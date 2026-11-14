@@ -10,7 +10,8 @@ import { render } from './telas.mjs';
 import { store } from './utils.mjs';
 import { avisar } from './avisos.mjs';
 
-const nuvem = { lista: null, enviando: null, timer: null };
+const nuvem = { lista: null, enviando: null, timer: null, avisouLimite: false };
+const LIMITE = /jogos salvos na nuvem/; // mensagem do gatilho privado.limitar_saves (#119)
 /** Saves da conta na nuvem: [{id, resumo, atualizado_em}] (sem o estado), ou null se ainda não carregou / deslogado. */
 export const savesNuvem = () => (usuarioAtual() ? nuvem.lista : null);
 export const pendente = x => x.nuvem !== x.data;
@@ -57,6 +58,10 @@ export function enviarPendentes() {
       const { nuvem: _n, ...resumo } = r;
       const { error } = await c.from('saves').upsert(
         { id: r.id, user_id: usuarioAtual().id, resumo, estado, atualizado_em: r.data }, { onConflict: 'user_id,id' });
+      if (error && LIMITE.test(error.message)) { // #119: a conta chegou ao limite; o save continua no navegador, pendente
+        if (!nuvem.avisouLimite) avisar(error.message + ' Este jogo continua salvo neste navegador.', 'erro');
+        nuvem.avisouLimite = true; continue;
+      }
       if (error) throw error;
       const idx = indiceSaves(), x = idx.list.find(y => y.id === r.id);
       if (x && x.data === r.data) { x.nuvem = r.data; store.set(SAVES_KEY, idx) } // se salvou de novo no meio, segue pendente
@@ -115,6 +120,7 @@ export async function abrirDaNuvem(id) {
 
 /** Apaga o save da nuvem também (senão ele volta na próxima lista). */
 export async function apagarNaNuvem(id) {
+  nuvem.avisouLimite = false; // abriu vaga: se encher de novo, avisa de novo
   if (nuvem.lista) nuvem.lista = nuvem.lista.filter(x => x.id !== id);
   const c = clienteLogado();
   if (!c) return;

@@ -36,9 +36,12 @@ export function salvarJogo(){
   idx.list=[{...resumoSave(S),...(antes&&antes.nuvem?{nuvem:antes.nuvem}:{})},...idx.list.filter(x=>x.id!==S.saveId)];idx.cur=S.saveId;
   store.set(SAVES_KEY,idx);agendarEnvio();return true;
 }
+export const MAX_NUVEM=20; // #119: o mesmo limite do banco (gatilho privado.limitar_saves)
 export function podeCriarSave(){
-  if(usuarioAtual()||indiceSaves().list.length<MAX_SAVES)return true; // logado: os saves vão para a nuvem e o espaço local é liberado quando enche
-  avisar(`Você já tem ${MAX_SAVES} jogos salvos. Exclua um na tela inicial para começar outro.`);return false;
+  // logado: os saves vão para a nuvem (até MAX_NUVEM por conta) e o espaço local é liberado quando enche
+  const max=usuarioAtual()?MAX_NUVEM:MAX_SAVES,ids=new Set([...indiceSaves().list,...(usuarioAtual()?savesNuvem()||[]:[])].map(x=>x.id));
+  if(ids.size<max)return true;
+  avisar(`Você já tem ${max} jogos salvos${usuarioAtual()?' na sua conta':''}. Exclua um na tela inicial para começar outro.`);return false;
 }
 export function migrarSaveAntigo(){
   const old=store.get(SAVE_KEY);if(!old||!Array.isArray(old.clubs))return;

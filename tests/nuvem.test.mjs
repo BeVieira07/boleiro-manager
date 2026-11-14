@@ -18,7 +18,13 @@ function servidorFalso() {
       from: tabela => tabela === 'profiles'
         ? { select: () => ({ eq: () => ({ maybeSingle: async () => ({ data: { nome: 'Ana' } }) }) }) }
         : {
-          upsert: async l => { if (!srv.online) return sem(); srv.envios++; srv.linhas[dono() + '/' + l.id] = structuredClone(l); return { error: null } },
+          upsert: async l => {
+            if (!srv.online) return sem();
+            // como o gatilho privado.limitar_saves (#119): save novo além do limite é recusado; atualizar um existente, não
+            if (srv.limite && !srv.linhas[dono() + '/' + l.id] && Object.values(srv.linhas).filter(x => x.user_id === dono()).length >= srv.limite)
+              return { error: { message: `Você já tem ${srv.limite} jogos salvos na nuvem. Exclua um na tela inicial para salvar outro.` } };
+            srv.envios++; srv.linhas[dono() + '/' + l.id] = structuredClone(l); return { error: null };
+          },
           select: () => ({
             order: async () => srv.online ? { data: Object.values(srv.linhas).filter(l => l.user_id === dono()).map(({ id, resumo, atualizado_em }) => ({ id, resumo, atualizado_em })) } : sem(),
             eq: (_c, id) => ({ maybeSingle: async () => srv.online ? { data: srv.linhas[dono() + '/' + id] ?? null } : sem() })
@@ -192,4 +198,25 @@ test('abrir save que não está na nuvem: aviso de erro com o texto certo (#120)
     await j.acao('abrirDaNuvem|nao-existe');
     assert.deepEqual(vistos, [['Não foi possível baixar o save da nuvem: sem internet', 'erro']]);
   } finally { avisosTeste.ouvir = antes }
+});
+
+test('limite de saves na conta: o save além do limite fica no navegador, com aviso, e novo jogo é barrado (#119)', async () => {
+  const srv = servidorFalso(); srv.limite = 1;
+  const j = carregarJogo({ boot: true });
+  await logar(srv);
+  j.run(`novoJogo();newGame('${clubeDaSerie(j)}')`); jogarRodada(j, 1);
+  await nuvem.enviarPendentes();
+  j.run(`voltarMenu();novoJogo();newGame('${clubeDaSerie(j, 'A', 1)}')`); jogarRodada(j, 1);
+  await nuvem.enviarPendentes();
+  assert.equal(Object.keys(srv.linhas).length, 1, 'o banco recusou o segundo');
+  assert.ok(j.alertas.some(a => /jogos salvos na nuvem/.test(a) && /continua salvo neste navegador/.test(a)));
+  assert.equal(j.run('indiceSaves().list.length'), 2, 'o segundo continua no navegador');
+  assert.equal(j.run('indiceSaves().list.filter(pendente).length'), 1, 'e segue pendente, para quando abrir vaga');
+  jogarRodada(j, 1); await nuvem.enviarPendentes(); // o primeiro (já na nuvem) continua sendo atualizado
+  const avisos = j.alertas.filter(a => /jogos salvos na nuvem/.test(a)).length;
+  assert.equal(avisos, 1, 'avisa uma vez só');
+  // limite da tela: com MAX_NUVEM saves na conta, novo jogo é barrado
+  j.run('voltarMenu()');
+  assert.equal(j.run(`(()=>{const i=indiceSaves();for(let k=0;k<MAX_NUVEM;k++)i.list.push({id:'x'+k});store.set(SAVES_KEY,i);return podeCriarSave()})()`), false);
+  assert.ok(j.alertas.some(a => /20 jogos salvos na sua conta/.test(a)));
 });
