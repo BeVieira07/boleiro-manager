@@ -44,7 +44,7 @@ export function confirmarVez(){
 }
 // botão da rodada: no solo joga direto; com vários técnicos, cada um confirma a sua vez
 export function botaoRodada(cls,txt){
-  if(tecnicos().some(t=>t.demitido))return `<button class="${cls}" data-acao="go|carreira">Escolher novo clube</button>`; // #37
+  if(!ui.liga&&tecnicos().some(t=>t.demitido))return `<button class="${cls}" data-acao="go|carreira">Escolher novo clube</button>` // #37 (na liga, botaoLiga olha só o técnico da vez); // #37
   if(ui.liga)return botaoLiga(cls); // #34: confirmar a rodada da liga (e forçar, para o dono)
   if(tecnicos().length>1)return `<button class="${cls}" data-acao="confirmarVez">${icone('ok',{tam:16})}Confirmar rodada ${S.round+1} — ${esc(tec().nome)}</button>`;
   return `<button class="${cls}" data-acao="playRound">${txt}</button>`;
