@@ -246,3 +246,23 @@ test('a semente da liga não sai na rodada: o resultado guarda só a semente da 
   assert.notEqual(r.semente, seed);
   assert.equal(JSON.stringify(r.jogos).includes(String(seed)), false);
 });
+
+test('jogador emprestado não é vendido, posto à venda nem comprado de quem só o tem emprestado (#117)', async () => {
+  const { startLoan } = await import(new URL('emprestimos.mjs', raiz));
+  const s = JSON.parse(novaLiga(['A']));
+  usarEstado(s); est.reindex();
+  const ana = clubDo(s.managers['u-ana']), bia = clubDo(s.managers['u-bia']), ia = s.clubs.find(c => c !== ana && c !== bia);
+  const daBia = bia.players[0], daAna = ana.players[0];
+  startLoan({ pid: daBia.id, from: bia.id, to: ana.id, until: 5, payer: 'from', buy: null });
+  startLoan({ pid: daAna.id, from: ana.id, to: ia.id, until: 5, payer: 'from', buy: null });
+  const estado = JSON.stringify(est.S), caixa = ana.balance;
+  for (const a of [{ tipo: 'venderJa', pid: daBia.id }, { tipo: 'alternarVenda', pid: daBia.id }]) {
+    const r = acaoMercadoLiga(JSON.parse(estado), 'u-ana', a);
+    assert.match(r.erro || '', /emprestado/, a.tipo);
+    assert.equal(clubDo(est.S.managers['u-ana']).balance, caixa);
+    assert.equal(est.S.loans.length, 2);
+  }
+  // o da Ana emprestado à IA: comprá-lo da IA não vale
+  const r = acaoMercadoLiga(JSON.parse(estado), 'u-bia', { tipo: 'compra', pid: daAna.id, valor: 999 });
+  assert.match(r.erro || '', /emprestado/);
+});
