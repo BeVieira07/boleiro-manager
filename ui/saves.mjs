@@ -3,7 +3,7 @@ import { DIVS, S, table, usarEstado } from '../core/estado.mjs';
 import { esc } from '../core/utils.mjs';
 import { loadSaveFile } from './api.mjs';
 import { getData, save, ui } from './estado.mjs';
-import { painelConta, usuarioAtual } from './conta.mjs';
+import { onlineConfigurado, painelConta, perfilAtual, usuarioAtual } from './conta.mjs';
 import { agendarEnvio, apagarNaNuvem, liberarEspaco, pendente, savesNuvem } from './nuvem.mjs';
 import { icone } from './icones.mjs';
 import { crest } from './partida.mjs';
@@ -20,7 +20,7 @@ export const indiceSaves=()=>{const i=store.get(SAVES_KEY);return i&&Array.isArr
 export function resumoSave(s){
   const ts=s.managers?Object.values(s.managers):[],t=ts.find(x=>x.id===s.atual);
   const c=s.clubs.find(x=>x.id===(t?t.clubId:s.userClubId))||{};
-  return {id:s.saveId,clube:c.name||'?',tecnicos:ts.length>1?ts.map(x=>x.nome):null,clubId:c.id,div:c.division||null,season:s.season,round:Math.min(s.round+1,(s.fixtures||[]).length),total:(s.fixtures||[]).length,data:new Date().toISOString()};
+  return {id:s.saveId,clube:c.name||'?',tecnicos:ts.length>1?ts.map(x=>x.nome):null,clubId:c.id,div:c.division||null,season:s.season,round:Math.min(s.round+1,(s.fixtures||[]).length),jogadas:s.round,total:(s.fixtures||[]).length,data:new Date().toISOString()};
 }
 // grava o jogo atual no seu save (cria um save novo na primeira vez)
 export function salvarJogo(){
@@ -63,34 +63,44 @@ export function excluirSave(id){
 export function apagarSave(id){const idx=indiceSaves();store.del(SAVE_PREFIX+id);idx.list=idx.list.filter(x=>x.id!==id);if(idx.cur===id)idx.cur=null;store.set(SAVES_KEY,idx)}
 export function voltarMenu(){if(ui.liga)sairDaLiga();else if(S)salvarJogo();usarEstado(null);go('menu')}
 export function novoJogo(){if(podeCriarSave()){usarEstado(null);go('inicio')}}
+/* ---------- tela inicial (#104, maquete do front): continuar, começar algo novo e jogos salvos ---------- */
 export function vMenu(){
-  const idx=indiceSaves(),cur=idx.list.find(x=>x.id===idx.cur)||idx.list[0];
+  const idx=indiceSaves(),eu=usuarioAtual(),online=onlineConfigurado();
   const clube=id=>(getData().clubs||[]).find(c=>c.id===id);
   const quando=d=>{try{return new Date(d).toLocaleString('pt-BR',{dateStyle:'short',timeStyle:'short'})}catch(e){return ''}};
   // #31: logado, junta os saves da nuvem; quando há os dois, diz qual é o mais recente
   const nv=savesNuvem(),naNuvem=id=>(nv||[]).find(n=>n.id===id),t=d=>Date.parse(d)||0;
-  const status=x=>{
-    if(!usuarioAtual())return '';
+  const nuvem=(x,soNaNuvem)=>{
+    if(soNaNuvem)return `<span class="nuvem-status">${icone('nuvem',{tam:14})} só na nuvem</span>`;
+    if(!eu)return '';
     const n=naNuvem(x.id);
-    if(n&&t(n.atualizado_em)>t(x.data))return `<br><span class="bad">${icone('nuvem',{tam:14})} versão mais nova na nuvem (${quando(n.atualizado_em)})</span>`;
-    return pendente(x)?`<br><span class="muted">${icone('relogio',{tam:14})} aguardando envio para a nuvem</span>`:`<br><span class="ok">${icone('nuvem',{tam:14})} salvo na nuvem</span>`;
+    if(n&&t(n.atualizado_em)>t(x.data))return `<span class="nuvem-status bad">${icone('nuvem',{tam:14})} versão mais nova na nuvem (${quando(n.atualizado_em)})</span>`;
+    return pendente(x)?`<span class="nuvem-status muted">${icone('relogio',{tam:14})} aguardando envio para a nuvem</span>`:`<span class="nuvem-status ok">${icone('nuvem',{tam:14})} salvo na nuvem</span>`;
   };
-  const linha=(x,soNaNuvem)=>{const c=clube(x.clubId);
-    return `<tr><td>${c?crest(c):''}</td><td><b>${esc(x.clube)}</b>${x.div&&DIVS[x.div]?` <span class="muted">${DIVS[x.div]}</span>`:''}${x.tecnicos?`<br><span class="muted">${x.tecnicos.map(esc).join(', ')}</span>`:''}${soNaNuvem?`<br><span class="muted">${icone('nuvem',{tam:14})} só na nuvem</span>`:status(x)}</td>
-    <td>Temporada ${x.season}</td><td>Rodada ${x.round}/${x.total}</td><td class="muted">${quando(x.data)}</td>
-    <td><button class="btn sm" data-acao="abrirMaisNovo|${esc(x.id)}">Abrir</button> <button class="btn red sm" data-acao="excluirSave|${esc(x.id)}">Excluir</button></td></tr>`};
-  const soNuvem=(nv||[]).filter(n=>!idx.list.some(x=>x.id===n.id)).map(n=>({...n.resumo,id:n.id,data:n.atualizado_em}));
-  return `<div class="menu-ini">
-  <h1 class="marca-inicio">${icone('logo',{tam:44})}Boleiro Manager</h1>
-  <div class="row">
-   ${cur?`<button class="btn" data-acao="abrirMaisNovo|${esc(cur.id)}">${icone('play',{tam:16})}Continuar — ${esc(cur.clube)}, temporada ${cur.season}</button>`:''}
-   <button class="btn ${cur?'sec':''}" data-acao="novoJogo">${icone('mais',{tam:16})}Novo jogo</button>
-   <label class="btn sec">Importar save<input type="file" accept=".json" class="sr" data-mudar="loadSaveFile"></label>
-   <button class="btn sec" data-acao="go|dados">Dados do jogo</button>
-   ${usuarioAtual()?`<button class="btn sec" data-acao="abrirLigas">${icone('liga',{tam:16})}Ligas com amigos</button>`:''}
-  </div>
-  ${painelConta()}
-  <div class="card tw"><h3>Jogos salvos (${usuarioAtual()?idx.list.length+soNuvem.length:idx.list.length+'/'+MAX_SAVES})</h3>
-   ${idx.list.length+soNuvem.length?`<table>${idx.list.map(x=>linha(x)).join('')}${soNuvem.map(x=>linha(x,true)).join('')}</table>`:'<p class="muted">Nenhum jogo salvo ainda. Comece um novo jogo.</p>'}
-  </div></div>`;
+  const serie=x=>x.div&&DIVS[x.div]?` <span class="muted">· ${DIVS[x.div]}</span>`:'';
+  const soNuvem=(nv||[]).filter(n=>!idx.list.some(x=>x.id===n.id)).map(n=>({...n.resumo,id:n.id,data:n.atualizado_em,soNaNuvem:true}));
+  const todos=[...idx.list,...soNuvem],cur=idx.list.find(x=>x.id===idx.cur)||idx.list[0]||soNuvem[0];
+  const saudacao=eu?`Olá, ${esc(perfilAtual()?.nome||eu.email)}`:'Bem-vindo de volta';
+  const destaque=cur?(()=>{const c=clube(cur.clubId),jogadas=cur.jogadas??Math.max(0,cur.round-1),pct=cur.total?Math.round(100*jogadas/cur.total):0; // round = a próxima rodada
+    return `<section class="continuar" aria-labelledby="hContinuar"><div class="continuar-info">
+      <div><p class="sobretitulo">${saudacao}</p><h1 id="hContinuar">${esc(cur.clube)} te espera</h1></div>
+      <div class="continuar-clube">${c?crest(c,'g'):''}<div><b>${esc(cur.clube)}</b>${serie(cur)}<br><span class="texto2">Temporada ${cur.season} · Rodada ${cur.round} de ${cur.total}</span><br>${nuvem(cur,cur.soNaNuvem)}</div></div>
+      <div class="continuar-progresso"><div class="barra"><div style="width:${pct}%"></div></div><span class="muted">Campeonato: ${jogadas} de ${cur.total} rodadas jogadas</span></div></div>
+      <button class="btn continuar-btn" data-acao="abrirMaisNovo|${esc(cur.id)}">${icone('play',{tam:18})}Continuar</button></section>`})():'<h1 class="sr">Boleiro Manager</h1>';
+  const linha=x=>{const c=clube(x.clubId);
+    return `<li class="save-linha">${c?crest(c,'m'):''}<div class="save-clube"><b>${esc(x.clube)}</b>${serie(x)}${x.tecnicos?`<br><span class="muted">${x.tecnicos.map(esc).join(', ')}</span>`:''}<br>${nuvem(x,x.soNaNuvem)}</div>
+    <dl class="save-dados"><div><dt>Temporada</dt><dd>${x.season}</dd></div><div><dt>Rodada</dt><dd>${x.round} / ${x.total}</dd></div><div><dt>Último acesso</dt><dd>${quando(x.data)}</dd></div></dl>
+    <div class="save-acoes"><button class="btn" data-acao="abrirMaisNovo|${esc(x.id)}">Abrir</button><button class="btn fantasma icone-so perigo-texto" data-acao="excluirSave|${esc(x.id)}" aria-label="Excluir o jogo salvo do ${esc(x.clube)}" title="Excluir">${icone('lixo',{tam:18})}</button></div></li>`};
+  const cartao=(acao,ic,cor,titulo,texto)=>`<button class="cartao-acao" data-acao="${acao}"><span class="cartao-icone ${cor}">${icone(ic,{tam:22})}</span><b>${titulo}</b><span class="muted">${texto}</span></button>`;
+  return `<div class="inicio">
+  <header class="inicio-topo"><div class="inicio-marca"><img src="img/logo/simbolo.svg" alt="" width="36" height="36"><div><span class="marca-nome">BOLEIRO</span><span class="marca-sub">MANAGER</span></div></div>${painelConta()}</header>
+  ${destaque}
+  <section aria-labelledby="hNovo"><h2 id="hNovo" class="secao-titulo">Começar algo novo</h2><div class="cartoes-acao">
+   ${cartao('novoJogo','adicionar','verde','Novo jogo sozinho','Só você no comando: escolha um clube e comece uma carreira do zero.')}
+   ${online?cartao('abrirLigas','pessoas','azul','Ligas com amigos','Cada um com seu clube: crie ou entre numa liga e dispute o mesmo campeonato com seus amigos.'+(eu?'':' Entre com sua conta para jogar.')):''}
+  </div></section>
+  <section aria-labelledby="hSalvos"><div class="secao-cabeca"><h2 id="hSalvos" class="secao-titulo">Jogos salvos (${eu?todos.length:idx.list.length+'/'+MAX_SAVES})</h2><span class="muted">${eu?'Sincronizados com sua conta':'Neste navegador'}</span></div>
+   ${todos.length?`<ul class="saves">${todos.map(linha).join('')}</ul>`:'<p class="muted">Nenhum jogo salvo ainda. Comece um novo jogo.</p>'}</section>
+  <div class="row inicio-rodape"><label class="btn fantasma">Importar save<input type="file" accept=".json" class="sr" data-mudar="loadSaveFile"></label><button class="btn fantasma" data-acao="go|dados">Dados do jogo</button></div>
+  </div>`;
 }

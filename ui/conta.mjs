@@ -4,6 +4,7 @@
 import { esc } from '../core/utils.mjs';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.mjs';
 import { avisar } from './avisos.mjs';
+import { icone } from './icones.mjs';
 
 // supabase-js vem de CDN (o jogo não tem build); versão fixa
 export const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
@@ -109,14 +110,21 @@ export async function mudarNomeTecnico() {
 }
 
 /** Quadro da conta na tela inicial. Vazio quando o online não está configurado. */
+/** Conta no topo da tela inicial (#104): menu com nome e sair, ou os botões de entrar. Vazio quando o online não está configurado. */
 export function painelConta() {
   if (!onlineConfigurado()) return '';
-  if (conta.erro) return `<div class="card"><p class="muted">${esc(conta.erro)}</p></div>`;
+  if (conta.erro) return `<p class="muted conta-erro">${esc(conta.erro)}</p>`;
   const u = conta.usuario;
-  if (u) return `<div class="card row"><span>Conectado como <b>${esc(conta.perfil?.nome || u.email)}</b> <span class="muted">${esc(u.email)}</span></span>
-    <input id="nomeConta" aria-label="Nome do técnico" placeholder="Nome do técnico" value="${esc(conta.perfil?.nome || '')}" style="width:180px"><button class="btn sec sm" data-acao="mudarNomeTecnico">Salvar nome</button>
-    <button class="btn sec sm" data-acao="sair">Sair</button></div>`;
-  return `<div class="card row"><span>Jogar online:</span><button class="btn sm" data-acao="entrarComGoogle">Entrar com Google</button>
-    <span class="muted">ou receba um link de acesso no e-mail:</span>
-    <input id="emailConta" type="email" aria-label="Seu e-mail" autocomplete="email" placeholder="seu@email.com" style="width:220px"><button class="btn sec sm" data-acao="entrar">Enviar link</button></div>`;
+  if (u) {
+    const nome = conta.perfil?.nome || u.email;
+    return `<details class="conta-menu"><summary><span class="avatar" aria-hidden="true">${esc((nome[0] || '?').toUpperCase())}</span><span class="conta-nome">${esc(nome)}</span>${icone('abaixo', { tam: 14 })}</summary>
+    <div class="conta-painel"><p class="muted">${icone('ok', { tam: 14 })} Conectado como <b>${esc(nome)}</b><br>${esc(u.email)}</p>
+    <label for="nomeConta" class="campo-rotulo">Nome de técnico</label>
+    <div class="row"><input id="nomeConta" placeholder="Nome do técnico" value="${esc(conta.perfil?.nome || '')}"><button class="btn sec" data-acao="mudarNomeTecnico">Salvar</button></div>
+    <button class="btn fantasma" data-acao="sair">${icone('sair', { tam: 16 })}Sair da conta</button></div></details>`;
+  }
+  return `<div class="row conta-entrar"><button class="btn" data-acao="entrarComGoogle">Entrar com Google</button>
+    <details class="conta-menu"><summary class="btn fantasma">Link por e-mail</summary><div class="conta-painel">
+    <label for="emailConta" class="campo-rotulo">Receba um link de acesso no e-mail</label>
+    <div class="row"><input id="emailConta" type="email" autocomplete="email" placeholder="seu@email.com"><button class="btn sec" data-acao="entrar">Enviar link</button></div></div></details></div>`;
 }
