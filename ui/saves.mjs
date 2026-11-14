@@ -36,7 +36,7 @@ export function salvarJogo(){
   idx.list=[{...resumoSave(S),...(antes&&antes.nuvem?{nuvem:antes.nuvem}:{})},...idx.list.filter(x=>x.id!==S.saveId)];idx.cur=S.saveId;
   store.set(SAVES_KEY,idx);agendarEnvio();return true;
 }
-export const MAX_NUVEM=20; // #119: o mesmo limite do banco (gatilho privado.limitar_saves)
+export const MAX_NUVEM=10; // #119: o mesmo limite do banco (gatilho privado.limitar_saves)
 export function podeCriarSave(){
   // logado: os saves vão para a nuvem (até MAX_NUVEM por conta) e o espaço local é liberado quando enche
   const max=usuarioAtual()?MAX_NUVEM:MAX_SAVES,ids=new Set([...indiceSaves().list,...(usuarioAtual()?savesNuvem()||[]:[])].map(x=>x.id));
