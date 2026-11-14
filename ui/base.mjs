@@ -33,7 +33,7 @@ export function promoverBase(id) {
 }
 export function venderBase(id) {
   const p = (userClub().base || []).find(x => x.id === id); if (!p) return;
-  confirmar({ titulo: `Vender ${p.name}?`, texto: `Ele sai da base por ${money(valorVendaBase(p))}, metade do valor de mercado. A venda não pode ser desfeita.`, ok: 'Vender', perigo: true }, () => {
+  confirmar({ dispensavel: true, titulo: `Vender ${p.name}?`, texto: `Ele sai da base por ${money(valorVendaBase(p))}, metade do valor de mercado. A venda não pode ser desfeita.`, ok: 'Vender', perigo: true }, () => {
     if (ui.liga) return mercadoLiga({ tipo: 'venderBase', pid: id });
     const r = venderDaBase(id); feito(r, r.msg);
   });

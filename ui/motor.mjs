@@ -8,6 +8,7 @@ import { icone } from './icones.mjs';
 import { render } from './telas.mjs';
 import { avisar, confirmar } from './avisos.mjs';
 import { bloqueadoNaLiga, botaoLiga } from './ligajogo.mjs';
+import { verAoVivo } from './configuracoes.mjs';
 
 export function playRound(aoVivo=true){
   if(bloqueadoNaLiga())return; // na liga, quem joga a rodada é o servidor (#34)
@@ -18,12 +19,13 @@ export function playRound(aoVivo=true){
   const games=r.jogos,mine=r.meu;
   ui.lastRound={round:S.round,games};
   save();
-  if(mine&&aoVivo)showLive(mine,()=>{ui.view='rodada';render();if(S.round>=S.fixtures.length)seasonEnd();if(tec().demitido)demissao()});
-  else if(aoVivo){ui.view='rodada';render();if(tec().demitido)demissao()}
+  const fim=()=>{ui.view='rodada';render();if(S.round>=S.fixtures.length)seasonEnd();if(tec().demitido)demissao()};
+  if(mine&&aoVivo&&verAoVivo(mine))showLive(mine,fim); // #106: sempre, só os decisivos ou nunca
+  else if(aoVivo)fim();
 }
 export function simToEnd(){
   if(bloqueadoNaLiga())return;
-  confirmar({titulo:'Simular até o fim?',texto:`As ${S.fixtures.length-S.round} rodadas restantes serão jogadas sem você assistir. Lesionados e suspensos são trocados pela escalação automática.`,ok:'Simular'},()=>{
+  confirmar({dispensavel:true,titulo:'Simular até o fim?',texto:`As ${S.fixtures.length-S.round} rodadas restantes serão jogadas sem você assistir. Lesionados e suspensos são trocados pela escalação automática.`,ok:'Simular'},()=>{
     while(S.round<S.fixtures.length&&!tec().demitido){
       const err=validateLineup();if(err){userClub().lineup=autoXI(userClub())}
       playRound(false);

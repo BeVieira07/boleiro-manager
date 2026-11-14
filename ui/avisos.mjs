@@ -6,6 +6,7 @@
    Modais prendem o foco (Tab), fecham com Esc e devolvem o foco ao elemento de origem. */
 import { esc } from '../core/utils.mjs';
 import { icone } from './icones.mjs';
+import { prefs } from './configuracoes.mjs';
 
 // Para os testes (sem navegador): registra as mensagens e responde "sim" às confirmações.
 export const avisosTeste = { ouvir: null, autoConfirmar: false };
@@ -66,7 +67,9 @@ function abrirDialogo(html) {
 }
 function fecharDialogo() { const d = el('dialogo'); if (!real(d)) return; d.hidden = true; d.innerHTML = ''; fecharCamada(d) }
 
-export function confirmar({ titulo = 'Confirmar', texto, ok = 'Confirmar', cancelar = 'Cancelar', perigo = false }, aoConfirmar, aoCancelar) {
+// dispensavel: ação de jogo que a pessoa pode decidir não confirmar mais (Configurações, #106); excluir save nunca é
+export function confirmar({ titulo = 'Confirmar', texto, ok = 'Confirmar', cancelar = 'Cancelar', perigo = false, dispensavel = false }, aoConfirmar, aoCancelar) {
+  if (dispensavel && !prefs().confirmar) { aoConfirmar && aoConfirmar(); return }
   if (avisosTeste.ouvir) avisosTeste.ouvir(texto);
   if (avisosTeste.autoConfirmar) { aoConfirmar && aoConfirmar(); return }
   dlg.sim = aoConfirmar; dlg.nao = aoCancelar;

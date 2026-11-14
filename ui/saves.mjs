@@ -101,6 +101,6 @@ export function vMenu(){
   </div></section>
   <section aria-labelledby="hSalvos"><div class="secao-cabeca"><h2 id="hSalvos" class="secao-titulo">Jogos salvos (${eu?todos.length:idx.list.length+'/'+MAX_SAVES})</h2><span class="muted">${eu?'Sincronizados com sua conta':'Neste navegador'}</span></div>
    ${todos.length?`<ul class="saves">${todos.map(linha).join('')}</ul>`:'<p class="muted">Nenhum jogo salvo ainda. Comece um novo jogo.</p>'}</section>
-  <div class="row inicio-rodape"><label class="btn fantasma">Importar save<input type="file" accept=".json" class="sr" data-mudar="loadSaveFile"></label><button class="btn fantasma" data-acao="go|dados">Dados do jogo</button></div>
+  <div class="row inicio-rodape"><label class="btn fantasma">Importar save<input type="file" accept=".json" class="sr" data-mudar="loadSaveFile"></label><button class="btn fantasma" data-acao="go|dados">Dados do jogo</button><button class="btn fantasma" data-acao="go|config">${icone('engrenagem',{tam:16})}Configurações</button></div>
   </div>`;
 }
