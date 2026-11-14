@@ -239,3 +239,10 @@ test('liga: pedir demissão, mercado bloqueado sem clube, escolher clube; quem n
   assert.equal(r.jogos.length, 10);
   assert.notEqual(antigo, ids[0]);
 });
+
+test('a semente da liga não sai na rodada: o resultado guarda só a semente da rodada (#79)', () => {
+  const s = JSON.parse(novaLiga(['A'])), seed = s.seed;
+  const r = jogarRodadaLiga(s, {});
+  assert.notEqual(r.semente, seed);
+  assert.equal(JSON.stringify(r.jogos).includes(String(seed)), false);
+});
