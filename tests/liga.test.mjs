@@ -66,7 +66,11 @@ test('criar liga, convidar por código e cada amigo escolher um clube diferente'
   await j.acao('abrirLigas');
   assert.equal(j.run('ui.view'), 'ligas');
   assert.match(j.html(), /nenhuma liga/);
-  j.campo('nomeLiga', 'Pelada'); j.campo('serieLigaA', true); j.campo('clubeLiga', clB);
+  j.campo('nomeLiga', 'Pelada'); j.campo('serieLigaA', true); j.campo('serieLigaC', true); j.campo('clubeLiga', clA);
+  await j.acao('criarLiga');
+  assert.ok(j.alertas.some(a => a.includes('vizinhas')), 'séries não vizinhas são recusadas antes de criar (#118)');
+  assert.equal(srv.ligas.length, 0);
+  j.campo('serieLigaC', false); j.campo('clubeLiga', clB);
   await j.acao('criarLiga');
   assert.ok(j.alertas.some(a => a.includes('entre as séries')), 'clube fora das séries escolhidas é recusado');
   j.campo('clubeLiga', clA);
