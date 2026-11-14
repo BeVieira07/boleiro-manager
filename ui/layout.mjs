@@ -30,7 +30,7 @@ export function lateral() {
   const uc = userClub(), mais = nav.slice(PRINCIPAIS), maisAtivo = mais.some(([k]) => k === ui.view);
   // #37: pedir demissão do clube assumido; no computador fica abaixo do cartão do clube, no celular dentro de "Mais"
   const demissao = cls => tec().demitido ? '' : `<button type="button" class="nav-item nav-perigo ${cls}" data-acao="pedirDemissaoUI">${icone('sair')}<span>Pedir demissão</span></button>`;
-  return `<div class="marca">${icone('logo', { tam: 30 })}<div><span class="marca-nome">BOLEIRO</span><span class="marca-sub">MANAGER</span></div></div>
+  return `<div class="marca"><img src="img/logo/simbolo.svg" alt="" width="34" height="34"><div><span class="marca-nome">BOLEIRO</span><span class="marca-sub">MANAGER</span></div></div>
   <nav class="nav" aria-label="Principal">
     ${nav.slice(0, PRINCIPAIS).map(item).join('')}
     <div class="nav-resto${ui.maisAberto ? ' aberto' : ''}" id="navResto">${mais.map(item).join('')}
