@@ -122,10 +122,11 @@ test('mercado da liga: nada com clube de outro técnico, e o que vem do navegado
   const daBia = s.clubs.find(c => c.id === bia).players[0], daAna = s.clubs.find(c => c.id === ana).players[0], ia = jogadorDaIA(s);
   const r = a => acaoMercadoLiga(copia(s), 'u-ana', a);
   assert.match(r({ tipo: 'compra', pid: daBia.id, valor: 999 }).erro, /outro técnico/);
-  assert.match(r({ tipo: 'emprestimo', mode: 'in', pid: daBia.id, dur: 5, payer: 'to' }).erro, /outro técnico/);
-  assert.match(r({ tipo: 'emprestimo', mode: 'out', pid: daAna.id, clubeId: bia, dur: 5, payer: 'to' }).erro, /outro técnico/);
-  assert.match(r({ tipo: 'emprestimo', mode: 'in', pid: ia.id, dur: 999, payer: 'to' }).erro, /inválida/);
-  assert.match(r({ tipo: 'emprestimo', mode: 'in', pid: ia.id, dur: 5, payer: 'eu' }).erro, /inválida/);
+  assert.match(r({ tipo: 'emprestimo', pid: daBia.id }).erro, /outro técnico/);
+  assert.match(r({ tipo: 'emprestimo', pid: daAna.id }).erro, /inválido/, 'o próprio jogador não se pede emprestado');
+  assert.match(r({ tipo: 'emprestimo', pid: ia.id }).erro, /lista de empréstimo/, '#142: só da lista de empréstimo');
+  assert.match(r({ tipo: 'alternarEmprestimo', pid: daBia.id }).erro, /inválido/);
+  const lista = r({ tipo: 'alternarEmprestimo', pid: daAna.id }); assert.equal(lista.ok, true);
   assert.match(r({ tipo: 'compra', pid: ia.id, valor: 'abc' }).erro, /inválido/i);
   assert.match(r({ tipo: 'compra', pid: daAna.id, valor: 1 }).erro, /inválido/);
   assert.match(r({ tipo: 'venderJa', pid: ia.id }).erro, /inválido/);
@@ -183,26 +184,27 @@ test('propostas entre técnicos: tudo é conferido de novo ao aceitar, e o que v
   assert.match(erro({ tipo: 'proporTecnico', negocio: 'roubo', pid: p.id, valor: 1 }), /inválida/);
   assert.match(erro({ tipo: 'proporTecnico', negocio: 'transferencia', pid: p.id, valor: -1 }), /Valor inválido/);
   assert.match(erro({ tipo: 'proporTecnico', negocio: 'transferencia', pid: p.id, valor: 6 }), /não tem caixa/);
-  assert.match(erro({ tipo: 'proporTecnico', negocio: 'emprestimo', pid: p.id, valor: 0, dur: 99, payer: 'to' }), /inválidas/);
+  assert.match(erro({ tipo: 'proporTecnico', negocio: 'emprestimo', pid: p.id, valor: 0 }), /lista de empréstimo/); // #142
   let x = passo(s, 'u-ana', { tipo: 'proporTecnico', negocio: 'transferencia', pid: p.id, valor: 4 }); s = x.s;
   clube(s, 'u-ana').balance = 1; // a Ana gastou o dinheiro antes da Bia responder
   assert.match(passo(s, 'u-bia', { tipo: 'aceitarProposta', id: s.propostas[0].id }).r.erro, /não tem caixa/);
 });
 
-test('empréstimo entre técnicos volta ao fim do prazo, e a opção de compra paga ao outro técnico', () => {
+test('empréstimo entre técnicos (#142): só da lista, por 1 ano, salário dividido, e volta no fim do prazo', () => {
   let s = comVaga(JSON.parse(novaLiga(['A'])));
   clube(s, 'u-ana').balance = 20; clube(s, 'u-bia').balance = 0;
   const p = reservaDe(s, 'u-bia');
-  let x = passo(s, 'u-ana', { tipo: 'proporTecnico', negocio: 'emprestimo', pid: p.id, valor: 1, dur: 2, payer: 'to', buy: 10 }); assert.ok(x.r.ok, x.r.erro); s = x.s;
+  s.clubs.flatMap(c => c.players).find(q => q.id === p.id).emprestar = true; // a Bia pôs na lista de empréstimo
+  let x = passo(s, 'u-ana', { tipo: 'proporTecnico', negocio: 'emprestimo', pid: p.id, valor: 1 }); assert.ok(x.r.ok, x.r.erro); s = x.s;
+  assert.match(s.propostas[0] ? s.managers['u-bia'].news[0].t : '', /por 1 ano.*salário dividido/);
   x = passo(s, 'u-bia', { tipo: 'aceitarProposta', id: s.propostas[0].id }); assert.ok(x.r.ok, x.r.erro); s = x.s;
   const onde = s => s.clubs.flatMap(c => c.players).find(q => q.id === p.id).clubId;
   assert.equal(onde(s), clube(s, 'u-ana').id);
   assert.equal(clube(s, 'u-bia').balance, 1, 'a taxa foi para a Bia');
-  // opção de compra: o dinheiro sai da Ana e entra na Bia
-  const y = passo(s, 'u-ana', { tipo: 'opcaoCompra', pid: p.id }); assert.ok(y.r.ok, y.r.erro);
-  assert.equal(clube(y.s, 'u-bia').balance, 11);
-  assert.equal(clube(y.s, 'u-ana').balance, 9);
-  // sem a opção: depois de 2 rodadas, ele volta
+  assert.deepEqual(s.loans.at(-1).fim, { s: s.season + 1, r: s.round }, 'dura até a mesma rodada da temporada seguinte');
+  assert.match(passo(s, 'u-ana', { tipo: 'opcaoCompra', pid: p.id }).r.erro, /Sem opção de compra/);
+  // aproxima o fim do prazo: depois de 2 rodadas, ele volta
+  s.loans.at(-1).fim = { s: s.season, r: s.round + 2 };
   for (let i = 0; i < 2; i++) { jogarRodadaLiga(s, {}); s = JSON.parse(JSON.stringify(est.S)) }
   assert.equal(onde(s), clube(s, 'u-bia').id);
 });

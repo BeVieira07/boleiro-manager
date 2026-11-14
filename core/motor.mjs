@@ -98,6 +98,15 @@ export function jogarRodada(){
           addNews(`💼 ${b.name} ofereceu ${money(amt)} por ${p.name}.`,uc.id);}
       }
     }
+    // #142: propostas de empréstimo (1 ano, salário dividido) pelos jogadores da lista de empréstimo
+    for(const p of uc.players.filter(p=>p.emprestar&&!t.offers.some(o=>o.pid===p.id))){
+      if(rnd()<0.4){
+        const quem=S.clubs.filter(c=>!ehHumano(c)&&c.players.length<32);
+        if(quem.length){const b=pick(quem);
+          t.offers.push({id:'oe'+S.season+'_'+S.round+'_'+p.id,pid:p.id,from:b.id,amount:0,until:S.round+3,emprestimo:true});
+          addNews(`🤝 ${b.name} quer ${p.name} emprestado por 1 ano, com o salário dividido. Responda no painel do clube.`,uc.id);}
+      }
+    }
   }
   const copa=jogarCopa(S.round); // #51: a Copa do Brasil, quando esta rodada tem jogo dela
   for(const t of tecnicos())t.pronto=false;

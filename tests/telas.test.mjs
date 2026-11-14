@@ -23,6 +23,7 @@ test('Mercado: mesmos filtros, busca e ordenação do Elenco; proposta e emprés
   const v = j.run(`filtrar(Object.values(P).filter(p=>p.clubId!==userClub().id),ui.mf).map(p=>p.value)`);
   assert.deepEqual(v, [...v].sort((a, b) => a - b));
   const clube = j.run(`S.clubs.find(c=>c.id!==userClub().id).id`);
+  j.run(`S.clubs.find(c=>c.id==='${clube}').players[0].emprestar=true`); // #142: só da lista de empréstimo
   j.acao('filtrarMercado|club', clube);
   assert.ok(j.run(`corpoMercado().total`) > 0);
   assert.match(j.html(), /data-acao="makeBid\|/);

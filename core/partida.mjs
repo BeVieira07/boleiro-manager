@@ -8,6 +8,7 @@ import { autoXI, getXI } from './motor.mjs';
 import { POSD } from './posicoes.mjs';
 import { clamp, ri, rnd } from './utils.mjs';
 import { aplicarFormaPendente } from './forma.mjs';
+import { processLoans } from './emprestimos.mjs';
 
 /* ================= fim de temporada ================= */
 // regra: fecha a temporada (premiação, histórico, diretoria). Devolve o resumo, ou null se já foi fechada.
@@ -53,6 +54,7 @@ export function iniciarTemporada(){
   virarBase(); // #50: a base dos clubes com técnico
   S.season++;S.round=0;S.fixtures=makeAllFixtures(S.clubs);
   reindex();criarCopa();
+  processLoans(); // #142: empréstimo de 1 ano feito na rodada 0 volta agora
   for(const t of tecnicos()){t.offers=[];confiancaNovaTemporada(t);const uc=clubDo(t);uc.lineup=getXI(uc);if(uc.lineup.length<11)uc.lineup=autoXI(uc)}
   addNewsTodos(`📅 Começa a temporada ${S.season}!`);
 }

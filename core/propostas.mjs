@@ -1,10 +1,11 @@
 /* ================= propostas entre técnicos da liga (#36) =================
-   S.propostas = [{id, de, para, pid, negocio:'transferencia'|'emprestimo', valor, dur, payer, buy, r}]
+   S.propostas = [{id, de, para, pid, negocio:'transferencia'|'emprestimo', valor, r}]
+   Empréstimo (#142): só de jogador na lista de empréstimo de quem cede, por 1 ano, com o salário dividido 50/50.
    de/para = ids dos técnicos. O jogador é de um dos dois clubes: dá para comprar ou pedir emprestado o jogador do outro,
    e vender ou emprestar o seu. valor: quem recebe o jogador paga ao clube dono (no empréstimo é uma taxa, pode ser 0).
    As propostas ficam no estado da liga, então passam pelo mesmo caminho do mercado: o servidor confere e grava com
    controle de versão. Ao aceitar, tudo é conferido de novo, porque o estado pode ter mudado desde a proposta. */
-import { loanOf, startLoan } from './emprestimos.mjs';
+import { UM_ANO, loanOf, startLoan } from './emprestimos.mjs';
 import { P, S, addFin, addNews, clubDo, tec, tecDoClube } from './estado.mjs';
 import { movePlayer } from './mercado.mjs';
 import { money } from './utils.mjs';
@@ -18,11 +19,7 @@ function termos(a, negocio) {
   const valor = Number(a.valor);
   if (!Number.isFinite(valor) || valor < 0 || (negocio === 'transferencia' && valor <= 0)) return { erro: 'Valor inválido.' };
   const v = Math.round(valor * 10) / 10;
-  if (negocio === 'transferencia') return { valor: v };
-  const dur = Number(a.dur), buy = a.buy == null ? null : Number(a.buy), resta = S.fixtures.length - S.round;
-  if (!Number.isInteger(dur) || dur < 1 || dur > resta || !['from', 'to'].includes(a.payer) || (buy != null && !(Number.isFinite(buy) && buy > 0)))
-    return { erro: 'Condições do empréstimo inválidas.' };
-  return { valor: v, dur, payer: a.payer, buy: buy == null ? null : Math.round(buy * 10) / 10 };
+  return { valor: v }; // empréstimo (#142): o valor é a taxa; prazo e salário são fixos
 }
 // clube que cede o jogador e clube que recebe, pelo estado de agora
 function lados(pr) {
@@ -36,6 +33,7 @@ function conferir(pr) {
   const l = lados(pr); if (l.erro) return l;
   const { jog, ced, rec } = l;
   if (loanOf(jog.id)) return { erro: `${jog.name} está emprestado.` };
+  if (pr.negocio === 'emprestimo' && !jog.emprestar) return { erro: `${jog.name} não está na lista de empréstimo do ${ced.name}.` };
   if (ced.players.length <= 16) return { erro: `${ced.name} ficaria com menos de 16 jogadores.` };
   if (rec.players.length >= 32) return { erro: `${rec.name} já tem 32 jogadores.` };
   if (pr.valor > rec.balance) return { erro: `${rec.name} não tem caixa para ${money(pr.valor)}.` };
@@ -47,12 +45,12 @@ export function descrever(pr) {
   if (l.erro) return `${pr.negocio === 'emprestimo' ? 'empréstimo' : 'transferência'} de ${jog ? jog.name : 'jogador'}`;
   const { ced, rec } = l, base = `${l.jog.name}, do ${ced.name} para o ${rec.name}`;
   if (pr.negocio === 'transferencia') return `compra de ${base} por ${money(pr.valor)}`;
-  return `empréstimo de ${base} por ${pr.dur} rodada(s)${pr.valor ? `, taxa de ${money(pr.valor)}` : ''}, salário pago pelo ${pr.payer === 'from' ? ced.name : rec.name}${pr.buy ? `, opção de compra de ${money(pr.buy)}` : ''}`;
+  return `empréstimo de ${base} por 1 ano${pr.valor ? `, taxa de ${money(pr.valor)}` : ''}, salário dividido entre os dois clubes`;
 }
 const novoId = () => 'pp' + (S.propSeq = (S.propSeq || 0) + 1);
 const clubeDe = id => clubDo(S.managers[id]);
 
-/** a: {pid, negocio, valor, dur?, payer?, buy?, para? (técnico, quando o jogador é seu)}. */
+/** a: {pid, negocio, valor, para? (técnico, quando o jogador é seu)}. */
 export function proporTecnico(a) {
   const t = tec(), jog = P[a.pid];
   if (!jog || !NEGOCIOS.includes(a.negocio)) return { erro: 'Proposta inválida.' };
@@ -76,7 +74,7 @@ export function aceitarProposta(id) {
     addFin(`${pr.negocio === 'transferencia' ? 'Venda' : 'Taxa de empréstimo'} de ${jog.name} (${rec.name})`, pr.valor, ced);
   }
   if (pr.negocio === 'transferencia') movePlayer(jog, rec);
-  else startLoan({ pid: jog.id, from: ced.id, to: rec.id, until: Math.min(S.round + pr.dur, S.fixtures.length), payer: pr.payer, buy: pr.buy });
+  else startLoan({ pid: jog.id, from: ced.id, to: rec.id, fim: UM_ANO() });
   addNews(`🤝 Negócio fechado entre técnicos: ${txt}.`);
   return { ok: true, msg: 'Negócio fechado!' };
 }
@@ -95,7 +93,7 @@ export function cancelarProposta(id) {
 /** Contraproposta: novos termos (o que não vier fica como estava); a proposta original deixa de valer. */
 export function contraproposta(id, a) {
   const pr = propostas().find(x => x.id === id && x.para === tec().id); if (!pr) return NAO_ACHEI;
-  const tr = termos({ valor: pr.valor, dur: pr.dur, payer: pr.payer, buy: pr.buy, ...Object.fromEntries(['valor', 'dur', 'payer', 'buy'].filter(k => k in a).map(k => [k, a[k]])) }, pr.negocio);
+  const tr = termos({ valor: 'valor' in a ? a.valor : pr.valor }, pr.negocio);
   if (tr.erro) return tr;
   const nova = { ...pr, ...tr, id: novoId(), de: pr.para, para: pr.de, r: S.round };
   const c = conferir(nova); if (c.erro) return c;

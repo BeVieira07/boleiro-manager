@@ -206,24 +206,20 @@ export function vLigaJogo() {
 export const botaoProposta = p => ui.liga && tecnicos().length > 1
   ? `<button class="btn sec sm" data-acao="propostaForm|${p.id}">${p.clubId === userClub().id ? 'Oferecer' : 'Proposta'}</button>` : '';
 export function propostaForm(pid) {
-  const p = P[pid], meu = p.clubId === userClub().id, resta = S.fixtures.length - S.round;
+  const p = P[pid], meu = p.clubId === userClub().id;
   const alvo = meu ? `<label>Para <select id="ppPara">${tecnicos().filter(t => t.id !== S.atual).map(t => `<option value="${esc(t.id)}">${esc(t.nome)} (${esc(clubDo(t).name)})</option>`).join('')}</select></label>`
     : `<p>Clube: <b>${esc(clubById(p.clubId).name)}</b> (${esc(tecnicos().find(t => t.clubId === p.clubId).nome)})</p>`;
-  const durs = [...new Set([5, 10, 19, resta].filter(n => n >= 1 && n <= resta))].sort((a, b) => a - b);
   openModal(`<h2>${meu ? 'Oferecer' : 'Proposta por'} ${esc(p.name)}</h2>
    <p class="muted">${posDSigla(p)} · força ${p.ovr} · valor ${money(p.value)} · salário ${money(p.wage)}/rod.</p>
    <div class="row" style="flex-direction:column;align-items:flex-start;gap:10px">${alvo}
    <label>Negócio <select id="ppNeg"><option value="transferencia">Transferência</option><option value="emprestimo">Empréstimo</option></select></label>
    <label>Valor (no empréstimo, taxa; pode ser 0) <input id="ppValor" inputmode="decimal" style="width:90px" value="${p.value.toFixed(1).replace('.', ',')}"> mi</label>
-   <label>Duração do empréstimo <select id="ppDur">${durs.map(n => `<option value="${n}">${n} rodadas</option>`).join('')}</select></label>
-   <label>Salário no empréstimo <select id="ppPay"><option value="to">Pago por quem recebe</option><option value="from">Pago por quem cede</option></select></label>
-   <label><input id="ppBuy" type="checkbox"> Opção de compra por <input id="ppBuyV" inputmode="decimal" style="width:90px" value="${(p.value * 1.1).toFixed(1).replace('.', ',')}"> mi</label></div>
+   <p class="muted">Empréstimo: 1 ano, salário dividido 50/50, sem opção de compra, e só de jogador na lista de empréstimo${p.emprestar ? ' (este está)' : ' (este não está)'}.</p></div>
    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn sec" data-acao="closeModal">Cancelar</button><button class="btn" data-acao="enviarProposta|${pid}">Enviar proposta</button></div>`);
 }
 export function enviarProposta(pid) {
   const v = id => document.getElementById(id), n = x => parseFloat(String(x).replace(',', '.'));
-  const a = { tipo: 'proporTecnico', pid, negocio: v('ppNeg').value, valor: n(v('ppValor').value), dur: parseInt(v('ppDur').value), payer: v('ppPay').value,
-    buy: v('ppBuy').checked ? n(v('ppBuyV').value) : null };
+  const a = { tipo: 'proporTecnico', pid, negocio: v('ppNeg').value, valor: n(v('ppValor').value) };
   if (P[pid].clubId === userClub().id) a.para = v('ppPara').value;
   closeModal(); return mercadoLiga(a);
 }

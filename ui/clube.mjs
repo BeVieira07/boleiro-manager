@@ -39,7 +39,7 @@ export function alertas() {
   if (foraPos.length) out.push({ tipo: 'aviso', titulo: `${foraPos.length} jogador${foraPos.length > 1 ? 'es' : ''} fora de posição`, texto: foraPos.map(s => `${P[s.id].name} na vaga de ${s.d}`).join(', ') + '.', acao: 'go|escalacao', rotulo: 'Ajustar' });
   for (const o of tec().offers.filter(o => P[o.pid] && P[o.pid].clubId === me)) {
     const p = P[o.pid];
-    out.push({ tipo: 'aviso', titulo: `Proposta por ${p.name}`, texto: `${clubById(o.from).name} oferece ${money(o.amount)} (valor de mercado ${money(p.value)}). Vale até a rodada ${o.until + 1}.`,
+    out.push({ tipo: 'aviso', titulo: `Proposta ${o.emprestimo ? 'de empréstimo ' : ''}por ${p.name}`, texto: o.emprestimo ? `${clubById(o.from).name} quer ele emprestado por 1 ano, com o salário dividido 50/50. Vale até a rodada ${o.until + 1}.` : `${clubById(o.from).name} oferece ${money(o.amount)} (valor de mercado ${money(p.value)}). Vale até a rodada ${o.until + 1}.`,
       botoes: `<button class="btn sm" data-acao="acceptOffer|${o.id}">Aceitar</button><button class="btn sec sm" data-acao="rejectOffer|${o.id}">Recusar</button>` });
   }
   const fim = uc.players.filter(p => p.contrato === 1 && !loanOf(p.id));

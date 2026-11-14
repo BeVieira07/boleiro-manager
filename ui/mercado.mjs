@@ -1,6 +1,6 @@
 import { loanOf } from '../core/emprestimos.mjs';
 import { P, S, clubById, ehHumano, tec, userClub } from '../core/estado.mjs';
-import { aceitarOferta, alternarVenda, podeProporCompra, proporCompra, recusarOferta, valorVendaRapida, venderJa } from '../core/mercado.mjs';
+import { aceitarOferta, alternarEmprestimo, alternarVenda, podeProporCompra, proporCompra, recusarOferta, valorVendaRapida, venderJa } from '../core/mercado.mjs';
 import { posDNome } from '../core/posicoes.mjs';
 import { esc, money } from '../core/utils.mjs';
 import { potTag } from './base.mjs';
@@ -64,7 +64,7 @@ export function makeBid(pid){
 // tela
 export const feito=(r,msg,tipo='ok')=>{if(r.erro){avisar(r.erro,'erro');return}save();render();if(msg)avisar(msg,tipo)};
 export function acceptOffer(oid){
-  const o=tec().offers.find(x=>x.id===oid),txt=o&&P[o.pid]?`Negócio fechado: ${P[o.pid].name} vendido ao ${clubById(o.from).name} por ${money(o.amount)}.`:'';
+  const o=tec().offers.find(x=>x.id===oid),txt=!o||!P[o.pid]?'':o.emprestimo?`${P[o.pid].name} foi emprestado ao ${clubById(o.from).name} por 1 ano.`:`Negócio fechado: ${P[o.pid].name} vendido ao ${clubById(o.from).name} por ${money(o.amount)}.`;
   if(ui.liga)return mercadoLiga({tipo:'aceitar',oid},txt);
   feito(aceitarOferta(oid),txt);
 }
@@ -73,4 +73,5 @@ export function quickSell(pid){
   if(userClub().players.length<=16){avisar('Seu elenco ficaria pequeno demais (mínimo 16).','aviso');return}
   confirmar({dispensavel:true,titulo:`Vender ${P[pid].name} agora?`,texto:`Ele sai do elenco por ${money(valorVendaRapida(pid))}, 70% do valor de mercado (${money(P[pid].value)}). A venda não pode ser desfeita.`,ok:'Vender agora',perigo:true},()=>{const txt=`${P[pid].name} vendido por ${money(valorVendaRapida(pid))}.`;if(ui.liga)return mercadoLiga({tipo:'venderJa',pid},txt);feito(venderJa(pid),txt)});
 }
+export function toggleEmprestimo(pid){if(ui.liga)return mercadoLiga({tipo:'alternarEmprestimo',pid});feito(alternarEmprestimo(pid))} // #142
 export function toggleListed(pid){if(ui.liga)return mercadoLiga({tipo:'alternarVenda',pid});feito(alternarVenda(pid))}

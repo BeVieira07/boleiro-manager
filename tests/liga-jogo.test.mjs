@@ -230,7 +230,7 @@ test('propostas entre técnicos: pelo Mercado, o outro aceita, e quem recebe uma
   j.run(`ui.mf.club='${bia}'`); await j.acao('go|mercado');
   assert.match(j.html(), new RegExp(`propostaForm\|${daBia}`), 'jogador de outro técnico tem botão de proposta');
   j.acao(`propostaForm|${daBia}`);
-  j.campo('ppNeg', 'transferencia'); j.campo('ppValor', '3,5'); j.campo('ppDur', '5'); j.campo('ppPay', 'to'); j.campo('ppBuy', false);
+  j.campo('ppNeg', 'transferencia'); j.campo('ppValor', '3,5');
   await j.acao(`enviarProposta|${daBia}`); await esperar();
   assert.equal(srv.estado.propostas.length, 1);
   assert.equal(srv.estado.propostas[0].valor, 3.5);
@@ -243,7 +243,8 @@ test('propostas entre técnicos: pelo Mercado, o outro aceita, e quem recebe uma
 
   // a Bia oferece um jogador à Ana: ela é avisada e recusa pela tela Liga
   const outro = clube(bia).players.find(p => !clube(bia).lineup.includes(p.id) && p.id !== daBia).id;
-  await srv.cliente('b').functions.invoke('jogar-rodada', { body: { liga: 'L1', acao: 'mercado', mercado: { tipo: 'proporTecnico', negocio: 'emprestimo', pid: outro, para: 'a', valor: 0, dur: 5, payer: 'from' } } });
+  clube(bia).players.find(p => p.id === outro).emprestar = true; // #142: só jogador da lista de empréstimo
+  await srv.cliente('b').functions.invoke('jogar-rodada', { body: { liga: 'L1', acao: 'mercado', mercado: { tipo: 'proporTecnico', negocio: 'emprestimo', pid: outro, para: 'a', valor: 0 } } });
   await esperar();
   assert.ok(j.alertas.some(a => a.includes('recebeu uma proposta')));
   await j.acao('go|liga');
