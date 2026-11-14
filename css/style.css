@@ -116,6 +116,7 @@ input[type=checkbox]{min-height:0;width:18px;height:18px;accent-color:var(--verd
 .crest{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;vertical-align:middle;object-fit:contain;background:var(--painel2);flex:none}
 .crest.g{width:68px;height:68px;font-size:18px}
 .crest.m{width:40px;height:40px;font-size:12px}
+img.crest{border-radius:0;background:none} /* #101: o escudo aparece inteiro; o círculo colorido é só da sigla (span.crest) */
 .club{display:inline-flex;align-items:center;gap:var(--e2)}
 
 /* ---------- utilidades de layout ---------- */
