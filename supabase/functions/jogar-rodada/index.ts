@@ -79,7 +79,7 @@ Deno.serve(async (req) => {
         const novo = JSON.stringify(S), jogos = JSON.stringify(r.jogos);
         const { data: ok, error } = await admin.rpc('liga_gravar_rodada', {
           p_liga: ligaId, p_rodada: l.rodada, p_versao: est.versao, p_estado: JSON.parse(novo),
-          p_temporada: r.temporada, p_rodada_temporada: r.rodada, p_semente: r.semente, p_jogos: JSON.parse(jogos)
+          p_temporada: r.temporada, p_rodada_temporada: r.rodada, p_semente: 0 /* #116: nada derivado da semente sai do servidor */, p_jogos: JSON.parse(jogos)
         });
         if (error) throw error;
         if (ok) {
