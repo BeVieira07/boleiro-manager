@@ -28,14 +28,17 @@ export function lateral() {
   if (!S) return '';
   const nav = ui.liga ? [['liga', 'Liga', 'liga'], ...NAV] : NAV; // #35: tela da liga só para quem está jogando uma
   const uc = userClub(), mais = nav.slice(PRINCIPAIS), maisAtivo = mais.some(([k]) => k === ui.view);
+  // #37: pedir demissão do clube assumido; no computador fica abaixo do cartão do clube, no celular dentro de "Mais"
+  const demissao = cls => tec().demitido ? '' : `<button type="button" class="nav-item nav-perigo ${cls}" data-acao="pedirDemissaoUI">${icone('sair')}<span>Pedir demissão</span></button>`;
   return `<div class="marca">${icone('logo', { tam: 30 })}<div><span class="marca-nome">BOLEIRO</span><span class="marca-sub">MANAGER</span></div></div>
   <nav class="nav" aria-label="Principal">
     ${nav.slice(0, PRINCIPAIS).map(item).join('')}
     <div class="nav-resto${ui.maisAberto ? ' aberto' : ''}" id="navResto">${mais.map(item).join('')}
-      <button type="button" class="nav-item" data-acao="voltarMenu">${icone('sair')}<span>${ui.liga ? 'Sair da liga' : 'Salvar e sair'}</span></button></div>
+      <button type="button" class="nav-item" data-acao="voltarMenu">${icone('sair')}<span>${ui.liga ? 'Sair da liga' : 'Salvar e sair'}</span></button>${demissao('demissao-celular')}</div>
     <button type="button" class="nav-item nav-mais" data-acao="alternarMais" aria-expanded="${!!ui.maisAberto}" aria-controls="navResto"${maisAtivo ? ' aria-current="page"' : ''}>${icone('mais')}<span>Mais</span></button>
   </nav>
-  <div class="clube-cartao" style="--cor-clube:${corOk(uc.color) ? uc.color : '#335'}">${crest(uc, 'm')}<div><b>${esc(uc.name)}</b><span class="muted">${DIVS[divOf(uc)] || ''} · ${S.season}</span></div></div>`;
+  <div class="clube-cartao" style="--cor-clube:${corOk(uc.color) ? uc.color : '#335'}">${crest(uc, 'm')}<div><b>${esc(uc.name)}</b><span class="muted">${DIVS[divOf(uc)] || ''} · ${S.season}</span></div></div>
+  ${demissao('demissao-lateral')}`;
 }
 export function alternarMais() { ui.maisAberto = !ui.maisAberto; render() }
 

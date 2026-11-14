@@ -141,6 +141,9 @@ body.em-jogo .lateral{display:flex;flex:0 0 232px;flex-direction:column;gap:24px
 .clube-cartao{margin-top:auto;background:var(--painel);border:1px solid var(--linha);border-left:4px solid var(--cor-clube,var(--verde));border-radius:var(--r);padding:12px;display:flex;gap:10px;align-items:center}
 .clube-cartao>div{display:flex;flex-direction:column;line-height:1.3;min-width:0}
 .clube-cartao .muted{font-size:12px}
+.nav-item.nav-perigo{color:var(--perigo-claro)} /* #37: pedir demissão */
+.demissao-lateral{margin-top:var(--e2)}
+.demissao-celular{display:none}
 .conteudo{flex:1;min-width:0;max-width:1000px;margin:0 auto;padding:24px 16px 40px}
 .conteudo:focus,.conteudo:focus-visible{outline:0;box-shadow:none} /* o foco vai para a área principal só para leitores de tela (go) */
 /* #65: link para pular o menu, visível só com o foco do teclado */
@@ -159,7 +162,8 @@ body.em-jogo .conteudo{max-width:1280px;padding:0 28px 40px}
 .topo-simples{margin-bottom:var(--e3)}
 @media(max-width:799px){
   body.em-jogo .lateral{position:fixed;left:0;right:0;bottom:0;top:auto;height:auto;z-index:10;flex-direction:row;gap:0;padding:6px 6px calc(6px + env(safe-area-inset-bottom));border-right:0;border-top:1px solid var(--linha);overflow:visible}
-  .marca,.clube-cartao{display:none}
+  .marca,.clube-cartao,.demissao-lateral{display:none}
+  .nav-resto .demissao-celular{display:flex}
   .nav{flex:1;flex-direction:row;justify-content:space-around;position:relative}
   .nav>.nav-item{flex:1;flex-direction:column;justify-content:center;gap:2px;padding:6px 2px;font-size:11px;min-width:0;text-align:center}
   .nav-mais{display:flex}
