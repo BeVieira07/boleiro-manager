@@ -79,8 +79,6 @@ liga_estado     (liga_id, versao, estado jsonb)                                 
 liga_membros    (liga_id, user_id, club_id, entrou_em)
 liga_entradas   (liga_id, user_id, rodada, escalacao jsonb, formacao, estilo, modo, pronto bool)
 liga_resultados (liga_id, temporada, rodada, semente, jogos jsonb)                 -- para o replay
-liga_propostas  (id, liga_id, de_user, para_user, player_id, tipo, valor, condicoes jsonb, status)
-liga_noticias   (liga_id, user_id null, rodada, texto)                             -- opcional
 ```
 
 - O estado da liga fica num **JSONB único** (`liga_estado.estado`, ~600 KB). É simples e aproveita o motor como está. Para grupos de amigos é suficiente. Tabelas normalizadas de jogadores só se um dia houver ligas grandes.
@@ -91,7 +89,6 @@ liga_noticias   (liga_id, user_id null, rodada, texto)                          
 - `saves`: cada usuário lê e grava só as suas linhas.
 - `liga_estado`, `liga_resultados`, `liga_membros`: leitura só para membros da liga; **escrita só pelo servidor** (chave de serviço, nas Edge Functions).
 - `liga_entradas`: cada membro grava só a própria linha (`user_id = auth.uid()`) e só da rodada atual.
-- `liga_propostas`: criadas e respondidas via função do servidor.
 
 ### 3.4 Fluxo da rodada (liga)
 
@@ -118,7 +115,7 @@ liga_noticias   (liga_id, user_id null, rodada, texto)                          
 
 **Como ficou (#35):** com a IA, cada ação vai para `jogar-rodada` com `acao: 'mercado'` (uma função só, em vez de `acao-mercado`), que roda `acaoMercadoLiga` e grava por `liga_gravar_acao` com controle de `versao`. Negócio fechado vira notícia para todos (`addNews` de cada técnico). Os outros navegadores recebem a mudança de `versao` pelo tempo real e baixam o estado de novo, mantendo a escalação ainda não confirmada. Com clube de outro técnico não há negócio ainda. A tela **Liga** (só dentro da liga) mostra técnicos, clubes, posição e quem confirmou.
 
-**Entre técnicos (#36):** as propostas (compra, venda, empréstimo com taxa, duração, quem paga o salário e opção de compra) ficam no estado da liga (`S.propostas`, regras em `core/propostas.mjs`) e passam pelo mesmo caminho do mercado: o servidor confere e grava com controle de versão, e o tempo real avisa o outro técnico. Ele aceita, recusa ou faz contraproposta na tela Liga; ao aceitar, tudo é conferido de novo (caixa, elenco, jogador ainda no clube). A tabela `liga_propostas` ficou sem uso.
+**Entre técnicos (#36):** as propostas (compra, venda, empréstimo com taxa, duração, quem paga o salário e opção de compra) ficam no estado da liga (`S.propostas`, regras em `core/propostas.mjs`) e passam pelo mesmo caminho do mercado: o servidor confere e grava com controle de versão, e o tempo real avisa o outro técnico. Ele aceita, recusa ou faz contraproposta na tela Liga; ao aceitar, tudo é conferido de novo (caixa, elenco, jogador ainda no clube).
 
 ### 3.6 Solo com conta e save na nuvem
 
