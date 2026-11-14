@@ -55,7 +55,7 @@ function servidorFalso(clubes) {
     const r = jogarRodadaLiga(copia(srv.estado), Object.fromEntries(ents.map(e => [e.user_id, e])));
     srv.estado = copia(est.S);
     srv.resultados.push({ temporada: r.temporada, rodada: r.rodada, jogos: copia(r.jogos) });
-    srv.entradas.forEach(e => { e.pronto = false });
+    srv.entradas.forEach(e => { e.pronto = false }); srv.membros.forEach(m => { m.pronto_rodada = null });
     L.rodada++; L.versao++;
     srv.emitir('ligas', L);
     return { ok: true, jogada: true };
@@ -81,13 +81,16 @@ function servidorFalso(clubes) {
         profiles: { nome: srv.membros.find(m => m.user_id === uid)?.nome },
         ligas: srv.liga,
         liga_estado: srv.estado && { estado: srv.estado },
-        liga_entradas: srv.entradas,
+        liga_entradas: srv.entradas.filter(e => e.user_id === uid), // #78: cada um lê só a sua
+        liga_membros: srv.membros,
         liga_resultados: srv.resultados.at(-1) ?? null
       })[tabela], tabela === 'ligas' ? l => srv.membros.some(m => m.user_id === uid) ? [{ ...l, liga_membros: srv.membros }] : [] : null),
       upsert: async linha => {
         if (linha.rodada !== srv.liga.rodada) return { error: { message: 'RLS' } }; // a regra do banco recusa rodada velha
         srv.entradas = srv.entradas.filter(e => e.user_id !== linha.user_id).concat(copia(linha));
-        srv.emitir('liga_entradas', linha);
+        // #78: como o gatilho marcar_pronto, quem confirmou vai para liga_membros, e é ela que o tempo real manda
+        const m = srv.membros.find(x => x.user_id === linha.user_id); m.pronto_rodada = linha.pronto ? linha.rodada : null;
+        srv.emitir('liga_membros', m);
         return { error: null };
       }
     }),
@@ -135,7 +138,7 @@ test('dono começa a liga, confirmações chegam em tempo real e a rodada é jog
 
   // a Bia confirma no computador dela: chega pelo tempo real
   srv.entradas.push({ liga_id: 'L1', user_id: 'b', rodada: 0, pronto: true });
-  srv.emitir('liga_entradas', srv.entradas[0]);
+  srv.membros[1].pronto_rodada = 0; srv.emitir('liga_membros', srv.membros[1]);
   assert.match(j.html(), /title="confirmou"/);
   assert.deepEqual(j.run('ui.liga.prontos'), ['b']);
 

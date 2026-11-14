@@ -56,7 +56,7 @@ async function carregar(id) {
   const [l, e, en] = await Promise.all([
     c.from('ligas').select('id, nome, dono_id, status, rodada, versao').eq('id', id).maybeSingle(),
     c.from('liga_estado').select('estado').eq('liga_id', id).maybeSingle(),
-    c.from('liga_entradas').select('user_id, pronto, rodada').eq('liga_id', id)
+    c.from('liga_membros').select('user_id, pronto_rodada').eq('liga_id', id) // #78: a escalação dos outros não é lida, só quem confirmou
   ]);
   if (l.error || e.error || !l.data || !e.data) { avisar('Não foi possível abrir a liga.', 'erro'); return false }
   // a escalação e a tática ainda não confirmadas só existem aqui: o estado novo não pode apagá-las
@@ -77,7 +77,7 @@ async function carregar(id) {
   }
   if (antes != null && paraMim() > antes) avisar('Você recebeu uma proposta de outro técnico. Veja na tela Liga.', 'info'); // #36
   ui.liga = { ...(ui.liga && ui.liga.id === id ? ui.liga : {}), id, nome: l.data.nome, dono: l.data.dono_id === eu, rodada: l.data.rodada, versao: l.data.versao,
-    prontos: (en.data || []).filter(x => x.pronto && x.rodada === l.data.rodada).map(x => x.user_id) };
+    prontos: (en.data || []).filter(x => x.pronto_rodada === l.data.rodada).map(x => x.user_id) };
   return true;
 }
 
@@ -93,10 +93,10 @@ function assinar(id) {
   const c = clienteLogado(); if (!c || !c.channel) return;
   if (canal) c.removeChannel(canal);
   canal = c.channel('liga-' + id)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'liga_entradas', filter: `liga_id=eq.${id}` }, p => {
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'liga_membros', filter: `liga_id=eq.${id}` }, p => {
       const n = p.new || {}; if (!ui.liga || !n.user_id) return;
       const s = new Set(ui.liga.prontos);
-      if (n.pronto && n.rodada === ui.liga.rodada) s.add(n.user_id); else s.delete(n.user_id);
+      if (n.pronto_rodada === ui.liga.rodada) s.add(n.user_id); else s.delete(n.user_id);
       ui.liga.prontos = [...s]; render();
     })
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'ligas', filter: `id=eq.${id}` }, p => {
