@@ -21,6 +21,7 @@ A função importa o `core/` do GitHub pelo jsDelivr, **fixado num commit**. Mud
 2. Publicar: MCP do Supabase `deploy_edge_function` (`name: jogar-rodada`, `verify_jwt: true`, o conteúdo do `index.ts`) ou `npx supabase functions deploy jogar-rodada --project-ref nfctxdzapspnxwttrwym`.
 3. Conferir que sobe: um POST sem login deve responder **401 "Entre na sua conta."** (500 = os imports falharam).
 4. Commit da fixação na `main`: `chore: função jogar-rodada fixada no core … (#N)`.
+- `npm test` avisa (#122): `tests/fixar-core.test.mjs` falha enquanto `core/` for diferente do commit fixado, e diz o que mudou. Enquanto se mexe em `core/` numa branch, essa falha é esperada; ela some com o commit da fixação.
 - Mudou só `ui/`: não precisa republicar.
 - Ação nova do mercado: entra no mapa `MERCADO` de `core/liga.mjs`; a função não muda.
 
