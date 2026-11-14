@@ -15,19 +15,20 @@ import { render } from './telas.mjs';
 // [tela, rótulo, ícone]; os 4 primeiros ficam visíveis na barra do celular
 export const NAV = [
   ['clube', 'Clube', 'clube'], ['elenco', 'Elenco', 'elenco'], ['escalacao', 'Escalação', 'escalacao'], ['jogos', 'Jogos', 'jogos'],
-  ['tabela', 'Classificação', 'tabela'], ['copa', 'Copa do Brasil', 'trofeu'], ['artilharia', 'Artilharia', 'artilharia'], ['mercado', 'Mercado', 'mercado'],
+  ['tabela', 'Classificação', 'tabela'], ['competicoes', 'Competições', 'trofeu'], ['artilharia', 'Artilharia', 'artilharia'], ['mercado', 'Mercado', 'mercado'],
   ['financas', 'Finanças', 'financas'], ['dados', 'Dados', 'dados'], ['config', 'Configurações', 'engrenagem']
 ];
 const PRINCIPAIS = 4;
-export const TITULOS = { liga: 'Liga', clube: 'Painel do clube', elenco: 'Elenco', escalacao: 'Escalação', jogos: 'Jogos', tabela: 'Classificação', copa: 'Copa do Brasil', artilharia: 'Artilharia', mercado: 'Mercado', financas: 'Finanças', dados: 'Dados do jogo', config: 'Configurações', carreira: 'Propostas de clubes', rodada: 'Resultados da rodada' };
+export const TITULOS = { liga: 'Liga', clube: 'Painel do clube', elenco: 'Elenco', escalacao: 'Escalação', jogos: 'Jogos', tabela: 'Classificação', competicoes: 'Competições', copa: 'Copa do Brasil', artilharia: 'Artilharia', mercado: 'Mercado', financas: 'Finanças', dados: 'Dados do jogo', config: 'Configurações', carreira: 'Propostas de clubes', rodada: 'Resultados da rodada' };
 
-const item = ([k, l, ic]) => `<button type="button" class="nav-item" data-acao="go|${k}"${ui.view === k ? ' aria-current="page"' : ''}>${icone(ic)}<span>${l}</span></button>`;
+const ativa = k => ui.view === k || (k === 'competicoes' && ui.view === 'copa'); // a copa é uma tela de dentro de Competições
+const item = ([k, l, ic]) => `<button type="button" class="nav-item" data-acao="go|${k}"${ativa(k) ? ' aria-current="page"' : ''}>${icone(ic)}<span>${l}</span></button>`;
 
 /** Menu lateral (no celular, vira a barra inferior). Vazio fora de um jogo. */
 export function lateral() {
   if (!S) return '';
   const nav = ui.liga ? [['liga', 'Liga', 'liga'], ...NAV] : NAV; // #35: tela da liga só para quem está jogando uma
-  const uc = userClub(), mais = nav.slice(PRINCIPAIS), maisAtivo = mais.some(([k]) => k === ui.view);
+  const uc = userClub(), mais = nav.slice(PRINCIPAIS), maisAtivo = mais.some(([k]) => ativa(k));
   // #37: pedir demissão do clube assumido; no computador fica abaixo do cartão do clube, no celular dentro de "Mais"
   const demissao = cls => tec().demitido ? '' : `<button type="button" class="nav-item nav-perigo ${cls}" data-acao="pedirDemissaoUI">${icone('sair')}<span>Pedir demissão</span></button>`;
   return `<div class="marca"><img src="img/logo/simbolo.svg" alt="" width="34" height="34"><div><span class="marca-nome">BOLEIRO</span><span class="marca-sub">MANAGER</span></div></div>

@@ -32,5 +32,28 @@ export function vCopa() {
     return `<section class="fase-copa"><div class="card-topo"><h3>${nomeFase(f)}</h3><span class="muted">Ida na rodada ${ida}, volta na rodada ${volta} · ${n === 1 ? 'título' : 'quem passa'}: ${money(PREMIO_COPA[n] ?? 0.3)}</span></div>
       <ul class="jogos">${[...f.jogos].sort((a, b) => (b.h === me || b.a === me) - (a.h === me || a.a === me)).map(j => confronto(j, me)).join('')}</ul></section>`;
   }).reverse().join('');
-  return `<p class="muted resumo">Mata-mata em ida e volta, jogado junto com rodadas da liga, com a escalação e a tática da rodada. Empate na soma dos dois jogos vai para os pênaltis. ${situacao}</p>${fases}`;
+  return `<p><button class="btn fantasma sm" data-acao="go|competicoes">← Competições</button></p><p class="muted resumo">Mata-mata em ida e volta, jogado junto com rodadas da liga, com a escalação e a tática da rodada. Empate na soma dos dois jogos vai para os pênaltis. ${situacao}</p>${fases}`;
 }
+
+// próximo jogo do clube na copa: {volta, adv, rodada} ou null (a rodada é a de calendário da liga, de 1 em diante)
+function proximoJogo(me) {
+  const j = confrontoDe(me), copa = S.copa; if (!j || j.v || copa.campeao) return null;
+  const i = copa.fases.length - 1, volta = !!j.ida;
+  return { volta, adv: clubById(j.h === me ? j.a : j.h), rodada: copa.datas[2 * i + (volta ? 1 : 0)] + 1 };
+}
+/** Cartão da Copa do Brasil na aba Competições (#102). */
+export const cartaoCopa = {
+  id: 'copa', nome: COPA, tela: 'copa',
+  cartao() {
+    const copa = S.copa, me = tec().clubId;
+    if (!copa) return { fase: 'Sem copa', situacao: 'Não há copa nesta temporada. Ela começa na próxima.' };
+    const nome = nomeFase(copa.fases[copa.fases.length - 1]), meu = confrontoDe(me), vivo = meu && (!meu.v || meu.v === me);
+    const nela = copa.fases[0].jogos.some(j => j.h === me || j.a === me);
+    const situacao = copa.campeao === me ? 'Seu clube é o <b>campeão</b>!'
+      : copa.campeao ? `Campeão: <b>${esc(clubById(copa.campeao).name)}</b>. ${nela ? 'Seu clube foi eliminado.' : 'Seu clube não se classificou.'}`
+      : !nela ? 'Seu clube não se classificou para a copa.' : vivo ? `Seu clube está na ${nome.toLowerCase()}.` : 'Seu clube foi eliminado.';
+    const p = copa.campeao ? null : proximoJogo(me);
+    return { fase: copa.campeao ? 'Encerrada' : nome, situacao,
+      proximo: p ? `Próximo jogo: ${p.volta ? 'volta' : 'ida'} contra ${esc(p.adv.name)}, na rodada ${p.rodada}.` : '' };
+  }
+};
