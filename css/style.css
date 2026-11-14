@@ -383,6 +383,8 @@ body.em-jogo .avisos{bottom:24px}
 .continuar-progresso .barra{background:var(--bg)}
 .continuar-btn{min-height:60px;padding:0 32px;font-size:18px;border-radius:14px}
 .secao-cabeca{display:flex;align-items:baseline;justify-content:space-between;gap:var(--e3);flex-wrap:wrap}
+.competicao{margin:0;display:flex;flex-direction:column;gap:var(--e2)}
+.competicao-acoes{margin-top:auto}
 .cartoes-acao{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
 .cartao-acao{background:var(--painel);border:1px solid var(--linha);border-radius:var(--r-lg);padding:var(--e5);display:flex;flex-direction:column;align-items:flex-start;gap:var(--e3);color:var(--texto);font:inherit;text-align:left;cursor:pointer}
 .cartao-acao:hover{border-color:var(--verde)}

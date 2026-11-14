@@ -151,7 +151,7 @@ test('telas: chaveamento por fase com o meu confronto em destaque, e o aviso na 
   assert.match(j.html(), /Nesta rodada também tem primeira fase \(ida\)/);
   j.acao(`verRodadaJogos|${datas[0] + 1}`);
   assert.doesNotMatch(j.html(), /Nesta rodada também tem/);
-  assert.match(j.run('lateral()'), /data-acao="go\|copa"/);
+  assert.match(j.run("lateral()"), /data-acao="go\|competicoes"/); // a copa agora é aberta por Competições (#102)
   assert.deepEqual(problemasNasTelas(j), []);
 });
 
