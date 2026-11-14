@@ -7,7 +7,7 @@ import { DIVS, MOVE_N, S, clubById, divOf, divisions, divsOf, hasTwoDivs, table,
 import { clamp, esc, money } from '../core/utils.mjs';
 import { vClube } from './clube.mjs';
 import { vCompeticoes } from './competicoes.mjs';
-import { avisoCopa, vCopa } from './copa.mjs';
+import { jogosCopa, vCopa } from './copa.mjs';
 import { chip, stat, tag } from './componentes.mjs';
 import { vElenco } from './elenco.mjs';
 import { vEscalacao } from './escalacao.mjs';
@@ -90,12 +90,12 @@ export function vJogos(){
     <b>Rodada ${r+1} <span class="muted">de ${n}</span></b>${r<S.round?tag('encerrada','ok'):r===S.round?tag('próxima','aviso'):''}
     <button class="btn sec icone-so" data-acao="verRodadaJogos|${Math.min(n-1,r+1)}" aria-label="Próxima rodada"${r>=n-1?' disabled':''}>${icone('seguir')}</button>
     ${r!==atual?`<button class="btn fantasma sm" data-acao="verRodadaJogos|${atual}">Ir para a rodada atual</button>`:''}</nav>
-  ${avisoCopa(r)}${listaJogos(S.fixtures[r].filter(g=>inDiv(g,d)),tec().clubId)}`;
+  ${listaJogos(S.fixtures[r].filter(g=>inDiv(g,d)),tec().clubId)}${jogosCopa(r)}`;
 }
 export function vRodada(){
   if(!ui.lastRound)return vClube();
   const me=tec().clubId,d=curDiv();
-  return `<p class="muted">Rodada ${ui.lastRound.round} encerrada.</p>${avisoCopa(ui.lastRound.round-1)}${divTabs()}${listaJogos(ui.lastRound.games.filter(g=>inDiv(g,d)),me)}
+  return `<p class="muted">Rodada ${ui.lastRound.round} encerrada.</p>${divTabs()}${listaJogos(ui.lastRound.games.filter(g=>inDiv(g,d)),me)}${jogosCopa(ui.lastRound.round-1)}
   <div class="row" style="margin-top:var(--e4)">${S.round<S.fixtures.length?botaoRodada('btn big',`${icone('play',{tam:16})}Jogar rodada ${S.round+1}`):''}<button class="btn sec" data-acao="go|tabela">Ver classificação</button><button class="btn sec" data-acao="go|clube">Painel do clube</button></div>`;
 }
 

@@ -37,7 +37,7 @@ test('Jogos em cartões com o seu jogo em destaque e navegação entre rodadas',
   jogarRodada(j, 2);
   j.run(`go('jogos')`);
   assert.match(j.html(), /Rodada 3 <span class="muted">de 38/);
-  assert.equal((j.html().match(/class="jogo meu"/g) || []).length, 1);
+  assert.equal((j.html().split("Copa do Brasil · ")[0].match(/class="jogo meu"/g) || []).length, 1); // a copa, quando joga na rodada, vem depois (#130)
   assert.match(j.html(), /<li class="jogo meu">/, 'o seu jogo vem primeiro');
   j.acao('verRodadaJogos|0');
   assert.match(j.html(), /Rodada 1 <span/);
