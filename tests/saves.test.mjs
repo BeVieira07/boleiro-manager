@@ -119,3 +119,25 @@ test('versão do save: jogo novo nasce na versão atual; save de versão mais no
   j.run(`migrarSave(${JSON.stringify(s)})`);
   assert.equal(j.run('S.versao'), versaoAtual);
 });
+
+test('tela inicial da maquete: continuar, começar algo novo e jogos salvos; sem save não há destaque (#104)', () => {
+  const vazio = carregarJogo({ boot: true });
+  assert.doesNotMatch(vazio.html(), /class="continuar"/, 'sem save, sem o destaque Continuar');
+  assert.match(vazio.html(), /<h1 class="sr">Boleiro Manager<\/h1>/, 'a página continua com um título');
+  assert.match(vazio.html(), /data-acao="novoJogo"[^>]*>[\s\S]*Novo jogo sozinho/);
+  assert.match(vazio.html(), /Nenhum jogo salvo ainda/);
+  assert.match(vazio.html(), /data-mudar="loadSaveFile"/);
+  assert.match(vazio.html(), /data-acao="go\|dados"/);
+
+  const j = carregarJogo({ boot: true });
+  j.run(`newGame('${clubeDaSerie(j)}')`);
+  const clube = j.run('userClub().name'), id = j.run('S.saveId');
+  j.run('voltarMenu()');
+  assert.match(j.html(), new RegExp(`<h1 id="hContinuar">${clube} te espera</h1>`));
+  assert.match(j.html(), new RegExp(`data-acao="abrirMaisNovo\|${id}"[^>]*>[\s\S]*?Continuar`));
+  assert.match(j.html(), /Campeonato: 0 de 38 rodadas jogadas/);
+  assert.match(j.html(), /Rodada 1 de 38/);
+  assert.match(j.html(), /<li class="save-linha">/);
+  assert.match(j.html(), new RegExp(`aria-label="Excluir o jogo salvo do ${clube}"`));
+  assert.deepEqual(problemasNasTelas(j, ['menu']), []);
+});
