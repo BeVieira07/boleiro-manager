@@ -62,7 +62,7 @@ export async function abrirLobby(id) {
     c.from('ligas').select('id, nome, codigo_convite, status, series, dono_id').eq('id', id).maybeSingle(),
     c.from('liga_membros').select('user_id, club_id, entrou_em').eq('liga_id', id).order('entrou_em')
   ]);
-  if (l.error || m.error || !l.data) { avisar('Não foi possível abrir a liga.','erro','erro'); return }
+  if (l.error || m.error || !l.data) { avisar('Não foi possível abrir a liga.', 'erro'); return }
   const ids = m.data.map(x => x.user_id);
   const p = await c.from('profiles').select('id, nome').in('id', ids);
   const nomes = Object.fromEntries((p.data || []).map(x => [x.id, x.nome]));
