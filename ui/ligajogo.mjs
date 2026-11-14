@@ -55,7 +55,7 @@ async function carregar(id) {
   const c = clienteLogado(), eu = usuarioAtual() && usuarioAtual().id;
   const [l, e, en] = await Promise.all([
     c.from('ligas').select('id, nome, dono_id, status, rodada, versao').eq('id', id).maybeSingle(),
-    c.from('liga_estado').select('estado').eq('liga_id', id).maybeSingle(),
+    c.rpc('liga_estado_meu', { p_liga: id }), // #121: o estado sem o que é privado dos outros técnicos
     c.from('liga_membros').select('user_id, pronto_rodada').eq('liga_id', id) // #78: a escalação dos outros não é lida, só quem confirmou
   ]);
   if (l.error || e.error || !l.data || !e.data) { avisar('Não foi possível abrir a liga.', 'erro'); return false }
@@ -63,7 +63,7 @@ async function carregar(id) {
   const uc0 = ui.liga && ui.liga.id === id && S && S.managers[eu] && clubDo(S.managers[eu]);
   const meu = uc0 && { lineup: uc0.lineup || [], formation: uc0.formation, tatica: uc0.tatica };
   const paraMim = () => (S.propostas || []).filter(x => x.para === eu).length, antes = uc0 ? paraMim() : null;
-  usarEstado(e.data.estado); reindex();
+  usarEstado(e.data); reindex();
   if (!S.managers[eu]) { // #37: saiu ou foi removido da liga
     const saindo = ui.liga && ui.liga.saindo; sairDaLiga(); usarEstado(null);
     if (!saindo) { avisar('Você não faz mais parte desta liga.', 'aviso'); go('ligas') }
