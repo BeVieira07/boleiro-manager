@@ -411,3 +411,8 @@ body.em-jogo .avisos{bottom:24px}
 .config-campo p{margin:0}
 .config-grupo{border:0;margin:0;padding:0;display:flex;flex-direction:column}
 .opcao{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer}
+
+/* ---------- propostas de clubes (#37) ---------- */
+.propostas-clube{list-style:none;margin:var(--e4) 0 0;padding:0;display:flex;flex-direction:column;gap:var(--e3)}
+.proposta-clube{display:flex;align-items:center;gap:var(--e4);flex-wrap:wrap;background:var(--painel2);border:1px solid var(--linha);border-radius:var(--r);padding:var(--e3) var(--e4)}
+.proposta-clube .btn{min-height:44px}

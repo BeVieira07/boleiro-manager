@@ -1,15 +1,36 @@
-import { faixaConf } from '../core/diretoria.mjs';
-import { S, tec, usarEstado, userClub } from '../core/estado.mjs';
+/* ================= carreira na tela (#37): propostas de clubes depois de sair do clube ================= */
+import { detalheProposta, escolherClube, pedirDemissao } from '../core/carreira.mjs';
+import { DIVS, clubDo, divOf, tec } from '../core/estado.mjs';
 import { esc } from '../core/utils.mjs';
-import { icone } from './icones.mjs';
-import { exportSave } from './api.mjs';
-import { save } from './estado.mjs';
-import { closeModal, openModal } from './partida.mjs';
-import { apagarSave, novoJogo } from './saves.mjs';
+import { avisar, confirmar } from './avisos.mjs';
+import { save, ui } from './estado.mjs';
+import { mercadoLiga } from './ligajogo.mjs';
+import { crest } from './partida.mjs';
+import { go } from './telas.mjs';
 
-export function demissao(){
-  openModal(`<h2>${icone('fogo',{tam:24})} Você foi demitido</h2><p>A diretoria do ${esc(userClub().name)} perdeu a confiança (${tec().conf}/100) e encerrou seu contrato.</p>
-   <div class="dialogo-acoes"><button class="btn sec" data-acao="exportSave">Exportar save</button><button class="btn" data-acao="recomecarAposDemissao" data-principal>Escolher outro clube</button></div>`,{fechavel:false});
+/** O técnico saiu do clube (demitido ou a pedido): vai para as propostas. */
+export function demissao() { go('carreira') }
+
+export function vCarreira() {
+  const t = tec(), antigo = esc(clubDo(t).name);
+  if (!t.demitido) return `<section class="card"><p>Você é o técnico do ${antigo}.</p></section>`;
+  const ids = t.propostasClube || [], n = ids.length;
+  const linha = id => { const { c, pos, meta } = detalheProposta(id);
+    return `<li class="proposta-clube">${crest(c, 'm')}<div class="cresce"><b>${esc(c.name)}</b> <span class="muted">· ${DIVS[divOf(c)]} · ${pos}º lugar</span><br><span class="texto2">Meta da diretoria: ${esc(meta.texto)}</span></div>
+      <button class="btn" data-acao="escolherClubeNovo|${esc(id)}" aria-label="Assumir o ${esc(c.name)}">Assumir</button></li>` };
+  return `<section class="card"><h2>${t.saida === 'pediu' ? `Você deixou o ${antigo}` : `Você foi demitido do ${antigo}`}</h2>
+    <p class="muted">${n === 1 ? 'Um clube quer você.' : `${n} clubes querem você.`} Escolha onde continuar a carreira.${ui.liga ? ' Se não escolher até a próxima rodada, você assume a primeira proposta.' : ''}</p>
+    <ul class="propostas-clube">${ids.map(linha).join('')}</ul></section>`;
 }
-
-export function recomecarAposDemissao(){closeModal();apagarSave(S.saveId);usarEstado(null);novoJogo()}
+export async function escolherClubeNovo(id) {
+  if (ui.liga) { await mercadoLiga({ tipo: 'escolherClube', clubeId: id }); if (!tec().demitido) go('clube'); return }
+  const r = escolherClube(id); if (r.erro) { avisar(r.erro, 'erro'); return }
+  save(); go('clube'); avisar(r.msg, 'ok');
+}
+export function pedirDemissaoUI() {
+  confirmar({ titulo: 'Pedir demissão?', texto: `Você deixa o ${clubDo(tec()).name} e escolhe entre os clubes interessados. Não dá para voltar atrás.`, ok: 'Pedir demissão', perigo: true }, async () => {
+    if (ui.liga) { await mercadoLiga({ tipo: 'pedirDemissao' }); if (tec().demitido) go('carreira'); return }
+    const r = pedirDemissao(); if (r.erro) { avisar(r.erro, 'erro'); return }
+    save(); go('carreira');
+  });
+}

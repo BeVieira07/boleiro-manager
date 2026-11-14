@@ -4,6 +4,7 @@
    Atenção: usa o estado global do core (S). Quem chama precisa fazer usarEstado -> regra -> JSON.stringify(S)
    num bloco síncrono, sem await no meio (várias requisições podem dividir o mesmo processo). */
 import { promoverDaBase, venderDaBase } from './base.mjs';
+import { escolherClube, gerarPropostas, pedirDemissao } from './carreira.mjs';
 import { renovarContrato } from './contratos.mjs';
 import { exercerOpcaoCompra, proporEmprestimo } from './emprestimos.mjs';
 import { unavailable } from './escalacao.mjs';
@@ -53,12 +54,18 @@ export function aplicarEntrada(uc, e) {
  *  Depois da última rodada, fecha a temporada e começa a próxima na mesma chamada. */
 export function jogarRodadaLiga(estado, entradas) {
   const m = migrarSave(estado); if (m.erro) throw new Error(m.erro); // liga criada antes de uma mudança no save ganha os campos novos
+  // #37: quem saiu do clube e não escolheu até agora assume a melhor proposta (a liga não espera)
+  const trocas = [];
+  for (const t of tecnicos()) if (t.demitido) {
+    const assume = id => escolherClube(id, t).ok;
+    // sem proposta que ainda sirva (outro técnico assumiu o clube): propostas novas
+    if (!(t.propostasClube || []).some(assume)) { t.propostasClube = gerarPropostas(t); t.propostasClube.some(assume) }
+    if (!t.demitido) trocas.push({ user_id: t.id, club_id: t.clubId });
+  }
   for (const t of tecnicos()) {
     const uc = clubDo(t), e = entradas[t.id];
     if (e && e.pronto) aplicarEntrada(uc, e);
     if (validateLineup(uc)) uc.lineup = autoXI(uc);
-    // shortcut: na liga ninguém é demitido por enquanto (zera a sequência de confiança baixa); a demissão na liga é a #37
-    t.demitido = false; t.confBaixa = 0;
     t.pronto = true;
   }
   S.atual = tecnicos()[0].id;
@@ -71,7 +78,7 @@ export function jogarRodadaLiga(estado, entradas) {
     virada = { temporada, campeoes: f ? f.champs.map(x => ({ serie: x.d, clube: x.c.name })) : [] };
     iniciarTemporada();
   }
-  return { jogos: r.jogos, temporada, rodada, semente, virada };
+  return { jogos: r.jogos, temporada, rodada, semente, virada, trocas };
 }
 
 /* ---------- mercado da liga (#35): o servidor sorteia a resposta da IA, então recarregar a página não muda nada ---------- */
@@ -105,8 +112,12 @@ const MERCADO = {
   aceitarProposta: a => aceitarProposta(a.id),
   recusarProposta: a => recusarProposta(a.id),
   cancelarProposta: a => cancelarProposta(a.id),
-  contraproposta: a => contraproposta(a.id, a)
+  contraproposta: a => contraproposta(a.id, a),
+  // carreira (#37)
+  pedirDemissao: () => pedirDemissao(),
+  escolherClube: a => escolherClube(String(a.clubeId))
 };
+const SO_SEM_CLUBE = new Set(['escolherClube']), SEM_REPASSE = new Set(['escolherClube', 'pedirDemissao']); // já viram notícia para todos
 /** Ação de mercado de um técnico (a: {tipo, ...}, vinda do navegador: tudo é conferido). Devolve {erro} (nada muda) ou {ok, msg}
  *  (o estado em S mudou e deve ser gravado; ok=false é proposta recusada). Negócio fechado vira notícia para todos da liga. */
 export function acaoMercadoLiga(estado, eu, a) {
@@ -115,8 +126,9 @@ export function acaoMercadoLiga(estado, eu, a) {
   if (!a || !Object.hasOwn(MERCADO, a.tipo)) return { erro: 'Ação de mercado desconhecida.' }; // hasOwn: "constructor" não vale
   const f = MERCADO[a.tipo];
   const t = tec(), uc = userClub(), antes = t.news[0];
+  if (t.demitido && !SO_SEM_CLUBE.has(a.tipo)) return { erro: 'Você está sem clube: escolha uma das propostas primeiro.' };
   const r = f(a, uc);
-  if (r.ok) {
+  if (r.ok && !SEM_REPASSE.has(a.tipo)) {
     const novas = []; for (const n of t.news) { if (n === antes) break; novas.push(n) }
     for (const n of novas.reverse()) for (const o of tecnicos()) if (o !== t) { o.news.unshift({ r: n.r, t: `${uc.name}: ${n.t}` }); o.news = o.news.slice(0, 40) }
   }

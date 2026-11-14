@@ -13,7 +13,7 @@ import { verAoVivo } from './configuracoes.mjs';
 export function playRound(aoVivo=true){
   if(bloqueadoNaLiga())return; // na liga, quem joga a rodada é o servidor (#34)
   const r=jogarRodada();
-  if(r.demitido){demissao();return}
+  if(r.demitido){if(r.tecnico)usarTecnico(r.tecnico);demissao();return} // #37: escolher o novo clube antes da rodada
   if(r.fim)return;
   if(r.erro){if(r.tecnico)usarTecnico(r.tecnico);avisar(r.erro,'erro');ui.view=r.faltam?'clube':'escalacao';render();return}
   const games=r.jogos,mine=r.meu;

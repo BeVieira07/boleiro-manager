@@ -58,10 +58,12 @@ Deno.serve(async (req) => {
         if (l.status !== 'andamento') return erro('A liga ainda não começou.', 409);
         if (l.rodada !== liga.rodada) return resposta({ ok: true, jogada: false, jaJogada: true });
         const { data: entradas } = await admin.from('liga_entradas').select('*').eq('liga_id', ligaId).eq('rodada', l.rodada);
-        const prontos = new Set((entradas || []).filter((e) => e.pronto).map((e) => e.user_id));
-        const faltam = membros.filter((m) => !prontos.has(m.user_id)).length;
-        if (faltam && !forcar) return resposta({ ok: true, jogada: false, faltam });
         const { data: est } = await admin.from('liga_estado').select('estado, versao').eq('liga_id', ligaId).single();
+        const prontos = new Set((entradas || []).filter((e) => e.pronto).map((e) => e.user_id));
+        // #37: quem está sem clube (escolhendo uma proposta) não é esperado
+        const semClube = new Set(Object.values(est.estado.managers || {}).filter((t: any) => t.demitido).map((t: any) => t.id));
+        const faltam = membros.filter((m) => !prontos.has(m.user_id) && !semClube.has(m.user_id)).length;
+        if (faltam && !forcar) return resposta({ ok: true, jogada: false, faltam });
         // bloco síncrono: joga e copia o resultado para texto antes do próximo await
         const r = jogarRodadaLiga(est.estado, Object.fromEntries((entradas || []).map((e) => [e.user_id, e])));
         const novo = JSON.stringify(S), jogos = JSON.stringify(r.jogos);
@@ -70,7 +72,11 @@ Deno.serve(async (req) => {
           p_temporada: r.temporada, p_rodada_temporada: r.rodada, p_semente: r.semente, p_jogos: JSON.parse(jogos)
         });
         if (error) throw error;
-        if (ok) return resposta({ ok: true, jogada: true, virada: r.virada });
+        if (ok) {
+          // #37: quem não escolheu clube assumiu a melhor proposta; a lista de ligas mostra o clube novo
+          for (const tr of r.trocas || []) await admin.from('liga_membros').update({ club_id: tr.club_id }).eq('liga_id', ligaId).eq('user_id', tr.user_id);
+          return resposta({ ok: true, jogada: true, virada: r.virada });
+        }
       }
       return erro('A liga mudou ao mesmo tempo. Tente de novo.', 409);
     }
@@ -85,7 +91,10 @@ Deno.serve(async (req) => {
         const novo = JSON.stringify(S);
         const { data: ok, error } = await admin.rpc('liga_gravar_acao', { p_liga: ligaId, p_versao: est.versao, p_estado: JSON.parse(novo) });
         if (error) throw error;
-        if (ok) return resposta({ ok: true, aceita: r.ok, msg: r.msg || null });
+        if (ok) {
+          if (r.clube) await admin.from('liga_membros').update({ club_id: r.clube }).eq('liga_id', ligaId).eq('user_id', eu); // #37: assumiu outro clube
+          return resposta({ ok: true, aceita: r.ok, msg: r.msg || null });
+        }
       }
       return erro('A liga mudou ao mesmo tempo. Tente de novo.', 409);
     }

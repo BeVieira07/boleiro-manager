@@ -1,3 +1,4 @@
+import { registrarTemporada, sairDoClube } from './carreira.mjs';
 import { wageBill } from './emprestimos.mjs';
 import { DIVS, MOVE_N, S, addNews, bilheteriaBase, clubById, clubDo, divOf, divisions, hasTwoDivs, seasonPrize, table, tec, tvQuota, userClub } from './estado.mjs';
 import { clamp } from './utils.mjs';
@@ -28,13 +29,15 @@ export function fatoresFinanceiros(uc,meta){
   }
   return fat;
 }
-export function definirMeta(t=tec()){
-  const uc=clubDo(t),d=divOf(uc),ds=divisions(),di=ds.indexOf(d),n=S.clubs.filter(c=>divOf(c)===d).length;
+/** Meta que a diretoria de um clube cobra, pela força dele na série: {texto, alvo}. */
+export function metaDe(uc){
+  const d=divOf(uc),ds=divisions(),di=ds.indexOf(d),n=S.clubs.filter(c=>divOf(c)===d).length;
   const esp=1+S.clubs.filter(c=>divOf(c)===d&&c.strength>uc.strength).length; // posição esperada pela força
   const mv=hasTwoDivs()?MOVE_N():4,top=di===0?6:mv,bottom=!hasTwoDivs()?4:di===ds.length-1?0:mv;
   const texto=esp<=2?'Lutar pelo título':esp<=top?(di===0?'Vaga na Libertadores':`Acesso à ${DIVS[ds[di-1]]}`):bottom&&esp>n-bottom?'Evitar o rebaixamento':'Terminar no meio da tabela';
-  t.meta={texto,alvo:esp<=2?3:esp<=top?top:bottom&&esp>n-bottom?n-bottom:Math.min(n,esp+1)}; // alvo: pior posição aceita
+  return {texto,alvo:esp<=2?3:esp<=top?top:bottom&&esp>n-bottom?n-bottom:Math.min(n,esp+1)}; // alvo: pior posição aceita
 }
+export function definirMeta(t=tec()){t.meta=metaDe(clubDo(t))}
 export function migrarDiretoria(estado){for(const t of Object.values(estado.managers||{})){if(t.conf==null){t.conf=CONF_INICIO;t.confBaixa=0;t.confFat=[]}if(!t.meta)definirMeta(t)}}
 // depois de cada rodada: soma os fatores, limita a variação e confere a demissão
 export function atualizarConfianca(t,jogo){
@@ -55,9 +58,10 @@ export function aplicarConfianca(t,fat,lim){
   const d=clamp(fat.reduce((s,f)=>s+f.v,0),-lim,lim);
   t.conf=clamp(Math.round((t.conf+d)*10)/10,0,100);t.confFat=fat;
   t.confBaixa=t.conf<=DEMISSAO_NIVEL?(t.confBaixa||0)+1:0;
-  if(t.confBaixa>=DEMISSAO_RODADAS&&!t.demitido){t.demitido=true;addNews('🔥 A diretoria demitiu você.',t.clubId)}
+  if(t.confBaixa>=DEMISSAO_RODADAS&&!t.demitido)sairDoClube(t,'demitido'); // #37: continua no jogo, com propostas de outros clubes
 }
 export function confiancaFimTemporada(t,pos){
+  registrarTemporada(t,pos); // #37: reputação do técnico
   const dif=t.meta.alvo-pos,ok=dif>=0;
   const fat=[{t:`Fim de temporada: ${pos}º (meta: ${t.meta.texto})`,v:ok?Math.min(15,5+dif*2):Math.max(-20,dif*3)}];
   if(clubDo(t).balance<0)fat.push({t:'Fechou a temporada com caixa negativo',v:-5}); // meta financeira (#48), já com a premiação

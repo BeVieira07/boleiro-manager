@@ -5,6 +5,7 @@
    o estado já em S e deve deixar o save no formato novo; VERSAO_SAVE acompanha sozinho. Saves sem versão rodam todas,
    por isso cada uma confere se o campo já existe (vários saves antigos já tinham parte das mudanças). */
 import { migrarBase } from './base.mjs';
+import { gerarPropostas } from './carreira.mjs';
 import { migrarContratos } from './contratos.mjs';
 import { migrarDiretoria } from './diretoria.mjs';
 import { migrarTecnicos, reindex, usarEstado } from './estado.mjs';
@@ -18,7 +19,8 @@ const MIGRACOES = [
   s => migrarDiretoria(s), // 4: confiança e meta da diretoria (#11); precisa dos técnicos
   s => migrarContratos(s), // 5: contrato de cada jogador (#49)
   s => migrarBase(s), // 6: potencial de cada jogador e base dos clubes com técnico (#50)
-  s => { for (const c of s.clubs) { simplificarPosicoes(c.players); if (c.base) simplificarPosicoes(c.base) } } // 7: só 6 posições (#97)
+  s => { for (const c of s.clubs) { simplificarPosicoes(c.players); if (c.base) simplificarPosicoes(c.base) } }, // 7: só 6 posições (#97)
+  s => { for (const t of Object.values(s.managers)) if (t.demitido && !t.propostasClube) { t.saida = 'demitido'; t.propostasClube = gerarPropostas(t) } } // 8: demitido antes da #37 recebe propostas em vez de fim de jogo
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 
