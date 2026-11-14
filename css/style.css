@@ -127,13 +127,14 @@ input[type=checkbox]{min-height:0;width:18px;height:18px;accent-color:var(--verd
 /* ================= layout: menu lateral, barra inferior e barra de ações (#58) ================= */
 .casca{display:flex;min-height:100vh}
 .lateral{display:none}
-body.em-jogo .lateral{display:flex;flex:0 0 232px;flex-direction:column;gap:24px;background:var(--lateral);border-right:1px solid var(--linha2);padding:22px 14px;position:sticky;top:0;height:100vh;overflow-y:auto}
+/* o menu lateral cabe inteiro na altura da janela: espaços e itens encolhem em telas baixas (clamp com vh); só rola em telas muito baixas */
+body.em-jogo .lateral{display:flex;flex:0 0 232px;flex-direction:column;gap:clamp(10px,2.2vh,24px);background:var(--lateral);border-right:1px solid var(--linha2);padding:clamp(12px,2.4vh,22px) 14px;position:sticky;top:0;height:100vh;overflow-y:auto}
 .marca{display:flex;align-items:center;gap:10px;padding:0 8px;color:var(--verde)}
 .marca>div{display:flex;flex-direction:column;line-height:1}
 .marca-nome{font-family:var(--f-titulo);font-weight:700;font-size:26px;letter-spacing:.06em}
 .marca-sub{font-size:10px;letter-spacing:.32em;color:var(--muted);margin-top:3px}
-.nav{display:flex;flex-direction:column;gap:3px}
-.nav-item{appearance:none;background:transparent;border:0;font:inherit;width:100%;text-align:left;display:flex;align-items:center;gap:12px;padding:11px 12px;border-radius:10px;font-weight:500;color:var(--texto2);min-height:44px;cursor:pointer}
+.nav{display:flex;flex-direction:column;gap:clamp(1px,.3vh,3px)}
+.nav-item{appearance:none;background:transparent;border:0;font:inherit;width:100%;text-align:left;display:flex;align-items:center;gap:12px;padding:clamp(4px,1vh,11px) 12px;border-radius:10px;font-weight:500;color:var(--texto2);min-height:clamp(34px,4.7vh,44px);cursor:pointer}
 .nav-item:hover{background:var(--painel);color:var(--texto)}
 .nav-item[aria-current="page"]{background:var(--verde);color:var(--tinta-verde);font-weight:600}
 .nav-resto{display:contents}
@@ -165,6 +166,7 @@ body.em-jogo .conteudo{max-width:1280px;padding:0 28px 40px}
   .marca,.clube-cartao,.demissao-lateral{display:none}
   .nav-resto .demissao-celular{display:flex}
   .nav{flex:1;flex-direction:row;justify-content:space-around;position:relative}
+  .nav-item{min-height:44px} /* no celular, alvo de toque cheio */
   .nav>.nav-item{flex:1;flex-direction:column;justify-content:center;gap:2px;padding:6px 2px;font-size:11px;min-width:0;text-align:center}
   .nav-mais{display:flex}
   .nav-resto{display:none;position:absolute;right:0;bottom:calc(100% + 10px);flex-direction:column;gap:2px;min-width:220px;background:var(--painel);border:1px solid var(--linha);border-radius:14px;padding:8px;box-shadow:var(--sombra)}
