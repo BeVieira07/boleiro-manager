@@ -178,3 +178,18 @@ test('deslogado: nada vai para a nuvem e o limite de 5 continua', async () => {
   assert.match(j.html(), /Jogos salvos \(1\/5\)/);
   assert.doesNotMatch(j.html(), /nuvem/);
 });
+
+test('abrir save que não está na nuvem: aviso de erro com o texto certo (#120)', async () => {
+  const { avisosTeste } = await import(new URL('../ui/avisos.mjs', import.meta.url));
+  const srv = servidorFalso(), j = carregarJogo({ boot: true });
+  await logar(srv);
+  const antes = avisosTeste.ouvir, vistos = [];
+  avisosTeste.ouvir = (m, tipo) => { vistos.push([m, tipo]); antes(m, tipo) };
+  try {
+    await j.acao('abrirDaNuvem|nao-existe');
+    assert.deepEqual(vistos, [['Não foi possível baixar o save da nuvem.', 'erro']]);
+    srv.online = false; vistos.length = 0;
+    await j.acao('abrirDaNuvem|nao-existe');
+    assert.deepEqual(vistos, [['Não foi possível baixar o save da nuvem: sem internet', 'erro']]);
+  } finally { avisosTeste.ouvir = antes }
+});

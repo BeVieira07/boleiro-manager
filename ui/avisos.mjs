@@ -16,7 +16,7 @@ const real = n => n && n.isConnected === true; // no teste o DOM é falso
 
 export function avisar(msg, tipo = 'info') {
   const texto = String(msg);
-  if (avisosTeste.ouvir) avisosTeste.ouvir(texto);
+  if (avisosTeste.ouvir) avisosTeste.ouvir(texto, tipo);
   const box = el('avisos'); if (!real(box)) return;
   const t = document.createElement('div');
   t.className = `toast ${tipo}`; t.setAttribute('role', tipo === 'erro' ? 'alert' : 'status');

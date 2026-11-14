@@ -102,7 +102,7 @@ export async function abrirDaNuvem(id) {
   const c = clienteLogado();
   if (!c) { avisar('Entre na sua conta para abrir saves da nuvem.'); return }
   const { data, error } = await c.from('saves').select('resumo, estado, atualizado_em').eq('id', id).maybeSingle();
-  if (error || !data) { avisar('Não foi possível baixar o save da nuvem' + (error ? ': ' + error.message : '.','erro','erro')); return }
+  if (error || !data) { avisar('Não foi possível baixar o save da nuvem' + (error ? ': ' + error.message : '.'), 'erro'); return }
   const data_ = data.resumo.data || data.atualizado_em;
   if (!store.set(SAVE_PREFIX + id, data.estado) && !(liberarEspaco() && store.set(SAVE_PREFIX + id, data.estado))) {
     avisar('Não há espaço no navegador para abrir este save. Exclua um jogo salvo e tente de novo.'); return;
