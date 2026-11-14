@@ -29,7 +29,7 @@ end $$;
 reset role;
 set local role service_role;
 do $$ begin
-  if not public.liga_gravar_rodada('00000000-0000-0000-0000-0000000000e1', 0, 1, '{}', 2024, 0, 1, '[]') then raise exception 'rodada não gravou'; end if;
+  if not public.liga_gravar_rodada('00000000-0000-0000-0000-0000000000e1', 0, 1, '{}', 2024, 0, 0, '[]') then raise exception 'rodada não gravou'; end if;
   if (select pronto_rodada from public.liga_membros where user_id = '00000000-0000-0000-0000-0000000000d2') is not null then raise exception 'confirmação não foi zerada'; end if;
 end $$;
 select 'entradas privadas OK' as resultado;
