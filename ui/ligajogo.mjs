@@ -102,18 +102,29 @@ function assinar(id) {
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'ligas', filter: `id=eq.${id}` }, p => {
       if (!ui.liga || !p.new) return;
       if (p.new.rodada !== ui.liga.rodada) atualizarAposRodada();
-      else if (p.new.versao !== ui.liga.versao) recarregar(); // alguém negociou com a IA (#35)
+      else if (p.new.versao !== ui.liga.versao) agendarRecarga(p.new.versao); // alguém negociou (#35); várias mudanças seguidas = uma recarga (#124)
     })
     .subscribe();
 }
 export function sairDaLiga() {
   const c = clienteLogado();
   if (canal && c) c.removeChannel(canal);
+  clearTimeout(recarga.timer); recarga.timer = null;
   canal = null; ui.liga = null;
 }
 
 /** O estado mudou sem rodada nova (mercado): baixa de novo, sem replay. */
 async function recarregar() { const L = ui.liga; if (L && !L.atualizando && (await carregar(L.id))) render() }
+/* #124: cada mudança de versão faria todos baixarem o estado inteiro (~600 KB). A primeira mudança abre uma janela de
+   `espera` ms e as seguintes só anotam a versão; no fim da janela há uma recarga só, e nenhuma se o estado já está nessa
+   versão (quem fez a ação já baixou). */
+export const recarga = { espera: 1500, timer: null, versao: null };
+function agendarRecarga(versao) {
+  recarga.versao = versao;
+  if (recarga.timer) return;
+  recarga.timer = setTimeout(() => { recarga.timer = null; if (ui.liga && ui.liga.versao !== recarga.versao) recarregar() }, recarga.espera);
+  recarga.timer.unref && recarga.timer.unref();
+}
 
 /** Ação de mercado na liga (#35): o servidor sorteia a resposta da IA, aplica e grava; depois baixa o estado novo. */
 export async function mercadoLiga(acao, msgOk) {
