@@ -3,6 +3,7 @@
    As ações passam pelas funções do banco (criar_liga, entrar_liga, escolher_clube); as tabelas só são lidas
    aqui, e as regras de acesso (RLS) mostram ao navegador só as ligas de que ele é membro. */
 import { DIVS } from '../core/estado.mjs';
+import { erroSeries } from '../core/liga.mjs';
 import { esc } from '../core/utils.mjs';
 import { clienteLogado, usuarioAtual } from './conta.mjs';
 import { getData, ui } from './estado.mjs';
@@ -40,7 +41,7 @@ export async function criarLiga() {
   const series = SERIES.filter(s => campo('serieLiga' + s)?.checked);
   const clubId = campo('clubeLiga')?.value;
   if (!nome) { avisar('Dê um nome para a liga.'); return }
-  if (!series.length) { avisar('Escolha pelo menos uma série.'); return }
+  const e = erroSeries(series); if (e) { avisar(e); return } // #118: antes, só dava erro ao começar a liga
   const cl = clube(clubId);
   if (!cl || !series.includes(cl.division)) { avisar('Escolha seu clube entre as séries da liga.'); return }
   const l = await chamar(c.rpc('criar_liga', { nome, series, club_id: clubId }));
