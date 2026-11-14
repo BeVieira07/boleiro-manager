@@ -19,7 +19,7 @@ export const NAV = [
   ['financas', 'Finanças', 'financas'], ['dados', 'Dados', 'dados'], ['config', 'Configurações', 'engrenagem']
 ];
 const PRINCIPAIS = 4;
-export const TITULOS = { liga: 'Liga', clube: 'Painel do clube', elenco: 'Elenco', escalacao: 'Escalação', jogos: 'Jogos', tabela: 'Classificação', copa: 'Copa do Brasil', artilharia: 'Artilharia', mercado: 'Mercado', financas: 'Finanças', dados: 'Dados do jogo', config: 'Configurações', rodada: 'Resultados da rodada' };
+export const TITULOS = { liga: 'Liga', clube: 'Painel do clube', elenco: 'Elenco', escalacao: 'Escalação', jogos: 'Jogos', tabela: 'Classificação', copa: 'Copa do Brasil', artilharia: 'Artilharia', mercado: 'Mercado', financas: 'Finanças', dados: 'Dados do jogo', config: 'Configurações', carreira: 'Propostas de clubes', rodada: 'Resultados da rodada' };
 
 const item = ([k, l, ic]) => `<button type="button" class="nav-item" data-acao="go|${k}"${ui.view === k ? ' aria-current="page"' : ''}>${icone(ic)}<span>${l}</span></button>`;
 

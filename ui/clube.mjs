@@ -117,5 +117,6 @@ export function vClube() {
     <div class="painel-lateral">${miniTabela(uc)}
       <section class="card"><h3>Notícias</h3><ul class="noticias">${t.news.filter(noticiaVisivel).slice(0, 10).map(n => `<li><span class="muted num">R${(n.r ?? 0) + 1}</span><span>${esc(n.t)}</span></li>`).join('') || '<li class="muted">Sem notícias ainda.</li>'}</ul></section>
     </div>
-  </div>${historico}`;
+  </div>${historico}
+  <div class="row inicio-rodape"><button class="btn fantasma" data-acao="pedirDemissaoUI">Pedir demissão</button></div>`;
 }

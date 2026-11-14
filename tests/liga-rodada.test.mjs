@@ -220,3 +220,22 @@ test('liga criada antes de uma mudança no save é atualizada pelo servidor (con
   const futuro = { ...JSON.parse(novaLiga(['A'])), versao: 999 };
   assert.match(acaoMercadoLiga(futuro, 'u-ana', { tipo: 'alternarVenda', pid: p.id }).erro, /versão mais nova/);
 });
+
+test('liga: pedir demissão, mercado bloqueado sem clube, escolher clube; quem não escolhe assume a melhor na rodada (#37)', () => {
+  let s = comVaga(JSON.parse(novaLiga(['A'])));
+  let x = passo(s, 'u-ana', { tipo: 'pedirDemissao' }); assert.ok(x.r.ok, x.r.erro); s = x.s;
+  const ids = s.managers['u-ana'].propostasClube, antigo = clube(s, 'u-ana').id;
+  assert.ok(ids.length >= 1 && ids.length <= 4);
+  assert.match(s.managers['u-bia'].news[0].t, /pediu demissão/, 'a Bia fica sabendo');
+  assert.match(passo(s, 'u-ana', { tipo: 'alternarVenda', pid: clube(s, 'u-ana').players[0].id }).r.erro, /sem clube/);
+  x = passo(s, 'u-ana', { tipo: 'escolherClube', clubeId: ids[0] }); assert.ok(x.r.ok, x.r.erro);
+  assert.equal(x.r.clube, ids[0]);
+  assert.equal(x.s.managers['u-ana'].clubId, ids[0]);
+  // a Bia pede demissão e não escolhe: a rodada seguinte dá a ela a melhor proposta
+  let y = passo(x.s, 'u-bia', { tipo: 'pedirDemissao' }); const melhor = y.s.managers['u-bia'].propostasClube[0];
+  const r = jogarRodadaLiga(y.s, {});
+  assert.deepEqual(r.trocas, [{ user_id: 'u-bia', club_id: melhor }]);
+  assert.equal(est.S.managers['u-bia'].demitido, false);
+  assert.equal(r.jogos.length, 10);
+  assert.notEqual(antigo, ids[0]);
+});

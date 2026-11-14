@@ -5,7 +5,7 @@
    quem confirmou e quando a rodada foi jogada; aí o estado novo é baixado e o seu jogo aparece como replay.
    Nada da liga vai para os saves locais nem da nuvem. */
 import { unavailable } from '../core/escalacao.mjs';
-import { DIVS, P, S, clubById, clubDo, divOf, reindex, table, tecnicos, usarEstado, usarTecnico, userClub } from '../core/estado.mjs';
+import { DIVS, P, S, clubById, clubDo, divOf, reindex, table, tec, tecnicos, usarEstado, usarTecnico, userClub } from '../core/estado.mjs';
 import { autoXI, validateLineup } from '../core/motor.mjs';
 import { posDSigla } from '../core/posicoes.mjs';
 import { descrever } from '../core/propostas.mjs';
@@ -159,6 +159,7 @@ export function forcarLiga() {
 
 /** Botões da rodada na barra de ações, no lugar de "Jogar rodada". */
 export function botaoLiga(cls) {
+  if (tec().demitido) return `<button class="${cls}" data-acao="go|carreira">Escolher novo clube</button>`; // #37
   const L = ui.liga, eu = usuarioAtual() && usuarioAtual().id, n = tecnicos().length, k = L.prontos.length;
   const meu = L.prontos.includes(eu)
     ? `<button class="${cls}" disabled>${icone('ok', { tam: 16 })}Confirmado · ${k} de ${n}</button>`

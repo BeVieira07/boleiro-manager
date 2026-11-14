@@ -60,7 +60,8 @@ export function validateLineup(uc=userClub()){
 // regra: joga a rodada atual. Devolve {erro, tecnico}, {demitido}, {fim} ou {jogos, meu, copa} (meu = jogo do técnico da vez;
 // copa = confrontos da Copa do Brasil jogados nesta rodada, #51).
 export function jogarRodada(){
-  if(tec().demitido)return {demitido:true};
+  const semClube=tecnicos().find(t=>t.demitido); // #37: quem saiu do clube escolhe o novo antes da rodada
+  if(semClube)return {demitido:true,tecnico:semClube.id};
   if(S.round>=S.fixtures.length)return {fim:true};
   const faltam=tecnicos().length>1?tecnicos().filter(t=>!t.pronto):[];
   if(faltam.length)return {erro:`Falta confirmar a rodada: ${faltam.map(t=>t.nome).join(', ')}.`,faltam:faltam.map(t=>t.id)};

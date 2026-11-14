@@ -13,7 +13,7 @@ import { verAoVivo } from './configuracoes.mjs';
 export function playRound(aoVivo=true){
   if(bloqueadoNaLiga())return; // na liga, quem joga a rodada é o servidor (#34)
   const r=jogarRodada();
-  if(r.demitido){demissao();return}
+  if(r.demitido){if(r.tecnico)usarTecnico(r.tecnico);demissao();return} // #37: escolher o novo clube antes da rodada
   if(r.fim)return;
   if(r.erro){if(r.tecnico)usarTecnico(r.tecnico);avisar(r.erro,'erro');ui.view=r.faltam?'clube':'escalacao';render();return}
   const games=r.jogos,mine=r.meu;
@@ -44,6 +44,7 @@ export function confirmarVez(){
 }
 // botão da rodada: no solo joga direto; com vários técnicos, cada um confirma a sua vez
 export function botaoRodada(cls,txt){
+  if(!ui.liga&&tecnicos().some(t=>t.demitido))return `<button class="${cls}" data-acao="go|carreira">Escolher novo clube</button>` // #37 (na liga, botaoLiga olha só o técnico da vez); // #37
   if(ui.liga)return botaoLiga(cls); // #34: confirmar a rodada da liga (e forçar, para o dono)
   if(tecnicos().length>1)return `<button class="${cls}" data-acao="confirmarVez">${icone('ok',{tam:16})}Confirmar rodada ${S.round+1} — ${esc(tec().nome)}</button>`;
   return `<button class="${cls}" data-acao="playRound">${txt}</button>`;
