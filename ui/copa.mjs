@@ -16,10 +16,12 @@ function confronto(j, me) {
     <span class="jogo-detalhe">${detalhe || 'A jogar'}</span></li>`;
 }
 
-/** Aviso para a tela de Jogos: o que a copa tem nesta rodada. */
-export function avisoCopa(r) {
+/** Seção das telas Jogos e Resultados (#130): os confrontos da copa na rodada r, ou '' se a copa não joga nela. */
+export function jogosCopa(r) {
   const q = copaNaRodada(r); if (!q || S.copa.fases.length <= q.fase) return '';
-  return `<p class="aviso-copa">${tag(COPA, 'info')} Nesta rodada também tem ${q.nome.toLowerCase()} (${q.volta ? 'volta' : 'ida'}). <button class="btn fantasma sm" data-acao="go|copa">Ver a copa</button></p>`;
+  const me = tec().clubId, jogos = [...S.copa.fases[q.fase].jogos].sort((a, b) => (b.h === me || b.a === me) - (a.h === me || a.a === me));
+  return `<section class="fase-copa"><div class="card-topo"><h3>${COPA} · ${q.nome} (${q.volta ? 'volta' : 'ida'})</h3><button class="btn fantasma sm" data-acao="go|copa">Ver o chaveamento</button></div>
+    <ul class="jogos">${jogos.map(j => confronto(j, me)).join('')}</ul></section>`;
 }
 
 export function vCopa() {

@@ -148,9 +148,10 @@ test('telas: chaveamento por fase com o meu confronto em destaque, e o aviso na 
   assert.match(j.html(), /class="jogo-time (casa|fora) venceu"/);
   j.run(`go('jogos')`);
   j.acao(`verRodadaJogos|${datas[0]}`);
-  assert.match(j.html(), /Nesta rodada também tem primeira fase \(ida\)/);
+  assert.match(j.html(), /Copa do Brasil · Primeira fase \(ida\)/);
+  assert.equal((j.html().match(/<li class="jogo/g) || []).length, 10 + 32, 'campeonato (10 jogos de uma série) + 32 confrontos da copa');
   j.acao(`verRodadaJogos|${datas[0] + 1}`);
-  assert.doesNotMatch(j.html(), /Nesta rodada também tem/);
+  assert.doesNotMatch(j.html(), /Copa do Brasil · /);
   assert.match(j.run("lateral()"), /data-acao="go\|competicoes"/); // a copa agora é aberta por Competições (#102)
   assert.deepEqual(problemasNasTelas(j), []);
 });
@@ -162,4 +163,15 @@ test('liga online: a rodada do servidor joga a copa junto', async () => {
   const datas = s.copa.datas;
   for (let r = 0; r <= datas[0]; r++) { jogarRodadaLiga(s, {}); s = JSON.parse(j.run('JSON.stringify(S)')) }
   assert.equal(s.copa.fases[0].jogos.every(x => x.ida), true);
+});
+
+test('Resultados da rodada também mostram os jogos da copa, com o placar do jogo já feito (#130)', () => {
+  const j = novo(), datas = copa(j).datas;
+  jogarRodada(j, datas[0] + 1); // joga até a rodada da ida
+  j.run(`go('rodada')`);
+  const h = j.html();
+  assert.match(h, /Copa do Brasil · Primeira fase \(ida\)/);
+  assert.equal((h.match(/<li class="jogo meu">/g) || []).length, 2, 'meu jogo no campeonato e meu jogo na copa');
+  assert.doesNotMatch(h, /A jogar/, 'a ida já foi jogada: todos os confrontos têm placar');
+  assert.deepEqual(problemasNasTelas(j), []);
 });
