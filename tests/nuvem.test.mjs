@@ -218,5 +218,5 @@ test('limite de saves na conta: o save além do limite fica no navegador, com av
   // limite da tela: com MAX_NUVEM saves na conta, novo jogo é barrado
   j.run('voltarMenu()');
   assert.equal(j.run(`(()=>{const i=indiceSaves();for(let k=0;k<MAX_NUVEM;k++)i.list.push({id:'x'+k});store.set(SAVES_KEY,i);return podeCriarSave()})()`), false);
-  assert.ok(j.alertas.some(a => /20 jogos salvos na sua conta/.test(a)));
+  assert.ok(j.alertas.some(a => /10 jogos salvos na sua conta/.test(a)));
 });
