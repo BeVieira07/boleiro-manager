@@ -31,6 +31,7 @@ A função importa o `core/` do GitHub pelo jsDelivr, **fixado num commit**. Mud
 - Testar as regras no banco real: `supabase/tests/*.sql`, uma transação que termina em `rollback` (rodar com `execute_sql`). Cada mudança de regra ganha um caso aí.
 
 ## Estado da liga
+- Escalação e tática de cada técnico (`liga_entradas`) só ele lê (#78). Quem confirmou fica em `liga_membros.pronto_rodada` (gatilho `privado.marcar_pronto`), que o navegador lê e o tempo real manda.
 - `liga_estado.estado` é o `S` da liga (JSON). O servidor passa todo estado por `migrarSave` (`core/versao.mjs`): campo novo no save = migração nova no fim de `MIGRACOES`, e as ligas antigas são atualizadas na primeira ação.
 - Controle de versão: toda gravação exige a `versao` lida; se outra gravou antes, o servidor refaz (até 3 vezes). A rodada nunca é jogada duas vezes.
 - O navegador nunca grava o estado; ao recarregar, mantém escalação, formação e tática ainda não confirmadas.
