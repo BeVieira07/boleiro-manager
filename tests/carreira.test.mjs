@@ -32,7 +32,8 @@ test('pedir demissão: confirma, deixa o clube e mostra as propostas', () => {
   const j = carregarJogo({ boot: true });
   j.run(`newGame('${clubeDaSerie(j)}')`);
   j.run("go('clube')");
-  assert.match(j.html(), /data-acao="pedirDemissaoUI"/);
+  assert.match(j.run('lateral()'), /data-acao="pedirDemissaoUI"[^>]*>[\s\S]*Pedir demissão/, 'no menu lateral');
+  assert.doesNotMatch(j.html(), /pedirDemissaoUI/, 'saiu do fim do Painel do clube');
   j.acao('pedirDemissaoUI');
   assert.deepEqual([j.run('tec().demitido'), j.run('tec().saida'), j.run('ui.view')], [true, 'pediu', 'carreira']);
   assert.match(j.html(), /Você deixou o/);
