@@ -4,6 +4,7 @@ import { processLoans, wageBill } from './emprestimos.mjs';
 import { aplicarDisponibilidade, autoSlotXI, slotsDe, unavailable } from './escalacao.mjs';
 import { P, S, addFin, addNews, bilheteriaBase, clubById, clubDo, divOf, ehHumano, table, tec, tecnicos, tvQuota, userClub } from './estado.mjs';
 import { adiarForma, aplicarFormaPendente } from './forma.mjs';
+import { ehJanela, janelaIA } from './mercadoIA.mjs';
 import { ovrNaPosicao } from './posicoes.mjs';
 import { golsSegmento, novosGols, taticaDe } from './taticas.mjs';
 import { clamp, money, pick, poisson, ri, rnd, semente } from './utils.mjs';
@@ -68,6 +69,7 @@ export function jogarRodada(){
   for(const t of tecnicos()){const e=validateLineup(clubDo(t));if(e)return {erro:(tecnicos().length>1?t.nome+': ':'')+e,tecnico:t.id}}
   aplicarFormaPendente(); // forma da rodada anterior, com o resultado final do jogo ao vivo (#44)
   S.rng=semente(S.seed,S.season,S.round); // a rodada depende só do estado e das escolhas, não do que foi sorteado antes
+  if(ehJanela(S.round))janelaIA(); // #103: começo e metade da temporada
   const games=S.fixtures[S.round].map(simulate);
   aplicarDisponibilidade(games);
   adiarForma(games);

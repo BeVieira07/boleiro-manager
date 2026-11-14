@@ -4,7 +4,7 @@ import { aceitarOferta, alternarVenda, podeProporCompra, proporCompra, recusarOf
 import { posDNome } from '../core/posicoes.mjs';
 import { esc, money } from '../core/utils.mjs';
 import { potTag } from './base.mjs';
-import { ovrChip } from './componentes.mjs';
+import { ovrChip, tag } from './componentes.mjs';
 import { loanBtn, loanTag } from './emprestimos.mjs';
 import { save, ui } from './estado.mjs';
 import { campoBusca, chipsGrupo, filtrar, mudarFiltro, th } from './jogadores.mjs';
@@ -27,7 +27,7 @@ const listaMercado = () => {
 export function corpoMercado() {
   const L = filtrar(listaMercado(), ui.mf);
   const linhas = L.slice(0, LIMITE).map(p => { const c = clubById(p.clubId);
-    return `<tr><td class="c-pos">${posTag(p)}</td><th scope="row" class="c-nome"><div class="jogador">${crest(c)}<div><b>${esc(p.name)}</b>${loanTag(p)}<span class="st">${esc(c.name)}</span></div></div></th>
+    return `<tr><td class="c-pos">${posTag(p)}</td><th scope="row" class="c-nome"><div class="jogador">${crest(c)}<div><b>${esc(p.name)}</b>${loanTag(p)}${!ehHumano(c)&&p.listed?tag('À venda','aviso'):''}${p.emprestar?tag('Para empréstimo','info'):''}<span class="st">${esc(c.name)}</span></div></div></th>
     <td class="n c-idade"><span class="rot">Idade </span>${p.age}</td><td class="c c-ovr">${ovrChip(p.ovr)}</td><td class="c-pot">${potTag(p)}</td><td class="n c-valor">${money(p.value)}</td><td class="n c-sal">${money(p.wage)}</td>
     <td class="c-acoes"><div class="acoes">${loanOf(p.id) ? '' : ehHumano(c) ? botaoProposta(p) : `<button class="btn sm" data-acao="makeBid|${p.id}">Proposta</button>${loanBtn(p, 'in')}`}</div></td></tr>` }).join('');
   return { linhas: linhas || '<tr><td colspan="8" class="muted">Nenhum jogador com esse filtro.</td></tr>', total: L.length };

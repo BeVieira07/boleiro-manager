@@ -47,7 +47,7 @@ test('empréstimo: o jogador vai, joga no outro clube e volta no fim do prazo', 
   assert.equal(j.run('S.loans.length'), 1);
   for (let r = 0; r < 3; r++) { j.run('if(validateLineup())userClub().lineup=autoXI(userClub());playRound()') }
   assert.equal(j.run(`P['${pid}'].clubId`), j.run('tec().clubId'), 'voltou ao clube de origem');
-  assert.equal(j.run('S.loans.length'), 0);
+  assert.equal(j.run(`S.loans.some(l=>l.pid==='${pid}')`), false, 'o empréstimo acabou'); // a IA também empresta (#103)
 });
 
 test('escalação: todas as formações e penalidade fora de posição', () => {
