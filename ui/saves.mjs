@@ -93,7 +93,7 @@ export function vMenu(){
     <div class="save-acoes"><button class="btn" data-acao="abrirMaisNovo|${esc(x.id)}">Abrir</button><button class="btn fantasma icone-so perigo-texto" data-acao="excluirSave|${esc(x.id)}" aria-label="Excluir o jogo salvo do ${esc(x.clube)}" title="Excluir">${icone('lixo',{tam:18})}</button></div></li>`};
   const cartao=(acao,ic,cor,titulo,texto)=>`<button class="cartao-acao" data-acao="${acao}"><span class="cartao-icone ${cor}">${icone(ic,{tam:22})}</span><b>${titulo}</b><span class="muted">${texto}</span></button>`;
   return `<div class="inicio">
-  <header class="inicio-topo"><div class="inicio-marca"><img src="img/logo/simbolo.svg" alt="" width="36" height="36"><div><span class="marca-nome">BOLEIRO</span><span class="marca-sub">MANAGER</span></div></div>${painelConta()}</header>
+  <header class="inicio-topo"><img class="inicio-marca" src="img/logo/logo-principal.png" alt="Boleiro Manager" width="166" height="48">${painelConta()}</header>
   ${destaque}
   <section aria-labelledby="hNovo"><h2 id="hNovo" class="secao-titulo">Começar algo novo</h2><div class="cartoes-acao">
    ${cartao('novoJogo','adicionar','verde','Novo jogo sozinho','Só você no comando: escolha um clube e comece uma carreira do zero.')}
