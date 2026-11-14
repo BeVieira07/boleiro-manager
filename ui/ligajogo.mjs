@@ -18,6 +18,7 @@ import { icone } from './icones.mjs';
 import { closeModal, crest, openModal, showLive } from './partida.mjs';
 import { go, render } from './telas.mjs';
 import { verAoVivo } from './configuracoes.mjs';
+import { abrirLigas, abrirLobby } from './liga.mjs';
 
 export const FUNCAO = 'jogar-rodada';
 let canal = null;
@@ -63,7 +64,12 @@ async function carregar(id) {
   const meu = uc0 && { lineup: uc0.lineup || [], formation: uc0.formation, tatica: uc0.tatica };
   const paraMim = () => (S.propostas || []).filter(x => x.para === eu).length, antes = uc0 ? paraMim() : null;
   usarEstado(e.data.estado); reindex();
-  if (S.managers[eu]) usarTecnico(eu);
+  if (!S.managers[eu]) { // #37: saiu ou foi removido da liga
+    const saindo = ui.liga && ui.liga.saindo; sairDaLiga(); usarEstado(null);
+    if (!saindo) { avisar('Você não faz mais parte desta liga.', 'aviso'); go('ligas') }
+    return false;
+  }
+  usarTecnico(eu);
   if (meu && S.managers[eu]) {
     const uc = userClub(); uc.formation = meu.formation || uc.formation; uc.tatica = meu.tatica || uc.tatica;
     uc.lineup = meu.lineup.filter(pid => uc.players.some(p => p.id === pid && !unavailable(p))); // quem saiu ou se machucou
@@ -176,12 +182,13 @@ export function vLigaJogo() {
   const eu = usuarioAtual() && usuarioAtual().id, n = tecnicos().length;
   const linhas = tecnicos().map(t => { const c = clubDo(t), pos = table(divOf(c)).findIndex(x => x.id === c.id) + 1, ok = L.prontos.includes(t.id);
     return `<tr><th scope="row">${esc(t.nome)}${t.id === eu ? ' <span class="pill">você</span>' : ''}</th><td>${crest(c)} ${esc(c.name)}</td><td>${DIVS[divOf(c)]}</td>
-      <td class="n">${S.round ? pos + 'º' : '-'}</td><td>${ok ? icone('ok', { tam: 12 }) + ' confirmou' : 'falta confirmar'}</td></tr>` }).join('');
+      <td class="n">${S.round ? pos + 'º' : '-'}</td><td>${ok ? icone('ok', { tam: 12 }) + ' confirmou' : 'falta confirmar'}</td>
+      <td>${L.dono && t.id !== eu ? botaoRemover(L.id, t.id, t.nome) : ''}</td></tr>` }).join('');
   return `<section class="card tw"><h3>${esc(L.nome)}</h3><table><caption class="sr">Técnicos da liga</caption>
-    <thead><tr><th>Técnico</th><th>Clube</th><th>Série</th><th class="n">Posição</th><th>Rodada ${S.round + 1}</th></tr></thead><tbody>${linhas}</tbody></table></section>
+    <thead><tr><th>Técnico</th><th>Clube</th><th>Série</th><th class="n">Posição</th><th>Rodada ${S.round + 1}</th><td></td></tr></thead><tbody>${linhas}</tbody></table></section>
   ${vPropostas()}
   <p class="muted">Negócios com a IA aparecem nas notícias de todos. A rodada é jogada quando todos confirmam${L.dono ? ' ou quando você força' : ' ou quando o dono força'}.</p>
-  <div class="row">${L.dono && L.prontos.length < n ? '<button class="btn sec" data-acao="forcarLiga">Forçar rodada</button>' : ''}<button class="btn sec" data-acao="go|tabela">Ver classificação</button></div>`;
+  <div class="row">${L.dono && L.prontos.length < n ? '<button class="btn sec" data-acao="forcarLiga">Forçar rodada</button>' : ''}<button class="btn sec" data-acao="go|tabela">Ver classificação</button>${botaoSairLiga(L.id)}</div>`;
 }
 
 /* ---------- propostas entre técnicos (#36): as regras estão em core/propostas.mjs e rodam no servidor ---------- */
@@ -224,4 +231,22 @@ function vPropostas() {
    ${rec.map(x => `<tr><td>De ${nome(x.de)}: ${esc(descrever(x))}</td><td><div class="acoes"><button class="btn sm" data-acao="responderProposta|aceitarProposta|${x.id}">Aceitar</button><button class="btn sec sm" data-acao="contrapropor|${x.id}">Contraproposta</button><button class="btn sec sm" data-acao="responderProposta|recusarProposta|${x.id}">Recusar</button></div></td></tr>`).join('')}
    ${env.map(x => `<tr><td>Para ${nome(x.para)}: ${esc(descrever(x))}</td><td><button class="btn sec sm" data-acao="responderProposta|cancelarProposta|${x.id}">Retirar</button></td></tr>`).join('')}
   </tbody></table></section>`;
+}
+
+/* ---------- saída de membros (#37): o clube de quem sai volta para a IA; o dono que sai passa a liga ao membro mais antigo ---------- */
+export const botaoRemover = (ligaId, membro, nome) => `<button class="btn fantasma sm" data-acao="removerMembro|${esc(ligaId)}|${esc(membro)}" aria-label="Remover ${esc(nome)} da liga">Remover</button>`;
+export const botaoSairLiga = ligaId => `<button class="btn fantasma" data-acao="deixarLiga|${esc(ligaId)}">Sair da liga</button>`;
+export function deixarLiga(id) {
+  confirmar({ titulo: 'Sair da liga?', texto: 'Seu clube volta a ser da IA e você deixa de participar desta liga. Se você é o dono, a liga passa para o membro mais antigo.', ok: 'Sair da liga', perigo: true }, async () => {
+    if (ui.liga) ui.liga.saindo = true; // o aviso de tempo real da própria saída não deve mostrar "não faz mais parte"
+    if (!(await chamarFuncao({ liga: id, acao: 'sair' }))) { if (ui.liga) ui.liga.saindo = false; return }
+    sairDaLiga(); usarEstado(null); avisar('Você saiu da liga.', 'ok'); await abrirLigas();
+  });
+}
+export function removerMembro(id, membro) {
+  confirmar({ titulo: 'Remover este técnico da liga?', texto: 'O clube dele volta a ser da IA, e ele deixa de participar desta liga.', ok: 'Remover', perigo: true }, async () => {
+    if (!(await chamarFuncao({ liga: id, acao: 'remover', membro }))) return;
+    avisar('Técnico removido da liga.', 'ok');
+    if (ui.liga) { if (await carregar(id)) render() } else await abrirLobby(id);
+  });
 }

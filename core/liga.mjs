@@ -8,7 +8,7 @@ import { escolherClube, gerarPropostas, pedirDemissao } from './carreira.mjs';
 import { renovarContrato } from './contratos.mjs';
 import { exercerOpcaoCompra, proporEmprestimo } from './emprestimos.mjs';
 import { unavailable } from './escalacao.mjs';
-import { P, S, clubById, clubDo, criarJogo, ehHumano, tec, tecnicos, usarTecnico, userClub } from './estado.mjs';
+import { P, S, addNewsTodos, clubById, clubDo, criarJogo, ehHumano, tec, tecnicos, usarTecnico, userClub } from './estado.mjs';
 import { migrarSave } from './versao.mjs';
 import { aceitarOferta, alternarVenda, proporCompra, recusarOferta, venderJa } from './mercado.mjs';
 import { autoXI, jogarRodada, validateLineup } from './motor.mjs';
@@ -133,4 +133,16 @@ export function acaoMercadoLiga(estado, eu, a) {
     for (const n of novas.reverse()) for (const o of tecnicos()) if (o !== t) { o.news.unshift({ r: n.r, t: `${uc.name}: ${n.t}` }); o.news = o.news.slice(0, 40) }
   }
   return r;
+}
+
+/** Tira um técnico da liga (saiu, ou o dono removeu): o clube dele volta para a IA (#37). Devolve {erro} ou {ok}; o estado fica em S. */
+export function removerTecnicoLiga(estado, userId) {
+  const m = migrarSave(estado); if (m.erro) return m;
+  const t = S.managers[userId]; if (!t) return { erro: 'Esse técnico não está na liga.' };
+  const c = clubDo(t);
+  delete S.managers[userId]; delete c.base;
+  S.propostas = (S.propostas || []).filter(p => p.de !== userId && p.para !== userId);
+  if (S.atual === userId) S.atual = Object.keys(S.managers)[0] ?? null;
+  addNewsTodos(`👋 ${t.nome} saiu da liga. O ${c.name} volta a ser da IA.`);
+  return { ok: true };
 }

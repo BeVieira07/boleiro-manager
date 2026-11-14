@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { performance } from 'node:perf_hooks';
 
 const raiz = new URL('../core/', import.meta.url);
-const { iniciarLiga, jogarRodadaLiga, erroSeries, aplicarEntrada, acaoMercadoLiga } = await import(new URL('liga.mjs', raiz));
+const { iniciarLiga, jogarRodadaLiga, erroSeries, aplicarEntrada, acaoMercadoLiga, removerTecnicoLiga } = await import(new URL('liga.mjs', raiz));
 const est = await import(new URL('estado.mjs', raiz)), { usarEstado, clubDo } = est;
 const { DADOS_PADRAO } = await import(new URL('dados-padrao.mjs', raiz));
 

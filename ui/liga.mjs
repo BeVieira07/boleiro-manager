@@ -9,6 +9,7 @@ import { getData, ui } from './estado.mjs';
 import { crest } from './partida.mjs';
 import { go, render } from './telas.mjs';
 import { avisar } from './avisos.mjs';
+import { botaoRemover, botaoSairLiga } from './ligajogo.mjs';
 
 const liga = { lista: null, atual: null, erro: null };
 const SERIES = ['A', 'B', 'C', 'D'];
@@ -125,7 +126,8 @@ export function vLobby() {
   const membros = l.membros.map(x => {
     const cl = clube(x.club_id);
     return `<tr><td><b>${esc(x.nome)}</b>${x.user_id === l.dono_id ? ' <span class="pill">dono</span>' : ''}${x.user_id === eu ? ' <span class="muted">(você)</span>' : ''}</td>
-      <td>${cl ? crest(cl) + ' ' + esc(cl.name) + ` <span class="muted">${DIVS[cl.division] || ''}</span>` : '<span class="muted">escolhendo clube…</span>'}</td></tr>`;
+      <td>${cl ? crest(cl) + ' ' + esc(cl.name) + ` <span class="muted">${DIVS[cl.division] || ''}</span>` : '<span class="muted">escolhendo clube…</span>'}</td>
+      <td>${l.dono_id === eu && x.user_id !== eu ? botaoRemover(l.id, x.user_id, x.nome) : ''}</td></tr>`;
   }).join('');
   return `<div class="menu-ini"><h2>${esc(l.nome)}</h2>
   <div class="card row"><span>Código de convite: <b style="font-size:1.3em;letter-spacing:2px">${esc(l.codigo_convite)}</b></span>
@@ -135,5 +137,5 @@ export function vLobby() {
    <select aria-label="Seu clube" data-mudar="escolherClubeLiga|${esc(l.id)}"><option value="">Escolha…</option>${opcoesClubes(l.series, ocupados, meu.club_id)}</select></div>` : ''}
   ${acaoLiga(l, eu)}
   <div class="row"><button class="btn sec" data-acao="abrirLobby|${esc(l.id)}">Atualizar</button>
-   <button class="btn sec" data-acao="abrirLigas">← Minhas ligas</button></div></div>`;
+   <button class="btn sec" data-acao="abrirLigas">← Minhas ligas</button>${meu ? botaoSairLiga(l.id) : ''}</div></div>`;
 }

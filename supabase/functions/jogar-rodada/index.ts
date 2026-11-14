@@ -4,7 +4,7 @@
 // Sempre que core/ mudar, troque o commit nos três imports abaixo e publique a função de novo, senão site e servidor
 // rodam motores diferentes. Veja supabase/functions/README.md.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
-import { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@b6064bb3e52212b5b669d35876979e07bc1ca613/core/liga.mjs';
+import { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga, removerTecnicoLiga } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@b6064bb3e52212b5b669d35876979e07bc1ca613/core/liga.mjs';
 import { S } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@b6064bb3e52212b5b669d35876979e07bc1ca613/core/estado.mjs';
 import { DADOS_PADRAO } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@b6064bb3e52212b5b669d35876979e07bc1ca613/core/dados-padrao.mjs';
 
@@ -95,6 +95,27 @@ Deno.serve(async (req) => {
           if (r.clube) await admin.from('liga_membros').update({ club_id: r.clube }).eq('liga_id', ligaId).eq('user_id', eu); // #37: assumiu outro clube
           return resposta({ ok: true, aceita: r.ok, msg: r.msg || null });
         }
+      }
+      return erro('A liga mudou ao mesmo tempo. Tente de novo.', 409);
+    }
+    if (acao === 'sair' || acao === 'remover') { // #37: sair da liga, ou o dono remove um membro; o clube volta para a IA
+      const alvo = acao === 'sair' ? eu : String(corpo.membro || '');
+      if (acao === 'remover' && liga.dono_id !== eu) return erro('Só o dono remove membros.', 403);
+      if (acao === 'remover' && alvo === eu) return erro('Para sair da liga, use "Sair da liga".');
+      if (!membros.some((m) => m.user_id === alvo)) return erro('Esse técnico não é membro da liga.', 404);
+      for (let tentativa = 0; tentativa < 3; tentativa++) {
+        let p_estado = null, p_versao = null;
+        if (liga.status === 'andamento') {
+          const { data: est } = await admin.from('liga_estado').select('estado, versao').eq('liga_id', ligaId).single();
+          // bloco síncrono, como na rodada
+          const r = removerTecnicoLiga(est.estado, alvo);
+          if (r.erro) return erro(r.erro);
+          p_estado = JSON.parse(JSON.stringify(S)); p_versao = est.versao;
+        }
+        const { data: ok, error } = await admin.rpc('liga_remover_membro', { p_liga: ligaId, p_user: alvo, p_versao, p_estado });
+        if (error) throw error;
+        if (ok) return resposta({ ok: true, saiu: alvo });
+        if (liga.status !== 'andamento') break;
       }
       return erro('A liga mudou ao mesmo tempo. Tente de novo.', 409);
     }

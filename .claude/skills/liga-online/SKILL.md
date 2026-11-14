@@ -11,7 +11,7 @@ Responder em **PT-BR**. As regras gerais (issues, branches, commits, testes) est
 - Projeto Supabase: ref `nfctxdzapspnxwttrwym` (sa-east-1, plano free; pausa após ~1 semana sem uso, reativar no painel).
 - Site: https://bevieira07.github.io/boleiro-manager/ (**minúsculas**; com maiúsculas dá 404). Publicado pelo workflow `pages.yml` a cada push na `main`.
 - Navegador: `ui/config.mjs` (URL e chave **pública**), `ui/conta.mjs` (login), `ui/nuvem.mjs` (saves na nuvem), `ui/liga.mjs` (lista de ligas e lobby), `ui/ligajogo.mjs` (jogar a liga).
-- Servidor: `supabase/functions/jogar-rodada/index.ts` (uma função só para começar a liga, jogar a rodada e o mercado, inclusive propostas entre técnicos), `supabase/migrations/*.sql`, `supabase/tests/*.sql`.
+- Servidor: `supabase/functions/jogar-rodada/index.ts` (uma função só para começar a liga, jogar a rodada, o mercado (inclusive propostas entre técnicos, pedir demissão e escolher clube, #37) e `sair`/`remover` membros (#37: `removerTecnicoLiga` no estado + `liga_remover_membro`, que passa a liga ao membro mais antigo ou a encerra)), `supabase/migrations/*.sql`, `supabase/tests/*.sql`.
 - Regras que o servidor roda: `core/liga.mjs` (`iniciarLiga`, `jogarRodadaLiga`, `acaoMercadoLiga`), `core/propostas.mjs`.
 - A chave service_role/secret **nunca** entra no repositório (`tests/conta.test.mjs` confere).
 

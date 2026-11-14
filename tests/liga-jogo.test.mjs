@@ -7,7 +7,7 @@ import { carregarJogo, clubeDaSerie } from './jogo.mjs';
 
 const raiz = new URL('../', import.meta.url);
 const conta = await import(new URL('ui/conta.mjs', raiz));
-const { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga } = await import(new URL('core/liga.mjs', raiz));
+const { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga, removerTecnicoLiga } = await import(new URL('core/liga.mjs', raiz));
 const est = await import(new URL('core/estado.mjs', raiz)); // est.S: o S muda a cada usarEstado
 const { DADOS_PADRAO } = await import(new URL('core/dados-padrao.mjs', raiz));
 
@@ -24,8 +24,17 @@ function servidorFalso(clubes) {
   // tempo real: avisa os canais assinados
   srv.emitir = (table, novo) => srv.ouvintes.filter(o => o.table === table).forEach(o => o.cb({ new: copia(novo) }));
   // a função jogar-rodada, como no servidor
-  const funcao = (uid, { acao, forcar, mercado }) => {
+  const funcao = (uid, { acao, forcar, mercado, membro }) => {
     const L = srv.liga;
+    if (acao === 'sair' || acao === 'remover') { // #37, como liga_remover_membro
+      const alvo = acao === 'sair' ? uid : membro;
+      if (acao === 'remover' && L.dono_id !== uid) return { erro: 'Só o dono remove membros.' };
+      if (L.status === 'andamento') { const r = removerTecnicoLiga(copia(srv.estado), alvo); if (r.erro) return r; srv.estado = copia(est.S); L.versao++ }
+      srv.membros = srv.membros.filter(m => m.user_id !== alvo);
+      if (L.dono_id === alvo) L.dono_id = srv.membros[0]?.user_id;
+      srv.emitir('ligas', L);
+      return { ok: true, saiu: alvo };
+    }
     if (acao === 'mercado') { // #35
       const r = acaoMercadoLiga(copia(srv.estado), uid, mercado || {});
       if (r.erro) return r;
@@ -53,8 +62,9 @@ function servidorFalso(clubes) {
   };
   const resp = data => ({ data: copia(data), error: null });
   // consulta encadeada (.eq().order().limit()...): o filtro é ignorado, só há uma liga
-  const consulta = dados => {
-    const q = { eq: () => q, order: () => q, limit: () => q, maybeSingle: async () => resp(dados()), then: (ok, ko) => Promise.resolve(resp(dados())).then(ok, ko) };
+  // a lista de ligas (sem maybeSingle) vem como lista, com os membros, só para quem é membro
+  const consulta = (dados, lista) => {
+    const q = { eq: () => q, order: () => q, limit: () => q, maybeSingle: async () => resp(dados()), then: (ok, ko) => Promise.resolve(resp(lista ? lista(dados()) : dados())).then(ok, ko) };
     return q;
   };
   srv.cliente = uid => ({
@@ -73,7 +83,7 @@ function servidorFalso(clubes) {
         liga_estado: srv.estado && { estado: srv.estado },
         liga_entradas: srv.entradas,
         liga_resultados: srv.resultados.at(-1) ?? null
-      })[tabela]),
+      })[tabela], tabela === 'ligas' ? l => srv.membros.some(m => m.user_id === uid) ? [{ ...l, liga_membros: srv.membros }] : [] : null),
       upsert: async linha => {
         if (linha.rodada !== srv.liga.rodada) return { error: { message: 'RLS' } }; // a regra do banco recusa rodada velha
         srv.entradas = srv.entradas.filter(e => e.user_id !== linha.user_id).concat(copia(linha));
@@ -254,4 +264,41 @@ test('sessão encerrada em outro aparelho: a liga avisa e volta a pedir o login,
   assert.equal(j.run('usuarioAtual()'), null, 'o login local foi encerrado');
   assert.equal(j.run('ui.liga'), null);
   assert.equal(j.run('ui.view'), 'menu');
+});
+
+test('saída de membros: o dono remove um técnico e depois sai; o clube volta para a IA (#37)', async () => {
+  const j0 = carregarJogo();
+  const srv = servidorFalso([clubeDaSerie(j0, 'A', 0), clubeDaSerie(j0, 'A', 1)]);
+  await como(srv, 'a');
+  const j = carregarJogo({ boot: true });
+  await j.acao('comecarLiga|L1'); await esperar();
+  await j.acao('go|liga');
+  assert.match(j.html(), /data-acao="removerMembro\|L1\|b"/, 'o dono vê "Remover" ao lado da Bia');
+  assert.doesNotMatch(j.html(), /removerMembro\|L1\|a"/, 'e não ao lado dele mesmo');
+  assert.match(j.html(), /data-acao="deixarLiga\|L1"/);
+  const clubeBia = srv.membros[1].club_id;
+  await j.acao('removerMembro|L1|b'); await esperar();
+  assert.deepEqual(srv.membros.map(m => m.user_id), ['a']);
+  assert.equal(srv.estado.managers.b, undefined);
+  assert.equal(j.run('tecnicos().length'), 1, 'o navegador recarregou a liga');
+  assert.equal(j.run(`ehHumano('${clubeBia}')`), false, 'o clube da Bia voltou para a IA');
+  await j.acao('deixarLiga|L1'); await esperar();
+  assert.equal(srv.membros.length, 0);
+  assert.equal(j.run('ui.liga'), null);
+  assert.equal(j.run('ui.view'), 'ligas');
+  assert.ok(j.alertas.some(a => a.includes('Você saiu da liga')));
+});
+
+test('quem não é dono não remove ninguém (#37)', async () => {
+  const j0 = carregarJogo();
+  const srv = servidorFalso([clubeDaSerie(j0, 'A', 0), clubeDaSerie(j0, 'A', 1)]);
+  await como(srv, 'a'); carregarJogo({ boot: true }).acao('comecarLiga|L1'); await esperar();
+  await como(srv, 'b');
+  const k = carregarJogo({ boot: true });
+  await k.acao('entrarNaLiga|L1'); await k.acao('go|liga');
+  assert.doesNotMatch(k.html(), /removerMembro/);
+  await k.acao('removerMembro|L1|a'); await esperar();
+  assert.ok(k.alertas.some(a => a.includes('Só o dono')));
+  assert.equal(srv.membros.length, 2);
+  k.run('sairDaLiga()');
 });
