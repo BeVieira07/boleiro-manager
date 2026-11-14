@@ -79,10 +79,9 @@ function servidorFalso(clubes) {
       return r.erro ? { data: null, error: { message: r.erro, context: { json: async () => r } } } : { data: r, error: null };
     } },
     from: tabela => ({
-      select: () => (tabela === 'liga_estado' && srv.cargas++, consulta)(() => ({
+      select: () => consulta(() => ({
         profiles: { nome: srv.membros.find(m => m.user_id === uid)?.nome },
         ligas: srv.liga,
-        liga_estado: srv.estado && { estado: srv.estado },
         liga_entradas: srv.entradas.filter(e => e.user_id === uid), // #78: cada um lê só a sua
         liga_membros: srv.membros,
         liga_resultados: srv.resultados.at(-1) ?? null
@@ -96,6 +95,12 @@ function servidorFalso(clubes) {
         return { error: null };
       }
     }),
+    // #121: o estado vem da função liga_estado_meu (o filtro do que é privado é testado no banco, supabase/tests/liga_estado_meu.sql)
+    rpc: async (nome, { p_liga }) => {
+      if (nome !== 'liga_estado_meu') return { data: null, error: { message: 'função desconhecida: ' + nome } };
+      srv.cargas++;
+      return resp(p_liga === srv.liga.id && srv.membros.some(m => m.user_id === uid) ? srv.estado ?? null : null);
+    },
     channel: () => {
       const c = { on: (_ev, { table }, cb) => { srv.ouvintes.push({ table, cb, c }); return c }, subscribe: () => c };
       return c;
