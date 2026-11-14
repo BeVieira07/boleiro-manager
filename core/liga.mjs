@@ -15,7 +15,7 @@ import { autoXI, jogarRodada, validateLineup } from './motor.mjs';
 import { fecharTemporada, iniciarTemporada } from './partida.mjs';
 import { aceitarProposta, cancelarProposta, contraproposta, proporTecnico, recusarProposta } from './propostas.mjs';
 import { ESTILOS, MODOS } from './taticas.mjs';
-import { FORMS } from './utils.mjs';
+import { FORMS, semente as sementeDe } from './utils.mjs';
 
 export const SERIES = ['A', 'B', 'C', 'D'];
 
@@ -69,7 +69,8 @@ export function jogarRodadaLiga(estado, entradas) {
     t.pronto = true;
   }
   S.atual = tecnicos()[0].id;
-  const temporada = S.season, rodada = S.round, semente = S.seed;
+  // #79: liga_resultados (que os membros leem) guarda a semente da rodada, nunca a semente da liga
+  const temporada = S.season, rodada = S.round, semente = sementeDe(S.seed, S.season, S.round);
   const r = jogarRodada();
   if (!r.jogos) throw new Error('A rodada não foi jogada: ' + JSON.stringify(r)); // com as correções acima não acontece
   let virada = null;

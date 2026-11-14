@@ -4,9 +4,9 @@
 // Sempre que core/ mudar, troque o commit nos três imports abaixo e publique a função de novo, senão site e servidor
 // rodam motores diferentes. Veja supabase/functions/README.md.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
-import { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga, removerTecnicoLiga } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@fb6527a63c0bc223faef6128e209477cc3cf5528/core/liga.mjs';
-import { S } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@fb6527a63c0bc223faef6128e209477cc3cf5528/core/estado.mjs';
-import { DADOS_PADRAO } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@fb6527a63c0bc223faef6128e209477cc3cf5528/core/dados-padrao.mjs';
+import { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga, removerTecnicoLiga } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@c5b641eae59c9c8300427989d0ef3c94b38416eb/core/liga.mjs';
+import { S } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@c5b641eae59c9c8300427989d0ef3c94b38416eb/core/estado.mjs';
+import { DADOS_PADRAO } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@c5b641eae59c9c8300427989d0ef3c94b38416eb/core/dados-padrao.mjs';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +16,16 @@ const CORS = {
 const resposta = (corpo: unknown, status = 200) =>
   new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 const erro = (msg: string, status = 400) => resposta({ erro: msg }, status);
+// #79: a semente (seed) e o gerador (rng) ficam em liga_segredo, que só o servidor lê; o gatilho do banco os tira do estado
+// gravado, e aqui eles voltam antes de rodar as regras. Sem a tabela ou sem linha (estado antigo), vale o que estiver no estado.
+async function lerEstado(admin: any, ligaId: string) {
+  const [{ data: est }, { data: seg }] = await Promise.all([
+    admin.from('liga_estado').select('estado, versao').eq('liga_id', ligaId).maybeSingle(),
+    admin.from('liga_segredo').select('seed, rng').eq('liga_id', ligaId).maybeSingle()
+  ]);
+  if (est && seg) { est.estado.seed = Number(seg.seed); est.estado.rng = Number(seg.rng) }
+  return est;
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS });
@@ -58,7 +68,7 @@ Deno.serve(async (req) => {
         if (l.status !== 'andamento') return erro('A liga ainda não começou.', 409);
         if (l.rodada !== liga.rodada) return resposta({ ok: true, jogada: false, jaJogada: true });
         const { data: entradas } = await admin.from('liga_entradas').select('*').eq('liga_id', ligaId).eq('rodada', l.rodada);
-        const { data: est } = await admin.from('liga_estado').select('estado, versao').eq('liga_id', ligaId).single();
+        const est = await lerEstado(admin, ligaId);
         const prontos = new Set((entradas || []).filter((e) => e.pronto).map((e) => e.user_id));
         // #37: quem está sem clube (escolhendo uma proposta) não é esperado
         const semClube = new Set(Object.values(est.estado.managers || {}).filter((t: any) => t.demitido).map((t: any) => t.id));
@@ -83,7 +93,7 @@ Deno.serve(async (req) => {
 
     if (acao === 'mercado') { // #35: a resposta da IA é sorteada aqui, então recarregar a página não muda nada
       for (let tentativa = 0; tentativa < 3; tentativa++) {
-        const { data: est } = await admin.from('liga_estado').select('estado, versao').eq('liga_id', ligaId).maybeSingle();
+        const est = await lerEstado(admin, ligaId);
         if (!est || liga.status !== 'andamento') return erro('A liga ainda não começou.', 409);
         // bloco síncrono, como na rodada
         const r = acaoMercadoLiga(est.estado, eu, corpo.mercado || {});
@@ -106,7 +116,7 @@ Deno.serve(async (req) => {
       for (let tentativa = 0; tentativa < 3; tentativa++) {
         let p_estado = null, p_versao = null;
         if (liga.status === 'andamento') {
-          const { data: est } = await admin.from('liga_estado').select('estado, versao').eq('liga_id', ligaId).single();
+          const est = await lerEstado(admin, ligaId);
           // bloco síncrono, como na rodada
           const r = removerTecnicoLiga(est.estado, alvo);
           if (r.erro) return erro(r.erro);
