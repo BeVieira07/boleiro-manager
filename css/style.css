@@ -403,3 +403,11 @@ body.em-jogo .avisos{bottom:24px}
   .save-acoes{width:100%}
   .save-acoes .btn:first-child{flex:1}
 }
+
+/* ---------- configurações (#106) ---------- */
+.config{max-width:640px}
+.config-campo{display:flex;flex-direction:column;align-items:flex-start;gap:6px;margin-bottom:var(--e4)}
+.config-campo label{font-weight:600}
+.config-campo p{margin:0}
+.config-grupo{border:0;margin:0;padding:0;display:flex;flex-direction:column}
+.opcao{display:flex;align-items:center;gap:10px;min-height:44px;cursor:pointer}

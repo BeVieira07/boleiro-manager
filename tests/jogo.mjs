@@ -71,7 +71,7 @@ export const virarTemporada = j => j.run('seasonEnd();newSeason()');
 /** Joga uma rodada, trocando titulares lesionados/suspensos pela escalação automática. */
 export const jogarRodada = (j, n = 1) => j.run(`for(let i=0;i<${n};i++){if(validateLineup())userClub().lineup=autoXI(userClub());playRound()}`);
 
-export const TELAS = ['clube', 'elenco', 'escalacao', 'tabela', 'copa', 'jogos', 'artilharia', 'mercado', 'financas', 'dados', 'rodada'];
+export const TELAS = ['clube', 'elenco', 'escalacao', 'tabela', 'copa', 'jogos', 'artilharia', 'mercado', 'financas', 'dados', 'config', 'rodada'];
 const SUSPEITOS = ['undefined', 'NaN', '[object'];
 /** Renderiza cada tela e devolve a lista de problemas (texto suspeito ou erro). */
 export function problemasNasTelas(j, telas = TELAS) {

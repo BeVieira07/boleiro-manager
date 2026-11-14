@@ -7,6 +7,7 @@ import { abrirCamada, fecharCamada } from './avisos.mjs';
 import { icone } from './icones.mjs';
 import { chipsTaticaAoVivo } from './taticas.mjs';
 import { render } from './telas.mjs';
+import { VELOCIDADES, prefs } from './configuracoes.mjs';
 
 /* ================= jogo ao vivo ================= */
 export function crest(c,cls=''){
@@ -53,7 +54,7 @@ export function showLive(g,done,{replay=false}={}){ // replay: jogo já simulado
   const finish=()=>{clearInterval(timer);while(min<DURACAO)tick();ui.tvAoVivo=null;document.getElementById('ltat').style.display='none';
     document.getElementById('lclk').textContent='Fim de jogo';
     document.getElementById('lskip').style.display='none';const ok=document.getElementById('ldone');ok.style.display='';ok.focus();};
-  timer=setInterval(tick,55);
+  timer=setInterval(tick,VELOCIDADES[prefs().velocidade]||55); // #106
   document.getElementById('lskip').onclick=()=>{clearInterval(timer);if(min<DURACAO){while(min<DURACAO-1)tick();tick()}};
   document.getElementById('ldone').onclick=()=>{closeModal();done()};
 }

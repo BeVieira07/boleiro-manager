@@ -71,6 +71,6 @@ export function acceptOffer(oid){
 export function rejectOffer(oid){if(ui.liga)return mercadoLiga({tipo:'recusar',oid},'Proposta recusada.');feito(recusarOferta(oid),'Proposta recusada.','info')}
 export function quickSell(pid){
   if(userClub().players.length<=16){avisar('Seu elenco ficaria pequeno demais (mínimo 16).','aviso');return}
-  confirmar({titulo:`Vender ${P[pid].name} agora?`,texto:`Ele sai do elenco por ${money(valorVendaRapida(pid))}, 70% do valor de mercado (${money(P[pid].value)}). A venda não pode ser desfeita.`,ok:'Vender agora',perigo:true},()=>{const txt=`${P[pid].name} vendido por ${money(valorVendaRapida(pid))}.`;if(ui.liga)return mercadoLiga({tipo:'venderJa',pid},txt);feito(venderJa(pid),txt)});
+  confirmar({dispensavel:true,titulo:`Vender ${P[pid].name} agora?`,texto:`Ele sai do elenco por ${money(valorVendaRapida(pid))}, 70% do valor de mercado (${money(P[pid].value)}). A venda não pode ser desfeita.`,ok:'Vender agora',perigo:true},()=>{const txt=`${P[pid].name} vendido por ${money(valorVendaRapida(pid))}.`;if(ui.liga)return mercadoLiga({tipo:'venderJa',pid},txt);feito(venderJa(pid),txt)});
 }
 export function toggleListed(pid){if(ui.liga)return mercadoLiga({tipo:'alternarVenda',pid});feito(alternarVenda(pid))}

@@ -17,6 +17,7 @@ import { ui } from './estado.mjs';
 import { icone } from './icones.mjs';
 import { closeModal, crest, openModal, showLive } from './partida.mjs';
 import { go, render } from './telas.mjs';
+import { verAoVivo } from './configuracoes.mjs';
 
 export const FUNCAO = 'jogar-rodada';
 let canal = null;
@@ -129,7 +130,7 @@ export async function atualizarAposRodada() {
   if (!r) { render(); return }
   const fim = () => { ui.lastRound = { round: r.rodada + 1, games: r.jogos }; ui.view = 'rodada'; render() };
   const me = userClub().id, meu = r.jogos.find(g => g.h === me || g.a === me);
-  if (meu) showLive(meu, fim, { replay: true }); else fim();
+  if (meu && verAoVivo(meu)) showLive(meu, fim, { replay: true }); else fim(); // #106
 }
 
 /** Envia a sua escalação, formação e tática da rodada e pede ao servidor para jogar (ele só joga quando todos confirmaram). */
