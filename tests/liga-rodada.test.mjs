@@ -240,11 +240,12 @@ test('liga: pedir demissão, mercado bloqueado sem clube, escolher clube; quem n
   assert.notEqual(antigo, ids[0]);
 });
 
-test('a semente da liga não sai na rodada: o resultado guarda só a semente da rodada (#79)', () => {
-  const s = JSON.parse(novaLiga(['A'])), seed = s.seed;
-  const r = jogarRodadaLiga(s, {});
-  assert.notEqual(r.semente, seed);
-  assert.equal(JSON.stringify(r.jogos).includes(String(seed)), false);
+test('nada derivado da semente sai na rodada: nem a da liga, nem a da rodada (#79, #116)', async () => {
+  const { semente } = await import(new URL('utils.mjs', raiz));
+  const s = JSON.parse(novaLiga(['A'])), seed = s.seed, daRodada = semente(seed, s.season, s.round);
+  const r = jogarRodadaLiga(s, {}), saida = JSON.stringify(r);
+  assert.equal('semente' in r, false);
+  for (const v of [seed, daRodada]) assert.equal(saida.includes(String(v)), false);
 });
 
 test('jogador emprestado não é vendido, posto à venda nem comprado de quem só o tem emprestado (#117)', async () => {

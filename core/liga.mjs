@@ -15,7 +15,7 @@ import { autoXI, jogarRodada, validateLineup } from './motor.mjs';
 import { fecharTemporada, iniciarTemporada } from './partida.mjs';
 import { aceitarProposta, cancelarProposta, contraproposta, proporTecnico, recusarProposta } from './propostas.mjs';
 import { ESTILOS, MODOS } from './taticas.mjs';
-import { FORMS, semente as sementeDe } from './utils.mjs';
+import { FORMS } from './utils.mjs';
 
 export const SERIES = ['A', 'B', 'C', 'D'];
 
@@ -69,8 +69,8 @@ export function jogarRodadaLiga(estado, entradas) {
     t.pronto = true;
   }
   S.atual = tecnicos()[0].id;
-  // #79: liga_resultados (que os membros leem) guarda a semente da rodada, nunca a semente da liga
-  const temporada = S.season, rodada = S.round, semente = sementeDe(S.seed, S.season, S.round);
+  // #116: nada derivado da semente sai do servidor (a semente da rodada deixava descobrir a da liga testando todas)
+  const temporada = S.season, rodada = S.round;
   const r = jogarRodada();
   if (!r.jogos) throw new Error('A rodada não foi jogada: ' + JSON.stringify(r)); // com as correções acima não acontece
   let virada = null;
@@ -79,7 +79,7 @@ export function jogarRodadaLiga(estado, entradas) {
     virada = { temporada, campeoes: f ? f.champs.map(x => ({ serie: x.d, clube: x.c.name })) : [] };
     iniciarTemporada();
   }
-  return { jogos: r.jogos, temporada, rodada, semente, virada, trocas };
+  return { jogos: r.jogos, temporada, rodada, virada, trocas };
 }
 
 /* ---------- mercado da liga (#35): o servidor sorteia a resposta da IA, então recarregar a página não muda nada ---------- */
