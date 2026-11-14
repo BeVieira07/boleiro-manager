@@ -47,7 +47,7 @@ export function loanChance(p,lender,borrower,l,mode){
     return clamp(0.5+(p.ovr-avg)/15+(l.payer==='from'?0.25:-0.1),0,0.95);
   }
   const best=[...lender.players].sort((a,b)=>b.ovr-a.ovr).slice(0,3).includes(p);
-  return clamp((best?0.2:0.7)+(l.payer==='to'?0.2:-0.3)+(l.buy?0.1:0),0.05,0.95);
+  return clamp((best?0.2:0.7)+(l.payer==='to'?0.2:-0.3)+(l.buy?0.1:0)+(p.emprestar?0.2:0),0.05,0.95); // emprestar: a IA quer emprestá-lo (#103)
 }
 export function startLoan(l){
   const p=P[l.pid];movePlayer(p,clubById(l.to),true); // movePlayer garante o elenco mínimo de quem cedeu
