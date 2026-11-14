@@ -53,6 +53,7 @@ export function vencerContratos() {
   const livres = [], saidas = [];
   for (const c of S.clubs) for (const p of c.players) {
     if (p.contrato == null) p.contrato = contratoInicial(p);
+    if (loanOf(p.id)) { p.contrato = Math.max(1, p.contrato - 1); continue } // #142: o empréstimo de 1 ano atravessa a virada; o contrato não vence no meio dele
     if (--p.contrato > 0) continue;
     if (!ehHumano(c) && rnd() < IA_RENOVA) { p.contrato = ri(1, CONTRATO_NOVO); delete p.aum; continue }
     livres.push([p, c]);

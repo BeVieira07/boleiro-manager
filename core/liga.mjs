@@ -10,7 +10,7 @@ import { exercerOpcaoCompra, proporEmprestimo } from './emprestimos.mjs';
 import { unavailable } from './escalacao.mjs';
 import { P, S, addNewsTodos, clubById, clubDo, criarJogo, ehHumano, tec, tecnicos, usarTecnico, userClub } from './estado.mjs';
 import { migrarSave } from './versao.mjs';
-import { aceitarOferta, alternarVenda, proporCompra, recusarOferta, venderJa } from './mercado.mjs';
+import { aceitarOferta, alternarEmprestimo, alternarVenda, proporCompra, recusarOferta, venderJa } from './mercado.mjs';
 import { autoXI, jogarRodada, validateLineup } from './motor.mjs';
 import { fecharTemporada, iniciarTemporada } from './partida.mjs';
 import { aceitarProposta, cancelarProposta, contraproposta, proporTecnico, recusarProposta } from './propostas.mjs';
@@ -88,15 +88,8 @@ const HUMANO = { erro: 'O clube é de outro técnico: faça uma proposta a ele.'
 // jogador de um clube da IA (comprar, pedir emprestado) / do meu clube (vender, emprestar)
 const daIA = (pid, uc) => !P[pid] || P[pid].clubId === uc.id ? invalido : ehHumano(P[pid].clubId) ? HUMANO : null;
 const meu = (pid, uc) => P[pid] && P[pid].clubId === uc.id ? null : invalido;
-function emprestimoLiga(a, uc) {
-  const dur = Number(a.dur), buy = a.buy == null ? null : Number(a.buy), resta = S.fixtures.length - S.round;
-  if (!['in', 'out'].includes(a.mode) || !['from', 'to'].includes(a.payer) || !Number.isInteger(dur) || dur < 1 || dur > resta)
-    return { erro: 'Proposta de empréstimo inválida.' };
-  if (a.mode === 'in') return daIA(a.pid, uc) || proporEmprestimo({ pid: a.pid, mode: 'in', dur, payer: a.payer, buy });
-  const c = clubById(a.clubeId);
-  return meu(a.pid, uc) || (!c || c.id === uc.id ? { erro: 'Clube inválido.' } : ehHumano(c) ? HUMANO : null)
-    || proporEmprestimo({ pid: a.pid, mode: 'out', clubeId: c.id, dur, payer: a.payer, buy });
-}
+// #142: só pedir emprestado da lista de um clube da IA; o técnico empresta os dele pondo-os na lista (alternarEmprestimo)
+const emprestimoLiga = (a, uc) => daIA(a.pid, uc) || proporEmprestimo({ pid: a.pid });
 const MERCADO = {
   compra: (a, uc) => daIA(a.pid, uc) || proporCompra(a.pid, Number(a.valor)),
   venderJa: (a, uc) => meu(a.pid, uc) || venderJa(a.pid),
@@ -105,6 +98,7 @@ const MERCADO = {
   recusar: a => recusarOferta(a.oid),
   opcaoCompra: a => exercerOpcaoCompra(a.pid),
   emprestimo: emprestimoLiga,
+  alternarEmprestimo: (a, uc) => meu(a.pid, uc) || alternarEmprestimo(a.pid), // #142
   renovar: (a, uc) => meu(a.pid, uc) || renovarContrato(a.pid), // #49
   promoverBase: a => promoverDaBase(String(a.pid)), // #50: só acha jogador da base do próprio clube
   venderBase: a => venderDaBase(String(a.pid)),

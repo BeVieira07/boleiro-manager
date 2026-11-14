@@ -1,5 +1,5 @@
 import { novoContrato } from './contratos.mjs';
-import { loanOf } from './emprestimos.mjs';
+import { UM_ANO, loanOf, startLoan } from './emprestimos.mjs';
 import { P, S, addFin, addNews, clubById, ehHumano, tec, tecnicos, userClub } from './estado.mjs';
 import { ensureSquad } from './partida.mjs';
 import { money, pick, rnd } from './utils.mjs';
@@ -47,6 +47,10 @@ export function aceitarOferta(oid){
   const o=tec().offers.find(x=>x.id===oid);if(!o)return {erro:'Proposta não encontrada.'};const p=P[o.pid],b=clubById(o.from);
   const e=emprestado(o.pid);if(e)return e;
   if(userClub().players.length<=16)return {erro:'Seu elenco ficaria pequeno demais (mínimo 16).'};
+  if(o.emprestimo){ // #142: proposta de empréstimo da IA por um jogador da lista do técnico
+    if(b.players.length>=32){recusarOferta(oid);return {erro:`${b.name} ficou sem vaga no elenco e desistiu do empréstimo.`}}
+    recusarOferta(oid);startLoan({pid:p.id,from:userClub().id,to:b.id,fim:UM_ANO()});return {ok:true};
+  }
   if(!ehHumano(b)&&b.balance<o.amount){recusarOferta(oid);return {erro:`${b.name} gastou o caixa em outros negócios e desistiu da proposta.`}}
   addFin(`Venda de ${p.name} (${b.name})`,o.amount);caixaIA(b,-o.amount);movePlayer(p,b);
   addNews(`💰 ${p.name} vendido ao ${b.name} por ${money(o.amount)}.`);return {ok:true};
@@ -60,5 +64,11 @@ export function venderJa(pid){
   const amt=valorVendaRapida(pid),vagas=S.clubs.filter(c=>!ehHumano(c)&&c.players.length<32),comCaixa=vagas.filter(c=>c.balance>=amt);
   const b=pick(comCaixa.length?comCaixa:vagas); // venda rápida sempre sai; quem tem caixa paga (#103)
   addFin(`Venda de ${p.name} (${b.name})`,amt);if(b.balance>=amt)caixaIA(b,-amt);movePlayer(p,b);addNews(`💰 ${p.name} vendido ao ${b.name} por ${money(amt)}.`);return {ok:true};
+}
+// #142: lista de empréstimo do técnico; clubes da IA mandam propostas pelos jogadores dela
+export function alternarEmprestimo(pid){
+  const p=P[pid];if(!p||p.clubId!==userClub().id)return {erro:'Jogador inválido para esta ação.'};
+  const e=emprestado(pid);if(e)return e;
+  if(p.emprestar)delete p.emprestar;else p.emprestar=true;return {ok:true};
 }
 export function alternarVenda(pid){const e=emprestado(pid);if(e)return e;P[pid].listed=!P[pid].listed;return {ok:true}}

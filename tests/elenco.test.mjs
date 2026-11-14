@@ -47,7 +47,7 @@ test('tendência e forma mostram os valores reais do jogador; ações de mercado
   assert.equal(j.run(`P['${id}'].listed`), true);
   assert.match(j.html(), new RegExp(`data-acao="toggleListed\\|${id}" aria-pressed="true">À venda`));
   assert.match(j.html(), /data-acao="quickSell\|/);
-  assert.match(j.html(), /data-acao="loanForm\|[^|]+\|out"/);
+  assert.match(j.html(), /data-acao="toggleEmprestimo\|[^"]+" aria-pressed="false">Pôr para empréstimo/); // #142
   assert.deepEqual(problemasNasTelas(j, ['elenco']), []);
 });
 
