@@ -36,6 +36,7 @@ A função importa o `core/` do GitHub pelo jsDelivr, **fixado num commit**. Mud
 - Semente (#79): `seed` e `rng` nunca ficam em `liga_estado` (gatilho `privado.guardar_segredo` os move para `liga_segredo`, sem leitura para membros); a função os devolve com `lerEstado`. `liga_resultados.semente` é a da rodada, não a da liga.
 - `liga_estado.estado` é o `S` da liga (JSON). O servidor passa todo estado por `migrarSave` (`core/versao.mjs`): campo novo no save = migração nova no fim de `MIGRACOES`, e as ligas antigas são atualizadas na primeira ação.
 - Controle de versão: toda gravação exige a `versao` lida; se outra gravou antes, o servidor refaz (até 3 vezes). A rodada nunca é jogada duas vezes.
+- Mudança de versão vinda do tempo real não recarrega na hora (#124): `agendarRecarga` em `ui/ligajogo.mjs` junta as mudanças de 1,5 s (`recarga.espera`; nos testes, 0) numa recarga só.
 - O navegador nunca grava o estado; ao recarregar, mantém escalação, formação e tática ainda não confirmadas.
 
 ## Diagnosticar pelos logs

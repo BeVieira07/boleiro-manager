@@ -12,14 +12,16 @@ const est = await import(new URL('core/estado.mjs', raiz)); // est.S: o S muda a
 const { DADOS_PADRAO } = await import(new URL('core/dados-padrao.mjs', raiz));
 
 // confirmar() chama o callback async sem esperar: deixa as promessas terminarem
-const esperar = () => new Promise(r => setTimeout(r, 0));
+const esperar = (ms = 0) => new Promise(r => setTimeout(r, ms));
+const { recarga } = await import(new URL('ui/ligajogo.mjs', raiz));
+recarga.espera = 0; // #124: nos testes, a recarga pelo tempo real não espera (o teste próprio dela muda isto)
 const copia = x => JSON.parse(JSON.stringify(x));
 
 function servidorFalso(clubes) {
   const srv = {
     liga: { id: 'L1', nome: 'Pelada', dono_id: 'a', status: 'aberta', rodada: 0, versao: 0, series: ['A'] },
     membros: [{ user_id: 'a', club_id: clubes[0], nome: 'Ana' }, { user_id: 'b', club_id: clubes[1], nome: 'Bia' }],
-    estado: null, entradas: [], resultados: [], ouvintes: []
+    estado: null, entradas: [], resultados: [], ouvintes: [], cargas: 0
   };
   // tempo real: avisa os canais assinados
   srv.emitir = (table, novo) => srv.ouvintes.filter(o => o.table === table).forEach(o => o.cb({ new: copia(novo) }));
@@ -77,7 +79,7 @@ function servidorFalso(clubes) {
       return r.erro ? { data: null, error: { message: r.erro, context: { json: async () => r } } } : { data: r, error: null };
     } },
     from: tabela => ({
-      select: () => consulta(() => ({
+      select: () => (tabela === 'liga_estado' && srv.cargas++, consulta)(() => ({
         profiles: { nome: srv.membros.find(m => m.user_id === uid)?.nome },
         ligas: srv.liga,
         liga_estado: srv.estado && { estado: srv.estado },
@@ -304,4 +306,33 @@ test('quem não é dono não remove ninguém (#37)', async () => {
   assert.ok(k.alertas.some(a => a.includes('Só o dono')));
   assert.equal(srv.membros.length, 2);
   k.run('sairDaLiga()');
+});
+
+test('várias mudanças seguidas do estado viram uma recarga só (#124)', async () => {
+  const j0 = carregarJogo();
+  const srv = servidorFalso([clubeDaSerie(j0, 'A', 0), clubeDaSerie(j0, 'A', 1)]);
+  await como(srv, 'a');
+  const j = carregarJogo({ boot: true });
+  await j.acao('comecarLiga|L1'); await esperar();
+  const mudar = () => { srv.liga.versao++; srv.emitir('ligas', srv.liga) };
+  recarga.espera = 30;
+  try {
+    const antes = srv.cargas;
+    mudar(); mudar(); mudar(); // três técnicos negociando quase juntos
+    await esperar(5);
+    assert.equal(srv.cargas, antes, 'dentro da janela, nada é baixado');
+    await esperar(80);
+    assert.equal(srv.cargas, antes + 1, 'três mudanças, uma recarga');
+    assert.equal(j.run('ui.liga.versao'), srv.liga.versao, 'e ela traz a versão mais nova');
+    // aviso de uma versão que o navegador já tem (a ação foi dele): não baixa de novo
+    srv.emitir('ligas', srv.liga); await esperar(80);
+    assert.equal(srv.cargas, antes + 1);
+    // depois da janela, uma mudança nova recarrega de novo
+    mudar(); await esperar(80);
+    assert.equal(srv.cargas, antes + 2);
+    // saiu da liga com uma recarga marcada: ela é cancelada
+    mudar(); j.run('sairDaLiga()'); await esperar(80);
+    assert.equal(srv.cargas, antes + 2);
+    assert.equal(recarga.timer, null);
+  } finally { recarga.espera = 0; j.run('sairDaLiga()') }
 });
