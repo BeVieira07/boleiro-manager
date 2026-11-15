@@ -442,3 +442,19 @@ body.em-jogo .avisos{bottom:24px}
 .propostas-clube{list-style:none;margin:var(--e4) 0 0;padding:0;display:flex;flex-direction:column;gap:var(--e3)}
 .proposta-clube{display:flex;align-items:center;gap:var(--e4);flex-wrap:wrap;background:var(--painel2);border:1px solid var(--linha);border-radius:var(--r);padding:var(--e3) var(--e4)}
 .proposta-clube .btn{min-height:44px}
+/* #166: sem rolagem horizontal desnecessária */
+.club{white-space:normal}
+.tabela-jogadores .acoes{flex-direction:column;align-items:stretch}
+@media(max-width:799px){.tabela-jogadores .acoes{flex-direction:row}}
+@media(max-width:520px){
+  .classif th:nth-child(n+5):nth-child(-n+9),.classif td:nth-child(n+5):nth-child(-n+9){display:none}
+  .tabela-base .c-idade{display:none}
+  .tabela-base .acoes{flex-direction:column;align-items:stretch}
+  .tabela-base th,.tabela-base td{padding:8px 4px;letter-spacing:0}
+  .tabela-base tbody th{white-space:normal}
+}
+.grupos{grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr))}
+/* elenco em telas médias: as colunas menos usadas saem (no celular já saem forma e salário) */
+@media(min-width:800px) and (max-width:1499px){.tabela-jogadores .c-forma,.tabela-jogadores .c-sal{display:none}}
+@media(min-width:800px) and (max-width:1299px){.tabela-jogadores .c-gols{display:none}}
+.tabela-jogadores .c-contr{white-space:normal}

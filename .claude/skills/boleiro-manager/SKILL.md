@@ -67,6 +67,7 @@ Manager de futebol estilo Brasfoot, em JS puro, sem build. Brasileirão Séries 
 ## Front (#56–#65)
 - Visual da maquete do front (tema escuro verde): tokens e componentes em `css/style.css`, documentados em `docs/front.md` (leia antes de mexer em tela). Ícones SVG em `ui/icones.mjs` (`icone(nome)`), nada de emoji nas telas.
 - Layout: menu lateral/barra inferior e barra de ações em `ui/layout.mjs`; cada tela do jogo tem título em `TITULOS`.
+- Rolagem horizontal (#166): nenhuma tela pode ter barra para o lado no computador, nem no celular a partir de 360 px. Medir com `LARGURA=<px> node scripts/navegador.mjs http://localhost:3000/ scripts/medir-rolagem.js`. Tabela larga: esconder colunas por largura (como `.tabela-jogadores` e `.classif`), deixar nomes quebrarem linha; a classe da coluna vai no `<th>` e no `<td>`.
 - Mensagens: `avisar(msg, tipo)`, `confirmar({...}, sim)` e `pedirValor({...}, enviar)` de `ui/avisos.mjs`. **Nunca** `alert`, `confirm` ou `prompt` (há teste). Nos testes, as mensagens vão para `j.alertas` e as confirmações respondem "sim".
 - Testes de front: contraste dos tokens (`tests/contraste.test.mjs`), classes sem uso e telas (`tests/telas.test.mjs`), acessibilidade (`tests/acessibilidade.test.mjs`).
 
