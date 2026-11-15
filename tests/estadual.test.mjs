@@ -42,7 +42,8 @@ test('a pré-temporada vem antes da rodada 1: campeão, premiação e notícia, 
   j.run('if(validateLineup())userClub().lineup=autoXI(userClub());playRound(false)');
   assert.equal(j.run('S.round'), 0, 'a primeira data do estadual não é a rodada 1');
   assert.equal(j.run('S.estaduais.dia') > 0, true);
-  assert.equal(j.run('ui.lastRound.pre'), 0);
+  // grupo de número ímpar (Paulistão: 7): se o clube folga na 1ª data, o jogo já mostra a seguinte
+  assert.equal(j.run('ui.lastRound.pre'), j.run('S.estaduais.dia') - 1);
   const cliques = jogarPre(j);
   assert.ok(cliques >= 2 && cliques <= 9, `cliques: ${cliques}`);
   assert.equal(j.run('S.round'), 1, 'acabada a pré-temporada, a rodada 1 foi jogada');
