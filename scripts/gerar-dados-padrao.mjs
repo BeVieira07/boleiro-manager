@@ -176,8 +176,22 @@ const arqCont = readdirSync('data').filter(f => /^continentais-\d{4}\.json$/.tes
 if (arqCont) {
   const cont = ler('data/' + arqCont), GENERICO = new Set(['club', 'ca', 'cd', 'cs', 'fc', 'sc', 'ss', 'cf', 'de', 'del', 'la', 'el', 'los', 'deportivo', 'atletico', 'atlético', 'sport', 'sporting', 'universidad']);
   const sigla = n => { const w = n.split(/\s+/).find(x => !GENERICO.has(norm(x))) || n; return norm(w).replace(/[^a-z]/g, '').slice(0, 3).toUpperCase() };
-  const clubesCont = cont.clubs.map(c => ({ id: c.id, name: c.name, short: sigla(c.name), color: '#335', logo: existsSync(`img/escudos/${c.id}.png`) ? `img/escudos/${c.id}.png` : c.logo,
-    strength: c.strength, torneio: c.torneio, players: c.players.map(p => ({ id: p.id, name: p.name, pos: p.pos, number: p.number ?? null })) }));
+  // força de 2026 e notas dos destaques, à mão (data/continentais-forca-2026.json); sem o arquivo, fica a força do download
+  const fc = existsSync('data/continentais-forca-2026.json') ? ler('data/continentais-forca-2026.json') : { clubes: {}, jogadores: {} };
+  const { hashStr, mulberry32 } = await import('../core/utils.mjs');
+  // nota de quem não está na lista: sorteio fixo por jogador, com a idade pesando (auge dos 24 aos 31); o 1º do ranking fica
+  // 3 acima da força do clube e cada um seguinte 0,65 abaixo, então os 11 melhores ficam em média perto da força
+  const idade = a => a >= 24 && a <= 31 ? 0.35 : a >= 21 && a <= 33 ? 0.15 : a <= 20 ? -0.1 : 0;
+  const notas = c => {
+    const forca = fc.clubes[c.id] ?? c.strength, dest = fc.jogadores[c.id] || {};
+    for (const n of Object.keys(dest)) if (!c.players.some(p => p.name === n)) console.log(`Força 2026: "${n}" não está no elenco do ${c.name}.`);
+    const ordem = c.players.filter(p => dest[p.name] == null).map(p => ({ p, s: mulberry32(hashStr(p.id + '|nota'))() + idade(p.age) })).sort((a, b) => b.s - a.s);
+    const topo = Math.min(forca + 3, ...Object.values(dest).map(v => v - 1)); // os gerados ficam abaixo dos destaques
+    const ovr = new Map(ordem.map(({ p }, i) => [p.id, Math.max(45, forca - 16, Math.min(88, Math.round(topo - 0.65 * i)))]));
+    return { forca, ovr: p => dest[p.name] ?? ovr.get(p.id) };
+  };
+  const clubesCont = cont.clubs.map(c => { const n = notas(c); return { id: c.id, name: c.name, short: sigla(c.name), color: '#335', logo: existsSync(`img/escudos/${c.id}.png`) ? `img/escudos/${c.id}.png` : c.logo,
+    strength: n.forca, torneio: c.torneio, players: c.players.map(p => ({ id: p.id, name: p.name, age: p.age, pos: p.pos, ovr: n.ovr(p), number: p.number ?? null })) } });
   writeFileSync('core/dados-continentais.mjs', `// Clubes estrangeiros da Libertadores e da Sul-Americana (API-Football, temporada ${cont.season}). NÃO EDITE: gerado por scripts/gerar-dados-padrao.mjs a partir de data/${arqCont}.\nexport const DADOS_CONTINENTAIS = ${JSON.stringify({ season: cont.season, clubs: clubesCont })};\n`);
   console.log(`core/dados-continentais.mjs: ${clubesCont.filter(c => c.torneio === 'libertadores').length} da Libertadores + ${clubesCont.filter(c => c.torneio === 'sulamericana').length} da Sul-Americana.`);
 }
