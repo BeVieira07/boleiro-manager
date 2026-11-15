@@ -70,7 +70,7 @@ Manager de futebol estilo Brasfoot, em JS puro, sem build. Brasileirão Séries 
 - Testes de front: contraste dos tokens (`tests/contraste.test.mjs`), classes sem uso e telas (`tests/telas.test.mjs`), acessibilidade (`tests/acessibilidade.test.mjs`).
 
 ## Testes
-- `npm test` roda `node --test` com os testes de `tests/` (uns 20 s). Rodar antes de commitar mudanças no jogo.
+- `npm test` roda `node --test` com os testes de `tests/`. Rodar antes de commitar mudanças no jogo. O `Math.random` dos testes tem semente fixa (`tests/sorteio-fixo.mjs`, carregado por `--import`; `carregarJogo` recomeça dela): um teste passa ou falha sempre igual. Para testar outro sorteio, `carregarJogo({ semente: N })`.
 - `tests/jogo.mjs` importa os módulos de `core/` e `ui/` em Node com um DOM falso: `carregarJogo()` zera o estado e devolve `run(código)` (com todos os exports à vista), `acao('nome|arg')` (clica como o botão), o HTML da tela atual, os alertas e o localStorage em memória. Para trocar o jogo use `usarEstado(...)`. Use `jogarRodada`/`jogarTemporada` (corrigem a escalação quando há lesionados) e `problemasNasTelas` (acha "undefined", "NaN" e "[object" nas telas).
 - Sorteio com semente (#26): as regras usam `rnd()` (`utils.js`), que avança `S.rng`; cada rodada recomeça de `semente(S.seed, temporada, rodada)`. Nunca usar `Math.random` nas regras (há um teste que confere). `jogarTemporada` impede a demissão, salvo com `{demissao:true}`.
 
