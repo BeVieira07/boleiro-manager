@@ -19,11 +19,13 @@ do $$ begin
   if (select (seed, rng) from public.liga_segredo where liga_id = '00000000-0000-0000-0000-0000000000f2') is distinct from (12345::bigint, 999::bigint)
     then raise exception 'rng não foi atualizado'; end if;
 end $$;
--- o membro lê o estado da liga, mas não o segredo
+-- o membro lê o estado da liga (pela função liga_estado_meu, #121), mas não o segredo nem a tabela direto
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"00000000-0000-0000-0000-0000000000f1","role":"authenticated"}';
 do $$ begin
-  if not exists (select 1 from public.liga_estado where liga_id = '00000000-0000-0000-0000-0000000000f2') then raise exception 'membro não leu o estado'; end if;
+  if public.liga_estado_meu('00000000-0000-0000-0000-0000000000f2') is null then raise exception 'membro não leu o estado'; end if;
+  if public.liga_estado_meu('00000000-0000-0000-0000-0000000000f2') ? 'seed' then raise exception 'a semente veio no estado'; end if;
+  if exists (select 1 from public.liga_estado) then raise exception 'membro leu liga_estado direto'; end if;
   if exists (select 1 from public.liga_segredo) then raise exception 'membro leu a semente'; end if;
 end $$;
 select 'segredo OK' as resultado;
