@@ -32,6 +32,7 @@ A função importa o `core/` do GitHub pelo jsDelivr, **fixado num commit**. Mud
 - Testar as regras no banco real: `supabase/tests/*.sql`, uma transação que termina em `rollback` (rodar com `execute_sql`). Cada mudança de regra ganha um caso aí.
 
 ## Estado da liga
+- O navegador lê o estado da liga pela função `liga_estado_meu` (#121): dos outros técnicos, só nome e clube; propostas só as suas; base só do seu clube; potencial em faixa (mesmas estrelas). A tabela `liga_estado` não tem leitura para membros.
 - Escalação e tática de cada técnico (`liga_entradas`) só ele lê (#78). Quem confirmou fica em `liga_membros.pronto_rodada` (gatilho `privado.marcar_pronto`), que o navegador lê e o tempo real manda.
 - Semente (#79): `seed` e `rng` nunca ficam em `liga_estado` (gatilho `privado.guardar_segredo` os move para `liga_segredo`, sem leitura para membros); a função os devolve com `lerEstado`. `liga_resultados.semente` é a da rodada, não a da liga.
 - `liga_estado.estado` é o `S` da liga (JSON). O servidor passa todo estado por `migrarSave` (`core/versao.mjs`): campo novo no save = migração nova no fim de `MIGRACOES`, e as ligas antigas são atualizadas na primeira ação.
