@@ -11,6 +11,7 @@ if (!KEY) { console.error('Coloque API_FOOTBALL_KEY no .env'); process.exit(1) }
 const DELAY = 7000; // plano gratuito: 10 pedidos por minuto
 const TORNEIOS = [{ id: 'libertadores', liga: 13, nome: 'Libertadores', base: 72 }, { id: 'sulamericana', liga: 11, nome: 'Sul-Americana', base: 66 }];
 const POS = { Goalkeeper: 'G', Defender: 'D', Midfielder: 'M', Attacker: 'A' };
+const CORRIGIR = { 225: { id: 2356, name: 'Nacional', logo: 'https://media.api-sports.io/football/teams/2356.png' } }; // Club Nacional (Uruguai)
 
 const RAW = `data/continentais-${SEASON}-raw.json`, OUT = `data/continentais-${SEASON}.json`;
 const raw = existsSync(RAW) ? JSON.parse(readFileSync(RAW, 'utf8')) : { season: SEASON, standings: {}, squads: {} };
@@ -34,6 +35,8 @@ for (const t of TORNEIOS) {
   const linhas = grupos.flat(), media = linhas.reduce((s, r) => s + r.points, 0) / (linhas.length || 1);
   console.log(`${t.nome} ${SEASON}: ${grupos.length} grupos, ${linhas.length} clubes`);
   for (const r of linhas) {
+    // a classificação da API às vezes aponta outro clube de mesmo nome (o "Nacional" de 2024 era o da Madeira, id 225)
+    if (CORRIGIR[r.team.id]) r.team = { ...r.team, ...CORRIGIR[r.team.id] };
     if (noJogo.has('c' + r.team.id)) continue; // já está no jogo (clubes brasileiros)
     if (!raw.squads[r.team.id]) {
       try { raw.squads[r.team.id] = (await api(`/players/squads?team=${r.team.id}`)).response; salvarRaw() }

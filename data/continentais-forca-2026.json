@@ -1,0 +1,142 @@
+{
+  "_como": "Força dos clubes estrangeiros (Libertadores e Sul-Americana) e notas dos principais jogadores, pelo momento de 2026. Editado à mão; aplicado por npm run dados:padrao. Os jogadores fora da lista ganham nota a partir da força do clube e da idade. Escala igual à dos brasileiros: a força do clube fica perto da média dos 11 melhores, e os craques uns 5 a 7 acima (Flamengo: força 79, melhor jogador 87).",
+  "clubes": {
+    "c435": 77,
+    "c451": 76,
+    "c436": 76,
+    "c450": 75,
+    "c1158": 75,
+    "c446": 74,
+    "c437": 74,
+    "c1153": 74,
+    "c2348": 73,
+    "c2356": 73,
+    "c1176": 72,
+    "c1179": 72,
+    "c458": 71,
+    "c1152": 71,
+    "c1135": 71,
+    "c2540": 71,
+    "c1128": 71,
+    "c2553": 70,
+    "c3702": 70,
+    "c2994": 70,
+    "c2330": 70,
+    "c2315": 69,
+    "c456": 69,
+    "c1125": 69,
+    "c440": 69,
+    "c460": 68,
+    "c3711": 68,
+    "c2358": 68,
+    "c442": 67,
+    "c2328": 66,
+    "c2318": 66,
+    "c3700": 66,
+    "c2352": 66,
+    "c2359": 66,
+    "c1175": 66,
+    "c1149": 65,
+    "c2331": 64,
+    "c2808": 64,
+    "c2807": 64,
+    "c2326": 64,
+    "c3706": 64,
+    "c10487": 64,
+    "c20960": 64,
+    "c1141": 63,
+    "c1187": 63,
+    "c2825": 62,
+    "c1183": 62,
+    "c2541": 61,
+    "c15708": 61,
+    "c16847": 61
+  },
+  "jogadores": {
+    "c435": {
+      "S. Driussi": 81,
+      "L. Martínez": 81,
+      "T. Almada": 81,
+      "G. Montiel": 80,
+      "M. Acuña": 79,
+      "Á. Correa": 79,
+      "N. Otamendi": 78,
+      "F. Vera": 78,
+      "A. Moreno": 78,
+      "R. Borré": 78,
+      "T. Galván": 77,
+      "M. Arambarri": 76
+    },
+    "c451": {
+      "L. Paredes": 82,
+      "M. Merentiel": 80,
+      "C. Palacios": 78,
+      "A. Costa": 78,
+      "M. Giménez": 77,
+      "Á. Romero": 76,
+      "A. Velasco": 76,
+      "L. Blanco": 76,
+      "S. Ascacíbar": 76,
+      "Marco Pellegrino": 75
+    },
+    "c436": {
+      "A. Martínez": 80,
+      "F. Cambeses": 77,
+      "M. Di Cesare": 77,
+      "A. Fernández": 76,
+      "M. Kranevitter": 75
+    },
+    "c450": {
+      "E. Cetré": 78,
+      "G. Carrillo": 77,
+      "F. Muslera": 76,
+      "A. Castro": 76,
+      "S. Arzamendia": 75,
+      "L. Alario": 75,
+      "J. Sosa": 73,
+      "M. Rojo": 73
+    },
+    "c437": {
+      "Á. Di María": 83,
+      "E. Copetti": 77,
+      "J. Campaz": 77,
+      "J. Ledesma": 75,
+      "F. Mallo": 75,
+      "M. Ruben": 74
+    },
+    "c446": {
+      "R. Carrera": 76,
+      "A. Cardozo": 76,
+      "N. Losada": 75,
+      "M. Moreno": 75,
+      "E. Salvio": 75,
+      "C. Izquierdoz": 74
+    },
+    "c1158": {
+      "Alexander Antonio Alvarado Carriel": 77,
+      "M. Estrada": 76,
+      "Alexander Domínguez Carabalí": 75,
+      "Deyverson": 75,
+      "J. Pretell": 75
+    },
+    "c1153": {
+      "J. Sornoza": 76,
+      "R. Schunke": 75
+    },
+    "c2348": {
+      "G. Pezzella": 77,
+      "M. Arezo": 77,
+      "D. Laxalt": 75,
+      "W. Aguerre": 75
+    },
+    "c2356": {
+      "S. Coates": 77
+    },
+    "c2315": {
+      "A. Vidal": 77
+    },
+    "c2553": {
+      "L. Advíncula": 74
+    }
+  }
+}

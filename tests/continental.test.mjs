@@ -9,7 +9,13 @@ const estrangeiros = new Set(DADOS_CONTINENTAIS.clubs.map(c => c.id));
 
 test('os dados têm clubes estrangeiros das duas copas, com elenco, e nenhum deles está nas séries', () => {
   for (const t of ['libertadores', 'sulamericana']) assert.ok(DADOS_CONTINENTAIS.clubs.filter(c => c.torneio === t).length >= 20, t);
-  for (const c of DADOS_CONTINENTAIS.clubs) assert.ok(c.players.length >= 11, `${c.name}: ${c.players.length} jogadores`);
+  for (const c of DADOS_CONTINENTAIS.clubs) {
+    assert.ok(c.players.length >= 11, `${c.name}: ${c.players.length} jogadores`);
+    assert.ok(c.players.every(p => p.ovr >= 45 && p.ovr <= 90), `${c.name}: nota fora da escala`);
+    const xi = c.players.map(p => p.ovr).sort((a, b) => b - a).slice(0, 11), media = xi.reduce((s, x) => s + x, 0) / 11;
+    assert.ok(Math.abs(media - c.strength) <= 3, `${c.name}: média dos 11 melhores ${media.toFixed(1)} longe da força ${c.strength}`);
+  }
+  assert.equal(DADOS_CONTINENTAIS.clubs.find(c => c.id === 'c2356').players.some(p => p.name === 'S. Coates'), true, 'o Nacional é o do Uruguai');
   const j = novo();
   assert.equal(j.run(`getData().clubs.filter(c=>${JSON.stringify([...estrangeiros])}.includes(c.id)).length`), 0, 'estrangeiro na escolha de clube');
   assert.equal(j.run(`S.clubs.filter(c=>${JSON.stringify([...estrangeiros])}.includes(c.id)).length`), 0, 'estrangeiro nas séries');

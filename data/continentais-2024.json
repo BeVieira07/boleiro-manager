@@ -1,7 +1,7 @@
 {
   "source": "api-football",
   "season": 2024,
-  "createdAt": "2026-11-15T12:58:37.881Z",
+  "createdAt": "2026-11-15T13:12:04.571Z",
   "clubs": [
     {
       "id": "c2315",
@@ -5407,225 +5407,232 @@
       ]
     },
     {
-      "id": "c225",
+      "id": "c2356",
       "name": "Nacional",
       "short": "NAC",
       "color": "#335",
-      "logo": "https://media.api-sports.io/football/teams/225.png",
+      "logo": "https://media.api-sports.io/football/teams/2356.png",
       "strength": 73,
       "torneio": "libertadores",
       "grupo": "Group H",
       "pontos": 10,
       "players": [
         {
-          "id": "p129774",
-          "name": "João Gonçalves",
-          "age": 25,
+          "id": "p646531",
+          "name": "J. Bianchi",
+          "age": 20,
           "pos": "G",
-          "number": 13
+          "number": 40
         },
         {
-          "id": "p437099",
-          "name": "Renato Bellucci",
-          "age": 20,
+          "id": "p6423",
+          "name": "A. Martín Arias",
+          "age": 33,
+          "pos": "G",
+          "number": 22
+        },
+        {
+          "id": "p2967",
+          "name": "L. Mejía",
+          "age": 34,
           "pos": "G",
           "number": 1
         },
         {
-          "id": "p435444",
-          "name": "Kevyn",
-          "age": 21,
+          "id": "p153082",
+          "name": "I. Suárez",
+          "age": 23,
           "pos": "G",
-          "number": 50
+          "number": 25
         },
         {
-          "id": "p41122",
-          "name": "Ivanildo Fernandes",
-          "age": 29,
+          "id": "p51417",
+          "name": "E. Ancheta",
+          "age": 26,
           "pos": "D",
-          "number": 14
+          "number": 13
         },
         {
-          "id": "p378983",
-          "name": "Francisco Gonçalves",
-          "age": 22,
-          "pos": "D",
-          "number": 33
-        },
-        {
-          "id": "p41667",
-          "name": "José Gomes",
-          "age": 30,
+          "id": "p2830",
+          "name": "F. Calvo",
+          "age": 33,
           "pos": "D",
           "number": 5
         },
         {
-          "id": "p297142",
-          "name": "W. Kokolo",
-          "age": 25,
+          "id": "p51718",
+          "name": "C. Cándido",
+          "age": 30,
           "pos": "D",
           "number": 21
         },
         {
-          "id": "p10308",
-          "name": "Léo Santos",
-          "age": 27,
+          "id": "p1477",
+          "name": "S. Coates",
+          "age": 35,
           "pos": "D",
-          "number": 34
+          "number": 4
         },
         {
-          "id": "p379078",
-          "name": "Joel da Silva",
-          "age": 23,
-          "pos": "M",
-          "number": 26
-        },
-        {
-          "id": "p145539",
-          "name": "Wesley Gasolina",
-          "age": 26,
-          "pos": "D",
-          "number": 52
-        },
-        {
-          "id": "p309730",
-          "name": "Zé Vitor",
+          "id": "p197520",
+          "name": "G. Martirena",
           "age": 25,
           "pos": "D",
-          "number": 38
-        },
-        {
-          "id": "p354009",
-          "name": "Daniel Isai de la Cruz de la Cruz",
-          "age": 22,
-          "pos": "D",
-          "number": 2
-        },
-        {
-          "id": "p162212",
-          "name": "Miguel Baeza",
-          "age": 26,
-          "pos": "M",
-          "number": 8
-        },
-        {
-          "id": "p353926",
-          "name": "Daniel Júnior",
-          "age": 24,
-          "pos": "M",
-          "number": 10
-        },
-        {
-          "id": "p524612",
-          "name": "Deivison",
-          "age": 20,
-          "pos": "M",
-          "number": 88
-        },
-        {
-          "id": "p282540",
-          "name": "D. Dongmo",
-          "age": 25,
-          "pos": "M",
-          "number": 31
-        },
-        {
-          "id": "p49603",
-          "name": "C. Labidi",
-          "age": 25,
-          "pos": "M",
           "number": 15
         },
         {
-          "id": "p9964",
-          "name": "Liziero",
-          "age": 28,
-          "pos": "M",
-          "number": 28
+          "id": "p634053",
+          "name": "L. Rodriguez",
+          "age": 18,
+          "pos": "D",
+          "number": 37
         },
         {
-          "id": "p465181",
-          "name": "Mateus Iseppe",
-          "age": 19,
-          "pos": "M",
-          "number": 23
-        },
-        {
-          "id": "p238562",
-          "name": "Matheus Dias",
-          "age": 24,
-          "pos": "M",
-          "number": 6
-        },
-        {
-          "id": "p41614",
-          "name": "Filipe Soares",
-          "age": 27,
-          "pos": "M",
-          "number": 22
-        },
-        {
-          "id": "p378982",
-          "name": "Martim Watts",
-          "age": 21,
-          "pos": "M",
-          "number": 30
-        },
-        {
-          "id": "p129794",
-          "name": "Matchoi Djaló",
-          "age": 23,
-          "pos": "M",
-          "number": 20
-        },
-        {
-          "id": "p161703",
-          "name": "S. Gavriel",
-          "age": 24,
-          "pos": "A",
-          "number": 11
-        },
-        {
-          "id": "p371928",
-          "name": "M. Jensen",
-          "age": 21,
+          "id": "p51752",
+          "name": "N. Rodríguez",
+          "age": 34,
           "pos": "D",
           "number": 7
         },
         {
-          "id": "p404644",
-          "name": "F. Nava",
-          "age": 21,
-          "pos": "A",
-          "number": 17
+          "id": "p53678",
+          "name": "A. Rogel",
+          "age": 28,
+          "pos": "D",
+          "number": 2
         },
         {
-          "id": "p459059",
-          "name": "N. Kader",
-          "age": 22,
+          "id": "p562741",
+          "name": "T. Viera",
+          "age": 19,
+          "pos": "D",
+          "number": 32
+        },
+        {
+          "id": "p51459",
+          "name": "L. Boggio",
+          "age": 26,
+          "pos": "M",
+          "number": 6
+        },
+        {
+          "id": "p6615",
+          "name": "R. Botta",
+          "age": 35,
+          "pos": "M",
+          "number": 20
+        },
+        {
+          "id": "p546149",
+          "name": "A. Dos Santos",
+          "age": 17,
+          "pos": "M",
+          "number": 10
+        },
+        {
+          "id": "p634150",
+          "name": "J. I. Garcia Lantean",
+          "age": 19,
+          "pos": "M",
+          "number": 56
+        },
+        {
+          "id": "p634062",
+          "name": "L. Gonzalez",
+          "age": 17,
+          "pos": "M",
+          "number": 39
+        },
+        {
+          "id": "p634063",
+          "name": "R. Martinez",
+          "age": 17,
+          "pos": "M",
+          "number": 31
+        },
+        {
+          "id": "p655129",
+          "name": "B. Nunez",
+          "age": 23,
+          "pos": "M",
+          "number": 24
+        },
+        {
+          "id": "p51343",
+          "name": "L. Rodríguez",
+          "age": 32,
+          "pos": "M",
+          "number": 23
+        },
+        {
+          "id": "p316732",
+          "name": "S. Silva",
+          "age": 21,
+          "pos": "M",
+          "number": 8
+        },
+        {
+          "id": "p6008",
+          "name": "B. Zuculini",
+          "age": 32,
+          "pos": "M",
+          "number": 36
+        },
+        {
+          "id": "p472612",
+          "name": "A. dos Santos",
+          "age": 17,
+          "pos": "M",
+          "number": 10
+        },
+        {
+          "id": "p359085",
+          "name": "T. Correa",
+          "age": 21,
           "pos": "A",
           "number": 29
         },
         {
-          "id": "p379505",
-          "name": "A. Obando",
-          "age": 19,
+          "id": "p528765",
+          "name": "Alec Aceves",
+          "age": 20,
+          "pos": "A",
+          "number": 77
+        },
+        {
+          "id": "p2615",
+          "name": "M. Gómez",
+          "age": 29,
           "pos": "A",
           "number": 9
         },
         {
-          "id": "p437774",
-          "name": "Pablo Ruan",
-          "age": 23,
+          "id": "p59070",
+          "name": "A. Martínez",
+          "age": 28,
           "pos": "A",
-          "number": 99
+          "number": 14
         },
         {
-          "id": "p34598",
-          "name": "Song Min-Kyu",
-          "age": 26,
+          "id": "p565565",
+          "name": "P. Nunez",
+          "age": 19,
           "pos": "A",
-          "number": 12
+          "number": 18
+        },
+        {
+          "id": "p52058",
+          "name": "M. Silvera",
+          "age": 28,
+          "pos": "A",
+          "number": 11
+        },
+        {
+          "id": "p5689",
+          "name": "T. Verón",
+          "age": 25,
+          "pos": "A",
+          "number": 27
         }
       ]
     },

@@ -90,8 +90,9 @@ const tatica = c => ehHumano(c) ? taticaDe(c, c) : NEUTRA;
 const PESO = { G: 0.02, D: 0.8, M: 2.6, A: 6 };
 function autor(c, f) {
   if (f.xi) { const p = pickScorer(f.xi); return p && { id: p.id, nome: p.name } }
-  const ps = (c.players || []).filter(p => PESO[p.pos]), tot = ps.reduce((s, p) => s + PESO[p.pos], 0);
-  let x = rnd() * tot; for (const p of ps) { x -= PESO[p.pos]; if (x <= 0) return { id: p.id, nome: p.name } }
+  const peso = p => PESO[p.pos] * Math.pow((p.ovr || 60) / 70, 2); // como pickScorer: posição e nota
+  const ps = (c.players || []).filter(p => PESO[p.pos]), tot = ps.reduce((s, p) => s + peso(p), 0);
+  let x = rnd() * tot; for (const p of ps) { x -= peso(p); if (x <= 0) return { id: p.id, nome: p.name } }
   return ps.length ? { id: ps[ps.length - 1].id, nome: ps[ps.length - 1].name } : null;
 }
 // placar de M (em casa, salvo neutro) contra V, com os autores dos gols na artilharia do torneio
