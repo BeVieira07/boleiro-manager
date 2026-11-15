@@ -1,5 +1,6 @@
 /* ================= componentes do front (#56) =================
    Pedaços de HTML que várias telas usam. As classes estão em css/style.css e documentadas em docs/front.md. */
+import { energiaDe } from '../core/energia.mjs';
 import { esc } from '../core/utils.mjs';
 
 /** Faixa do overall: alto (76+), médio (68–75) ou baixo. */
@@ -9,6 +10,14 @@ export const ovrChip = (v, titulo = '') => `<span class="ovr ${faixaOvr(v)}"${ti
 /** Barra de progresso; `pct` de 0 a 100. */
 export const barra = (pct, cor = '', classe = '') =>
   `<div class="barra ${classe}" role="presentation"><div style="width:${Math.max(0, Math.min(100, pct))}%${cor ? ';background:' + cor : ''}"></div></div>`;
+
+/** Cor da energia (#136): verde a partir de 70, amarelo de 40 a 69, vermelho abaixo de 40. */
+export const corEnergia = e => (e >= 70 ? 'var(--verde)' : e >= 40 ? 'var(--ouro)' : 'var(--perigo)');
+/** Energia de 0 a 100 do jogador: barra e número (e o texto para leitor de tela, a cor sozinha não diz nada). */
+export function energiaBarra(p) {
+  const e = Math.round(energiaDe(p));
+  return `<span class="energia" title="Energia ${e} de 100"><span class="sr">Energia ${e} de 100</span>${barra(e, corEnergia(e), 'fina')}<span class="energia-n" aria-hidden="true">${e}</span></span>`;
+}
 
 /** Indicador: rótulo, valor grande, unidade, barra opcional e subtexto. */
 export function stat({ rotulo, valor, unid = '', sub = '', cor = '', pct = null, corBarra = '' }) {

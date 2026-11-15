@@ -1,6 +1,7 @@
 /* ================= tela do Clube como painel (#59) =================
    Responde "como estamos e o que preciso fazer agora": indicadores, próximo jogo, forma recente,
    o que pede atenção, mini classificação e notícias. */
+import { cansados, energiaDe } from '../core/energia.mjs';
 import { faixaConf, receitaEsperada } from '../core/diretoria.mjs';
 import { loanLeft, loanOf, loansIn, wageBill } from '../core/emprestimos.mjs';
 import { slotLayout, unavailable } from '../core/escalacao.mjs';
@@ -37,6 +38,8 @@ export function alertas() {
   if (fora.length) out.push({ tipo: 'erro', titulo: `${fora.length} titular${fora.length > 1 ? 'es' : ''} sem condição de jogo`, texto: fora.map(p => `${p.name}: ${unavailable(p)}`).join('; ') + '.', acao: 'go|escalacao', rotulo: 'Trocar' });
   const foraPos = lay.filter(s => s.id && !unavailable(P[s.id]) && penalidadePosicao(P[s.id], s.d).tipo === 'fora');
   if (foraPos.length) out.push({ tipo: 'aviso', titulo: `${foraPos.length} jogador${foraPos.length > 1 ? 'es' : ''} fora de posição`, texto: foraPos.map(s => `${P[s.id].name} na vaga de ${s.d}`).join(', ') + '.', acao: 'go|escalacao', rotulo: 'Ajustar' });
+  const cans = cansados(xi, P);
+  if (cans.length) out.push({ tipo: 'aviso', titulo: `${cans.length} titular${cans.length > 1 ? 'es' : ''} cansado${cans.length > 1 ? 's' : ''}`, texto: cans.map(p => `${p.name} (${Math.round(energiaDe(p))})`).join(', ') + '. Com pouca energia rendem menos e se lesionam mais.', acao: 'go|escalacao', rotulo: 'Poupar' });
   for (const o of tec().offers.filter(o => P[o.pid] && P[o.pid].clubId === me)) {
     const p = P[o.pid];
     out.push({ tipo: 'aviso', titulo: `Proposta ${o.emprestimo ? 'de empréstimo ' : ''}por ${p.name}`, texto: o.emprestimo ? `${clubById(o.from).name} quer ele emprestado por 1 ano, com o salário dividido 50/50. Vale até a rodada ${o.until + 1}.` : `${clubById(o.from).name} oferece ${money(o.amount)} (valor de mercado ${money(p.value)}). Vale até a rodada ${o.until + 1}.`,

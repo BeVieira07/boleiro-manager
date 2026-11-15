@@ -13,6 +13,8 @@
 import { S, addFin, addNews, bilheteriaBase, clubById, ehHumano, tecDoClube } from './estado.mjs';
 import { aplicarConfianca } from './diretoria.mjs';
 import { placar } from './copa.mjs';
+import { anotarTitulares, atualizarEnergia } from './energia.mjs';
+import { getXI } from './motor.mjs';
 import { clamp, money, rnd, semente, shuffle } from './utils.mjs';
 
 export const ESTADUAL_MIN = 4, GRUPOS_DESDE = 12;
@@ -106,6 +108,7 @@ export function estadualPelaFrente() {
 function jogarData(d) {
   const E = S.estaduais;
   S.rng = semente(S.seed, S.season, 'estadual', d); // como a rodada: depende só do estado e das escolhas
+  const jogaram = anotarTitulares(new Map(), E.torneios.flatMap(t => jogosDaData(t, d)), getXI, clubById); // #136: a energia também gasta aqui
   for (const tor of E.torneios) {
     if (d < tor.rodadas.length) {
       for (const g of tor.rodadas[d]) { [g.hg, g.ag] = placar(clubById(g.h), clubById(g.a)); dinheiroDoJogo(tor, g, `Rodada ${d + 1}`) }
@@ -122,6 +125,7 @@ function jogarData(d) {
       encerrar(tor);
     }
   }
+  atualizarEnergia(jogaram);
 }
 // bilheteria (metade da de um jogo da liga) e notícia, só para clube com técnico
 function dinheiroDoJogo(tor, g, fase) {
