@@ -1,10 +1,10 @@
 // Abre uma página num Chrome sem janela e roda uma expressão JavaScript nela (Chrome DevTools Protocol).
 // Serve para o que o Node não mostra: tempo de desenho das telas, o fluxo real de um botão, captura de imagens.
 // Uso: node scripts/navegador.mjs <url> <arquivo-com-a-expressão.js>   (a expressão pode ser async; o resultado vai em JSON)
-// Largura da janela: LARGURA=390 (celular) ou LARGURA=1920; padrão 1366 x 768.
+// Largura da janela: LARGURA=390 (celular) ou LARGURA=1920; padrão 1366 x 768. FOTO=arquivo.png salva uma foto da tela.
 // Rode o jogo antes (npm start). Chrome em outro lugar: variável CHROME com o caminho.
 import { spawn } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -35,6 +35,8 @@ try {
   await new Promise(r => setTimeout(r, 2500)); // a página carrega os módulos
   const r = await cmd('Runtime.evaluate', { expression: readFileSync(arquivo, 'utf8'), awaitPromise: true, returnByValue: true });
   console.log(JSON.stringify(r.result?.value ?? r.exceptionDetails?.exception?.description ?? r, null, 1));
+  // FOTO=arquivo.png: foto da página depois da expressão (para conferir o desenho de uma tela)
+  if (process.env.FOTO) { await new Promise(res => setTimeout(res, 400)); const f = await cmd('Page.captureScreenshot', { format: 'png' }); writeFileSync(process.env.FOTO, Buffer.from(f.data, 'base64')) }
   if (logs.length) console.log(logs.join('\n'));
   fim(0);
 } catch (e) { console.error(e.message); fim(1) }
