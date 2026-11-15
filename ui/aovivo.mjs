@@ -3,7 +3,7 @@
    da rodada e a classificação provisória. A rodada já foi calculada (core/motor.mjs); aqui só se mostra até o minuto
    `v.min`. Sair da tela pausa o jogo; "Voltar ao jogo" retoma. Na liga o jogo é um replay do servidor: trocas e
    formação ficam bloqueadas, o painel do campeonato funciona. */
-import { placarNoMinuto, tabelaNoMinuto } from '../core/aovivo.mjs';
+import { estatisticas, minutoDoTempo, placarNoMinuto, tabelaNoMinuto, ultimoLance } from '../core/aovivo.mjs';
 import { COPA, copaNaRodada } from '../core/copa.mjs';
 import { DIVS, P, S, clubById, divOf, divisions, hasTwoDivs, userClub } from '../core/estado.mjs';
 import { getXI } from '../core/motor.mjs';
@@ -53,7 +53,7 @@ function restaurar(v) {
 
 function tick(v) {
   if (ui.vivo !== v || v.S !== S) { clearInterval(v.timer); if (ui.vivo === v) { ui.vivo = null; ui.tvAoVivo = null } return }
-  if (ui.view !== 'aovivo') return; // pausado: saiu da tela
+  if (ui.view !== 'aovivo' || v.pausado) return; // pausado: saiu da tela ou apertou Pausar (#170)
   if (v.min >= DURACAO) return;
   v.min++; pintar(v);
   if (v.min >= DURACAO) terminar(v);
@@ -77,7 +77,21 @@ export function avEntrar(id) {
   aplicar(v, substituir(v.g, v.min, v.sel, id));
 }
 export function avFormacao(f) { const v = ui.vivo; if (!v || v.fim || v.replay) return; aplicar(v, mudarFormacaoAoVivo(v.g, v.min, f)) }
-export function avPular() { const v = ui.vivo; if (v && !v.fim) { v.min = DURACAO; terminar(v) } }
+export function avPular() { const v = ui.vivo; if (v && !v.fim) { v.min = DURACAO; v.pausado = false; terminar(v) } }
+/** Pausa ou continua o relógio (#170). Pausado, as trocas e o esquema continuam disponíveis. */
+export function avPausar() {
+  const v = ui.vivo; if (!v || v.fim) return;
+  v.pausado = !v.pausado;
+  const b = el('av-botoes'); if (b) b.innerHTML = botoes(v);
+  const c = el('lclk'); if (c) c.textContent = relogio(v);
+  const p = el('lpausa'); if (p && p.focus) p.focus();
+}
+// barra de espaço pausa e continua (fora de campos e botões, que já usam o espaço)
+if (globalThis.document && document.addEventListener) document.addEventListener('keydown', ev => {
+  if (ev.key !== ' ' || ui.view !== 'aovivo' || !ui.vivo || ui.vivo.fim) return;
+  const t = ev.target && ev.target.tagName; if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(t)) return;
+  ev.preventDefault(); avPausar();
+});
 export function avContinuar() { const v = ui.vivo; if (!v) return; const { done } = v; encerrarVivo(); done() }
 function aplicar(v, r) {
   if (r.erro) { avisar(r.erro, 'erro'); return }
@@ -85,7 +99,20 @@ function aplicar(v, r) {
 }
 
 /* ---------- pedaços da página ---------- */
-const relogio = v => v.fim ? 'Fim de jogo' : v.min + "'";
+const relogio = v => { if (v.fim) return 'Fim de jogo'; const t = minutoDoTempo(v.min); return `${t.m}' · ${t.tempo}º tempo${v.pausado ? ' · pausado' : ''}` };
+// último lance de um jogo: "⚽ Fulano 10' · 2º" (gol) ou cartão
+function lanceTxt(g, min) {
+  const e = ultimoLance(g, min); if (!e) return '';
+  const t = minutoDoTempo(e.m), c = clubById(e.side === 'h' ? g.h : g.a);
+  return `${icone(e.t === 'gol' ? 'bola' : 'cartao', { tam: 14, rotulo: e.t === 'gol' ? 'Gol' : 'Cartão', classe: e.t === 'gol' ? '' : 'ev-cartao' })}<span>${esc(e.name)} <span class="muted">(${esc(c.short || c.name)}) ${t.m}' · ${t.tempo}º</span></span>`;
+}
+const ESTAT = [['posse', 'Posse de bola'], ['fin', 'Finalizações'], ['noGol', 'No gol'], ['fora', 'Para fora'], ['desarmes', 'Desarmes'], ['erros', 'Erros de passe']];
+function htmlEst(v) {
+  const e = estatisticas(v.g, v.min), H = clubById(v.g.h), A = clubById(v.g.a), x = (k, l) => k === 'posse' ? `${e[k][l]}%` : e[k][l];
+  return `<caption class="sr">Estatísticas: ${esc(H.name)} contra ${esc(A.name)}</caption>
+    <thead><tr><th scope="col">${esc(H.short || H.name)}</th><th scope="col"><span class="sr">Estatística</span></th><th scope="col">${esc(A.short || A.name)}</th></tr></thead>
+    <tbody>${ESTAT.map(([k, r]) => `<tr><td>${x(k, 'h')}</td><th scope="row">${r}</th><td>${x(k, 'a')}</td></tr>`).join('')}</tbody>`;
+}
 function lances(v) {
   const H = clubById(v.g.h), A = clubById(v.g.a), meu = userClub().id, ate = v.g.ev.filter(e => e.m <= v.min);
   return { feed: [...ate].reverse().map(e => itemEvento(e, H, A, meu)).join('') + '<li class="ev muted">Bola rolando!</li>', marcas: ate.map(e => marcador(e, H, A)).join('') };
@@ -97,8 +124,10 @@ function pintar(v) {
     const txt = `${p.h} x ${p.a}`;
     if (n.textContent !== txt) { n.textContent = txt; if (n.classList) { n.classList.remove('pulsa'); void n.offsetWidth; n.classList.add('pulsa') } }
   }
-  const c = el('lclk'), b = el('lbar'), f = el('lfeed'), m = el('lmarcas');
+  const c = el('lclk'), b = el('lbar'), f = el('lfeed'), m = el('lmarcas'), est = el('lest'), ult = el('lult');
   if (c) c.textContent = relogio(v);
+  if (est) est.innerHTML = htmlEst(v);
+  if (ult) ult.innerHTML = lanceTxt(v.g, v.min);
   if (b) b.style.width = Math.min(100, v.min / DURACAO * 100) + '%';
   if (f) f.innerHTML = feed;
   if (m) m.innerHTML = marcas;
@@ -110,7 +139,8 @@ function paineis(v) { const r = el('av-rodada'), c = el('av-classif'); if (r) r.
 
 const botoes = v => v.fim
   ? `<button class="btn" id="ldone" data-acao="avContinuar">Continuar</button>`
-  : `<button class="btn sec" id="lskip" data-acao="avPular">${icone('avancar', { tam: 16 })}Pular para o fim</button>`;
+  : `<button class="btn${v.pausado ? '' : ' sec'}" id="lpausa" data-acao="avPausar" aria-pressed="${!!v.pausado}">${icone(v.pausado ? 'play' : 'pausa', { tam: 16 })}${v.pausado ? 'Continuar' : 'Pausar'}</button>
+    <button class="btn sec" id="lskip" data-acao="avPular">${icone('avancar', { tam: 16 })}Pular para o fim</button>`;
 
 function htmlControles(v) {
   if (v.fim) return '';
@@ -131,14 +161,21 @@ function htmlControles(v) {
       </div></section>`;
 }
 
-function htmlMeu(v) {
-  const H = clubById(v.g.h), A = clubById(v.g.a), p = placarNoMinuto(v.g, v.min), { feed, marcas } = lances(v);
+// cabeçalho do seu jogo (#170): competição, relógio, placar, último lance, barra de tempo, pausa e estatísticas
+function htmlCab(v) {
+  const H = clubById(v.g.h), A = clubById(v.g.a), p = placarNoMinuto(v.g, v.min), { marcas } = lances(v);
   const lado = (c, cls) => `<div class="placar-time ${cls}">${crest(c, 'g')}<b>${esc(c.name)}</b></div>`;
-  return `<div class="placar">${lado(H, 'casa')}<div class="placar-centro"><div class="placar-num" id="lsc" aria-live="polite">${p.h} x ${p.a}</div><div class="relogio" id="lclk">${relogio(v)}</div></div>${lado(A, 'fora')}</div>
+  return `<div class="cab-jogo"><div class="cab-topo"><span class="sobretitulo">${esc(DIVS[divOf(userClub())] || 'Campeonato')} · Rodada ${v.rodada + 1}</span><span class="relogio" id="lclk" aria-live="off">${relogio(v)}</span></div>
+    <div class="placar">${lado(H, 'casa')}<div class="placar-centro"><div class="placar-num" id="lsc" aria-live="polite">${p.h} x ${p.a}</div></div>${lado(A, 'fora')}</div>
+    <p class="ult-lance" id="lult">${lanceTxt(v.g, v.min)}</p>
     <div class="tempo" aria-hidden="true"><div class="tempo-trilho"><div class="tempo-feito" id="lbar" style="width:${Math.min(100, v.min / DURACAO * 100)}%"></div></div><div class="tempo-marcas" id="lmarcas">${marcas}</div>
       <div class="tempo-escala"><span>0'</span><span>45'</span><span>90'</span></div></div>
-    <ul class="eventos" id="lfeed" aria-label="Lances da partida">${feed}</ul>
-    <div class="row fim-acoes" id="av-botoes">${botoes(v)}</div>
+    <div class="row fim-acoes" id="av-botoes">${botoes(v)}</div></div>
+    <table class="estat" id="lest">${htmlEst(v)}</table>`;
+}
+// seu time: lances do jogo, tática, esquema e substituições
+function htmlMeu(v) {
+  return `<ul class="eventos" id="lfeed" aria-label="Lances da partida">${lances(v).feed}</ul>
     <div class="ao-vivo" id="av-controles">${htmlControles(v)}</div>`;
 }
 
@@ -157,9 +194,10 @@ function htmlRodada(v) {
     return `<h3>Outros jogos</h3>${comps}${lista}`;
   }
   const gs = v.jogos.filter(g => divOf(clubById(g.h)) === v.div).sort(meusPrimeiro(me));
-  return `<h3>Outros jogos</h3>${comps}${serieChips(v)}<ul class="jogos">${gs.map(g => {
-    const p = placarNoMinuto(g, v.min), H = clubById(g.h), A = clubById(g.a);
-    return `<li class="jogo${g.h === me || g.a === me ? ' meu' : ''}"><span class="jogo-time casa">${esc(H.name)} ${crest(H)}</span><span class="jogo-placar">${p.h}<span aria-hidden="true"> x </span><span class="sr"> a </span>${p.a}</span><span class="jogo-time fora">${crest(A)} ${esc(A.name)}</span></li>`;
+  // #170: uma linha por jogo, com o último lance embaixo
+  return `<h3>Jogos da rodada</h3>${comps}${serieChips(v)}<ul class="rodada-lista">${gs.map(g => {
+    const p = placarNoMinuto(g, v.min), H = clubById(g.h), A = clubById(g.a), lance = lanceTxt(g, v.min);
+    return `<li class="linha-jogo${g.h === me || g.a === me ? ' meu' : ''}"><span class="jogo-time casa">${esc(H.name)} ${crest(H)}</span><span class="linha-placar">${p.h}<span aria-hidden="true"> x </span><span class="sr"> a </span>${p.a}</span><span class="jogo-time fora">${crest(A)} ${esc(A.name)}</span>${lance ? `<span class="linha-lance">${lance}</span>` : ''}</li>`;
   }).join('')}</ul>`;
 }
 function htmlClassif(v) {
@@ -179,8 +217,9 @@ export function vAoVivo() {
   if (!v || v.S !== S) return `<p class="muted">Nenhum jogo em andamento.</p><button class="btn sec" data-acao="go|clube">Painel do clube</button>`;
   v.sig = soma(v, v.min);
   return `<div class="vivo" id="vivo" data-aba="${v.aba}">
+    <section class="vivo-cab card" aria-label="Seu jogo">${htmlCab(v)}</section>
     <div class="chips vivo-abas" role="group" aria-label="Área da tela">${Object.entries(ABAS).map(([k, r]) => chip(r, `avAba|${k}`, v.aba === k)).join('')}</div>
-    <section class="vivo-meu" aria-label="Seu jogo">${htmlMeu(v)}</section>
+    <section class="vivo-meu" aria-label="Seu time">${htmlMeu(v)}</section>
     <section class="vivo-rodada" id="av-rodada" aria-label="Jogos da rodada">${htmlRodada(v)}</section>
     <section class="vivo-classif" id="av-classif" aria-label="Classificação provisória">${htmlClassif(v)}</section></div>`;
 }

@@ -18,9 +18,9 @@ test('a rodada ao vivo é uma tela com o seu jogo, os outros jogos e a classific
   const h = j.html();
   assert.match(h, /Rodada ao vivo/);
   assert.match(h, /id="lsc"/, 'placar do seu jogo');
-  assert.match(h, /Outros jogos/);
+  assert.match(h, /Jogos da rodada/);
   assert.match(h, /Classificação provisória/);
-  assert.equal((h.match(/class="jogo( meu)?"/g) || []).length, 10, 'os 10 jogos da série');
+  assert.equal((h.match(/class="linha-jogo( meu)?"/g) || []).length, 10, 'os 10 jogos da série');
   assert.match(h, /data-acao="avSair\|/, 'dá para escolher quem sai');
   assert.match(h, /data-acao="avFormacao\|4-3-3"/);
   assert.match(h, /data-acao="avAba\|classif"/, 'abas para o celular');
@@ -155,4 +155,36 @@ test('as telas não mostram undefined, NaN nem [object', () => {
   const j = novo(); comRelogioManual(j);
   for (const t of ['aovivo']) { j.acao(`go|${t}`); for (const x of ['undefined', 'NaN', '[object']) assert.ok(!j.html().includes(x), `${t}: ${x}`) }
   j.acao('avAba|rodada'); assert.match(j.html(), /data-aba="rodada"/);
+});
+
+test('pausar para o relógio, e pausado dá para trocar o esquema; continuar retoma (#170)', () => {
+  const j = novo(), r = comRelogioManual(j);
+  r.passo(10);
+  j.acao('avPausar');
+  assert.equal(j.run('ui.vivo.pausado'), true);
+  j.run("render()"); assert.match(j.html(), /id="lpausa"[^>]*aria-pressed="true"[^>]*>[\s\S]*Continuar/);
+  r.passo(15);
+  assert.equal(j.run('ui.vivo.min'), 10, 'pausado, o relógio não anda');
+  j.acao('avFormacao|4-3-3');
+  assert.equal(j.run('userClub().formation'), '4-3-3', 'pausado, o esquema muda');
+  j.acao('avPausar');
+  r.passo(2);
+  assert.equal(j.run('ui.vivo.min'), 12);
+});
+
+test('cabeçalho com tempo de jogo, último lance e estatísticas que batem com o placar (#170)', () => {
+  const j = novo(), r = comRelogioManual(j);
+  r.passo(60);
+  j.run("render()"); const h = j.html();
+  assert.match(h, /15' · 2º tempo/);
+  assert.match(h, /Posse de bola/); assert.match(h, /Erros de passe/);
+  const e = JSON.parse(j.run('JSON.stringify({e:estatisticas(ui.vivo.g,93),p:placarNoMinuto(ui.vivo.g,93),m:estatisticas(ui.vivo.g,30)})'));
+  for (const l of ['h', 'a']) {
+    assert.ok(e.e.noGol[l] >= e.p[l], 'chutes no gol >= gols');
+    assert.equal(e.e.fin[l], e.e.noGol[l] + e.e.fora[l]);
+    assert.ok(e.m.fin[l] <= e.e.fin[l], 'as estatísticas só crescem com o relógio');
+  }
+  assert.equal(e.e.posse.h + e.e.posse.a, 100);
+  // último lance: o mais recente, mesmo com os lances fora de ordem
+  assert.equal(j.run(`ultimoLance({ev:[{m:80,t:'gol',name:'Z'},{m:60,t:'cartao',name:'W'}]},93).name`), 'Z');
 });

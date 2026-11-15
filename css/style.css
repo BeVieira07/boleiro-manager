@@ -299,7 +299,7 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .vivo-rodada .jogos{grid-template-columns:minmax(0,1fr)}
 .vivo-abas{display:flex}
 @media(max-width:899px){.vivo[data-aba="meu"] :is(.vivo-rodada,.vivo-classif),.vivo[data-aba="rodada"] :is(.vivo-meu,.vivo-classif),.vivo[data-aba="classif"] :is(.vivo-meu,.vivo-rodada){display:none}}
-@media(min-width:900px){.vivo{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}.vivo-abas{display:none}.vivo-meu{grid-column:1;grid-row:1/span 2}.vivo-rodada{grid-column:2;grid-row:1}.vivo-classif{grid-column:2;grid-row:2}}
+@media(min-width:900px){.vivo{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}.vivo-abas{display:none}.vivo-cab{grid-column:1/-1;grid-row:1}.vivo-meu{grid-column:1;grid-row:2/span 2}.vivo-rodada{grid-column:2;grid-row:2}.vivo-classif{grid-column:2;grid-row:3}}
 .ev.troca .ev-ic,.ev.formacao .ev-ic{color:var(--verde-claro)}
 .marca-ev.troca,.marca-ev.formacao{background:var(--verde-claro);height:12px;top:4px}
 .trocas{display:flex;flex-direction:column;gap:var(--e2)}
@@ -458,3 +458,22 @@ body.em-jogo .avisos{bottom:24px}
 @media(min-width:800px) and (max-width:1499px){.tabela-jogadores .c-sal{display:none}}
 @media(min-width:800px) and (max-width:1299px){.tabela-jogadores .c-gols{display:none}}
 .tabela-jogadores .c-contr{white-space:normal}
+/* #170: cabeçalho do seu jogo (placar, último lance, relógio, pausa) com as estatísticas ao lado, e a rodada em linhas */
+.vivo-cab{display:grid;gap:var(--e3) var(--e5);grid-template-columns:minmax(0,1fr);margin:0}
+.cab-jogo{display:flex;flex-direction:column;gap:var(--e3);min-width:0}
+.cab-topo{display:flex;justify-content:space-between;align-items:baseline;gap:var(--e2);flex-wrap:wrap}
+.cab-topo .relogio{margin:0}
+.ult-lance{margin:0;min-height:20px;font-size:13px;color:var(--texto2);display:flex;gap:6px;align-items:center;justify-content:center;text-align:center}
+.ev-cartao{color:var(--ouro)}
+.estat{width:100%;border-collapse:collapse;align-self:start}
+.estat th,.estat td{padding:7px 8px;text-align:center;white-space:normal;border-bottom:1px solid var(--linha2)}
+.estat thead th{background:none;position:static;color:var(--texto2)}
+.estat tbody th{font-size:12px;text-transform:none;letter-spacing:0;color:var(--muted);background:none;position:static;font-weight:500}
+.estat td{font-weight:700;font-variant-numeric:tabular-nums;width:22%}
+@media(min-width:900px){.vivo-cab{grid-template-columns:minmax(0,1.5fr) minmax(220px,1fr)}}
+.rodada-lista{list-style:none;margin:0;padding:0;background:var(--painel);border:1px solid var(--linha);border-radius:var(--r)}
+.linha-jogo{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:2px 10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--linha2);font-size:14px}
+.linha-jogo:last-child{border-bottom:0}
+.linha-jogo.meu{background:var(--verde-esc)}
+.linha-placar{font-family:var(--f-titulo);font-size:20px;font-weight:700;min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
+.linha-lance{grid-column:1/-1;font-size:12px;color:var(--texto2);display:flex;gap:6px;justify-content:center;align-items:center;text-align:center}

@@ -157,7 +157,7 @@ test('dono começa a liga, confirmações chegam em tempo real e a rodada é jog
   assert.deepEqual(j.run('ui.liga.prontos'), [], 'as confirmações foram zeradas');
   assert.equal(j.run('ui.view'), 'aovivo', 'o replay é uma tela, não um modal');
   assert.match(j.html(), /Replay do jogo simulado no servidor/);
-  assert.match(j.html(), /Outros jogos/, 'o painel do campeonato funciona no replay');
+  assert.match(j.html(), /Jogos da rodada/, 'o painel do campeonato funciona no replay');
   assert.match(j.html(), /Classificação provisória/);
   assert.doesNotMatch(j.html(), /data-acao="(avSair|avEntrar|avFormacao)[|]/, 'trocas e formação ficam bloqueadas na liga');
   assert.equal(j.run('avSair(userClub().lineup[0]),ui.vivo.sel'), null, 'o bloqueio vale também fora do botão');

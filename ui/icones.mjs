@@ -21,6 +21,7 @@ const PATHS = {
   menu: 'M4 6h16M4 12h16M4 18h16',
   mais: 'M5 12h.01M12 12h.01M19 12h.01',
   play: 'M7 4l13 8-13 8z',
+  pausa: 'M7 4v16M17 4v16', // #170
   avancar: 'M5 4l9 8-9 8zM15 4v16',
   busca: 'M11 4a7 7 0 100 14 7 7 0 000-14zM20 20l-4-4',
   alerta: 'M12 3l10 18H2zM12 10v5M12 18v.5',
