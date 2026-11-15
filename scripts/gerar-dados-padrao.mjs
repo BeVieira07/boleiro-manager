@@ -4,7 +4,7 @@
 // Aplica também o overall real dos jogadores:
 //   1. data/notas-<ano>.json (npm run notas): nota média e minutos -> p.base (overall calculado) e p.conf (confiança)
 //   2. data/overalls-manual.json: overall escolhido à mão para os craques -> p.ovrM (vale mais que tudo)
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
 
 const ANO = process.argv[2] || '2024';
 const ler = f => JSON.parse(readFileSync(f, 'utf8'));
@@ -170,3 +170,14 @@ for (const c of clubs) c.uf = ufs[c.id];
 const data = { posv: 2, source: 'api', season: a.season, createdAt: a.createdAt, clubs };
 writeFileSync('core/dados-padrao.mjs', `// Dados padrão do jogo (API-Football), temporada ${a.season}. NÃO EDITE: gerado por scripts/gerar-dados-padrao.mjs a partir de data/.\nexport const DADOS_PADRAO=${JSON.stringify(data)};\n`);
 console.log(`core/dados-padrao.mjs: ${Object.entries(series).map(([d, x]) => `Série ${d} ${x.clubs.length} clubes`).join(' + ')}, ${ids.size} jogadores.`);
+
+// clubes estrangeiros da Libertadores e da Sul-Americana (#133, #134), de npm run continentais: só a IA usa, só nessas copas
+const arqCont = readdirSync('data').filter(f => /^continentais-\d{4}\.json$/.test(f)).sort().pop();
+if (arqCont) {
+  const cont = ler('data/' + arqCont), GENERICO = new Set(['club', 'ca', 'cd', 'cs', 'fc', 'sc', 'ss', 'cf', 'de', 'del', 'la', 'el', 'los', 'deportivo', 'atletico', 'atlético', 'sport', 'sporting', 'universidad']);
+  const sigla = n => { const w = n.split(/\s+/).find(x => !GENERICO.has(norm(x))) || n; return norm(w).replace(/[^a-z]/g, '').slice(0, 3).toUpperCase() };
+  const clubesCont = cont.clubs.map(c => ({ id: c.id, name: c.name, short: sigla(c.name), color: '#335', logo: existsSync(`img/escudos/${c.id}.png`) ? `img/escudos/${c.id}.png` : c.logo,
+    strength: c.strength, torneio: c.torneio, players: c.players.map(p => ({ id: p.id, name: p.name, pos: p.pos, number: p.number ?? null })) }));
+  writeFileSync('core/dados-continentais.mjs', `// Clubes estrangeiros da Libertadores e da Sul-Americana (API-Football, temporada ${cont.season}). NÃO EDITE: gerado por scripts/gerar-dados-padrao.mjs a partir de data/${arqCont}.\nexport const DADOS_CONTINENTAIS = ${JSON.stringify({ season: cont.season, clubs: clubesCont })};\n`);
+  console.log(`core/dados-continentais.mjs: ${clubesCont.filter(c => c.torneio === 'libertadores').length} da Libertadores + ${clubesCont.filter(c => c.torneio === 'sulamericana').length} da Sul-Americana.`);
+}

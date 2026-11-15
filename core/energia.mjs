@@ -48,7 +48,8 @@ export function atualizarEnergia(jogaram) {
 export function anotarTitulares(jogaram, jogos, getXI, clubById) {
   for (const g of jogos) for (const id of [g.h, g.a]) {
     const j = jogaram.get(id);
-    if (j) j.jogos++; else jogaram.set(id, { xi: [...getXI(clubById(id))], jogos: 1 });
+    const c = clubById(id); if (!c) continue; // estrangeiro da Libertadores/Sul-Americana: sem energia (#133)
+    if (j) j.jogos++; else jogaram.set(id, { xi: [...getXI(c)], jogos: 1 });
   }
   return jogaram;
 }

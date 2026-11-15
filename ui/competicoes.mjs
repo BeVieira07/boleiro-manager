@@ -8,6 +8,7 @@ import { esc } from '../core/utils.mjs';
 import { tag } from './componentes.mjs';
 import { cartaoCopa } from './copa.mjs';
 import { cartaoEstadual } from './estadual.mjs';
+import { cartoesContinentais } from './continental.mjs';
 
 const brasileirao = {
   id: 'brasileirao', nome: 'Campeonato Brasileiro', tela: 'tabela',
@@ -22,7 +23,7 @@ const brasileirao = {
 };
 
 /** As competições da temporada, na ordem dos cartões. Competição nova: uma linha aqui. */
-export const COMPETICOES = [cartaoEstadual, brasileirao, cartaoCopa];
+export const COMPETICOES = [cartaoEstadual, brasileirao, cartaoCopa, ...cartoesContinentais];
 
 const cartao = c => {
   const d = c.cartao();

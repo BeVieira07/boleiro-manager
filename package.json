@@ -15,6 +15,7 @@
     "dados:d": "node --env-file=.env scripts/baixar-brasileirao.mjs --serie=d --temporada=2024",
     "posicoes": "node scripts/baixar-posicoes.mjs",
     "notas": "node --env-file=.env scripts/baixar-notas.mjs",
-    "fixar-core": "node scripts/fixar-core.mjs"
+    "fixar-core": "node scripts/fixar-core.mjs",
+    "continentais": "node --env-file=.env scripts/baixar-continentais.mjs"
   }
 }

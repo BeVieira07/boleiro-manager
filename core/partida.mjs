@@ -1,5 +1,6 @@
 import { potInicial, tetoOvr, virarBase } from './base.mjs';
 import { CONTRATO_NOVO, vencerContratos } from './contratos.mjs';
+import { criarContinentais, vagasBrasileiras } from './continental.mjs';
 import { criarCopa } from './copa.mjs';
 import { ferias } from './energia.mjs';
 import { criarEstaduais } from './estadual.mjs';
@@ -31,6 +32,7 @@ export function fecharTemporada(){
 }
 // regra: começa a temporada seguinte (acesso/rebaixamento, fim de contratos, idade, aposentadoria, calendário)
 export function iniciarTemporada(){
+  const vagas=vagasBrasileiras(); // #133: pela Série A que acabou, antes do acesso e do rebaixamento
   if(hasTwoDivs()){ // acesso e rebaixamento entre séries vizinhas, com base nas tabelas finais
     const ds=divisions(),n=MOVE_N(),moves=[];
     for(let i=0;i<ds.length-1;i++)moves.push({hi:ds[i],lo:ds[i+1],down:table(ds[i]).slice(-n).map(t=>clubById(t.id)),up:table(ds[i+1]).slice(0,n).map(t=>clubById(t.id))});
@@ -56,7 +58,7 @@ export function iniciarTemporada(){
   virarBase(); // #50: a base dos clubes com técnico
   ferias(); // #136: energia cheia na nova temporada
   S.season++;S.round=0;S.fixtures=makeAllFixtures(S.clubs);
-  reindex();criarCopa();criarEstaduais();
+  reindex();criarCopa();criarEstaduais();criarContinentais(vagas);
   processLoans(); // #142: empréstimo de 1 ano feito na rodada 0 volta agora
   for(const t of tecnicos()){t.offers=[];confiancaNovaTemporada(t);const uc=clubDo(t);uc.lineup=getXI(uc);if(uc.lineup.length<11)uc.lineup=autoXI(uc)}
   addNewsTodos(`📅 Começa a temporada ${S.season}!`);
