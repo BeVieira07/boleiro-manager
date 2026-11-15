@@ -6,11 +6,11 @@
 import { estatisticas, minutoDoTempo, placarNoMinuto, tabelaNoMinuto, ultimoLance } from '../core/aovivo.mjs';
 import { COPA, copaNaRodada } from '../core/copa.mjs';
 import { DIVS, P, S, clubById, divOf, divisions, hasTwoDivs, userClub } from '../core/estado.mjs';
-import { getXI } from '../core/motor.mjs';
 import { MAX_TROCAS, banco, mudarFormacaoAoVivo, substituir, trocasDe } from '../core/substituicoes.mjs';
 import { FORMS, esc } from '../core/utils.mjs';
 import { avisar } from './avisos.mjs';
 import { chip, ovrChip } from './componentes.mjs';
+import { campoHtml } from './escalacao.mjs';
 import { VELOCIDADES, prefs } from './configuracoes.mjs';
 import { jogosCopa } from './copa.mjs';
 import { save, ui } from './estado.mjs';
@@ -145,7 +145,7 @@ const botoes = v => v.fim
 function htmlControles(v) {
   if (v.fim) return '';
   if (v.replay) return `<p class="muted dica">${icone('info', { tam: 14 })} Replay do jogo simulado no servidor. Na liga, escalação, formação e tática valem para a rodada inteira: as trocas ficam bloqueadas.</p>`;
-  const uc = userClub(), em = getXI(uc).map(id => P[id]).filter(Boolean), feitas = trocasDe(v.g, uc.id).length, cheio = feitas >= MAX_TROCAS;
+  const uc = userClub(), feitas = trocasDe(v.g, uc.id).length, cheio = feitas >= MAX_TROCAS;
   const sel = v.sel && P[v.sel], form = uc.formation || '4-4-2';
   const jog = p => `${posTag(p)}<span class="troca-nome">${esc(p.name)}</span>${ovrChip(p.ovr)}`;
   const dica = cheio ? `As ${MAX_TROCAS} substituições já foram feitas.` : sel ? `Escolha no banco quem entra no lugar de ${esc(sel.name)}.` : 'Escolha em campo quem sai.';
@@ -155,7 +155,7 @@ function htmlControles(v) {
     <section class="trocas" aria-label="Substituições"><div class="card-topo"><h3>Substituições</h3><span class="muted">${feitas} de ${MAX_TROCAS}</span></div>
       <p class="muted dica" aria-live="polite">${dica}</p>
       <div class="trocas-listas">
-        <ul class="lista-troca" aria-label="Em campo">${em.map(p => `<li><button type="button" class="troca-item${v.sel === p.id ? ' on' : ''}" aria-pressed="${v.sel === p.id}" data-acao="avSair|${p.id}"${cheio ? ' disabled' : ''}>${jog(p)}</button></li>`).join('')}</ul>
+        ${campoHtml(uc, { acao: 'avSair', sel: v.sel, bloqueado: cheio, mini: true })}
         <ul class="lista-troca" aria-label="Banco">${reservas.map(({ p, motivo }) =>
           `<li><button type="button" class="troca-item" data-acao="avEntrar|${p.id}"${!sel || cheio || motivo ? ' disabled' : ''}>${jog(p)}${motivo ? `<span class="muted">${esc(motivo)}</span>` : ''}</button></li>`).join('')}</ul>
       </div></section>`;

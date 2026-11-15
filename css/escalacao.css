@@ -45,3 +45,10 @@
   .carta{min-width:0;flex:1 1 0;max-width:96px;padding:6px 4px}
   .carta-nome{font-size:12px}
 }
+/* #172: o mesmo campo, menor, nas substituições da rodada ao vivo */
+.campo.mini{flex:none;min-height:360px;padding:14px 6px;gap:var(--e3);border-radius:14px}
+.campo.mini .carta{min-width:0;flex:1 1 0;max-width:86px;padding:4px 3px 5px;gap:3px;border-width:1px}
+.campo.mini .carta-nome{font-size:11px}
+.campo.mini .carta-vaga{font-size:9px;padding:0 5px}
+.campo.mini .ovr{font-size:12px;min-width:28px}
+.carta:disabled{opacity:.55;cursor:not-allowed}

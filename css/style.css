@@ -303,7 +303,7 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .ev.troca .ev-ic,.ev.formacao .ev-ic{color:var(--verde-claro)}
 .marca-ev.troca,.marca-ev.formacao{background:var(--verde-claro);height:12px;top:4px}
 .trocas{display:flex;flex-direction:column;gap:var(--e2)}
-.trocas-listas{display:grid;gap:var(--e3);grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))}
+.trocas-listas{display:grid;gap:var(--e3);grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));align-items:start}
 .lista-troca{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .troca-item{display:flex;align-items:center;gap:var(--e2);width:100%;min-height:40px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--linha);background:var(--painel);color:var(--texto);font:inherit;text-align:left;cursor:pointer}
 .troca-item:hover:not(:disabled){border-color:var(--verde)}

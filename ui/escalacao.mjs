@@ -40,22 +40,33 @@ export function sugestoesTroca(lay) {
   return out;
 }
 
-function carta(s) {
+function carta(s, o = {}) {
+  const acao = o.acao || 'clickEsc', selId = 'sel' in o ? o.sel : ui.selEsc;
   if (!s.id) return `<div class="carta vazia"><span class="carta-vaga">${s.d}</span><span>vaga livre</span></div>`;
-  const p = P[s.id], u = unavailable(p), pp = penalidadePosicao(p, s.d), sel = ui.selEsc === p.id;
+  const p = P[s.id], u = unavailable(p), pp = penalidadePosicao(p, s.d), sel = selId === p.id;
   const est = u ? 'indisp' : pp.tipo === 'fora' ? 'fora' : '', nota = u ? (p.inj > 0 ? `${p.inj} rod.` : `susp. ${p.susp}`) : pp.pen ? `-${Math.round(pp.pen * 100)}%` : '';
   const desc = `${POSD[s.d].nome}: ${p.name}, força ${ovrNaPosicao(p, s.d)}, energia ${Math.round(energiaDe(p))}${u ? ', ' + u : pp.tipo === 'fora' ? ', fora de posição, ' + nota : pp.tipo === 'secundaria' ? ', posição secundária' : ''}`;
-  return `<button type="button" class="carta ${est}${sel ? ' sel' : ''}" data-acao="clickEsc|${p.id}" aria-pressed="${sel}" aria-label="${esc(desc)}" title="${esc(p.name)}">
+  return `<button type="button" class="carta ${est}${sel ? ' sel' : ''}" data-acao="${acao}|${p.id}" aria-pressed="${sel}" aria-label="${esc(desc)}" title="${esc(p.name)}"${o.bloqueado ? ' disabled' : ''}>
     <span class="carta-vaga">${s.d}</span><span class="carta-nome">${esc(sobrenome(p.name))}</span>
     <span class="carta-pe">${ovrChip(ovrNaPosicao(p, s.d))}${nota ? `<span class="carta-nota">${nota}</span>` : ''}</span>${energiaBarra(p)}</button>`;
+}
+
+/** Campo com uma carta por vaga, no esquema do clube. o = {acao, sel, bloqueado, mini}: a ação do clique (padrão: trocar na
+ *  Escalação), quem está selecionado, se as cartas ficam desabilitadas e a versão menor (substituições ao vivo, #172). */
+export function campoHtml(uc, o = {}) {
+  const lay = slotLayout(uc), xi = lay.map(s => s.id).filter(Boolean);
+  // vagas em linhas: ataque em cima, goleiro embaixo. Linhas desenhadas da esquerda para a direita do campo (LE à esquerda, LD à direita; #54)
+  const sz = FORMS[uc.formation] || FORMS['4-4-2'], idx = (de, n) => Array.from({ length: n }, (_, k) => de + k);
+  const linhas = [idx(1 + sz[0] + sz[1], sz[2]), idx(1 + sz[0], sz[1]), idx(1, sz[0]).reverse(), [0]];
+  return `<section class="campo${o.mini ? ' mini' : ''}" aria-label="Campo: ${esc(uc.formation)}, ${xi.length} de 11 titulares">
+      <svg class="campo-linhas" viewBox="0 0 400 600" preserveAspectRatio="none" aria-hidden="true"><rect x="14" y="14" width="372" height="572"/><path d="M14 300h372"/><circle cx="200" cy="300" r="52"/><rect x="110" y="14" width="180" height="84"/><rect x="110" y="502" width="180" height="84"/></svg>
+      ${linhas.map(l => `<div class="linha">${l.map(i => carta(lay[i], o)).join('')}</div>`).join('')}
+    </section>`;
 }
 
 export function vEscalacao() {
   const uc = userClub(), lay = slotLayout(uc), xi = lay.map(s => s.id).filter(Boolean), pw = power(uc);
   const bench = uc.players.filter(p => !xi.includes(p.id)).sort((a, b) => !!unavailable(a) - !!unavailable(b) || PORD[a.pos] - PORD[b.pos] || b.ovr - a.ovr);
-  // vagas em linhas: ataque em cima, goleiro embaixo. Linhas desenhadas da esquerda para a direita do campo (LE à esquerda, LD à direita; #54)
-  const sz = FORMS[uc.formation] || FORMS['4-4-2'], idx = (de, n) => Array.from({ length: n }, (_, k) => de + k);
-  const linhas = [idx(1 + sz[0] + sz[1], sz[2]), idx(1 + sz[0], sz[1]), idx(1, sz[0]).reverse(), [0]];
   const avisos = [];
   if (xi.length < 11) avisos.push(`Há vaga sem jogador: escale 11 titulares.`);
   for (const s of lay) if (s.id) { const p = P[s.id], u = unavailable(p); if (u) avisos.push(`${p.name} está ${u} e não pode jogar: troque por um reserva.`); else { const pp = penalidadePosicao(p, s.d); if (pp.aviso) avisos.push(pp.aviso) } }
@@ -68,10 +79,7 @@ export function vEscalacao() {
   return `<div class="esc-topo"><p class="muted">Toque em um titular e depois em um reserva (ou em outro titular) para trocar. Lesionados e suspensos não podem entrar.</p>
     <div class="chips" role="group" aria-label="Formação">${Object.keys(FORMS).map(f => chip(f, `setFormation|${f}`, uc.formation === f)).join('')}</div></div>
   <div class="esc">
-    <section class="campo" aria-label="Campo: ${esc(uc.formation)}, ${xi.length} de 11 titulares">
-      <svg class="campo-linhas" viewBox="0 0 400 600" preserveAspectRatio="none" aria-hidden="true"><rect x="14" y="14" width="372" height="572"/><path d="M14 300h372"/><circle cx="200" cy="300" r="52"/><rect x="110" y="14" width="180" height="84"/><rect x="110" y="502" width="180" height="84"/></svg>
-      ${linhas.map(l => `<div class="linha">${l.map(i => carta(lay[i])).join('')}</div>`).join('')}
-    </section>
+    ${campoHtml(uc)}
     <div class="esc-lado">
       <section class="card"><div class="card-topo"><h3>Força do time</h3><button class="btn sm" data-acao="escalarMelhoresTela">Escalar melhores</button></div>
         <p class="muted titulares">Titulares: <b class="${xi.length === 11 ? 'ok' : 'bad'}">${xi.length}/11</b> · energia média <b>${xi.length ? Math.round(xi.reduce((t, id) => t + energiaDe(P[id]), 0) / xi.length) : 0}</b></p>

@@ -22,6 +22,8 @@ test('a rodada ao vivo é uma tela com o seu jogo, os outros jogos e a classific
   assert.match(h, /Classificação provisória/);
   assert.equal((h.match(/class="linha-jogo( meu)?"/g) || []).length, 10, 'os 10 jogos da série');
   assert.match(h, /data-acao="avSair\|/, 'dá para escolher quem sai');
+  assert.match(h, /<section class="campo mini"/, 'quem sai é escolhido num campo, como na Escalação');
+  assert.equal((h.match(/class="carta [^"]*" data-acao="avSair\|/g) || []).length, 11, 'uma carta por titular');
   assert.match(h, /data-acao="avFormacao\|4-3-3"/);
   assert.match(h, /data-acao="avAba\|classif"/, 'abas para o celular');
   r.passo(3);
