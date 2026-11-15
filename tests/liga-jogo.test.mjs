@@ -113,15 +113,11 @@ async function como(srv, uid) {
   conta.configurarConta({ url: 'https://exemplo.supabase.co', chave: 'chave-publica', cliente: srv.cliente(uid) });
   await conta.iniciarConta();
 }
-// o replay abre o modal; o DOM falso não guarda o HTML dele, então o teste o captura
-function capturarModal() {
-  const get = document.getElementById, cap = { html: '' };
-  const mbox = new Proxy(get('mbox'), { set: (t, k, v) => { if (k === 'innerHTML') cap.html = v; return true } });
-  document.getElementById = id => id === 'mbox' ? mbox : get(id);
+// o replay é a tela da rodada ao vivo (#135); o relógio dele não anda no teste (não deixa timer pendurado)
+function pararRelogio() {
   const setI = globalThis.setInterval;
-  globalThis.setInterval = () => 0; // o relógio do replay não anda no teste (não deixa timer pendurado)
-  cap.soltar = () => { document.getElementById = get; globalThis.setInterval = setI };
-  return cap;
+  globalThis.setInterval = () => 0;
+  return { soltar: () => { globalThis.setInterval = setI } };
 }
 
 test('dono começa a liga, confirmações chegam em tempo real e a rodada é jogada quando todos confirmam', async () => {
@@ -149,18 +145,23 @@ test('dono começa a liga, confirmações chegam em tempo real e a rodada é jog
   assert.match(j.html(), /title="confirmou"/);
   assert.deepEqual(j.run('ui.liga.prontos'), ['b']);
 
-  const modal = capturarModal();
+  const relogio = pararRelogio();
   try {
     await j.acao('confirmarLiga'); await esperar(); // o replay vem do aviso de tempo real, que corre à parte
-  } finally { modal.soltar() }
+  } finally { relogio.soltar() }
   const minha = srv.entradas.find(e => e.user_id === 'a');
   assert.equal(minha.escalacao.lineup.length, 11, 'a escalação foi enviada');
   assert.equal(srv.resultados.length, 1, 'a rodada foi jogada uma vez');
   assert.equal(srv.liga.rodada, 1);
   assert.equal(j.run('S.round'), 1, 'o navegador baixou o estado novo');
   assert.deepEqual(j.run('ui.liga.prontos'), [], 'as confirmações foram zeradas');
-  assert.match(modal.html, /Replay do jogo simulado no servidor/);
-  j.run('render()'); // no navegador, o "Continuar" do replay mostra a rodada
+  assert.equal(j.run('ui.view'), 'aovivo', 'o replay é uma tela, não um modal');
+  assert.match(j.html(), /Replay do jogo simulado no servidor/);
+  assert.match(j.html(), /Outros jogos/, 'o painel do campeonato funciona no replay');
+  assert.match(j.html(), /Classificação provisória/);
+  assert.doesNotMatch(j.html(), /data-acao="(avSair|avEntrar|avFormacao)[|]/, 'trocas e formação ficam bloqueadas na liga');
+  assert.equal(j.run('avSair(userClub().lineup[0]),ui.vivo.sel'), null, 'o bloqueio vale também fora do botão');
+  j.run('avContinuar()'); // no navegador, o "Continuar" do replay mostra a rodada
   assert.match(j.html(), /Confirmar rodada 2/);
   assert.ok(!Object.keys(j.ls).some(k => k.startsWith('brasfoot_save_v2_')), 'a liga não vira save local');
   j.run('sairDaLiga()');

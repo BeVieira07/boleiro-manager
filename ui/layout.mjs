@@ -19,7 +19,7 @@ export const NAV = [
   ['financas', 'Finanças', 'financas'], ['dados', 'Dados', 'dados'], ['config', 'Configurações', 'engrenagem']
 ];
 const PRINCIPAIS = 4;
-export const TITULOS = { liga: 'Liga', clube: 'Painel do clube', elenco: 'Elenco', escalacao: 'Escalação', jogos: 'Jogos', tabela: 'Classificação', competicoes: 'Competições', copa: 'Copa do Brasil', artilharia: 'Artilharia', mercado: 'Mercado', financas: 'Finanças', dados: 'Dados do jogo', config: 'Configurações', carreira: 'Propostas de clubes', rodada: 'Resultados da rodada' };
+export const TITULOS = { liga: 'Liga', clube: 'Painel do clube', elenco: 'Elenco', escalacao: 'Escalação', jogos: 'Jogos', tabela: 'Classificação', competicoes: 'Competições', copa: 'Copa do Brasil', artilharia: 'Artilharia', mercado: 'Mercado', financas: 'Finanças', dados: 'Dados do jogo', config: 'Configurações', carreira: 'Propostas de clubes', rodada: 'Resultados da rodada', aovivo: 'Rodada ao vivo' };
 
 const ativa = k => ui.view === k || (k === 'competicoes' && ui.view === 'copa'); // a copa é uma tela de dentro de Competições
 const item = ([k, l, ic]) => `<button type="button" class="nav-item" data-acao="go|${k}"${ativa(k) ? ' aria-current="page"' : ''}>${icone(ic)}<span>${l}</span></button>`;
@@ -47,10 +47,10 @@ export function alternarMais() { ui.maisAberto = !ui.maisAberto; render() }
 export function barraAcoes(titulo) {
   const uc = userClub(), T = table(divOf(uc)), pos = T.findIndex(t => t.id === uc.id) + 1, fim = S.round >= S.fixtures.length;
   const varios = tecnicos().length > 1;
-  const sub = [`Rodada ${Math.min(S.round + 1, S.fixtures.length)} de ${S.fixtures.length}`, `temporada ${S.season}`,
+  const sub = [`Rodada ${ui.view === 'aovivo' && ui.vivo ? ui.vivo.rodada + 1 : Math.min(S.round + 1, S.fixtures.length)} de ${S.fixtures.length}`, `temporada ${S.season}`,
     S.round ? `${pos}º lugar${hasTwoDivs() ? ' na ' + DIVS[divOf(uc)] : ''}` : '', `caixa <b class="${uc.balance < 0 ? 'bad' : ''}">${money(uc.balance)}</b>`].filter(Boolean).join(' · ');
   const vez = ui.liga ? situacaoLiga() : varios ? `<div class="vez">Vez de <b>${esc(tec().nome)}</b> ${tecnicos().map(t => `<span class="pill" title="${t.pronto ? 'confirmou' : 'falta confirmar'}">${t.pronto ? icone('ok', { tam: 12, rotulo: 'confirmou' }) : '…'} ${esc(t.nome)}</span>`).join(' ')}</div>` : '';
-  const botoes = fim
+  const botoes = ui.view === 'aovivo' ? '' : fim
     ? `<button class="btn" data-acao="proximaTemporada">${icone('trofeu')}${S.seasonClosed === S.season ? 'Iniciar temporada ' + (S.season + 1) : 'Encerrar a temporada ' + S.season}</button>`
     : `${varios || ui.liga ? '' : '<button class="btn sec" data-acao="simToEnd">Simular até o fim</button>'}${botaoRodada('btn', `${icone('play', { tam: 16 })}Jogar rodada ${S.round + 1}`)}`;
   return `<div class="barra-acoes"><div class="barra-titulo"><h1>${esc(titulo)}</h1><span class="muted">${sub}</span>${vez}</div>
