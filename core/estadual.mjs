@@ -16,6 +16,8 @@ import { placar } from './copa.mjs';
 import { clamp, money, rnd, semente, shuffle } from './utils.mjs';
 
 export const ESTADUAL_MIN = 4, GRUPOS_DESDE = 12;
+// na liga, a data d vai para liga_resultados com rodada RODADA_ESTADUAL + d: negativa (não bate com a liga) e em ordem
+export const RODADA_ESTADUAL = -100;
 // os testes de outras funcionalidades desligam (tests/jogo.mjs), para cada "Jogar" continuar sendo uma rodada da liga
 export const ESTADUAIS = { ligados: true };
 // premiação em milhões: bem menor que a do Brasileirão e a da copa

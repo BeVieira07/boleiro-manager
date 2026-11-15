@@ -10,6 +10,7 @@ import { vCompeticoes } from './competicoes.mjs';
 import { jogosCopa, vCopa } from './copa.mjs';
 import { jogosEstadual, proximoEstadual, rotuloRodada, vEstadual } from './estadual.mjs';
 import { chip, stat, tag } from './componentes.mjs';
+import { vAoVivo } from './aovivo.mjs';
 import { vElenco } from './elenco.mjs';
 import { vEscalacao } from './escalacao.mjs';
 import { MAX_TECNICOS, getData, save, ui } from './estado.mjs';
@@ -42,7 +43,7 @@ export function render(){
   // #58: menu lateral (computador) / barra inferior (celular) e barra de ações no topo de cada tela do jogo
   document.body.classList.toggle('em-jogo',!!S);
   document.getElementById('lateral').innerHTML=lateral();
-  const V={menu:vMenu,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,tabela:vTabela,competicoes:vCompeticoes,copa:vCopa,estadual:vEstadual,jogos:vJogos,artilharia:vArt,mercado:vMercado,financas:vFin,dados:vDados,rodada:vRodada,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
+  const V={menu:vMenu,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,tabela:vTabela,competicoes:vCompeticoes,copa:vCopa,estadual:vEstadual,jogos:vJogos,artilharia:vArt,mercado:vMercado,financas:vFin,dados:vDados,rodada:vRodada,aovivo:vAoVivo,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
   const topo=S?barraAcoes(TITULOS[ui.view]):ui.view==='menu'?'':`<div class="topo-simples"><button class="btn fantasma" data-acao="go|menu">${icone('voltar')}Tela inicial</button></div>`;
   document.getElementById('app').innerHTML=topo+V[ui.view]();
   if(chave&&at.isConnected===false){const n=document.querySelector(`[${chave[0]}="${(globalThis.CSS&&CSS.escape?CSS.escape(chave[1]):chave[1])}"]`);if(n&&n.focus)n.focus({preventScroll:true})}

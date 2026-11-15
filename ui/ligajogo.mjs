@@ -15,11 +15,13 @@ import { avisar, confirmar, pedirValor } from './avisos.mjs';
 import { clienteLogado, sessaoEncerrada, usuarioAtual } from './conta.mjs';
 import { ui } from './estado.mjs';
 import { icone } from './icones.mjs';
-import { closeModal, crest, openModal, showLive } from './partida.mjs';
+import { closeModal, crest, openModal } from './partida.mjs';
+import { iniciarVivo } from './aovivo.mjs';
 import { go, render } from './telas.mjs';
 import { verAoVivo } from './configuracoes.mjs';
 import { abrirLigas, abrirLobby } from './liga.mjs';
 import { rotuloRodada } from './estadual.mjs';
+import { RODADA_ESTADUAL } from '../core/estadual.mjs';
 
 export const FUNCAO = 'jogar-rodada';
 let canal = null;
@@ -146,10 +148,10 @@ export async function atualizarAposRodada() {
   const { data: r } = await clienteLogado().from('liga_resultados').select('temporada, rodada, jogos').eq('liga_id', L.id)
     .order('temporada', { ascending: false }).order('rodada', { ascending: false }).limit(1).maybeSingle();
   if (!r) { render(); return }
-  const pre = r.rodada < 0; // #132: data do estadual (rodada -1 = primeira data), sem jogo ao vivo
-  const fim = () => { ui.lastRound = pre ? { pre: -r.rodada - 1, games: r.jogos } : { round: r.rodada + 1, games: r.jogos }; ui.view = 'rodada'; render() };
+  const pre = r.rodada < 0; // #132: data do estadual (RODADA_ESTADUAL = primeira data), sem jogo ao vivo
+  const fim = () => { ui.lastRound = pre ? { pre: r.rodada - RODADA_ESTADUAL, games: r.jogos } : { round: r.rodada + 1, games: r.jogos }; ui.view = 'rodada'; render() };
   const me = userClub().id, meu = r.jogos.find(g => g.h === me || g.a === me);
-  if (meu && !pre && verAoVivo(meu)) showLive(meu, fim, { replay: true }); else fim(); // #106
+  if (meu && !pre && verAoVivo(meu)) iniciarVivo(r.jogos, meu, fim, { replay: true, rodada: r.rodada }); else fim(); // #106
 }
 
 /** Envia a sua escalação, formação e tática da rodada e pede ao servidor para jogar (ele só joga quando todos confirmaram). */

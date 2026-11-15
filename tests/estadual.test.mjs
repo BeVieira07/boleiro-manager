@@ -130,11 +130,15 @@ test('liga online: a data do estadual vai para os resultados com rodada negativa
   const j = carregarJogo({ estaduais: true });
   j.run(`iniciarLiga([{user_id:'u1',nome:'Ana',club_id:'c121'},{user_id:'u2',nome:'Bia',club_id:'c127'}],['A'],DADOS_PADRAO)`);
   const r = JSON.parse(j.run('JSON.stringify(jogarRodadaLiga(JSON.parse(JSON.stringify(S)),{}))'));
-  assert.equal(r.rodada, -1);
+  assert.equal(r.rodada, -100);
   assert.equal(j.run('S.round'), 0);
   assert.ok(r.jogos.some(g => g.h === 'c121' || g.a === 'c121' || g.h === 'c127' || g.a === 'c127'));
   let ultima = r;
-  for (let n = 0; n < 20 && ultima.rodada < 0; n++) ultima = JSON.parse(j.run('JSON.stringify(jogarRodadaLiga(JSON.parse(JSON.stringify(S)),{}))'));
+  for (let n = 0; n < 20 && ultima.rodada < 0; n++) {
+    const prox = JSON.parse(j.run('JSON.stringify(jogarRodadaLiga(JSON.parse(JSON.stringify(S)),{}))'));
+    assert.ok(prox.rodada > ultima.rodada, 'a ordem das rodadas nos resultados segue a das datas');
+    ultima = prox;
+  }
   assert.equal(ultima.rodada, 0, 'depois da pré-temporada vem a rodada 1 (índice 0)');
   assert.equal(j.run('S.round'), 1);
   assert.ok(j.run('S.estaduais.torneios.filter(t=>t.uf==="SP"||t.uf==="RJ").every(t=>t.campeao)'));
