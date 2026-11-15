@@ -49,7 +49,7 @@ Manager de futebol estilo Brasfoot, em JS puro, sem build. Brasileirão Séries 
 - A Wikipédia limita o ritmo (HTTP 429). O script já faz pausa e tenta de novo; se ainda falhar, esperar alguns minutos.
 - `gerar-dados-padrao.mjs` aponta o `logo` para o arquivo local quando ele existe; sem arquivo, mantém o link da API.
 - Se a imagem falhar no navegador, `crest()` em `ui/partida.mjs` troca pela sigla colorida.
-- Clubes estrangeiros das copas (#133) também estão no mapa; se o título não tiver imagem, o script tenta a Wikipédia em inglês e a busca da em português (confira em `data/escudos-fontes.json`). Faltam **Deportivo Táchira** (`c2807`) e **Alianza Petrolera** (`c1141`): salve o PNG em `img/escudos/<id>.png` e rode `npm run dados:padrao`.
+- Clubes estrangeiros das copas (#133) também estão no mapa; se o título não tiver imagem, o script tenta a Wikipédia em inglês e a busca da em português (confira em `data/escudos-fontes.json`). Deportivo Táchira (`c2807`) e Alianza Petrolera (`c1141`) não têm imagem nos artigos: os escudos vieram do Wikimedia Commons, à mão (fonte em `data/escudos-fontes.json`); se o script apagar, baixe de novo de lá.
 
 ## Rodando o jogo
 - O jogo usa módulos ES: **precisa de servidor local**. Abrir `index.html` direto do disco (`file://`) não funciona.
