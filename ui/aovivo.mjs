@@ -1,0 +1,186 @@
+/* ================= tela da rodada ao vivo (#135) =================
+   Uma página só, sem modal, com tudo andando no mesmo relógio: o seu jogo (com trocas e formação), os outros jogos
+   da rodada e a classificação provisória. A rodada já foi calculada (core/motor.mjs); aqui só se mostra até o minuto
+   `v.min`. Sair da tela pausa o jogo; "Voltar ao jogo" retoma. Na liga o jogo é um replay do servidor: trocas e
+   formação ficam bloqueadas, o painel do campeonato funciona. */
+import { placarNoMinuto, tabelaNoMinuto } from '../core/aovivo.mjs';
+import { COPA, copaNaRodada } from '../core/copa.mjs';
+import { DIVS, P, S, clubById, divOf, divisions, hasTwoDivs, userClub } from '../core/estado.mjs';
+import { getXI } from '../core/motor.mjs';
+import { MAX_TROCAS, banco, mudarFormacaoAoVivo, substituir, trocasDe } from '../core/substituicoes.mjs';
+import { FORMS, esc } from '../core/utils.mjs';
+import { avisar } from './avisos.mjs';
+import { chip, ovrChip } from './componentes.mjs';
+import { VELOCIDADES, prefs } from './configuracoes.mjs';
+import { jogosCopa } from './copa.mjs';
+import { save, ui } from './estado.mjs';
+import { icone } from './icones.mjs';
+import { DURACAO, crest, itemEvento, marcador } from './partida.mjs';
+import { posTag } from './posicoes.mjs';
+import { chipsTaticaAoVivo } from './taticas.mjs';
+import { go, render } from './telas.mjs';
+
+const ABAS = { meu: 'Meu jogo', rodada: 'Rodada', classif: 'Classificação' };
+const el = id => document.getElementById(id);
+const soma = (v, min) => v.jogos.map(g => { const q = placarNoMinuto(g, min); return q.h + ':' + q.a }).join(',');
+
+/** Há um jogo ao vivo em andamento (não terminado) neste save? */
+export const vivoAtivo = () => !!(ui.vivo && !ui.vivo.fim && ui.vivo.S === S);
+
+/** Começa a rodada ao vivo: `jogos` = todos os jogos da rodada `rodada` (índice), `meu` = o seu; `done` roda no "Continuar". */
+export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round - 1 } = {}) {
+  encerrarVivo();
+  const uc = userClub();
+  const v = ui.vivo = { g: meu, jogos, rodada, done, replay, min: 0, fim: false, aba: 'meu', div: divOf(uc), comp: 'liga', sel: null, sig: '',
+    S, clube: uc, xi0: [...(uc.lineup || [])], f0: uc.formation, timer: null }; // xi0/f0: trocas e formação valem só neste jogo
+  ui.tvAoVivo = replay ? null : { g: meu, min: () => v.min };
+  go('aovivo');
+  v.timer = setInterval(() => tick(v), VELOCIDADES[prefs().velocidade] || 55); // #106
+  v.timer.unref && v.timer.unref();
+}
+/** Larga o jogo ao vivo (se houver) sem chamar o "Continuar": o time volta à escalação de antes das trocas. */
+export function encerrarVivo() {
+  const v = ui.vivo; if (!v) return;
+  clearInterval(v.timer); restaurar(v); ui.vivo = null; ui.tvAoVivo = null;
+}
+/** Devolve o time de antes das trocas, a não ser que a escalação já tenha sido mexida depois delas (aí vale a nova). */
+function restaurar(v) {
+  if (v.restaurado) return; v.restaurado = true;
+  const uc = v.clube;
+  if (!v.alterou || v.S !== S || uc.lineup.join() !== v.xi1.join() || uc.formation !== v.f1) return;
+  uc.lineup = v.xi0; uc.formation = v.f0; save();
+}
+
+function tick(v) {
+  if (ui.vivo !== v || v.S !== S) { clearInterval(v.timer); if (ui.vivo === v) { ui.vivo = null; ui.tvAoVivo = null } return }
+  if (ui.view !== 'aovivo') return; // pausado: saiu da tela
+  if (v.min >= DURACAO) return;
+  v.min++; pintar(v);
+  if (v.min >= DURACAO) terminar(v);
+}
+function terminar(v) {
+  clearInterval(v.timer); v.fim = true; ui.tvAoVivo = null; restaurar(v);
+  pintar(v);
+  const c = el('av-controles'), b = el('av-botoes');
+  if (c) c.innerHTML = '';
+  if (b) { b.innerHTML = botoes(v); const ok = el('ldone'); if (ok && ok.focus) ok.focus() }
+  paineis(v);
+}
+
+/* ---------- ações dos botões ---------- */
+export function avAba(a) { if (ui.vivo && ABAS[a]) { ui.vivo.aba = a; render() } }
+export function avDiv(d) { if (ui.vivo) { ui.vivo.div = d; paineis(ui.vivo) } }
+export function avComp(c) { if (ui.vivo) { ui.vivo.comp = c; paineis(ui.vivo) } }
+export function avSair(id) { const v = ui.vivo; if (!v || v.fim || v.replay) return; v.sel = v.sel === id ? null : id; controles(v) }
+export function avEntrar(id) {
+  const v = ui.vivo; if (!v || v.fim || v.replay || !v.sel) return;
+  aplicar(v, substituir(v.g, v.min, v.sel, id));
+}
+export function avFormacao(f) { const v = ui.vivo; if (!v || v.fim || v.replay) return; aplicar(v, mudarFormacaoAoVivo(v.g, v.min, f)) }
+export function avPular() { const v = ui.vivo; if (v && !v.fim) { v.min = DURACAO; terminar(v) } }
+export function avContinuar() { const v = ui.vivo; if (!v) return; const { done } = v; encerrarVivo(); done() }
+function aplicar(v, r) {
+  if (r.erro) { avisar(r.erro, 'erro'); return }
+  v.sel = null; v.alterou = true; v.xi1 = [...v.clube.lineup]; v.f1 = v.clube.formation; save(); avisar(r.msg); pintar(v); controles(v); paineis(v);
+}
+
+/* ---------- pedaços da página ---------- */
+const relogio = v => v.fim ? 'Fim de jogo' : v.min + "'";
+function lances(v) {
+  const H = clubById(v.g.h), A = clubById(v.g.a), meu = userClub().id, ate = v.g.ev.filter(e => e.m <= v.min);
+  return { feed: [...ate].reverse().map(e => itemEvento(e, H, A, meu)).join('') + '<li class="ev muted">Bola rolando!</li>', marcas: ate.map(e => marcador(e, H, A)).join('') };
+}
+/** Atualiza o que anda com o relógio: placar, relógio, barra e lances; e os painéis do campeonato se algum placar mudou. */
+function pintar(v) {
+  const p = placarNoMinuto(v.g, v.min), n = el('lsc'), { feed, marcas } = lances(v);
+  if (n) {
+    const txt = `${p.h} x ${p.a}`;
+    if (n.textContent !== txt) { n.textContent = txt; if (n.classList) { n.classList.remove('pulsa'); void n.offsetWidth; n.classList.add('pulsa') } }
+  }
+  const c = el('lclk'), b = el('lbar'), f = el('lfeed'), m = el('lmarcas');
+  if (c) c.textContent = relogio(v);
+  if (b) b.style.width = Math.min(100, v.min / DURACAO * 100) + '%';
+  if (f) f.innerHTML = feed;
+  if (m) m.innerHTML = marcas;
+  const sig = soma(v, v.min);
+  if (sig !== v.sig) { v.sig = sig; paineis(v) }
+}
+function controles(v) { const c = el('av-controles'); if (c) c.innerHTML = htmlControles(v) }
+function paineis(v) { const r = el('av-rodada'), c = el('av-classif'); if (r) r.innerHTML = htmlRodada(v); if (c) c.innerHTML = htmlClassif(v) }
+
+const botoes = v => v.fim
+  ? `<button class="btn" id="ldone" data-acao="avContinuar">Continuar</button>`
+  : `<button class="btn sec" id="lskip" data-acao="avPular">${icone('avancar', { tam: 16 })}Pular para o fim</button>`;
+
+function htmlControles(v) {
+  if (v.fim) return '';
+  if (v.replay) return `<p class="muted dica">${icone('info', { tam: 14 })} Replay do jogo simulado no servidor. Na liga, escalação, formação e tática valem para a rodada inteira: as trocas ficam bloqueadas.</p>`;
+  const uc = userClub(), em = getXI(uc).map(id => P[id]).filter(Boolean), feitas = trocasDe(v.g, uc.id).length, cheio = feitas >= MAX_TROCAS;
+  const sel = v.sel && P[v.sel], form = uc.formation || '4-4-2';
+  const jog = p => `${posTag(p)}<span class="troca-nome">${esc(p.name)}</span>${ovrChip(p.ovr)}`;
+  const dica = cheio ? `As ${MAX_TROCAS} substituições já foram feitas.` : sel ? `Escolha no banco quem entra no lugar de ${esc(sel.name)}.` : 'Escolha em campo quem sai.';
+  const reservas = banco(v.g).sort((a, b) => !a.motivo - !b.motivo || b.p.ovr - a.p.ovr);
+  return `<div class="tatica-vivo" id="ltat">${chipsTaticaAoVivo()}</div>
+    <div class="chips" role="group" aria-label="Formação"><span class="muted">Formação</span>${Object.keys(FORMS).map(f => chip(f, `avFormacao|${f}`, f === form)).join('')}</div>
+    <section class="trocas" aria-label="Substituições"><div class="card-topo"><h3>Substituições</h3><span class="muted">${feitas} de ${MAX_TROCAS}</span></div>
+      <p class="muted dica" aria-live="polite">${dica}</p>
+      <div class="trocas-listas">
+        <ul class="lista-troca" aria-label="Em campo">${em.map(p => `<li><button type="button" class="troca-item${v.sel === p.id ? ' on' : ''}" aria-pressed="${v.sel === p.id}" data-acao="avSair|${p.id}"${cheio ? ' disabled' : ''}>${jog(p)}</button></li>`).join('')}</ul>
+        <ul class="lista-troca" aria-label="Banco">${reservas.map(({ p, motivo }) =>
+          `<li><button type="button" class="troca-item" data-acao="avEntrar|${p.id}"${!sel || cheio || motivo ? ' disabled' : ''}>${jog(p)}${motivo ? `<span class="muted">${esc(motivo)}</span>` : ''}</button></li>`).join('')}</ul>
+      </div></section>`;
+}
+
+function htmlMeu(v) {
+  const H = clubById(v.g.h), A = clubById(v.g.a), p = placarNoMinuto(v.g, v.min), { feed, marcas } = lances(v);
+  const lado = (c, cls) => `<div class="placar-time ${cls}">${crest(c, 'g')}<b>${esc(c.name)}</b></div>`;
+  return `<div class="placar">${lado(H, 'casa')}<div class="placar-centro"><div class="placar-num" id="lsc" aria-live="polite">${p.h} x ${p.a}</div><div class="relogio" id="lclk">${relogio(v)}</div></div>${lado(A, 'fora')}</div>
+    <div class="tempo" aria-hidden="true"><div class="tempo-trilho"><div class="tempo-feito" id="lbar" style="width:${Math.min(100, v.min / DURACAO * 100)}%"></div></div><div class="tempo-marcas" id="lmarcas">${marcas}</div>
+      <div class="tempo-escala"><span>0'</span><span>45'</span><span>90'</span></div></div>
+    <ul class="eventos" id="lfeed" aria-label="Lances da partida">${feed}</ul>
+    <div class="row fim-acoes" id="av-botoes">${botoes(v)}</div>
+    <div class="ao-vivo" id="av-controles">${htmlControles(v)}</div>`;
+}
+
+function serieChips(v) {
+  return hasTwoDivs() ? `<div class="chips abas" role="group" aria-label="Série">${divisions().map(d => chip(DIVS[d], `avDiv|${d}`, v.div === d)).join('')}</div>` : '';
+}
+const meusPrimeiro = me => (a, b) => (b.h === me || b.a === me) - (a.h === me || a.a === me);
+function htmlRodada(v) {
+  const me = userClub().id, copa = copaNaRodada(v.rodada), comp = copa && v.comp === 'copa' ? 'copa' : 'liga';
+  const comps = copa ? `<div class="chips abas" role="group" aria-label="Competição">${chip('Campeonato', 'avComp|liga', comp === 'liga')}${chip(COPA, 'avComp|copa', comp === 'copa')}</div>` : '';
+  if (comp === 'copa') {
+    const fase = S.copa.fases[copa.fase];
+    const aJogar = j => `<li class="jogo${j.h === me || j.a === me ? ' meu' : ''}"><span class="jogo-time casa">${esc(clubById(j.h).name)} ${crest(clubById(j.h))}</span><span class="jogo-placar"><span class="muted">x</span></span><span class="jogo-time fora">${crest(clubById(j.a))} ${esc(clubById(j.a).name)}</span></li>`;
+    const lista = v.fim || !fase ? jogosCopa(v.rodada) : `<section class="fase-copa"><div class="card-topo"><h3>${COPA} · ${copa.nome} (${copa.volta ? 'volta' : 'ida'})</h3></div>
+      <p class="muted">O resultado da copa aparece quando a rodada termina.</p><ul class="jogos">${[...fase.jogos].sort(meusPrimeiro(me)).map(aJogar).join('')}</ul></section>`;
+    return `<h3>Outros jogos</h3>${comps}${lista}`;
+  }
+  const gs = v.jogos.filter(g => divOf(clubById(g.h)) === v.div).sort(meusPrimeiro(me));
+  return `<h3>Outros jogos</h3>${comps}${serieChips(v)}<ul class="jogos">${gs.map(g => {
+    const p = placarNoMinuto(g, v.min), H = clubById(g.h), A = clubById(g.a);
+    return `<li class="jogo${g.h === me || g.a === me ? ' meu' : ''}"><span class="jogo-time casa">${esc(H.name)} ${crest(H)}</span><span class="jogo-placar">${p.h}<span aria-hidden="true"> x </span><span class="sr"> a </span>${p.a}</span><span class="jogo-time fora">${crest(A)} ${esc(A.name)}</span></li>`;
+  }).join('')}</ul>`;
+}
+function htmlClassif(v) {
+  const me = userClub().id, T = tabelaNoMinuto(v.div, v.rodada, v.jogos, v.min), antes = tabelaNoMinuto(v.div, v.rodada, [], 0).map(t => t.id);
+  const mov = (id, i) => {
+    const d = antes.indexOf(id) - i;
+    return d > 0 ? `<span class="ok">${icone('subir', { tam: 12, rotulo: `subiu ${d}` })}</span>` : d < 0 ? `<span class="bad">${icone('descer', { tam: 12, rotulo: `caiu ${-d}` })}</span>` : '';
+  };
+  return `<h3>Classificação provisória</h3>${serieChips(v)}<section class="card tabela-card"><div class="tw"><table><caption class="sr">Classificação da ${DIVS[v.div]} no minuto ${v.min}</caption>
+    <thead><tr><th scope="col">#</th><th scope="col"><span class="sr">Variação</span></th><th scope="col">Clube</th><th scope="col" class="n">J</th><th scope="col" class="n">SG</th><th scope="col" class="n">Pts</th></tr></thead>
+    <tbody>${T.map((t, i) => { const c = clubById(t.id); return `<tr class="${t.id === me ? 'me' : ''}"><td>${i + 1}</td><td>${mov(t.id, i)}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n">${t.J}</td><td class="n">${t.GP - t.GC}</td><td class="n"><b>${t.Pts}</b></td></tr>` }).join('')}</tbody>
+  </table></div></section>`;
+}
+
+export function vAoVivo() {
+  const v = ui.vivo;
+  if (!v || v.S !== S) return `<p class="muted">Nenhum jogo em andamento.</p><button class="btn sec" data-acao="go|clube">Painel do clube</button>`;
+  v.sig = soma(v, v.min);
+  return `<div class="vivo" id="vivo" data-aba="${v.aba}">
+    <div class="chips vivo-abas" role="group" aria-label="Área da tela">${Object.entries(ABAS).map(([k, r]) => chip(r, `avAba|${k}`, v.aba === k)).join('')}</div>
+    <section class="vivo-meu" aria-label="Seu jogo">${htmlMeu(v)}</section>
+    <section class="vivo-rodada" id="av-rodada" aria-label="Jogos da rodada">${htmlRodada(v)}</section>
+    <section class="vivo-classif" id="av-classif" aria-label="Classificação provisória">${htmlClassif(v)}</section></div>`;
+}

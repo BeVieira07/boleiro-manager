@@ -15,7 +15,8 @@ import { avisar, confirmar, pedirValor } from './avisos.mjs';
 import { clienteLogado, sessaoEncerrada, usuarioAtual } from './conta.mjs';
 import { ui } from './estado.mjs';
 import { icone } from './icones.mjs';
-import { closeModal, crest, openModal, showLive } from './partida.mjs';
+import { closeModal, crest, openModal } from './partida.mjs';
+import { iniciarVivo } from './aovivo.mjs';
 import { go, render } from './telas.mjs';
 import { verAoVivo } from './configuracoes.mjs';
 import { abrirLigas, abrirLobby } from './liga.mjs';
@@ -147,7 +148,7 @@ export async function atualizarAposRodada() {
   if (!r) { render(); return }
   const fim = () => { ui.lastRound = { round: r.rodada + 1, games: r.jogos }; ui.view = 'rodada'; render() };
   const me = userClub().id, meu = r.jogos.find(g => g.h === me || g.a === me);
-  if (meu && verAoVivo(meu)) showLive(meu, fim, { replay: true }); else fim(); // #106
+  if (meu && verAoVivo(meu)) iniciarVivo(r.jogos, meu, fim, { replay: true, rodada: r.rodada }); else fim(); // #106
 }
 
 /** Envia a sua escalação, formação e tática da rodada e pede ao servidor para jogar (ele só joga quando todos confirmaram). */

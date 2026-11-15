@@ -290,6 +290,24 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .tatica-vivo{display:flex;flex-direction:column;gap:var(--e2)}
 .tatica-vivo .chips>.muted{font-size:12px;min-width:48px}
 .fim-acoes{justify-content:flex-end}
+/* #135: tela da rodada ao vivo (ui/aovivo.mjs): o seu jogo, os outros jogos e a classificação no mesmo relógio */
+.vivo{display:grid;gap:var(--e4);grid-template-columns:minmax(0,1fr);align-items:start}
+.vivo-meu{display:flex;flex-direction:column;gap:var(--e4);min-width:0}
+.vivo-rodada,.vivo-classif{display:flex;flex-direction:column;gap:var(--e3);min-width:0}
+.vivo-rodada .jogos{grid-template-columns:minmax(0,1fr)}
+.vivo-abas{display:flex}
+@media(max-width:899px){.vivo[data-aba="meu"] :is(.vivo-rodada,.vivo-classif),.vivo[data-aba="rodada"] :is(.vivo-meu,.vivo-classif),.vivo[data-aba="classif"] :is(.vivo-meu,.vivo-rodada){display:none}}
+@media(min-width:900px){.vivo{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}.vivo-abas{display:none}.vivo-meu{grid-column:1;grid-row:1/span 2}.vivo-rodada{grid-column:2;grid-row:1}.vivo-classif{grid-column:2;grid-row:2}}
+.ev.troca .ev-ic,.ev.formacao .ev-ic{color:var(--verde-claro)}
+.marca-ev.troca,.marca-ev.formacao{background:var(--verde-claro);height:12px;top:4px}
+.trocas{display:flex;flex-direction:column;gap:var(--e2)}
+.trocas-listas{display:grid;gap:var(--e3);grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr))}
+.lista-troca{list-style:none;margin:0;padding:0;display:grid;gap:6px}
+.troca-item{display:flex;align-items:center;gap:var(--e2);width:100%;min-height:40px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--linha);background:var(--painel);color:var(--texto);font:inherit;text-align:left;cursor:pointer}
+.troca-item:hover:not(:disabled){border-color:var(--verde)}
+.troca-item.on{border-color:var(--verde);background:var(--verde-esc)}
+.troca-item:disabled{opacity:.55;cursor:not-allowed}
+.troca-nome{flex:1;min-width:0;overflow-wrap:anywhere}
 @media(max-width:520px){.placar-num{font-size:44px}.placar .crest.g{width:48px;height:48px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
