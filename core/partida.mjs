@@ -1,6 +1,7 @@
 import { potInicial, tetoOvr, virarBase } from './base.mjs';
 import { CONTRATO_NOVO, vencerContratos } from './contratos.mjs';
 import { criarCopa } from './copa.mjs';
+import { ferias } from './energia.mjs';
 import { criarEstaduais } from './estadual.mjs';
 import { fakePlayer, refreshEconomics } from './dados.mjs';
 import { confiancaFimTemporada, confiancaNovaTemporada } from './diretoria.mjs';
@@ -53,6 +54,7 @@ export function iniciarTemporada(){
     c.players=keep;ensureSquad(c);
   }
   virarBase(); // #50: a base dos clubes com técnico
+  ferias(); // #136: energia cheia na nova temporada
   S.season++;S.round=0;S.fixtures=makeAllFixtures(S.clubs);
   reindex();criarCopa();criarEstaduais();
   processLoans(); // #142: empréstimo de 1 ano feito na rodada 0 volta agora

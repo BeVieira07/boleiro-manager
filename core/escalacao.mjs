@@ -1,6 +1,7 @@
 import { P, S, addNews, clubById, userClub } from './estado.mjs';
 import { autoXI, getXI } from './motor.mjs';
 import { POSD, ovrNaPosicao, penalidadePosicao } from './posicoes.mjs';
+import { fatorEnergia, riscoLesao } from './energia.mjs';
 import { ri, rnd } from './utils.mjs';
 
 /* ================= escalação: tela, disponibilidade e trocas ================= */
@@ -18,7 +19,7 @@ export function aplicarDisponibilidade(games){
     for(const pid of getXI(c)){
       const p=P[pid];if(!p)continue;
       let msg=null;
-      if(rnd()<0.012){p.inj=ri(1,5);msg=`🩹 ${p.name} se lesionou e desfalca o time por ${p.inj} rodada(s).`}
+      if(rnd()<0.012*riscoLesao(p)){p.inj=ri(1,5);msg=`🩹 ${p.name} se lesionou e desfalca o time por ${p.inj} rodada(s).`}
       else if(rnd()<0.015){p.susp=1;msg=`🟥 ${p.name} foi expulso e cumpre 1 jogo de suspensão.`}
       if(msg)addNews(msg,c.id);
     }
@@ -49,7 +50,7 @@ export function autoSlotXI(club,f){
   const out=[];
   for(const s of slots){
     let best=-1,bv=-1;
-    jog.forEach((p,k)=>{const v=ovrNaPosicao(p,s);if(v>bv){bv=v;best=k}});
+    jog.forEach((p,k)=>{const v=ovrNaPosicao(p,s)*fatorEnergia(p);if(v>bv){bv=v;best=k}});
     if(best>=0)out.push(jog.splice(best,1)[0].id);
   }
   return out;

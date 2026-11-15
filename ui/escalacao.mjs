@@ -1,12 +1,13 @@
 /* ================= Escalação visual (#61) =================
    Campo com uma carta por vaga, força do time por setor, aviso de quem joga fora de posição (com sugestão de troca)
    e os reservas ao lado. Toque num titular e depois num reserva (ou noutro titular) para trocar. */
+import { energiaDe } from '../core/energia.mjs';
 import { definirFormacao, slotLayout, trocarNaEscalacao, unavailable } from '../core/escalacao.mjs';
 import { P, userClub } from '../core/estado.mjs';
 import { power } from '../core/motor.mjs';
 import { POSD, ovrNaPosicao, penalidadePosicao, posDSigla } from '../core/posicoes.mjs';
 import { FORMS, PORD, esc } from '../core/utils.mjs';
-import { barra, chip, ovrChip } from './componentes.mjs';
+import { barra, chip, energiaBarra, ovrChip } from './componentes.mjs';
 import { save, ui } from './estado.mjs';
 import { icone } from './icones.mjs';
 import { autoLineup, render } from './telas.mjs';
@@ -43,10 +44,10 @@ function carta(s) {
   if (!s.id) return `<div class="carta vazia"><span class="carta-vaga">${s.d}</span><span>vaga livre</span></div>`;
   const p = P[s.id], u = unavailable(p), pp = penalidadePosicao(p, s.d), sel = ui.selEsc === p.id;
   const est = u ? 'indisp' : pp.tipo === 'fora' ? 'fora' : '', nota = u ? (p.inj > 0 ? `${p.inj} rod.` : `susp. ${p.susp}`) : pp.pen ? `-${Math.round(pp.pen * 100)}%` : '';
-  const desc = `${POSD[s.d].nome}: ${p.name}, força ${ovrNaPosicao(p, s.d)}${u ? ', ' + u : pp.tipo === 'fora' ? ', fora de posição, ' + nota : pp.tipo === 'secundaria' ? ', posição secundária' : ''}`;
+  const desc = `${POSD[s.d].nome}: ${p.name}, força ${ovrNaPosicao(p, s.d)}, energia ${Math.round(energiaDe(p))}${u ? ', ' + u : pp.tipo === 'fora' ? ', fora de posição, ' + nota : pp.tipo === 'secundaria' ? ', posição secundária' : ''}`;
   return `<button type="button" class="carta ${est}${sel ? ' sel' : ''}" data-acao="clickEsc|${p.id}" aria-pressed="${sel}" aria-label="${esc(desc)}" title="${esc(p.name)}">
     <span class="carta-vaga">${s.d}</span><span class="carta-nome">${esc(sobrenome(p.name))}</span>
-    <span class="carta-pe">${ovrChip(ovrNaPosicao(p, s.d))}${nota ? `<span class="carta-nota">${nota}</span>` : ''}</span></button>`;
+    <span class="carta-pe">${ovrChip(ovrNaPosicao(p, s.d))}${nota ? `<span class="carta-nota">${nota}</span>` : ''}</span>${energiaBarra(p)}</button>`;
 }
 
 export function vEscalacao() {
@@ -73,7 +74,7 @@ export function vEscalacao() {
     </section>
     <div class="esc-lado">
       <section class="card"><div class="card-topo"><h3>Força do time</h3><button class="btn sm" data-acao="escalarMelhoresTela">Escalar melhores</button></div>
-        <p class="muted titulares">Titulares: <b class="${xi.length === 11 ? 'ok' : 'bad'}">${xi.length}/11</b></p>
+        <p class="muted titulares">Titulares: <b class="${xi.length === 11 ? 'ok' : 'bad'}">${xi.length}/11</b> · energia média <b>${xi.length ? Math.round(xi.reduce((t, id) => t + energiaDe(P[id]), 0) / xi.length) : 0}</b></p>
         ${[['Ataque', pw.att, 'var(--pos-a)'], ['Meio', pw.mid, 'var(--verde)'], ['Defesa', pw.def, 'var(--info)']].map(([n, v, c]) => `<div class="setor"><div class="setor-topo"><span>${n}</span><b>${v.toFixed(0)}</b></div>${barra(v, c)}</div>`).join('')}
       </section>
       ${avisos.length ? `<section class="aviso-posicao" role="status">${icone('alerta', { tam: 20 })}<div><b>${avisos.length} aviso${avisos.length > 1 ? 's' : ''} na escalação</b>
@@ -81,7 +82,7 @@ export function vEscalacao() {
         ${sug.map(x => `<button class="btn sm" data-acao="trocarTitulares|${x.a}|${x.b}">Trocar ${esc(P[x.a].name)} e ${esc(P[x.b].name)} de vaga (+${x.ganho}%)</button>`).join('')}</div></section>` : ''}
       <section class="card"><h3>Reservas (${bench.length})</h3><ul class="reservas">${bench.map(p => { const [n, t] = notaReserva(p), sel = ui.selEsc === p.id;
         return `<li><button type="button" class="reserva${sel ? ' sel' : ''}${unavailable(p) ? ' indisp' : ''}" data-acao="clickEsc|${p.id}" aria-pressed="${sel}">
-          <span class="pos ${p.pos}">${posDSigla(p)}</span><span class="reserva-nome"><b>${esc(p.name)}</b><span class="st ${t}">${esc(n)}</span></span>${ovrChip(p.ovr)}</button></li>` }).join('')}</ul></section>
+          <span class="pos ${p.pos}">${posDSigla(p)}</span><span class="reserva-nome"><b>${esc(p.name)}</b><span class="st ${t}">${esc(n)}</span></span>${energiaBarra(p)}${ovrChip(p.ovr)}</button></li>` }).join('')}</ul></section>
     </div>
   </div>`;
 }

@@ -7,7 +7,7 @@ import { unavailable } from '../core/escalacao.mjs';
 import { P, userClub } from '../core/estado.mjs';
 import { getXI } from '../core/motor.mjs';
 import { esc, money } from '../core/utils.mjs';
-import { barra, ovrChip } from './componentes.mjs';
+import { barra, energiaBarra, ovrChip } from './componentes.mjs';
 import { loanBtn, loanTag, vLoans } from './emprestimos.mjs';
 import { avisar, confirmar } from './avisos.mjs';
 import { potTag, vBase } from './base.mjs';
@@ -42,6 +42,7 @@ function linha(p, xi) {
     <td class="c c-ovr"><span class="forca">${ovrChip(p.ovr)}${tendenciaTag(p)}</span></td>
     <td class="c-pot">${potTag(p)}</td>
     <td class="c-forma" title="Forma: ${f}%"><span class="sr">Forma ${f}%</span>${barra(f, corForma(f), 'fina')}</td>
+    <td class="c-energia">${energiaBarra(p)}</td>
     <td class="n c-gols"><span class="rot">Gols </span>${p.goals || 0}</td>
     <td class="n c-valor">${money(p.value)}</td>
     <td class="n c-sal">${money(p.wage)}</td>
@@ -49,7 +50,7 @@ function linha(p, xi) {
     <td class="c-acoes"><div class="acoes">${podeRenovar(p) ? `<button class="btn sec sm" data-acao="renovar|${p.id}">Renovar</button>` : ''}${acoes}${loanBtn(p, 'out')}</div></td></tr>`;
 }
 
-export const corpoElenco = () => { const uc = userClub(), xi = getXI(uc); return filtrar(uc.players, ui.ef).map(p => linha(p, xi)).join('') || '<tr><td colspan="11" class="muted">Nenhum jogador com esse filtro.</td></tr>' };
+export const corpoElenco = () => { const uc = userClub(), xi = getXI(uc); return filtrar(uc.players, ui.ef).map(p => linha(p, xi)).join('') || '<tr><td colspan="12" class="muted">Nenhum jogador com esse filtro.</td></tr>' };
 
 /** Filtro do elenco: chips e colunas redesenham a tela; a busca só troca as linhas, para não perder o foco do campo. */
 export function filtrarElenco(campo, valor) {
@@ -75,9 +76,9 @@ export function vElenco() {
   <p class="muted resumo">${uc.players.length} jogadores · folha de ${money(wageBill(uc))} por rodada · titulares em destaque. A escalação é feita na tela de Escalação.</p>
   <section class="card tabela-card"><div class="tabela-rolavel"><table class="tabela-jogadores">
     <caption class="sr">Elenco do ${esc(uc.name)}</caption>
-    <thead><tr>${th('Pos', 'pos', f, a)}${th('Jogador', 'nome', f, a, 'c-nome')}${th('Idade', 'idade', f, a, 'n')}${th('Força', 'ovr', f, a, 'c')}${th('Potencial', 'pot', f, a)}${th('Forma', 'forma', f, a)}${th('Gols', 'gols', f, a, 'n')}${th('Valor', 'valor', f, a, 'n')}${th('Salário', 'salario', f, a, 'n')}${th('Contrato', 'contrato', f, a)}${th('Mercado', '', f, a)}</tr></thead>
+    <thead><tr>${th('Pos', 'pos', f, a)}${th('Jogador', 'nome', f, a, 'c-nome')}${th('Idade', 'idade', f, a, 'n')}${th('Força', 'ovr', f, a, 'c')}${th('Potencial', 'pot', f, a)}${th('Forma', 'forma', f, a)}${th('Energia', 'energia', f, a)}${th('Gols', 'gols', f, a, 'n')}${th('Valor', 'valor', f, a, 'n')}${th('Salário', 'salario', f, a, 'n')}${th('Contrato', 'contrato', f, a)}${th('Mercado', '', f, a)}</tr></thead>
     <tbody id="corpoElenco">${corpoElenco()}</tbody></table></div></section>
-  <p class="muted nota">As setas mostram a variação do overall desde o início da temporada, e as estrelas, até onde o jogador pode chegar. A barra de forma sobe com bons jogos e cai no banco. Quem chega ao fim do contrato sem renovar sai de graça na virada da temporada.</p>
+  <p class="muted nota">As setas mostram a variação do overall desde o início da temporada, e as estrelas, até onde o jogador pode chegar. A barra de forma sobe com bons jogos e cai no banco. A energia cai a cada jogo como titular e volta no descanso; abaixo de 70 o jogador rende menos e abaixo de 30 também se lesiona mais. Quem chega ao fim do contrato sem renovar sai de graça na virada da temporada.</p>
   ${vBase()}
   ${vLoans()}`;
 }

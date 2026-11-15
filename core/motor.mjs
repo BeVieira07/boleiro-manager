@@ -1,4 +1,5 @@
 import { jogarCopa } from './copa.mjs';
+import { anotarTitulares, atualizarEnergia, fatorEnergia } from './energia.mjs';
 import { atualizarConfianca } from './diretoria.mjs';
 import { jogarPreTemporada } from './estadual.mjs';
 import { processLoans, wageBill } from './emprestimos.mjs';
@@ -20,7 +21,7 @@ export function power(club){
   const xi=getXI(club).map(id=>P[id]).filter(Boolean);
   // com 11 titulares na ordem das vagas, quem joga fora de posição rende menos
   const sl=xi.length===11?slotsDe(club.formation||'4-4-2'):null;
-  const xe=xi.map((p,i)=>({pos:p.pos,ovr:sl?ovrNaPosicao(p,sl[i]):p.ovr}));
+  const xe=xi.map((p,i)=>({pos:p.pos,ovr:(sl?ovrNaPosicao(p,sl[i]):p.ovr)*fatorEnergia(p)})); // #136: cansaço tira rendimento
   const grp=pos=>xe.filter(p=>p.pos===pos);
   const avg=(arr,f)=>arr.length?arr.reduce((s,p)=>s+p.ovr,0)/arr.length:f;
   const base=avg(xe,45),g=grp('G'),d=grp('D'),m=grp('M'),a=grp('A');
@@ -80,6 +81,7 @@ export function jogarRodada(){
   S.rng=semente(S.seed,S.season,S.round); // a rodada depende só do estado e das escolhas, não do que foi sorteado antes
   if(ehJanela(S.round))janelaIA(); // #103: começo e metade da temporada
   const games=S.fixtures[S.round].map(simulate);
+  const jogaram=anotarTitulares(new Map(),games,getXI,clubById); // #136: titulares do jogo, antes de lesões e energia mudarem
   aplicarDisponibilidade(games);
   adiarForma(games);
   const jogoDe=c=>games.find(g=>g.h===c.id||g.a===c.id);
@@ -118,6 +120,7 @@ export function jogarRodada(){
     }
   }
   const copa=jogarCopa(S.round); // #51: a Copa do Brasil, quando esta rodada tem jogo dela
+  atualizarEnergia(anotarTitulares(jogaram,copa,getXI,clubById)); // #136: a copa é outro jogo na mesma rodada
   for(const t of tecnicos())t.pronto=false;
   S.atual=tecnicos()[0].id; // depois da rodada, a vez volta ao primeiro técnico
   S.round++;processLoans();
