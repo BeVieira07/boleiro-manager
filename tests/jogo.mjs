@@ -6,6 +6,7 @@
 // Para trocar o jogo atual use usarEstado(...) (módulos não deixam atribuir S=...).
 // Os módulos são carregados uma vez por arquivo de teste; carregarJogo() zera o estado entre os testes.
 import { readdirSync } from 'node:fs';
+import { sorteioFixo } from './sorteio-fixo.mjs';
 
 const falso = () => new Proxy(function () {}, {
   get: (t, k) => k === 'value' ? '5' : k === 'checked' ? false : k === Symbol.toPrimitive ? () => '' : falso(),
@@ -50,8 +51,10 @@ const escopo = new Proxy({}, {
 });
 const avaliar = new Function('escopo', 'codigo', 'with (escopo) { return eval(codigo) }');
 
-/** Começa do zero: sem jogo, armazenamento vazio (ou o `ls` dado). `boot: true` abre o jogo como no navegador. */
-export function carregarJogo({ boot = false, ls = {}, limiteLs = Infinity, estaduais = false } = {}) {
+/** Começa do zero: sem jogo, armazenamento vazio (ou o `ls` dado). `boot: true` abre o jogo como no navegador.
+ *  `semente`: o Math.random recomeça dela a cada carregarJogo (tests/sorteio-fixo.mjs), então o teste não depende da ordem. */
+export function carregarJogo({ boot = false, ls = {}, limiteLs = Infinity, estaduais = false, semente = 20261115 } = {}) {
+  Math.random = sorteioFixo(semente);
   ESTADUAIS.ligados = estaduais;
   amb.app = ''; amb.alertas = []; amb.ls = ls; amb.limite = limiteLs; amb.campos = {};
   usarEstado(null); Object.assign(ui, JSON.parse(UI_INICIAL)); salvarJogo.avisou = false;

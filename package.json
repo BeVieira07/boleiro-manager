@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "start": "npx --yes serve .",
-    "test": "node --test",
+    "test": "node --import ./tests/sorteio-fixo.mjs --test",
     "dados": "node --env-file=.env scripts/baixar-brasileirao.mjs",
     "dados:b": "node --env-file=.env scripts/baixar-brasileirao.mjs --serie=b --temporada=2024",
     "dados:padrao": "node scripts/gerar-dados-padrao.mjs",
