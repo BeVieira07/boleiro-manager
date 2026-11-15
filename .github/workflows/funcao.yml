@@ -38,7 +38,7 @@ jobs:
       - uses: supabase/setup-cli@v1
         if: steps.segredo.outputs.ok == 'true'
         with:
-          version: latest
+          version: 3.1.0 # fixa: "latest" consulta a API do GitHub e falha por limite de pedidos
       - name: Publicar jogar-rodada
         if: steps.segredo.outputs.ok == 'true'
         env:
