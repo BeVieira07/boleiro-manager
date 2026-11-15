@@ -1,5 +1,6 @@
 import { criarBases, darPotencial } from './base.mjs';
 import { contratoInicial } from './contratos.mjs';
+import { criarContinentais, vagasBrasileiras } from './continental.mjs';
 import { criarCopa } from './copa.mjs';
 import { criarEstaduais } from './estadual.mjs';
 import { SQUAD_SHAPE, fakePlayer, rate, refStrength, refreshEconomics } from './dados.mjs';
@@ -71,7 +72,7 @@ export function criarJogo(quem,data){
      managers:Object.fromEntries(lista.map(t=>[t.id,novoTecnico(t.id,t.nome,t.clubId)])),atual:lista[0].id};
   for(const c of S.clubs)c.balance=startBalance(divOf(c),c.strength); // clubes da IA também têm caixa
   darPotencial(S.clubs);
-  reindex();criarBases();criarCopa();criarEstaduais();
+  reindex();criarBases();criarCopa();criarEstaduais();criarContinentais(vagasBrasileiras()); // #133: na 1ª temporada, os mais fortes da Série A
   for(const t of tecnicos()){const uc=clubDo(t);uc.lineup=autoXI(uc);addNews(`${lista.length>1?t.nome+', você':'Você'} assumiu o comando do ${uc.name}! Caixa inicial: ${money(uc.balance)}.`,uc.id)}
   migrarDiretoria(S);
   return S;

@@ -1,3 +1,4 @@
+import { jogarContinentais } from './continental.mjs';
 import { jogarCopa } from './copa.mjs';
 import { anotarTitulares, atualizarEnergia, fatorEnergia } from './energia.mjs';
 import { atualizarConfianca } from './diretoria.mjs';
@@ -120,7 +121,8 @@ export function jogarRodada(){
     }
   }
   const copa=jogarCopa(S.round); // #51: a Copa do Brasil, quando esta rodada tem jogo dela
-  atualizarEnergia(anotarTitulares(jogaram,copa,getXI,clubById)); // #136: a copa é outro jogo na mesma rodada
+  const continentais=jogarContinentais(S.round); // #133, #134: Libertadores e Sul-Americana
+  atualizarEnergia(anotarTitulares(jogaram,[...copa,...continentais],getXI,clubById)); // #136: as copas são outros jogos na mesma rodada
   for(const t of tecnicos())t.pronto=false;
   S.atual=tecnicos()[0].id; // depois da rodada, a vez volta ao primeiro técnico
   S.round++;processLoans();

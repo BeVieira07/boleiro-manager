@@ -27,7 +27,8 @@ Manager de futebol estilo Brasfoot, em JS puro, sem build. Brasileirão Séries 
 | Escudos | `img/escudos/<id>.png` |
 | Origem de cada escudo (para conferir) | `data/escudos-fontes.json` |
 | Título do artigo da Wikipédia de cada clube | `data/escudos-wikipedia.json` |
-| O que o jogo lê | `core/dados-padrao.mjs` (**gerado**, não editar à mão) |
+| Clubes estrangeiros da Libertadores e da Sul-Americana (só da IA, #133 e #134) | `data/continentais-2024.json` (`npm run continentais`: fase de grupos de 2024, a temporada mais nova do plano gratuito) |
+| O que o jogo lê | `core/dados-padrao.mjs` e `core/dados-continentais.mjs` (**gerados** por `npm run dados:padrao`, não editar à mão) |
 
 `data/*-raw.json` é ignorado pelo git.
 
@@ -39,7 +40,7 @@ Manager de futebol estilo Brasfoot, em JS puro, sem build. Brasileirão Séries 
 5. **Sempre** terminar com `npm run dados:padrao` (regenera `core/dados-padrao.mjs`), conferir e commitar.
 
 ## API-Football
-- A conta está **suspensa** ("Your account is suspended"), então `dados`, `dados:b/c/d` e `notas` não baixam nada novo. Os dados já salvos em `data/` continuam valendo.
+- Conta nova no plano gratuito (100 pedidos por dia, 10 por minuto, temporadas de 2022 a 2024). A chave fica em `API_FOOTBALL_KEY` no `.env` (ignorado pelo git; nunca no repositório).
 - O navegador não importa mais da API (#52): a aba Dados só carrega e exporta JSON. A única fonte são os scripts (`npm run dados` etc.).
 - O host de imagens `media.api-sports.io` está fora do ar (DNS não resolve). Por isso os escudos vêm da Wikipédia.
 

@@ -20,9 +20,9 @@ export const NAV = [
   ['financas', 'Finanças', 'financas'], ['dados', 'Dados', 'dados'], ['config', 'Configurações', 'engrenagem']
 ];
 const PRINCIPAIS = 4;
-export const TITULOS = { liga: 'Liga', clube: 'Painel do clube', elenco: 'Elenco', escalacao: 'Escalação', jogos: 'Jogos', tabela: 'Classificação', competicoes: 'Competições', copa: 'Copa do Brasil', estadual: 'Estadual', artilharia: 'Artilharia', mercado: 'Mercado', financas: 'Finanças', dados: 'Dados do jogo', config: 'Configurações', carreira: 'Propostas de clubes', rodada: 'Resultados da rodada', aovivo: 'Rodada ao vivo' };
+export const TITULOS = { liga: 'Liga', clube: 'Painel do clube', elenco: 'Elenco', escalacao: 'Escalação', jogos: 'Jogos', tabela: 'Classificação', competicoes: 'Competições', copa: 'Copa do Brasil', libertadores: 'Libertadores', sulamericana: 'Sul-Americana', estadual: 'Estadual', artilharia: 'Artilharia', mercado: 'Mercado', financas: 'Finanças', dados: 'Dados do jogo', config: 'Configurações', carreira: 'Propostas de clubes', rodada: 'Resultados da rodada', aovivo: 'Rodada ao vivo' };
 
-const ativa = k => ui.view === k || (k === 'competicoes' && (ui.view === 'copa' || ui.view === 'estadual')); // copa e estadual são telas de dentro de Competições
+const ativa = k => ui.view === k || (k === 'competicoes' && ['copa', 'estadual', 'libertadores', 'sulamericana'].includes(ui.view)); // telas de dentro de Competições
 const item = ([k, l, ic]) => `<button type="button" class="nav-item" data-acao="go|${k}"${ativa(k) ? ' aria-current="page"' : ''}>${icone(ic)}<span>${l}</span></button>`;
 
 /** Menu lateral (no celular, vira a barra inferior). Vazio fora de um jogo. */
