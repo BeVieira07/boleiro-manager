@@ -33,7 +33,7 @@ export function proximoEstadual() {
 
 function tabela(tor, ids, titulo, me) {
   const T = tabelaGrupo(tor, ids), vaga = tor.grupos.length === 1 ? 2 : 1;
-  return `<section class="card tabela-card"><h3>${esc(titulo)}</h3><div class="tw"><table><caption class="sr">${esc(titulo)}</caption>
+  return `<section class="card tabela-card"><h3>${esc(titulo)}</h3><div class="tw"><table class="classif"><caption class="sr">${esc(titulo)}</caption>
   <thead><tr><th scope="col">#</th><th scope="col">Clube</th><th scope="col" class="n">Pts</th><th scope="col" class="n">J</th><th scope="col" class="n">V</th><th scope="col" class="n">E</th><th scope="col" class="n">D</th><th scope="col" class="n">SG</th></tr></thead>
   <tbody>${T.map((t, i) => { const c = clubById(t.id), z = i < vaga; return `<tr class="${t.id === me ? 'me' : ''}"><td class="${z ? 'zona-lib' : ''}"${z ? ' title="Vai à final"' : ''}>${i + 1}${z ? '<span class="sr"> (vai à final)</span>' : ''}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n"><b>${t.Pts}</b></td><td class="n">${t.J}</td><td class="n">${t.V}</td><td class="n">${t.E}</td><td class="n">${t.D}</td><td class="n">${t.GP - t.GC}</td></tr>` }).join('')}</tbody>
   </table></div></section>`;

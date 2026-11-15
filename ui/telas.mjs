@@ -112,7 +112,7 @@ export function vTabela(){
   const d=curDiv(),T=table(d),me=tec().clubId,{top,bottom,nomeTop,nomeBottom}=zonas(d);
   const zona=i=>i<top?['zona-lib',nomeTop]:bottom&&i>=T.length-bottom?['zona-z4',nomeBottom]:['',''];
   return `${divTabs()}<div class="legenda"><span><i class="zona-cor lib"></i>${nomeTop}</span>${bottom?`<span><i class="zona-cor z4"></i>${nomeBottom}</span>`:''}</div>
-  <section class="card tabela-card"><div class="tw"><table><caption class="sr">Classificação da ${DIVS[d]} ${S.season}</caption>
+  <section class="card tabela-card"><div class="tw"><table class="classif"><caption class="sr">Classificação da ${DIVS[d]} ${S.season}</caption>
   <thead><tr><th scope="col">#</th><th scope="col">Clube</th><th scope="col" class="n">Pts</th><th scope="col" class="n">J</th><th scope="col" class="n">V</th><th scope="col" class="n">E</th><th scope="col" class="n">D</th><th scope="col" class="n">GP</th><th scope="col" class="n">GC</th><th scope="col" class="n">SG</th></tr></thead>
   <tbody>${T.map((t,i)=>{const c=clubById(t.id),[z,nz]=zona(i);return `<tr class="${t.id===me?'me':''}"><td class="${z}"${nz?` title="${esc(nz)}"`:''}>${i+1}${nz?`<span class="sr"> (${esc(nz)})</span>`:''}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n"><b>${t.Pts}</b></td><td class="n">${t.J}</td><td class="n">${t.V}</td><td class="n">${t.E}</td><td class="n">${t.D}</td><td class="n">${t.GP}</td><td class="n">${t.GC}</td><td class="n">${t.GP-t.GC}</td></tr>`}).join('')}</tbody>
   </table></div></section>`;

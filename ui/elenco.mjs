@@ -76,7 +76,7 @@ export function vElenco() {
   <p class="muted resumo">${uc.players.length} jogadores · folha de ${money(wageBill(uc))} por rodada · titulares em destaque. A escalação é feita na tela de Escalação.</p>
   <section class="card tabela-card"><div class="tabela-rolavel"><table class="tabela-jogadores">
     <caption class="sr">Elenco do ${esc(uc.name)}</caption>
-    <thead><tr>${th('Pos', 'pos', f, a)}${th('Jogador', 'nome', f, a, 'c-nome')}${th('Idade', 'idade', f, a, 'n')}${th('Força', 'ovr', f, a, 'c')}${th('Potencial', 'pot', f, a)}${th('Forma', 'forma', f, a)}${th('Energia', 'energia', f, a)}${th('Gols', 'gols', f, a, 'n')}${th('Valor', 'valor', f, a, 'n')}${th('Salário', 'salario', f, a, 'n')}${th('Contrato', 'contrato', f, a)}${th('Mercado', '', f, a)}</tr></thead>
+    <thead><tr>${th('Pos', 'pos', f, a)}${th('Jogador', 'nome', f, a, 'c-nome')}${th('Idade', 'idade', f, a, 'n')}${th('Força', 'ovr', f, a, 'c')}${th('Potencial', 'pot', f, a)}${th('Forma', 'forma', f, a, 'c-forma')}${th('Energia', 'energia', f, a)}${th('Gols', 'gols', f, a, 'n c-gols')}${th('Valor', 'valor', f, a, 'n')}${th('Salário', 'salario', f, a, 'n c-sal')}${th('Contrato', 'contrato', f, a)}${th('Mercado', '', f, a)}</tr></thead>
     <tbody id="corpoElenco">${corpoElenco()}</tbody></table></div></section>
   <p class="muted nota">As setas mostram a variação do overall desde o início da temporada, e as estrelas, até onde o jogador pode chegar. A barra de forma sobe com bons jogos e cai no banco. A energia cai a cada jogo como titular e volta no descanso; abaixo de 70 o jogador rende menos e abaixo de 30 também se lesiona mais. Quem chega ao fim do contrato sem renovar sai de graça na virada da temporada.</p>
   ${vBase()}

@@ -1,6 +1,7 @@
 // Abre uma página num Chrome sem janela e roda uma expressão JavaScript nela (Chrome DevTools Protocol).
 // Serve para o que o Node não mostra: tempo de desenho das telas, o fluxo real de um botão, captura de imagens.
 // Uso: node scripts/navegador.mjs <url> <arquivo-com-a-expressão.js>   (a expressão pode ser async; o resultado vai em JSON)
+// Largura da janela: LARGURA=390 (celular) ou LARGURA=1920; padrão 1366 x 768.
 // Rode o jogo antes (npm start). Chrome em outro lugar: variável CHROME com o caminho.
 import { spawn } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
@@ -27,6 +28,10 @@ try {
   };
   await new Promise(r => { ws.onopen = r });
   await cmd('Runtime.enable');
+  // LARGURA=390 node scripts/navegador.mjs ...: tamanho da janela (padrão 1366 x 768), para medir telas no celular
+  const largura = +process.env.LARGURA || 1366, altura = +process.env.ALTURA || 768;
+  await cmd('Emulation.setDeviceMetricsOverride', { width: largura, height: altura, deviceScaleFactor: 1, mobile: largura < 600 });
+  await cmd('Page.reload');
   await new Promise(r => setTimeout(r, 2500)); // a página carrega os módulos
   const r = await cmd('Runtime.evaluate', { expression: readFileSync(arquivo, 'utf8'), awaitPromise: true, returnByValue: true });
   console.log(JSON.stringify(r.result?.value ?? r.exceptionDetails?.exception?.description ?? r, null, 1));

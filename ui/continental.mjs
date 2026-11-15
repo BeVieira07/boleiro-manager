@@ -94,7 +94,7 @@ function vTorneio(id) {
   return `${voltar}<p class="muted resumo">32 clubes em 8 grupos de 4 (ida e volta); os dois primeiros de cada grupo vão às oitavas. Mata-mata em ida e volta e final em jogo único, junto com as rodadas do Brasileirão.
     Premiação: ${money(p.grupos)} pela fase de grupos, ${money(p.oitavas)} pelas oitavas, ${money(p.quartas)} pelas quartas, ${money(p.semi)} pela semifinal e ${money(p.titulo)} pelo título.
     ${tor.campeao ? `Campeão: <b>${esc(clubeCont(tor.campeao).name)}</b>.` : ''}</p>
-    ${mataMata(tor, me)}<div class="cartoes-acao">${tor.grupos.map((g, i) => tabelaGrupo(tor, g, i, me)).join('')}</div>${artilharia(tor)}`;
+    ${mataMata(tor, me)}<div class="cartoes-acao grupos">${tor.grupos.map((g, i) => tabelaGrupo(tor, g, i, me)).join('')}</div>${artilharia(tor)}`;
 }
 export const vLibertadores = () => vTorneio('libertadores');
 export const vSulamericana = () => vTorneio('sulamericana');
