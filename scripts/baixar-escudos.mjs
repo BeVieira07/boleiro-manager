@@ -11,7 +11,7 @@ const UA = { 'User-Agent': 'BoleiroManager/0.1 (projeto pessoal de jogo de futeb
 
 const clubes = new Map(); // id -> { name, logo }
 for (const f of readdirSync('data')) {
-  if (!/^brasileirao.*\.json$/.test(f) || f.includes('-raw')) continue;
+  if (!/^(brasileirao.*|continentais-\d{4})\.json$/.test(f) || f.includes('-raw')) continue; // + estrangeiros das copas (#133)
   for (const c of JSON.parse(readFileSync(`data/${f}`, 'utf8')).clubs || []) clubes.set(c.id, c);
 }
 const mapa = JSON.parse(readFileSync('data/escudos-wikipedia.json', 'utf8'));
@@ -29,15 +29,26 @@ async function pega(url) {
   throw new Error('HTTP 429 (limite de requisições)');
 }
 
-async function daWikipedia(titulo) {
+async function daWikipedia(titulo, lingua = 'pt') {
   const q = new URLSearchParams({ action: 'query', format: 'json', prop: 'pageimages', piprop: 'thumbnail|name', pithumbsize: String(TAM), redirects: '1', titles: titulo });
-  const r = await pega('https://pt.wikipedia.org/w/api.php?' + q);
+  const r = await pega(`https://${lingua}.wikipedia.org/w/api.php?` + q);
   if (!r.ok) throw new Error('API HTTP ' + r.status);
   const page = Object.values((await r.json()).query.pages)[0];
   if (!page.thumbnail) throw new Error('artigo sem imagem principal');
   const img = await pega(page.thumbnail.source);
   if (!img.ok) throw new Error('imagem HTTP ' + img.status);
-  return { buf: Buffer.from(await img.arrayBuffer()), fonte: `${page.title} / ${page.pageimage}`, tipo: img.headers.get('content-type') };
+  return { buf: Buffer.from(await img.arrayBuffer()), fonte: `${lingua}: ${page.title} / ${page.pageimage}`, tipo: img.headers.get('content-type') };
+}
+// título do mapa sem imagem: tenta a Wikipédia em inglês e depois a busca da em português pelo nome do clube
+async function comAlternativas(titulo, nome) {
+  try { return await daWikipedia(titulo) } catch (e1) {
+    try { return await daWikipedia(titulo, 'en') } catch {
+      const q = new URLSearchParams({ action: 'query', format: 'json', list: 'search', srlimit: '1', srsearch: `${nome} clube de futebol` });
+      const achado = (await (await pega('https://pt.wikipedia.org/w/api.php?' + q)).json()).query.search[0];
+      if (!achado) throw e1;
+      return await daWikipedia(achado.title);
+    }
+  }
 }
 
 let ok = 0, pulou = 0, falhou = 0;
@@ -46,7 +57,7 @@ for (const [id, c] of clubes) {
   if (existsSync(dest)) { pulou++; continue; }
   try {
     let res;
-    if (mapa[id]) res = await daWikipedia(mapa[id]);
+    if (mapa[id]) res = await comAlternativas(mapa[id], c.name);
     else if (c.logo && /^https?:/.test(c.logo)) {
       const r = await fetch(c.logo, { signal: AbortSignal.timeout(10000) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
