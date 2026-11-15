@@ -1,0 +1,53 @@
+# Publica a função jogar-rodada no Supabase depois que core/ ou supabase/functions/ mudam na main (passando nos testes).
+# Precisa do segredo SUPABASE_ACCESS_TOKEN (Settings > Secrets and variables > Actions). Sem ele, o job só avisa e termina.
+name: Publicar a função da liga
+
+on:
+  push:
+    branches: [main]
+    paths: ['core/**', 'supabase/functions/**', '.github/workflows/funcao.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: funcao-liga
+  cancel-in-progress: false
+
+env:
+  PROJETO: nfctxdzapspnxwttrwym
+
+jobs:
+  publicar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # o teste do core/ fixado (#122) compara com um commit antigo
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+      - name: Conferir o segredo
+        id: segredo
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$TOKEN" ]; then echo "::warning::SUPABASE_ACCESS_TOKEN não está configurado: a função NÃO foi publicada."; echo "ok=false" >> "$GITHUB_OUTPUT"; else echo "ok=true" >> "$GITHUB_OUTPUT"; fi
+      - uses: supabase/setup-cli@v1
+        if: steps.segredo.outputs.ok == 'true'
+        with:
+          version: latest
+      - name: Publicar jogar-rodada
+        if: steps.segredo.outputs.ok == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy jogar-rodada --project-ref "$PROJETO" --use-api
+      - name: Conferir que a função responde 401 sem login
+        if: steps.segredo.outputs.ok == 'true'
+        run: |
+          chave=$(grep -oE "(sb_publishable_[A-Za-z0-9_-]+|eyJ[A-Za-z0-9._-]+)" ui/config.mjs | head -1)
+          codigo=$(curl -s -o /dev/null -w "%{http_code}" -X POST "https://$PROJETO.supabase.co/functions/v1/jogar-rodada" -H "apikey: $chave" -H "Authorization: Bearer $chave" -H "Content-Type: application/json" -d '{}')
+          echo "HTTP $codigo"
+          [ "$codigo" = "401" ]
