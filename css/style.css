@@ -234,7 +234,7 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .st{font-size:11px;font-weight:500;color:var(--muted);display:inline-flex;gap:4px;align-items:center}
 .st.ok{color:var(--verde)} .st.aviso{color:var(--ouro)} .st.erro{color:var(--perigo-claro)}
 .forca{display:inline-flex;align-items:center;gap:8px}
-.c-forma .barra,.c-energia .barra{width:64px}
+.c-energia .barra{width:64px}
 .energia{display:inline-flex;align-items:center;gap:6px;min-width:0}
 .energia-n{font-size:11px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;min-width:2ch;text-align:right}
 .acoes{display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap}
@@ -255,7 +255,7 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
   .tabela-jogadores .c-nome{min-width:0}
   .tabela-jogadores .c-ovr,.tabela-jogadores .c-pot,.tabela-jogadores .c-energia{order:2}
   .tabela-jogadores .c-idade,.tabela-jogadores .c-gols,.tabela-jogadores .c-valor,.tabela-jogadores .c-contr{order:3;font-size:12px;color:var(--muted)}
-  .tabela-jogadores .c-forma,.tabela-jogadores .c-sal{display:none}
+  .tabela-jogadores .c-sal{display:none}
   .tabela-jogadores .c-acoes{order:4;flex-basis:100%}
   .acoes{justify-content:flex-start;flex-wrap:wrap}
   .rot{display:inline}
@@ -454,7 +454,7 @@ body.em-jogo .avisos{bottom:24px}
   .tabela-base tbody th{white-space:normal}
 }
 .grupos{grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr))}
-/* elenco em telas médias: as colunas menos usadas saem (no celular já saem forma e salário) */
-@media(min-width:800px) and (max-width:1499px){.tabela-jogadores .c-forma,.tabela-jogadores .c-sal{display:none}}
+/* elenco em telas médias: as colunas menos usadas saem (no celular o salário já sai) */
+@media(min-width:800px) and (max-width:1499px){.tabela-jogadores .c-sal{display:none}}
 @media(min-width:800px) and (max-width:1299px){.tabela-jogadores .c-gols{display:none}}
 .tabela-jogadores .c-contr{white-space:normal}

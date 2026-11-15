@@ -35,14 +35,14 @@ test('clicar no título da coluna ordena crescente e depois decrescente', () => 
   assert.match(j.html(), /aria-sort="descending"><button[^>]*filtrarElenco\|ord\|idade/);
 });
 
-test('tendência e forma mostram os valores reais do jogador; ações de mercado continuam', () => {
+test('a tendência mostra o valor real; a forma não aparece na tela (age no overall); ações de mercado continuam', () => {
   const j = carregarJogo({ boot: true });
   j.run(`newGame('${clubeDaSerie(j)}')`);
   jogarRodada(j, 3);
   j.run(`const p=userClub().players[0];p.o0=p.ovr-2;p.forma=1;go('elenco')`);
   const id = j.run('userClub().players[0].id');
   assert.match(j.html(), /▲ \+2/);
-  assert.match(j.html(), /Forma 75%/);
+  assert.doesNotMatch(j.html(), /Forma \d+%/);
   j.acao(`toggleListed|${id}`);
   assert.equal(j.run(`P['${id}'].listed`), true);
   assert.match(j.html(), new RegExp(`data-acao="toggleListed\\|${id}" aria-pressed="true">À venda`));
