@@ -162,6 +162,11 @@ for (const c of clubs) atribuirPosicoes(c.players);
 for (const c of clubs) for (const p of c.players) delete p.real;
 console.log(`Posições: ${clubs.reduce((s, c) => s + c.players.filter(p => p.pd).length, 0)}/${ids.size} jogadores com posição detalhada.`);
 
+// estado de cada clube (#132): todo clube precisa ter UF
+const ufs = ler('data/clubes-uf.json'), semUf = clubs.filter(c => !/^[A-Z]{2}$/.test(ufs[c.id] || ''));
+if (semUf.length) throw new Error('Clubes sem UF em data/clubes-uf.json: ' + semUf.map(c => `${c.id} ${c.name}`).join(', '));
+for (const c of clubs) c.uf = ufs[c.id];
+
 const data = { posv: 2, source: 'api', season: a.season, createdAt: a.createdAt, clubs };
 writeFileSync('core/dados-padrao.mjs', `// Dados padrão do jogo (API-Football), temporada ${a.season}. NÃO EDITE: gerado por scripts/gerar-dados-padrao.mjs a partir de data/.\nexport const DADOS_PADRAO=${JSON.stringify(data)};\n`);
 console.log(`core/dados-padrao.mjs: ${Object.entries(series).map(([d, x]) => `Série ${d} ${x.clubs.length} clubes`).join(' + ')}, ${ids.size} jogadores.`);

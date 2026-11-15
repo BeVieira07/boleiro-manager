@@ -36,6 +36,9 @@ const { usarEstado } = await import(new URL('core/estado.mjs', RAIZ));
 const { ui } = await import(new URL('ui/estado.mjs', RAIZ));
 const { salvarJogo } = await import(new URL('ui/saves.mjs', RAIZ));
 const { avisosTeste } = await import(new URL('ui/avisos.mjs', RAIZ));
+// #132: os estaduais (pré-temporada) ficam desligados, salvo carregarJogo({ estaduais: true }); assim cada "Jogar" é uma rodada da liga
+const { ESTADUAIS } = await import(new URL('core/estadual.mjs', RAIZ));
+ESTADUAIS.ligados = false;
 // #64: avisos e confirmações vão para j.alertas; as confirmações respondem "sim", como o confirm falso fazia
 avisosTeste.ouvir = m => amb.alertas.push(m); avisosTeste.autoConfirmar = true;
 const UI_INICIAL = JSON.stringify(ui);
@@ -48,7 +51,8 @@ const escopo = new Proxy({}, {
 const avaliar = new Function('escopo', 'codigo', 'with (escopo) { return eval(codigo) }');
 
 /** Começa do zero: sem jogo, armazenamento vazio (ou o `ls` dado). `boot: true` abre o jogo como no navegador. */
-export function carregarJogo({ boot = false, ls = {}, limiteLs = Infinity } = {}) {
+export function carregarJogo({ boot = false, ls = {}, limiteLs = Infinity, estaduais = false } = {}) {
+  ESTADUAIS.ligados = estaduais;
   amb.app = ''; amb.alertas = []; amb.ls = ls; amb.limite = limiteLs; amb.campos = {};
   usarEstado(null); Object.assign(ui, JSON.parse(UI_INICIAL)); salvarJogo.avisou = false;
   if (boot) main.iniciar();

@@ -7,6 +7,7 @@ const raiz = new URL('../core/', import.meta.url);
 const { iniciarLiga, jogarRodadaLiga, erroSeries, aplicarEntrada, acaoMercadoLiga, removerTecnicoLiga } = await import(new URL('liga.mjs', raiz));
 const est = await import(new URL('estado.mjs', raiz)), { usarEstado, clubDo } = est;
 const { DADOS_PADRAO } = await import(new URL('dados-padrao.mjs', raiz));
+(await import(new URL('estadual.mjs', raiz))).ESTADUAIS.ligados = false; // #132: aqui cada chamada é uma rodada da liga
 
 const copia = x => JSON.parse(JSON.stringify(x));
 const clubesDe = d => DADOS_PADRAO.clubs.filter(c => c.division === d).map(c => c.id);

@@ -8,6 +8,7 @@ import { escolherClube, gerarPropostas, pedirDemissao } from './carreira.mjs';
 import { renovarContrato } from './contratos.mjs';
 import { exercerOpcaoCompra, proporEmprestimo } from './emprestimos.mjs';
 import { unavailable } from './escalacao.mjs';
+import { RODADA_ESTADUAL } from './estadual.mjs';
 import { P, S, addNewsTodos, clubById, clubDo, criarJogo, ehHumano, tec, tecnicos, usarTecnico, userClub } from './estado.mjs';
 import { migrarSave } from './versao.mjs';
 import { aceitarOferta, alternarEmprestimo, alternarVenda, proporCompra, recusarOferta, venderJa } from './mercado.mjs';
@@ -73,6 +74,8 @@ export function jogarRodadaLiga(estado, entradas) {
   const temporada = S.season, rodada = S.round;
   const r = jogarRodada();
   if (!r.jogos) throw new Error('A rodada não foi jogada: ' + JSON.stringify(r)); // com as correções acima não acontece
+  // #132: data de estadual (pré-temporada) fica nos resultados com rodada negativa, sem bater com a liga
+  if (r.estadual) return { jogos: r.jogos, temporada, rodada: RODADA_ESTADUAL + r.estadual.dia, virada: null, trocas };
   let virada = null;
   if (S.round >= S.fixtures.length) {
     const f = fecharTemporada();

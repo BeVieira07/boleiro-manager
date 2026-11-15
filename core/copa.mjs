@@ -36,8 +36,8 @@ export function copaNaRodada(r) {
   const { fase, volta } = jogoDaData(k), n = S.copa.fases[0].jogos.length / 2 ** fase;
   return { fase, volta, nome: NOMES[n] || 'Fase preliminar' };
 }
-// placar de um jogo da copa (mandante M contra V), com a mesma conta da liga
-function placar(M, V) {
+// placar de um jogo da copa (mandante M contra V), com a mesma conta da liga; os estaduais (#132) usam o mesmo
+export function placar(M, V) {
   const pm = power(M), pv = power(V);
   const lm = clamp(1.1 * Math.pow(pm.att / pv.def, 3) * Math.pow(pm.mid / pv.mid, 0.8) * 1.12, 0.15, 4.5);
   const lv = clamp(1.1 * Math.pow(pv.att / pm.def, 3) * Math.pow(pv.mid / pm.mid, 0.8) * 0.9, 0.15, 4.5);
