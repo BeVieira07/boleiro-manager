@@ -8,6 +8,7 @@ import { clamp, esc, money } from '../core/utils.mjs';
 import { vClube } from './clube.mjs';
 import { vCompeticoes } from './competicoes.mjs';
 import { jogosCopa, vCopa } from './copa.mjs';
+import { jogosEstadual, proximoEstadual, rotuloRodada, vEstadual } from './estadual.mjs';
 import { chip, stat, tag } from './componentes.mjs';
 import { vElenco } from './elenco.mjs';
 import { vEscalacao } from './escalacao.mjs';
@@ -41,7 +42,7 @@ export function render(){
   // #58: menu lateral (computador) / barra inferior (celular) e barra de ações no topo de cada tela do jogo
   document.body.classList.toggle('em-jogo',!!S);
   document.getElementById('lateral').innerHTML=lateral();
-  const V={menu:vMenu,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,tabela:vTabela,competicoes:vCompeticoes,copa:vCopa,jogos:vJogos,artilharia:vArt,mercado:vMercado,financas:vFin,dados:vDados,rodada:vRodada,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
+  const V={menu:vMenu,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,tabela:vTabela,competicoes:vCompeticoes,copa:vCopa,estadual:vEstadual,jogos:vJogos,artilharia:vArt,mercado:vMercado,financas:vFin,dados:vDados,rodada:vRodada,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
   const topo=S?barraAcoes(TITULOS[ui.view]):ui.view==='menu'?'':`<div class="topo-simples"><button class="btn fantasma" data-acao="go|menu">${icone('voltar')}Tela inicial</button></div>`;
   document.getElementById('app').innerHTML=topo+V[ui.view]();
   if(chave&&at.isConnected===false){const n=document.querySelector(`[${chave[0]}="${(globalThis.CSS&&CSS.escape?CSS.escape(chave[1]):chave[1])}"]`);if(n&&n.focus)n.focus({preventScroll:true})}
@@ -90,13 +91,13 @@ export function vJogos(){
     <b>Rodada ${r+1} <span class="muted">de ${n}</span></b>${r<S.round?tag('encerrada','ok'):r===S.round?tag('próxima','aviso'):''}
     <button class="btn sec icone-so" data-acao="verRodadaJogos|${Math.min(n-1,r+1)}" aria-label="Próxima rodada"${r>=n-1?' disabled':''}>${icone('seguir')}</button>
     ${r!==atual?`<button class="btn fantasma sm" data-acao="verRodadaJogos|${atual}">Ir para a rodada atual</button>`:''}</nav>
-  ${listaJogos(S.fixtures[r].filter(g=>inDiv(g,d)),tec().clubId)}${jogosCopa(r)}`;
+  ${r===0?proximoEstadual():''}${listaJogos(S.fixtures[r].filter(g=>inDiv(g,d)),tec().clubId)}${jogosCopa(r)}`;
 }
 export function vRodada(){
   if(!ui.lastRound)return vClube();
-  const me=tec().clubId,d=curDiv();
-  return `<p class="muted">Rodada ${ui.lastRound.round} encerrada.</p>${divTabs()}${listaJogos(ui.lastRound.games.filter(g=>inDiv(g,d)),me)}${jogosCopa(ui.lastRound.round-1)}
-  <div class="row" style="margin-top:var(--e4)">${S.round<S.fixtures.length?botaoRodada('btn big',`${icone('play',{tam:16})}Jogar rodada ${S.round+1}`):''}<button class="btn sec" data-acao="go|tabela">Ver classificação</button><button class="btn sec" data-acao="go|clube">Painel do clube</button></div>`;
+  const me=tec().clubId,d=curDiv(),pre=ui.lastRound.pre!=null; // pre: data do estadual na pré-temporada (#132)
+  return `${pre?`<p class="muted">Data ${ui.lastRound.pre+1} da pré-temporada encerrada.</p>${jogosEstadual(ui.lastRound.pre)}`:`<p class="muted">Rodada ${ui.lastRound.round} encerrada.</p>${divTabs()}${listaJogos(ui.lastRound.games.filter(g=>inDiv(g,d)),me)}${jogosCopa(ui.lastRound.round-1)}`}
+  <div class="row" style="margin-top:var(--e4)">${S.round<S.fixtures.length?botaoRodada('btn big',`${icone('play',{tam:16})}Jogar ${rotuloRodada()}`):''}<button class="btn sec" data-acao="go|tabela">Ver classificação</button><button class="btn sec" data-acao="go|clube">Painel do clube</button></div>`;
 }
 
 /* ---------- classificação e artilharia ---------- */

@@ -19,6 +19,7 @@ import { closeModal, crest, openModal, showLive } from './partida.mjs';
 import { go, render } from './telas.mjs';
 import { verAoVivo } from './configuracoes.mjs';
 import { abrirLigas, abrirLobby } from './liga.mjs';
+import { rotuloRodada } from './estadual.mjs';
 
 export const FUNCAO = 'jogar-rodada';
 let canal = null;
@@ -145,9 +146,10 @@ export async function atualizarAposRodada() {
   const { data: r } = await clienteLogado().from('liga_resultados').select('temporada, rodada, jogos').eq('liga_id', L.id)
     .order('temporada', { ascending: false }).order('rodada', { ascending: false }).limit(1).maybeSingle();
   if (!r) { render(); return }
-  const fim = () => { ui.lastRound = { round: r.rodada + 1, games: r.jogos }; ui.view = 'rodada'; render() };
+  const pre = r.rodada < 0; // #132: data do estadual (rodada -1 = primeira data), sem jogo ao vivo
+  const fim = () => { ui.lastRound = pre ? { pre: -r.rodada - 1, games: r.jogos } : { round: r.rodada + 1, games: r.jogos }; ui.view = 'rodada'; render() };
   const me = userClub().id, meu = r.jogos.find(g => g.h === me || g.a === me);
-  if (meu && verAoVivo(meu)) showLive(meu, fim, { replay: true }); else fim(); // #106
+  if (meu && !pre && verAoVivo(meu)) showLive(meu, fim, { replay: true }); else fim(); // #106
 }
 
 /** Envia a sua escalação, formação e tática da rodada e pede ao servidor para jogar (ele só joga quando todos confirmaram). */
@@ -180,7 +182,7 @@ export function botaoLiga(cls) {
   const L = ui.liga, eu = usuarioAtual() && usuarioAtual().id, n = tecnicos().length, k = L.prontos.length;
   const meu = L.prontos.includes(eu)
     ? `<button class="${cls}" disabled>${icone('ok', { tam: 16 })}Confirmado · ${k} de ${n}</button>`
-    : `<button class="${cls}" data-acao="confirmarLiga">${icone('ok', { tam: 16 })}Confirmar rodada ${S.round + 1}</button>`;
+    : `<button class="${cls}" data-acao="confirmarLiga">${icone('ok', { tam: 16 })}Confirmar ${rotuloRodada()}</button>`;
   return meu + (L.dono && k < n ? '<button class="btn sec" data-acao="forcarLiga">Forçar rodada</button>' : '');
 }
 /** Quem já confirmou, para a barra de ações. */

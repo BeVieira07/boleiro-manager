@@ -1,5 +1,6 @@
 import { jogarCopa } from './copa.mjs';
 import { atualizarConfianca } from './diretoria.mjs';
+import { jogarPreTemporada } from './estadual.mjs';
 import { processLoans, wageBill } from './emprestimos.mjs';
 import { aplicarDisponibilidade, autoSlotXI, slotsDe, unavailable } from './escalacao.mjs';
 import { P, S, addFin, addNews, bilheteriaBase, clubById, clubDo, divOf, ehHumano, table, tec, tecnicos, tvQuota, userClub } from './estado.mjs';
@@ -59,7 +60,8 @@ export function validateLineup(uc=userClub()){
   return null;
 }
 // regra: joga a rodada atual. Devolve {erro, tecnico}, {demitido}, {fim} ou {jogos, meu, copa} (meu = jogo do técnico da vez;
-// copa = confrontos da Copa do Brasil jogados nesta rodada, #51).
+// copa = confrontos da Copa do Brasil jogados nesta rodada, #51). Na pré-temporada, joga uma data dos estaduais (#132) e
+// devolve {jogos, meu, estadual} (jogos = os do estadual; estadual = a data), sem a rodada avançar.
 export function jogarRodada(){
   const semClube=tecnicos().find(t=>t.demitido); // #37: quem saiu do clube escolhe o novo antes da rodada
   if(semClube)return {demitido:true,tecnico:semClube.id};
@@ -67,6 +69,13 @@ export function jogarRodada(){
   const faltam=tecnicos().length>1?tecnicos().filter(t=>!t.pronto):[];
   if(faltam.length)return {erro:`Falta confirmar a rodada: ${faltam.map(t=>t.nome).join(', ')}.`,faltam:faltam.map(t=>t.id)};
   for(const t of tecnicos()){const e=validateLineup(clubDo(t));if(e)return {erro:(tecnicos().length>1?t.nome+': ':'')+e,tecnico:t.id}}
+  const pre=jogarPreTemporada(); // #132: estaduais antes da rodada 1
+  if(pre){
+    for(const t of tecnicos())t.pronto=false;
+    S.atual=tecnicos()[0].id;
+    const uc=userClub();
+    return {jogos:pre.jogos,meu:pre.jogos.find(g=>g.h===uc.id||g.a===uc.id)||null,estadual:{dia:pre.dia}};
+  }
   aplicarFormaPendente(); // forma da rodada anterior, com o resultado final do jogo ao vivo (#44)
   S.rng=semente(S.seed,S.season,S.round); // a rodada depende só do estado e das escolhas, não do que foi sorteado antes
   if(ehJanela(S.round))janelaIA(); // #103: começo e metade da temporada

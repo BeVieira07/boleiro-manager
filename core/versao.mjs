@@ -7,6 +7,7 @@
 import { migrarBase } from './base.mjs';
 import { gerarPropostas } from './carreira.mjs';
 import { migrarContratos } from './contratos.mjs';
+import { DADOS_PADRAO } from './dados-padrao.mjs';
 import { migrarDiretoria } from './diretoria.mjs';
 import { migrarTecnicos, reindex, usarEstado } from './estado.mjs';
 import { migrarPosicoes, simplificarPosicoes } from './posicoes.mjs';
@@ -20,7 +21,8 @@ const MIGRACOES = [
   s => migrarContratos(s), // 5: contrato de cada jogador (#49)
   s => migrarBase(s), // 6: potencial de cada jogador e base dos clubes com técnico (#50)
   s => { for (const c of s.clubs) { simplificarPosicoes(c.players); if (c.base) simplificarPosicoes(c.base) } }, // 7: só 6 posições (#97)
-  s => { for (const t of Object.values(s.managers)) if (t.demitido && !t.propostasClube) { t.saida = 'demitido'; t.propostasClube = gerarPropostas(t) } } // 8: demitido antes da #37 recebe propostas em vez de fim de jogo
+  s => { for (const t of Object.values(s.managers)) if (t.demitido && !t.propostasClube) { t.saida = 'demitido'; t.propostasClube = gerarPropostas(t) } }, // 8: demitido antes da #37 recebe propostas em vez de fim de jogo
+  s => { const uf = Object.fromEntries(DADOS_PADRAO.clubs.map(c => [c.id, c.uf])); for (const c of s.clubs) if (!c.uf && uf[c.id]) c.uf = uf[c.id] } // 9: estado de cada clube (#132); os estaduais começam na temporada seguinte
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 

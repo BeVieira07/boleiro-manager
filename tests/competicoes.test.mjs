@@ -41,5 +41,5 @@ test('competição nova entra só com o cartão dela e uma linha no registro', (
   const h = j.run(`vCompeticoes([...COMPETICOES,{id:'x',nome:'Torneio de Mentira',tela:'clube',cartao:()=>({fase:'Fase 1',situacao:'Tudo certo.',acoes:[['Extra','go|elenco']]})}])`);
   assert.match(h, /Torneio de Mentira/);
   assert.match(h, /Tudo certo\./);
-  assert.equal((h.match(/class="card competicao"/g) || []).length, 3);
+  assert.equal((h.match(/class="card competicao"/g) || []).length, j.run('COMPETICOES.length') + 1); // #132: o estadual também tem cartão
 });

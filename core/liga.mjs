@@ -73,6 +73,8 @@ export function jogarRodadaLiga(estado, entradas) {
   const temporada = S.season, rodada = S.round;
   const r = jogarRodada();
   if (!r.jogos) throw new Error('A rodada não foi jogada: ' + JSON.stringify(r)); // com as correções acima não acontece
+  // #132: data de estadual (pré-temporada) fica nos resultados com rodada negativa (-1 = primeira data), sem bater com a liga
+  if (r.estadual) return { jogos: r.jogos, temporada, rodada: -(r.estadual.dia + 1), virada: null, trocas };
   let virada = null;
   if (S.round >= S.fixtures.length) {
     const f = fecharTemporada();
