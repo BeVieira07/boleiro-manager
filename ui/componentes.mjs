@@ -20,8 +20,8 @@ export function energiaBarra(p) {
 }
 
 /** Indicador: rótulo, valor grande, unidade, barra opcional e subtexto. */
-export function stat({ rotulo, valor, unid = '', sub = '', cor = '', pct = null, corBarra = '' }) {
-  return `<div class="stat"><span class="stat-rotulo">${esc(rotulo)}</span>
+export function stat({ rotulo, valor, unid = '', sub = '', cor = '', pct = null, corBarra = '', classe = '' }) {
+  return `<div class="stat${classe ? ' ' + classe : ''}"><span class="stat-rotulo">${esc(rotulo)}</span>
     <div class="stat-linha"><span class="stat-valor"${cor ? ` style="color:${cor}"` : ''}>${valor}</span>${unid ? `<span class="stat-unid">${unid}</span>` : ''}</div>
     ${pct == null ? '' : barra(pct, corBarra)}${sub ? `<span class="stat-sub">${sub}</span>` : ''}</div>`;
 }
