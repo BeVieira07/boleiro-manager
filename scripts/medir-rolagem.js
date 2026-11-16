@@ -19,7 +19,7 @@
   api.criarJogo('c127', DADOS_PADRAO);
   for (let i = 0; i < 4; i++) { const uc = api.userClub(); if (motor.validateLineup(uc)) uc.lineup = motor.autoXI(uc); motor.jogarRodada() }
   const um = await import('/ui/motor.mjs'); { const uc = api.userClub(); if (motor.validateLineup(uc)) uc.lineup = motor.autoXI(uc) } um.playRound(false);
-  for (const t of ['clube', 'elenco', 'escalacao', 'jogos', 'rodada', 'tabela', 'competicoes', 'copa', 'estadual', 'libertadores', 'sulamericana', 'artilharia', 'mercado', 'financas', 'dados', 'config']) {
+  for (const t of ['clube', 'elenco', 'escalacao', 'jogos', 'rodada', 'tabela', 'competicoes', 'copa', 'estadual', 'libertadores', 'sulamericana', 'artilharia', 'mercado', 'financas', 'config']) {
     try { tel.go(t); await new Promise(r => setTimeout(r, 50)); out[t] = medir() } catch (e) { out[t] = ['ERRO ' + e.message] }
   }
   return Object.fromEntries(Object.entries(out).filter(([, v]) => v.length));

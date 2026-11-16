@@ -57,7 +57,5 @@ test('Classificação com zonas e o seu clube em destaque; Finanças com entrada
   assert.equal((j.html().match(/<tr class="me">/g) || []).length, 1);
   j.run(`go('financas')`);
   assert.match(j.html(), /class="(entrada|saida)"><svg[^>]*aria-label="(Entrada|Saída)"/);
-  j.run(`go('dados')`);
-  assert.match(j.html(), /class="card caixa-perigo"/, 'aviso de perda de dados em destaque');
   assert.deepEqual(problemasNasTelas(j), []);
 });

@@ -19,7 +19,7 @@ test('o menu lateral alcança todas as telas e marca a atual com aria-current', 
   const j = carregarJogo({ boot: true });
   j.run(`newGame('${clubeDaSerie(j)}')`);
   const menu = j.run(`go('mercado');lateral()`);
-  for (const t of ['clube', 'elenco', 'escalacao', 'jogos', 'tabela', 'artilharia', 'mercado', 'financas', 'dados'])
+  for (const t of ['clube', 'elenco', 'escalacao', 'jogos', 'tabela', 'artilharia', 'mercado', 'financas'])
     assert.match(menu, new RegExp(`data-acao="go\\|${t}"`), t);
   assert.match(menu, /data-acao="voltarMenu"/, 'sair para a tela inicial');
   assert.deepEqual([...menu.matchAll(/data-acao="go\|(\w+)" aria-current="page"/g)].map(m => m[1]), ['mercado']);

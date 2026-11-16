@@ -17,10 +17,10 @@ import { render } from './telas.mjs';
 export const NAV = [
   ['clube', 'Clube', 'clube'], ['elenco', 'Elenco', 'elenco'], ['escalacao', 'Escalação', 'escalacao'], ['jogos', 'Jogos', 'jogos'],
   ['tabela', 'Classificação', 'tabela'], ['competicoes', 'Competições', 'trofeu'], ['artilharia', 'Artilharia', 'artilharia'], ['mercado', 'Mercado', 'mercado'],
-  ['financas', 'Finanças', 'financas'], ['dados', 'Dados', 'dados'], ['config', 'Configurações', 'engrenagem']
+  ['financas', 'Finanças', 'financas'], ['config', 'Configurações', 'engrenagem']
 ];
 const PRINCIPAIS = 4;
-export const TITULOS = { liga: 'Liga', clube: 'Painel do clube', elenco: 'Elenco', escalacao: 'Escalação', jogos: 'Jogos', tabela: 'Classificação', competicoes: 'Competições', copa: 'Copa do Brasil', libertadores: 'Libertadores', sulamericana: 'Sul-Americana', estadual: 'Estadual', artilharia: 'Artilharia', mercado: 'Mercado', financas: 'Finanças', dados: 'Dados do jogo', config: 'Configurações', carreira: 'Propostas de clubes', rodada: 'Resultados da rodada', aovivo: 'Rodada ao vivo' };
+export const TITULOS = { liga: 'Liga', clube: 'Painel do clube', elenco: 'Elenco', escalacao: 'Escalação', jogos: 'Jogos', tabela: 'Classificação', competicoes: 'Competições', copa: 'Copa do Brasil', libertadores: 'Libertadores', sulamericana: 'Sul-Americana', estadual: 'Estadual', artilharia: 'Artilharia', mercado: 'Mercado', financas: 'Finanças', config: 'Configurações', carreira: 'Propostas de clubes', rodada: 'Resultados da rodada', aovivo: 'Rodada ao vivo' };
 
 const ativa = k => ui.view === k || (k === 'competicoes' && ['copa', 'estadual', 'libertadores', 'sulamericana'].includes(ui.view)); // telas de dentro de Competições
 const item = ([k, l, ic]) => `<button type="button" class="nav-item" data-acao="go|${k}"${ativa(k) ? ' aria-current="page"' : ''}>${icone(ic)}<span>${l}</span></button>`;

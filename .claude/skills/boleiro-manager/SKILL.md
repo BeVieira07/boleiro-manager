@@ -41,7 +41,7 @@ Manager de futebol estilo Brasfoot, em JS puro, sem build. Brasileirão Séries 
 
 ## API-Football
 - Conta nova no plano gratuito (100 pedidos por dia, 10 por minuto, temporadas de 2022 a 2024). A chave fica em `API_FOOTBALL_KEY` no `.env` (ignorado pelo git; nunca no repositório).
-- O navegador não importa mais da API (#52): a aba Dados só carrega e exporta JSON. A única fonte são os scripts (`npm run dados` etc.).
+- O navegador não importa nem exporta dados nem saves (#52, #187): a tela Dados não existe mais. A única fonte dos dados são os scripts (`npm run dados` etc.) e `npm run dados:padrao`.
 - O host de imagens `media.api-sports.io` está fora do ar (DNS não resolve). Por isso os escudos vêm da Wikipédia.
 
 ## Escudos
@@ -54,7 +54,7 @@ Manager de futebol estilo Brasfoot, em JS puro, sem build. Brasileirão Séries 
 ## Rodando o jogo
 - O jogo usa módulos ES: **precisa de servidor local**. Abrir `index.html` direto do disco (`file://`) não funciona.
 - Com porta: `npm start` (`npx serve .`, normalmente `http://localhost:3000`) ou Live Server do VS Code (`http://127.0.0.1:5500`).
-- O `localStorage` é separado por origem: save feito em `file://` não aparece em `localhost`. Para mudar de origem, usar **Exportar save** e **Importar save** na aba **Dados**.
+- O `localStorage` é separado por origem: save feito em `file://` não aparece em `localhost`. Para levar um jogo a outra origem, entrar com a conta (saves na nuvem).
 
 ## Online (#30)
 - **Operar e depurar o online** (republicar a função da liga quando `core/` muda, migrações, logs do Supabase, login, testar no navegador): skill `liga-online`.
@@ -77,10 +77,9 @@ Manager de futebol estilo Brasfoot, em JS puro, sem build. Brasileirão Séries 
 - Sorteio com semente (#26): as regras usam `rnd()` (`utils.js`), que avança `S.rng`; cada rodada recomeça de `semente(S.seed, temporada, rodada)`. Nunca usar `Math.random` nas regras (há um teste que confere). `jogarTemporada` impede a demissão, salvo com `{demissao:true}`.
 
 ## Persistência no navegador
-- As campanhas ficam em `localStorage`, uma por save (até 5): `brasfoot_save_v2_<id>` mais o índice `brasfoot_saves_v2`. Tudo em `ui/saves.mjs` (`save()` de `core/estado.mjs` chama `salvarJogo()`). O jogo abre na tela inicial (Continuar, Novo jogo, lista de saves); o save antigo de slot único (`brasfoot_save_v1`) é migrado na primeira abertura. Backup: **Exportar save (JSON)**; importar cria um save novo.
+- As campanhas ficam em `localStorage`, uma por save (até 5): `brasfoot_save_v2_<id>` mais o índice `brasfoot_saves_v2`. Tudo em `ui/saves.mjs` (`save()` de `core/estado.mjs` chama `salvarJogo()`). O jogo abre na tela inicial (Continuar, Novo jogo, lista de saves); o save antigo de slot único (`brasfoot_save_v1`) é migrado na primeira abertura. Não há importar nem exportar save pela interface (#187); excluir um jogo é pela lista de saves do menu (`excluirSave`).
 - **Versão do save (#46):** `S.versao` e `migrarSave(s)` em `core/versao.mjs`. Todo save que vem de fora (local, nuvem, arquivo importado, slot antigo) passa por `migrarSave`, que recusa versão mais nova que o jogo. Campo novo no save = migração nova no **fim** de `MIGRACOES` (conferindo se o campo já existe); `reindex()` só monta o índice `P`. Nos testes, para simular um save antigo, apague também `versao`.
-- Dados importados pela aba Dados (`DATA_KEY`) ficam só no navegador e **têm prioridade** sobre `dados-padrao.js`. Se o jogo mostrar menos jogadores ou escudos antigos: aba **Dados**, **Voltar aos dados padrão**, `Ctrl+F5` e começar campanha nova (dados novos só valem a partir de um jogo novo).
-- Para guardar algo importado pela aba Dados: **Exportar dados**, salvar em `data/` e rodar `npm run dados:padrao`.
+- Os dados do jogo são só os embutidos (`core/dados-padrao.mjs`, gerado por `npm run dados:padrao`). O que a antiga tela Dados deixou em `DATA_KEY` é ignorado e apagado na abertura (#187). Se o jogo mostrar escudos ou jogadores antigos: `Ctrl+F5` e começar campanha nova (dados novos só valem a partir de um jogo novo).
 - O overall é recalculado a cada campanha nova (`rate()` em `core/dados.mjs`), exceto os `ovrM`. Ordem (#174): nota manual (`ovrM`); nas Séries A e B, o **valor de mercado real** do Transfermarkt (`p.vm`, em milhões de €, vindo de `npm run posicoes` e casado por `npm run dados:padrao`) convertido por `ovrDeValor` (idade pesa; B tem acréscimo); notas reais de 2024 (`p.base`) misturadas; nas Séries C e D, a estimativa pelo clube. Quem não é manual nunca passa do teto da idade (`tetoIdade`: até 17 anos 62, até 19 68, até 21 74). A **força do clube** (`c.strength`) é recalculada em cada jogo novo como a média dos 11 titulares (`forcaDoElenco`), não vem mais da tabela de 2024. Para conferir tudo: `npm run overalls`.
 
 ## Mapa do código

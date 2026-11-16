@@ -48,14 +48,10 @@ test('save antigo com as siglas de posição de antes da #23 (MEI, MAT, PON, CEN
   assert.equal(j.run('S.round'), 1);
 });
 
-test('dados antigos da aba Dados (sem posv) viram as posições novas no jogo novo', () => {
+test('dados antigos (sem posv) viram as posições novas no jogo novo', () => {
   const j = carregarJogo({ boot: true });
-  const d = JSON.parse(j.run('JSON.stringify(getData())'));
-  delete d.posv;
-  for (const c of d.clubs) for (const p of c.players) if (p.pd === 'ATA') p.pd = 'CEN';
-  const k = carregarJogo({ boot: true, ls: { [j.run('DATA_KEY')]: JSON.stringify(d) } });
-  k.run(`newGame('${clubeDaSerie(k)}')`);
-  assert.equal(k.run("S.clubs.some(c=>c.players.some(p=>p.pd==='CEN'))"), false);
+  j.run(`(()=>{const d=JSON.parse(JSON.stringify(getData()));delete d.posv;for(const c of d.clubs)for(const p of c.players)if(p.pd==='ATA')p.pd='CEN';criarJogo('${clubeDaSerie(j)}',d)})()`);
+  assert.equal(j.run("S.clubs.some(c=>c.players.some(p=>p.pd==='CEN'))"), false);
 });
 
 test('numa temporada, o desempenho muda o overall no máximo 3 pontos, e caixa e confiança seguem números', () => {

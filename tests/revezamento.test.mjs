@@ -94,16 +94,3 @@ test('jogo solo continua jogando direto, sem confirmação', () => {
   j.acao('playRound');
   assert.equal(j.run('S.round'), 1);
 });
-
-test('save exportado depois da #28 pode ser importado', () => {
-  const j = carregarJogo({ boot: true });
-  j.acao('novoJogo'); j.acao(`newGame|${clubeDaSerie(j)}`);
-  const arquivo = j.run(`JSON.stringify({type:'brasfoot-save',version:1,save:S})`);
-  const k = carregarJogo({ boot: true });
-  // loadSaveFile lê o arquivo com FileReader; aqui simulamos um leitor que devolve o texto na hora
-  globalThis.FileReader = class { readAsText() { this.result = arquivo; this.onload() } };
-  k.acao('loadSaveFile', '', { target: { files: [{}] } });
-  assert.ok(!k.alertas.some(x => x.includes('inválido')), k.alertas.join(' | '));
-  assert.equal(k.run('indiceSaves().list.length'), 1);
-  assert.notEqual(k.run('indiceSaves().list[0].clube'), '?');
-});
