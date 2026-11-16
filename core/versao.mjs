@@ -23,7 +23,8 @@ const MIGRACOES = [
   s => { for (const c of s.clubs) { simplificarPosicoes(c.players); if (c.base) simplificarPosicoes(c.base) } }, // 7: só 6 posições (#97)
   s => { for (const t of Object.values(s.managers)) if (t.demitido && !t.propostasClube) { t.saida = 'demitido'; t.propostasClube = gerarPropostas(t) } }, // 8: demitido antes da #37 recebe propostas em vez de fim de jogo
   s => { const uf = Object.fromEntries(DADOS_PADRAO.clubs.map(c => [c.id, c.uf])); for (const c of s.clubs) if (!c.uf && uf[c.id]) c.uf = uf[c.id] }, // 9: estado de cada clube (#132); os estaduais começam na temporada seguinte
-  s => { for (const c of s.clubs) for (const p of [...c.players, ...(c.base || [])]) if (p.energia == null) p.energia = 100 } // 10: energia dos jogadores (#136)
+  s => { for (const c of s.clubs) for (const p of [...c.players, ...(c.base || [])]) if (p.energia == null) p.energia = 100 }, // 10: energia dos jogadores (#136)
+  s => { for (const c of s.clubs) for (const p of [...c.players, ...(c.base || [])]) delete p.ps } // 11: sem posição secundária (#181)
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 

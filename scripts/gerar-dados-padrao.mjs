@@ -132,7 +132,7 @@ if (pos) {
     if (j && j.v !== undefined) { p.vm = j.v ?? 0; vmCasados++ } // #174: valor de mercado real (milhões de €); 0 = o Transfermarkt não avalia
     if (!pd) { (pendentes[c.name] ||= []).push(p.name + (r.length > 1 ? ' (ambíguo)' : j ? ' (posição "' + j.p + '")' : '')); continue; }
     if (GRUPO[pd] !== p.pos) trocouGrupo++;
-    p.pd = pd; p.pos = GRUPO[pd]; p.ps = []; p.real = 1; reais++;
+    p.pd = pd; p.pos = GRUPO[pd]; delete p.ps; p.real = 1; reais++;
   }
   console.log(`Posições reais: ${reais}/${ids.size} jogadores casados com o Transfermarkt (${trocouGrupo} mudaram de grupo em relação à API); ${vmCasados} com valor de mercado.`);
 } else console.log('Sem data/posicoes-' + ANO + '.json: rode npm run posicoes para usar as posições reais.');
@@ -147,8 +147,8 @@ if (existsSync(mp)) {
       const toks = norm(nome).split(' ');
       let r = c.players.filter(p => norm(p.name) === norm(nome));
       if (!r.length) r = c.players.filter(p => toks.every(t => norm(p.name).split(' ').includes(t)));
-      if (r.length !== 1 || !GRUPO[pd] || sec.some(s => !GRUPO[s])) { console.log(`Posição manual: "${nome}" (${clube}) ${r.length !== 1 ? (r.length ? 'ambíguo' : 'não encontrado') : 'posição inválida (' + v + ')'}.`); continue; }
-      const p = r[0]; if (!p.real) reais++; p.pd = pd; p.pos = GRUPO[pd]; p.ps = sec; p.real = 1; manualPos++;
+      if (r.length !== 1 || !GRUPO[pd] || sec.length) { /* só a posição principal (#181) */ console.log(`Posição manual: "${nome}" (${clube}) ${r.length !== 1 ? (r.length ? 'ambíguo' : 'não encontrado') : 'posição inválida (' + v + ')'}.`); continue; }
+      const p = r[0]; if (!p.real) reais++; p.pd = pd; p.pos = GRUPO[pd]; delete p.ps; p.real = 1; manualPos++;
       const l = pendentes[c.name]; if (l) { const k = l.findIndex(x => norm(x).startsWith(norm(p.name))); if (k >= 0) l.splice(k, 1) }
     }
   }
