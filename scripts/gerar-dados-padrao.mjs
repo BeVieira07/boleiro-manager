@@ -158,7 +158,10 @@ for (const k of Object.keys(pendentes)) if (!pendentes[k].length) delete pendent
 writeFileSync('data/posicoes-pendentes.json', JSON.stringify(pendentes, null, 1));
 console.log(`Pendentes (posição inferida, a conferir): ${Object.values(pendentes).reduce((s, v) => s + v.length, 0)} jogadores, lista em data/posicoes-pendentes.json.`);
 // Quem sobrou recebe a posição inferida, com a mesma lógica do jogo (core/posicoes.mjs).
-const { atribuirPosicoes } = await import('../core/posicoes.mjs');
+const { atribuirPosicoes, simplificarPosicoes } = await import('../core/posicoes.mjs');
+// as posições reais do Transfermarkt (VOL, MC, PE, PD) viram as 6 do jogo ANTES de atribuirPosicoes (#97): sem isso, ela não reconhecia
+// a posição, a jogava fora e sorteava outra, com uma secundária inventada (o volante Pulgar "jogava de atacante")
+for (const c of clubs) simplificarPosicoes(c.players);
 for (const c of clubs) atribuirPosicoes(c.players);
 for (const c of clubs) for (const p of c.players) delete p.real;
 console.log(`Posições: ${clubs.reduce((s, c) => s + c.players.filter(p => p.pd).length, 0)}/${ids.size} jogadores com posição detalhada.`);
