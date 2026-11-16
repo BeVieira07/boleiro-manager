@@ -49,3 +49,11 @@ test('os dados guardam o valor de mercado dos jogadores casados com o Transferma
   assert.ok(ps.filter(p => p.vm != null).length >= 400, 'Série A com valor de mercado');
   assert.ok(ps.every(p => p.vm == null || (p.vm >= 0 && p.vm < 200)));
 });
+
+test('posição real do Transfermarkt não ganha posição secundária inventada (o volante Pulgar não joga de atacante)', () => {
+  const pulgar = DADOS_PADRAO.clubs.find(c => c.id === 'c127').players.find(p => /Pulgar/.test(p.name));
+  assert.equal(pulgar.pd, 'MEI');
+  assert.deepEqual(pulgar.ps, []);
+  const casados = DADOS_PADRAO.clubs.flatMap(c => c.players).filter(p => p.vm !== undefined);
+  assert.ok(casados.filter(p => (p.ps || []).length).length <= casados.length * 0.02, 'jogador com posição real quase nunca tem secundária');
+});
