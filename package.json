@@ -16,6 +16,7 @@
     "posicoes": "node scripts/baixar-posicoes.mjs",
     "notas": "node --env-file=.env scripts/baixar-notas.mjs",
     "fixar-core": "node scripts/fixar-core.mjs",
-    "continentais": "node --env-file=.env scripts/baixar-continentais.mjs"
+    "continentais": "node --env-file=.env scripts/baixar-continentais.mjs",
+    "overalls": "node scripts/auditar-overalls.mjs"
   }
 }

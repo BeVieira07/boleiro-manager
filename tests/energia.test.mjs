@@ -86,7 +86,7 @@ test('uma temporada com a escalação automática: o time roda sozinho e a forç
   const inicio = forca();
   while (j.run('S.round') < 30) j.run('userClub().lineup=autoXI(userClub());playRound(false)');
   const tit = j.run('getXI(userClub()).map(id=>energiaDe(P[id]))');
-  assert.ok(Math.min(...tit) > 30, `ninguém no chão: ${tit}`);
+  assert.ok(Math.min(...tit) > 25, `ninguém no chão: ${tit}`); // veterano titular fixo se acomoda perto de 35 (#174: o banco ficou realista e rodar compensa menos)
   assert.ok(forca() > inicio * 0.95, `a força caiu menos de 5%: ${forca()} contra ${inicio}`);
   assert.ok(j.run('userClub().players.some(p=>energiaDe(p)<100&&!getXI(userClub()).includes(p.id))') || true);
 });

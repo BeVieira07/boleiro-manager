@@ -101,7 +101,7 @@ console.log(`Escudos: ${locais}/${clubs.length} usando arquivo local.`);
 const hashStr = s => { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619) } return h >>> 0 };
 const GRUPO = { GOL: 'G', ZAG: 'D', LD: 'D', LE: 'D', VOL: 'M', MC: 'M', MEI: 'M', PE: 'A', PD: 'A', ATA: 'A' };
 const TM = { 'Goalkeeper': 'GOL', 'Centre-Back': 'ZAG', 'Right-Back': 'LD', 'Left-Back': 'LE', 'Defensive Midfield': 'VOL', 'Central Midfield': 'MC', 'Attacking Midfield': 'MEI', 'Right Midfield': 'MC', 'Left Midfield': 'MC', 'Right Winger': 'PD', 'Left Winger': 'PE', 'Centre-Forward': 'ATA', 'Second Striker': 'MEI' };
-let reais = 0, trocouGrupo = 0, manualPos = 0;
+let reais = 0, trocouGrupo = 0, manualPos = 0, vmCasados = 0;
 const pendentes = {};
 const pf = `data/posicoes-${ANO}.json`, pos = existsSync(pf) ? ler(pf) : null;
 const mapa = new Set(Object.keys(TM));
@@ -129,11 +129,12 @@ if (pos) {
     }
     if (!r.length) { const g = casa(p, todos, true); if (g.length === 1) r = g } // mudou de clube: nome e idade (±1) batem com um único jogador
     const j = r.length === 1 ? r[0] : null, pd = j && TM[j.p];
+    if (j && j.v !== undefined) { p.vm = j.v ?? 0; vmCasados++ } // #174: valor de mercado real (milhões de €); 0 = o Transfermarkt não avalia
     if (!pd) { (pendentes[c.name] ||= []).push(p.name + (r.length > 1 ? ' (ambíguo)' : j ? ' (posição "' + j.p + '")' : '')); continue; }
     if (GRUPO[pd] !== p.pos) trocouGrupo++;
     p.pd = pd; p.pos = GRUPO[pd]; p.ps = []; p.real = 1; reais++;
   }
-  console.log(`Posições reais: ${reais}/${ids.size} jogadores casados com o Transfermarkt (${trocouGrupo} mudaram de grupo em relação à API).`);
+  console.log(`Posições reais: ${reais}/${ids.size} jogadores casados com o Transfermarkt (${trocouGrupo} mudaram de grupo em relação à API); ${vmCasados} com valor de mercado.`);
 } else console.log('Sem data/posicoes-' + ANO + '.json: rode npm run posicoes para usar as posições reais.');
 const mp = 'data/posicoes-manual.json';
 if (existsSync(mp)) {
