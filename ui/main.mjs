@@ -4,7 +4,6 @@
 //   data-mudar="nome|arg1"      -> mudança (select, input, arquivo) chama nome('arg1', valor, evento)
 // `nome` precisa ser uma função exportada por algum módulo de ui/.
 import { usarEstado } from '../core/estado.mjs';
-import * as api from './api.mjs';
 import * as aovivo from './aovivo.mjs';
 import * as artilharia from './artilharia.mjs';
 import * as avisos from './avisos.mjs';
@@ -31,7 +30,7 @@ import * as telas from './telas.mjs';
 import * as utils from './utils.mjs';
 
 export const acoes = Object.fromEntries(
-  [api, aovivo, artilharia, avisos, base, configuracoes, conta, diretoria, elenco, emprestimos, escalacao, estado, forma, layout, liga, ligajogo, mercado, motor, nuvem, partida, posicoes, saves, taticas, telas, utils]
+  [aovivo, artilharia, avisos, base, configuracoes, conta, diretoria, elenco, emprestimos, escalacao, estado, forma, layout, liga, ligajogo, mercado, motor, nuvem, partida, posicoes, saves, taticas, telas, utils]
     .flatMap(m => Object.entries(m)).filter(([, f]) => typeof f === 'function'));
 
 /** Executa a ação descrita em data-acao / data-mudar. */
@@ -62,6 +61,7 @@ export function ligarEventos(doc = document) {
 export function iniciar() {
   saves.migrarSaveAntigo(); // save de slot único (versões antigas) vira o primeiro da lista
   utils.store.del(utils.APIKEY_KEY); // a chave da API-Football não fica mais guardada no navegador (#52)
+  utils.store.del(utils.DATA_KEY); // dados importados pela antiga tela Dados deixam de valer: o jogo só usa os dados padrão (#187)
   usarEstado(null); estado.ui.view = 'menu'; // tela inicial: continuar, carregar ou começar um jogo
   telas.render();
 }

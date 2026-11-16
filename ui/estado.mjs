@@ -1,16 +1,14 @@
-import { erroIds, sampleData } from '../core/dados.mjs';
+import { sampleData } from '../core/dados.mjs';
 import { DADOS_PADRAO } from '../core/dados-padrao.mjs';
 import { S, criarJogo } from '../core/estado.mjs';
 import { podeCriarSave, salvarJogo } from './saves.mjs';
 import { render } from './telas.mjs';
-import { DATA_KEY, store } from './utils.mjs';
 import { avisar } from './avisos.mjs';
 
 // estado só da tela (não vai para o save)
 export const ui={view:'clube',lastRound:null,selEsc:null,vDiv:null,jogosRound:null,mf:{grupo:'',q:'',max:'',club:'',liga:'',aba:'todos',ord:'ovr',dir:-1},ef:{grupo:'',q:'',ord:'pos',dir:1},tvAoVivo:null,vivo:null,artComp:null,artSo:false,novos:[],liga:null}; // liga: jogando uma liga online (#34)
 export function save(){if(S)salvarJogo()} // js/saves.js: grava no save da campanha atual
-export function getData(){const d=store.get(DATA_KEY);return d&&Array.isArray(d.clubs)&&!erroIds(d.clubs)?d:( // dados importados antes da #47 com id inválido são ignorados
-  typeof DADOS_PADRAO!=='undefined'?DADOS_PADRAO:sampleData())}
+export function getData(){return typeof DADOS_PADRAO!=='undefined'?DADOS_PADRAO:sampleData()} // os dados só mudam por scripts/ (npm run dados:padrao); importar pela tela saiu (#187)
 
 export function newGame(clubId){
   if(ui.novos.length){ // montando um jogo com vários técnicos: o clube vai para o próximo técnico sem clube

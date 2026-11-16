@@ -350,9 +350,6 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .lanc-desc{flex:1;display:flex;flex-direction:column;min-width:0}
 .lanc-desc .muted{font-size:12px}
 .entrada>.icone,.entrada>b{color:var(--verde)} .saida>.icone,.saida>b{color:var(--perigo)}
-.caixa-perigo{border-color:var(--perigo-borda);background:var(--perigo-esc)}
-.caixa-perigo h3{color:var(--perigo-claro)}
-.caixa-perigo .icone{color:var(--perigo-claro)}
 .grade-clubes{display:grid;gap:var(--e3);grid-template-columns:repeat(auto-fill,minmax(160px,1fr));margin-bottom:var(--e5)}
 .clube-escolha{appearance:none;font:inherit;color:var(--texto);background:var(--painel);border:1px solid var(--linha);border-radius:var(--r-lg);padding:16px 10px;
   display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer;text-align:center}

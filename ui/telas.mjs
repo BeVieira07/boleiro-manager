@@ -24,7 +24,6 @@ import { vMercado } from './mercado.mjs';
 import { botaoRodada } from './motor.mjs';
 import { crest, newSeason, seasonEnd } from './partida.mjs';
 import { vMenu } from './saves.mjs';
-import { DATA_KEY, store } from './utils.mjs';
 
 /* ================= telas ================= */
 // #65: ao trocar de tela, o foco vai para o conteúdo (teclado e leitor de tela começam pelo título)
@@ -39,9 +38,9 @@ export function divTabs(){
 const ROLAVEIS='.tabela-rolavel,.tw,.eventos,.lista-troca';
 let telaDesenhada=null;
 export function render(){
-  if(!S&&!['dados','inicio','ligas','lobby','config'].includes(ui.view))ui.view='menu';
+  if(!S&&!['inicio','ligas','lobby','config'].includes(ui.view))ui.view='menu';
   if(S&&!TITULOS[ui.view])ui.view='clube';
-  if(S&&tec()&&tec().demitido&&!['carreira','dados','config'].includes(ui.view))ui.view='carreira'; // #37: sem clube, primeiro escolher o novo
+  if(S&&tec()&&tec().demitido&&!['carreira','config'].includes(ui.view))ui.view='carreira'; // #37: sem clube, primeiro escolher o novo
   const mesma=telaDesenhada===ui.view;
   const rol=mesma?[...document.querySelectorAll(ROLAVEIS)].map(e=>[e.scrollLeft||0,e.scrollTop||0]):[],pag=mesma?[window.scrollX||0,window.scrollY||0]:null;
   // #65: redesenhar a tela não pode jogar o foco do teclado para o começo da página: volta ao mesmo botão/campo
@@ -49,7 +48,7 @@ export function render(){
   // #58: menu lateral (computador) / barra inferior (celular) e barra de ações no topo de cada tela do jogo
   document.body.classList.toggle('em-jogo',!!S);
   document.getElementById('lateral').innerHTML=lateral();
-  const V={menu:vMenu,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,tabela:vTabela,competicoes:vCompeticoes,copa:vCopa,libertadores:vLibertadores,sulamericana:vSulamericana,estadual:vEstadual,jogos:vJogos,artilharia:vArt,mercado:vMercado,financas:vFin,dados:vDados,rodada:vRodada,aovivo:vAoVivo,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
+  const V={menu:vMenu,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,tabela:vTabela,competicoes:vCompeticoes,copa:vCopa,libertadores:vLibertadores,sulamericana:vSulamericana,estadual:vEstadual,jogos:vJogos,artilharia:vArt,mercado:vMercado,financas:vFin,rodada:vRodada,aovivo:vAoVivo,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
   const topo=S?barraAcoes(TITULOS[ui.view]):ui.view==='menu'?'':`<div class="topo-simples"><button class="btn fantasma" data-acao="go|menu">${icone('voltar')}Tela inicial</button></div>`;
   document.getElementById('app').innerHTML=topo+V[ui.view]();
   if(pag){const els=[...document.querySelectorAll(ROLAVEIS)];if(els.length===rol.length)els.forEach((e,i)=>{e.scrollLeft=rol[i][0];e.scrollTop=rol[i][1]});window.scrollTo(pag[0],pag[1])}
@@ -65,8 +64,7 @@ export function vInicio(){
   const card=c=>`<button type="button" class="clube-escolha" data-acao="newGame|${c.id}">${crest(c,'m')}<b>${esc(c.name)}</b>${stars(c.strength)}<span class="muted">${c.players.length} jogadores</span></button>`;
   return `<h2>Novo jogo</h2>
   <div class="card row"><span class="cresce">Dados: <b>${d.source==='api'?'API-Football (reais)':'Exemplo (jogadores fictícios)'}</b>, temporada ${d.season}: ${ds.map(x=>`${DIVS[x]} (${d.clubs.filter(c=>divOf(c)===x).length} clubes)`).join(', ')}.</span>
-  <button class="btn sec sm" data-acao="go|dados">${d.source==='api'?'Gerenciar dados':'Importar dados reais'}</button>
-  <label class="btn sec sm">Carregar save<input type="file" accept=".json" class="sr" data-mudar="loadSaveFile"></label></div>
+  </div>
   ${painelTecnicos(d)}
   <h3>${ui.novos.length?`Clube de ${esc((ui.novos.find(t=>!t.clubId)||{nome:'...'}).nome)}`:'Escolha seu clube'}</h3>
   ${ds.map(x=>`${ds.length>1?`<h3 class="sub-serie">${DIVS[x]}</h3>`:''}<div class="grade-clubes">${d.clubs.filter(c=>divOf(c)===x).sort((a,b)=>b.strength-a.strength).map(card).join('')}</div>`).join('')}`;
@@ -137,23 +135,6 @@ export function vFin(){
   </div>
   <section class="card"><h3>Lançamentos recentes</h3>${uc.fin.length?`<ul class="lancamentos">${uc.fin.map(f=>{const e=f.amount>=0;
     return `<li class="${e?'entrada':'saida'}">${icone(e?'subir':'descer',{rotulo:e?'Entrada':'Saída'})}<span class="lanc-desc">${esc(f.desc)}<span class="muted">Temporada ${f.s}, rodada ${f.r+1}</span></span><b class="num">${e?'+':''}${money(f.amount)}</b></li>`}).join('')}</ul>`:'<p class="muted">Sem movimentações ainda.</p>'}</section>`;
-}
-
-/* ---------- dados ---------- */
-export function vDados(){
-  const d=getData();
-  return `${S?'':'<h2>Dados do jogo</h2>'}
-  <section class="card"><h3>Dados dos clubes</h3><p>Fonte atual: <b>${d.source==='api'?'API-Football':'Exemplo (fictício)'}</b> · temporada ${d.season} · ${divsOf(d.clubs).map(x=>`${DIVS[x]}: ${d.clubs.filter(c=>divOf(c)===x).length} clubes`).join(' · ')} · ${d.clubs.reduce((s,c)=>s+c.players.length,0)} jogadores</p>
-  <div class="row"><button class="btn sec" data-acao="exportData">Exportar dados dos clubes (JSON)</button>
-  <label class="btn sec">Carregar JSON<input type="file" accept=".json" class="sr" data-mudar="loadDataFile"></label>
-  ${store.get(DATA_KEY)?'<button class="btn sec" data-acao="resetData">Voltar aos dados padrão</button>':''}</div>
-  <p class="muted">Dados novos valem a partir do próximo jogo novo. Seu jogo atual continua com os dados com que começou.</p></section>
-  <section class="card"><h3>Backup do jogo (save)</h3>
-   <p class="muted">Salva a campanha inteira (elenco, tabela, finanças, histórico) num arquivo JSON. Use para não perder o progresso ou para continuar em outro navegador ou computador.</p>
-   <div class="row">${S?`<button class="btn" data-acao="exportSave">${icone('descer',{tam:16})}Exportar save (JSON)</button>`:''}
-   <label class="btn sec">Importar save<input type="file" accept=".json" class="sr" data-mudar="loadSaveFile"></label></div></section>
-  ${S?`<section class="card caixa-perigo"><h3>Zona de perigo</h3><p>${icone('alerta')} <b>Excluir este jogo salvo apaga a campanha inteira</b> (elenco, tabela, finanças e histórico). Isso não pode ser desfeito. Exporte o save antes se quiser guardar uma cópia.</p>
-   <button class="btn perigo" data-acao="resetGame">${icone('lixo',{tam:16})}Excluir este jogo salvo</button></section>`:''}`;
 }
 
 export function verRodadaJogos(n){ui.jogosRound=+n;render()}

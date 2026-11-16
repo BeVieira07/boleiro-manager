@@ -53,10 +53,10 @@ O jogo já vem com as **Séries A, B, C e D de 2024** (80 clubes, 2435 jogadores
    npm run dados
    ```
 3. Serão criados:
-   - `data/brasileirao-2026.json` → formato do jogo (no jogo: **Dados → Carregar JSON**)
+   - `data/brasileirao-2026.json` → formato do jogo
    - `data/brasileirao-2026-raw.json` → respostas brutas da API
 
-No plano gratuito a temporada 2026 é bloqueada; o script monta os 20 clubes de 2026 com os **elencos atuais** (`/players/squads`, que não depende de temporada). Também é possível importar pelo próprio jogo, na tela **Dados**.
+No plano gratuito a temporada 2026 é bloqueada; o script monta os 20 clubes de 2026 com os **elencos atuais** (`/players/squads`, que não depende de temporada).
 
 ### Séries B, C e D
 
@@ -64,8 +64,7 @@ O jogo suporta até quatro divisões. Cada série tem sua tabela, e no fim da te
 
 A Série D real tem 64 clubes. O jogo usa só 20: os que foram mais longe em 2024 (quem avança joga mais partidas). Alguns clubes pequenos vêm com poucos jogadores na API, e o jogo completa o elenco com jogadores gerados.
 
-- **Pelo terminal:** `npm run dados:b`, `dados:c` ou `dados:d` gera `data/brasileirao-serie-<b|c|d>-2024.json`. Depois rode `npm run dados:padrao` para embutir no jogo, ou use **Dados → Carregar JSON** e confirme para juntar com o que já está carregado.
-- **Pelo jogo:** na tela **Dados**, escolha a série no importador. A série importada substitui só ela mesma.
+- **Pelo terminal:** `npm run dados:b`, `dados:c` ou `dados:d` gera `data/brasileirao-serie-<b|c|d>-2024.json`. Depois rode `npm run dados:padrao` para embutir no jogo.
 
 As Séries B, C e D precisam de uma temporada liberada pelo plano da API (no plano gratuito, de 2022 a 2024). Jogadores que aparecem em dois elencos (empréstimos) devem ficar só em um clube, porque o `dados:padrao` recusa ids repetidos.
 
@@ -106,7 +105,7 @@ ui/                   telas e interação (usam o core/); config.mjs e conta.mjs
 supabase/             tabelas e regras de acesso do banco online (migrations/)
 .github/workflows/    publicação no GitHub Pages
   main.mjs            entrada: liga os botões (data-acao / data-mudar) e abre a tela inicial
-  telas.mjs           telas e abas · saves.mjs jogos salvos · api.mjs importar/exportar · ...
+  telas.mjs           telas e abas · saves.mjs jogos salvos · ...
 tests/                testes (npm test)
 scripts/baixar-brasileirao.mjs   script Node para baixar os dados
 scripts/baixar-notas.mjs         baixa nota e minutos dos jogadores (retomável)
@@ -118,9 +117,9 @@ As regras ficam em `core/` e não sabem nada da tela: devolvem resultados (`{err
 
 ## Salvamento
 
-O progresso fica no `localStorage` do navegador. Use **Dados → Exportar save** para fazer backup em JSON.
+O progresso fica no `localStorage` do navegador e, com login, na sua conta (nuvem). Não há importar nem exportar save pelo jogo (#187).
 
-> Atenção: o `localStorage` é separado por endereço. Um jogo salvo abrindo o arquivo direto não aparece no Live Server (e vice-versa) — use Exportar/Importar save para levar.
+> Atenção: o `localStorage` é separado por endereço. Um jogo salvo abrindo o arquivo direto não aparece no Live Server (e vice-versa) — entre com sua conta para levar o jogo de um endereço a outro.
 
 ## Ideias para próximas versões
 - Lesões, suspensões e cartões acumulados

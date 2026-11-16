@@ -88,14 +88,16 @@ test('save de versões antigas, sem os campos novos, carrega e joga', () => {
   assert.deepEqual(problemasNasTelas(j), []);
 });
 
-test('aba Dados sem importação pela API; a chave antiga é apagada e carregar/exportar continuam (#52)', () => {
+test('sem tela Dados nem importação: a chave antiga da API é apagada e ir direto a "dados" não abre tela (#187)', () => {
   const j = carregarJogo({ boot: true, ls: { brasfoot_apikey: 'segredo123' } });
   assert.equal(j.ls.brasfoot_apikey, undefined, 'a chave guardada por versões antigas foi apagada');
   j.run("go('dados')");
-  assert.doesNotMatch(j.html(), /API-Football<\/h3>|apikey|importFromApi/);
-  assert.match(j.html(), /data-mudar="loadDataFile"/);
-  assert.match(j.html(), /data-acao="exportData"/);
-  assert.equal(j.run('typeof importFromApi'), 'undefined');
+  assert.equal(j.run('ui.view'), 'menu');
+  j.run(`newGame('${clubeDaSerie(j)}')`);
+  j.run("go('dados')");
+  assert.equal(j.run('ui.view'), 'clube', 'em jogo, volta ao painel do clube');
+  assert.doesNotMatch(j.run('lateral()'), /go\|dados/);
+  for (const nome of ['exportData', 'loadDataFile', 'exportSave', 'loadSaveFile', 'resetData', 'resetGame', 'importFromApi']) assert.equal(j.run(`typeof ${nome}`), 'undefined', nome);
 });
 
 test('versão do save: jogo novo nasce na versão atual; save de versão mais nova não abre (#46)', () => {
@@ -110,10 +112,6 @@ test('versão do save: jogo novo nasce na versão atual; save de versão mais no
   j.run("abrirSave('futuro')");
   assert.ok(j.alertas.some(a => a.includes('versão mais nova')));
   assert.equal(j.run('S'), null, 'o jogo não abriu');
-  // o mesmo save importado por arquivo também é recusado
-  globalThis.FileReader = class { readAsText() { this.result = JSON.stringify({ type: 'brasfoot-save', save: s }); this.onload() } };
-  j.acao('loadSaveFile', '', { target: { files: [{}] } });
-  assert.equal(j.alertas.filter(a => a.includes('versão mais nova')).length, 2);
   // e um save sem versão (antigo) chega à versão atual
   delete s.versao;
   j.run(`migrarSave(${JSON.stringify(s)})`);
@@ -126,8 +124,8 @@ test('tela inicial da maquete: continuar, começar algo novo e jogos salvos; sem
   assert.match(vazio.html(), /<h1 class="sr">Boleiro Manager<\/h1>/, 'a página continua com um título');
   assert.match(vazio.html(), /data-acao="novoJogo"[^>]*>[\s\S]*Novo jogo sozinho/);
   assert.match(vazio.html(), /Nenhum jogo salvo ainda/);
-  assert.match(vazio.html(), /data-mudar="loadSaveFile"/);
-  assert.match(vazio.html(), /data-acao="go\|dados"/);
+  assert.doesNotMatch(vazio.html(), /type="file"|loadSaveFile|go\|dados|Importar/, 'o menu não importa nada (#187)');
+  assert.match(vazio.html(), /data-acao="go\|config"/);
 
   const j = carregarJogo({ boot: true });
   j.run(`newGame('${clubeDaSerie(j)}')`);
