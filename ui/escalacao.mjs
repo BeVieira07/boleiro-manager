@@ -45,7 +45,7 @@ function carta(s, o = {}) {
   if (!s.id) return `<div class="carta vazia"><span class="carta-vaga">${s.d}</span><span>vaga livre</span></div>`;
   const p = P[s.id], u = unavailable(p), pp = penalidadePosicao(p, s.d), sel = selId === p.id;
   const est = u ? 'indisp' : pp.tipo === 'fora' ? 'fora' : '', nota = u ? (p.inj > 0 ? `${p.inj} rod.` : `susp. ${p.susp}`) : pp.pen ? `-${Math.round(pp.pen * 100)}%` : '';
-  const desc = `${POSD[s.d].nome}: ${p.name}, força ${ovrNaPosicao(p, s.d)}, energia ${Math.round(energiaDe(p))}${u ? ', ' + u : pp.tipo === 'fora' ? ', fora de posição, ' + nota : pp.tipo === 'secundaria' ? ', posição secundária' : ''}`;
+  const desc = `${POSD[s.d].nome}: ${p.name}, força ${ovrNaPosicao(p, s.d)}, energia ${Math.round(energiaDe(p))}${u ? ', ' + u : pp.tipo === 'fora' ? ', fora de posição, ' + nota : ''}`;
   return `<button type="button" class="carta ${est}${sel ? ' sel' : ''}" data-acao="${acao}|${p.id}" aria-pressed="${sel}" aria-label="${esc(desc)}" title="${esc(p.name)}"${o.bloqueado ? ' disabled' : ''}>
     <span class="carta-vaga">${s.d}</span><span class="carta-nome">${esc(sobrenome(p.name))}</span>
     <span class="carta-pe">${ovrChip(ovrNaPosicao(p, s.d))}${nota ? `<span class="carta-nota">${nota}</span>` : ''}</span>${energiaBarra(p)}</button>`;
@@ -75,7 +75,7 @@ export function vEscalacao() {
   const vagasRuins = new Set(lay.filter(s => !s.id || unavailable(P[s.id]) || penalidadePosicao(P[s.id], s.d).tipo === 'fora').map(s => s.d));
   const notaReserva = p => { const u = unavailable(p); if (u) return [u[0].toUpperCase() + u.slice(1), 'erro'];
     if (vagasRuins.has(posDSigla(p))) return [`Natural de ${posDSigla(p)}, vaga com problema`, 'ok'];
-    return [(p.ps || []).length ? `Também joga de ${p.ps.join(', ')}` : POSD[posDSigla(p)].nome, ''] };
+    return [POSD[posDSigla(p)].nome, ''] };
   return `<div class="esc-topo"><p class="muted">Toque em um titular e depois em um reserva (ou em outro titular) para trocar. Lesionados e suspensos não podem entrar.</p>
     <div class="chips" role="group" aria-label="Formação">${Object.keys(FORMS).map(f => chip(f, `setFormation|${f}`, uc.formation === f)).join('')}</div></div>
   <div class="esc">

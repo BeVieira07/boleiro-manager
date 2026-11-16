@@ -3,7 +3,7 @@ import { clamp, hashStr } from './utils.mjs';
 /* ================= posições detalhadas =================
    p.pos  = grupo (G/D/M/A), mantido para o motor e para saves antigos
    p.pd   = posição principal detalhada (chave de POSD)
-   p.ps   = posições secundárias (lista de chaves de POSD), opcional
+   Uma posição só por jogador (#181): não há posição secundária; jogar fora da posição tem penalidade (PEN).
    Carregado depois de utils.js e antes de dados.js; também é lido por scripts/gerar-dados-padrao.mjs. */
 export const POSD={
   GOL:{nome:'Goleiro',grupo:'G'},
@@ -17,7 +17,7 @@ export const POSD={
 export const POS_SIMPLES={VOL:'MEI',MC:'MEI',MEI:'MEI',PE:'ATA',PD:'ATA',ATA:'ATA'};
 export function simplificarPosicoes(players){
   const s=k=>POS_SIMPLES[k]||k;
-  for(const p of players){if(p.pd)p.pd=s(p.pd);if(p.ps)p.ps=[...new Set(p.ps.map(s))].filter(k=>k!==p.pd)}
+  for(const p of players){if(p.pd)p.pd=s(p.pd);delete p.ps} // #181: sem posição secundária
 }
 export const POSD_ORDEM=Object.keys(POSD);
 export const GRUPO_DETALHES={G:['GOL'],D:['ZAG','LD','LE'],M:['MEI'],A:['ATA']};
@@ -54,14 +54,13 @@ export const PEN={
   MEI:{ATA:.10,LD:.18,LE:.18,ZAG:.18},
   ATA:{MEI:.10,LD:.25,LE:.25,ZAG:.32}
 };
-export const PEN_SECUNDARIA=0.03, PEN_GOLEIRO=0.6; // goleiro na linha (ou o contrário) é quase inútil
+export const PEN_GOLEIRO=0.6; // goleiro na linha (ou o contrário) é quase inútil
 /* Penalidade de escalar o jogador p na posição `slot` (chave de POSD).
-   Retorna {pen, tipo, aviso}: pen é a fração perdida (0 a 0.6); tipo é 'principal', 'secundaria' ou 'fora';
-   aviso é um texto para mostrar ao usuário (null quando está na posição ou numa secundária). */
+   Retorna {pen, tipo, aviso}: pen é a fração perdida (0 a 0.6); tipo é 'principal' ou 'fora';
+   aviso é um texto para mostrar ao usuário (null quando está na posição). */
 export function penalidadePosicao(p,slot){
   const pd=p.pd||inferirPosicao(p);
   if(pd===slot)return {pen:0,tipo:'principal',aviso:null};
-  if((p.ps||[]).includes(slot))return {pen:PEN_SECUNDARIA,tipo:'secundaria',aviso:null};
   const pen=(pd==='GOL'||slot==='GOL')?PEN_GOLEIRO:(PEN[pd]&&PEN[pd][slot])||.35;
   return {pen,tipo:'fora',aviso:`${p.name} é ${POSD[pd].nome.toLowerCase()} e jogará de ${POSD[slot].nome.toLowerCase()}: -${Math.round(pen*100)}% no desempenho.`};
 }
@@ -75,23 +74,18 @@ export function inferirPosicao(p){ // sem contexto do elenco: só pelo grupo e p
   const g=GRUPO_DETALHES[p.pos]||['MEI'],h=POSD_CAMISA[p.number];
   return h&&g.includes(h)?h:g[hashStr(p.id)%g.length];
 }
-export function sorteiaSecundarias(p){
-  const afins=Object.entries(PEN[p.pd]||{}).filter(([,v])=>v<=.12).map(([k])=>k);
-  const h=hashStr(p.id+'|sec');
-  return afins.length&&h%5<2?[afins[h%afins.length]]:[];
-}
-// Dá pd/ps a quem ainda não tem, equilibrando o elenco (proporção de POSD_PESO). Idempotente: não mexe em quem já tem pd.
+// Dá pd a quem ainda não tem, equilibrando o elenco (proporção de POSD_PESO). Idempotente: não mexe em quem já tem pd.
 export function atribuirPosicoes(players){
   const cont={},tam={};
   for(const p of players){tam[p.pos]=(tam[p.pos]||0)+1;if(p.pd)cont[p.pd]=(cont[p.pd]||0)+1}
   for(const p of players){
-    if(p.pd&&POSD[p.pd]){if(!p.ps)p.ps=sorteiaSecundarias(p);continue}
+    if(p.pd&&POSD[p.pd])continue;
     const g=GRUPO_DETALHES[p.pos]||['MEI'],soma=g.reduce((s,k)=>s+POSD_PESO[k],0);
     let pd=POSD_CAMISA[p.number];
     // a dica da camisa vale até a cota da posição no elenco (+1)
     if(!pd||!g.includes(pd)||(cont[pd]||0)>=Math.ceil(tam[p.pos]*POSD_PESO[pd]/soma)+1)
       pd=[...g].sort((a,b)=>(cont[a]||0)/POSD_PESO[a]-(cont[b]||0)/POSD_PESO[b])[0];
-    p.pd=pd;cont[pd]=(cont[pd]||0)+1;p.ps=sorteiaSecundarias(p);
+    p.pd=pd;cont[pd]=(cont[pd]||0)+1;
   }
 }
 // Sorteio para jogadores gerados (base, elenco fictício): escolhe a posição detalhada de um grupo.
@@ -105,7 +99,6 @@ export function converterPosicoesAntigas(players){
   for(const p of players){
     const nova=k=>k==='PON'?ponta(p):k==='MEI'?'MC':k==='MAT'?'MEI':k==='CEN'?'ATA':k;
     if(p.pd)p.pd=nova(p.pd);
-    if(p.ps)p.ps=[...new Set(p.ps.map(nova))].filter(k=>k!==p.pd);
   }
 }
 // estado.posv=2 marca saves já convertidos
