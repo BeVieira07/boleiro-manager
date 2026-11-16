@@ -3,7 +3,7 @@ import { contratoInicial } from './contratos.mjs';
 import { criarContinentais, vagasBrasileiras } from './continental.mjs';
 import { criarCopa } from './copa.mjs';
 import { criarEstaduais } from './estadual.mjs';
-import { SQUAD_SHAPE, fakePlayer, rate, refStrength, refreshEconomics } from './dados.mjs';
+import { SQUAD_SHAPE, fakePlayer, forcaDoElenco, rate, refStrength, refreshEconomics } from './dados.mjs';
 import { migrarDiretoria } from './diretoria.mjs';
 import { autoXI } from './motor.mjs';
 import { atribuirPosicoes, converterPosicoesAntigas, simplificarPosicoes } from './posicoes.mjs';
@@ -63,9 +63,12 @@ export function criarJogo(quem,data){
     if(c.players.length<16){const r=mulberry32(hashStr(c.id));let k=0;for(const [pos,n] of Object.entries(SQUAD_SHAPE))while(c.players.filter(p=>p.pos===pos).length<n)c.players.push(fakePlayer(c.id,k++,c.strength,pos,r))}
     atribuirPosicoes(c.players);
     const ref=refStrength(c,clubs);
-    c.players.forEach(p=>{p.ovr=rate(p,ref);p.contrato=contratoInicial(p);refreshEconomics(p);p.goals=0;p.listed=false});
+    c.players.forEach(p=>{p.ovr=rate(p,ref,divOf(c));p.contrato=contratoInicial(p);refreshEconomics(p);p.goals=0;p.listed=false});
     c.formation='4-4-2';c.fin=[];
   }
+  // #174: a força do clube é a do elenco (média dos 11 titulares), depois de todos os overalls; a da tabela de 2024 ficou velha.
+  // Só depois do laço: refStrength compara cada clube com a média da série, com as forças de antes
+  for(const c of clubs)c.strength=forcaDoElenco(c);
   const seed=novaSemente();
   S={versao:VERSAO_SAVE,seed,rng:seed,posv:2,season:data.season||2026,dataSource:data.source,round:0,clubs,
      fixtures:makeAllFixtures(clubs),history:[],

@@ -1,4 +1,5 @@
-// Baixa a posição detalhada real de cada jogador (Transfermarkt: elenco detalhado de cada clube).
+// Baixa a posição detalhada real e o valor de mercado de cada jogador (Transfermarkt: elenco detalhado de cada clube).
+// O valor de mercado (milhões de €, campo v) calibra o overall das Séries A e B (#174); null = o Transfermarkt não avalia.
 // A API-Football só informa goleiro/defensor/meia/atacante; aqui vem lateral, zagueiro, volante, ponta etc.
 // Uso: npm run posicoes                         clubes das Séries A, B, C e D da temporada 2024
 //      npm run posicoes -- --series=a,b         escolhe as séries
@@ -68,11 +69,13 @@ for (const s of SERIES) {
   console.log(`  ${tms.length} clubes no Transfermarkt.`);
   for (const c of nossos) {
     const manual = aj[c.id] ? tms.find(t => t.id === String(aj[c.id])) || { id: String(aj[c.id]), nome: c.name } : null;
-    const t = manual || casa(c, tms);
+    // clube que mudou de série entre a lista usada (2023) e a de 2026: vale o clube que já foi casado numa execução anterior
+    const anterior = Object.entries(d.times).find(([k, v]) => v.nossoId === c.id && !k.startsWith('?') && v.ok);
+    const t = manual || casa(c, tms) || (anterior && { id: anterior[0], nome: anterior[1].nome });
     if (!t) { console.log(`  ✗ ${c.name}: sem clube correspondente (ajuste em data/posicoes-clubes.json).`); d.times['?' + c.id] = { nome: c.name, nossoId: c.id, serie: s.toUpperCase(), ok: false }; continue; }
     const reg = d.times[t.id] || (d.times[t.id] = { nome: t.nome, nossoId: c.id, serie: s.toUpperCase(), ok: false });
     reg.nossoId = c.id; delete d.times['?' + c.id];
-    if (reg.ok) { continue; }
+    if (reg.ok && reg.valores) { continue; } // #174: clubes baixados antes de guardar o valor de mercado voltam uma vez
     process.stdout.write(`  ${c.name} (${t.nome}) ... `);
     const h = await pega(`/-/kader/verein/${t.id}/saison_id/${SAISON_ELENCO}/plus/1`);
     const linhas = h.match(/<tr class="(?:odd|even)">[\s\S]*?<\/td><\/tr>\s*(?=<tr class|<\/tbody)/g) || [];
@@ -81,11 +84,14 @@ for (const s of SERIES) {
       const nome = l.match(/class="hauptlink">\s*<a href="\/[^"]*\/profil\/spieler\/(\d+)">\s*([^<]+?)\s*<\/a>/);
       const pos = l.match(/<tr>\s*<td>\s*([^<]+?)\s*<\/td>\s*<\/tr>\s*<\/table>/);
       if (!nome || !pos) continue;
-      const num = l.match(/class=rn_nummer>(\d+)</), nasc = l.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-      d.jogadores[nome[1]] = { n: decode(nome[2]), t: t.id, num: num ? +num[1] : null, nasc: nasc ? `${nasc[3]}-${nasc[2]}-${nasc[1]}` : null, p: decode(pos[1]) };
+      const num = l.match(/class=rn_nummer>(\d+)</), nasc = l.match(/(\d{2})\/(\d{2})\/(\d{4})\s*\(\d+\)/); // o nascimento vem com a idade; sem isso pegava a data de chegada ao clube (#174)
+      // valor de mercado (#174), em milhões de euros: "€10.00M", "€500k", "€1.20bn" ou "-" (sem valor)
+      const vm = l.match(/class="rechts hauptlink">\s*(?:<a[^>]*>)?\s*€\s*([\d.,]+)\s*(bn|m|k|th\.)?/i);
+      const v = vm ? Math.round(parseFloat(vm[1].replace(',', '.')) * ({ bn: 1000, m: 1, k: 0.001, 'th.': 0.001 }[(vm[2] || 'm').toLowerCase()] ?? 1) * 1000) / 1000 : null;
+      d.jogadores[nome[1]] = { n: decode(nome[2]), t: t.id, num: num ? +num[1] : null, nasc: nasc ? `${nasc[3]}-${nasc[2]}-${nasc[1]}` : null, p: decode(pos[1]), v };
       n++;
     }
-    reg.ok = n > 0; console.log(`${n} jogadores`);
+    reg.ok = n > 0; reg.valores = true; console.log(`${n} jogadores`);
     salva(); await sleep(PAUSA);
   }
   salva();
