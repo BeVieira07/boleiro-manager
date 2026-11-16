@@ -29,33 +29,30 @@ export function jogosContinentais(r) {
 
 // próxima data (índice) ainda não jogada
 const proximaData = () => { const c = C(); const k = c.datas.findIndex(r => r >= S.round); return k < 0 ? null : k };
-function situacao(tor, me) {
-  if (tor.campeao) return tor.campeao === me ? 'Seu clube é o <b>campeão</b>!' : `Campeão: <b>${esc(clubeCont(tor.campeao).name)}</b>.`;
-  if (tor.final) return tor.final.h === me || tor.final.a === me ? `Seu clube está na final contra o ${esc(clubeCont(tor.final.h === me ? tor.final.a : tor.final.h).name)}.` : 'Seu clube foi eliminado.';
-  const fase = tor.fases[tor.fases.length - 1];
-  if (fase) return fase.jogos.some(j => (j.h === me || j.a === me) && (!j.v || j.v === me)) ? 'Seu clube está no mata-mata.' : 'Seu clube foi eliminado.';
-  const g = tor.grupos.find(x => x.includes(me)), pos = tabelaGrupoCont(tor, g).findIndex(t => t.id === me) + 1;
-  return `Seu clube é o ${pos}º no grupo ${'ABCDEFGH'[tor.grupos.indexOf(g)]} (os dois primeiros passam).`;
-}
 function semVaga(cfg) {
   if (!C()) return 'Não há copas sul-americanas nesta temporada. Elas começam na próxima, com as vagas da Série A.';
   return cfg.id === 'libertadores' ? 'Seu clube não se classificou. Vão os 6 primeiros da Série A e o campeão da Copa do Brasil (ou o 7º).'
     : 'Seu clube não se classificou. Vão os 7 seguintes da Série A, depois das vagas da Libertadores.';
 }
 
+const FASES = ['Oitavas', 'Quartas', 'Semifinal']; // nome curto da fase do mata-mata, na ordem de tor.fases
 const cartaoDe = cfg => ({
   id: cfg.id, nome: cfg.nome, tela: cfg.id,
   cartao() {
-    const tor = doTorneio(cfg.id), me = tec().clubId;
-    if (!tor) return { fase: 'Sem copa', situacao: semVaga(cfg) };
-    const k = proximaData(), fase = tor.campeao ? 'Encerrada' : k == null ? 'Encerrada' : dataCont(k).nome.replace(/, rodada \d+| \((ida|volta)\)/, '');
-    if (!torneioContDe(me, cfg.id)) return { fase, situacao: `${semVaga(cfg)}${tor.campeao ? ` Campeão: <b>${esc(clubeCont(tor.campeao).name)}</b>.` : ''}` };
-    let proximo = '';
-    for (let j = k; k != null && j < S.continentais.datas.length && !proximo; j++) {
-      const g = jogosDaDataCont(tor, j).find(x => (x.h === me || x.a === me) && x.hg == null);
-      if (g) proximo = `Próximo jogo: ${dataCont(j).nome.toLowerCase()}, contra o ${esc(clubeCont(g.h === me ? g.a : g.h).name)}, na rodada ${S.continentais.datas[j] + 1}.`;
+    const tor = doTorneio(cfg.id), me = tec().clubId, base = { sigla: cfg.id.slice(0, 3).toUpperCase(), tom: cfg.id === 'sulamericana' ? 'ok' : '' };
+    if (!tor || !torneioContDe(me, cfg.id)) return { ...base, fora: semVaga(cfg) };
+    const k = proximaData(), g = tor.grupos.find(x => x.includes(me)), pos = tabelaGrupoCont(tor, g).findIndex(t => t.id === me) + 1, fase = tor.fases[tor.fases.length - 1];
+    const vivo = tor.final ? tor.final.h === me || tor.final.a === me : fase ? fase.jogos.some(j => (j.h === me || j.a === me) && (!j.v || j.v === me)) : true;
+    const [fas, destaque, status] = tor.campeao === me ? ['Encerrada', 'Campeão', ['Título conquistado', 'ok']]
+      : tor.campeao ? ['Encerrada', 'Encerrada', ['Eliminado', 'erro']]
+      : tor.final || fase ? ['Mata-mata', tor.final ? 'Final' : FASES[tor.fases.length - 1], vivo ? ['Na disputa', 'ok'] : ['Eliminado', 'erro']]
+      : [`Fase de grupos · Grupo ${'ABCDEFGH'[tor.grupos.indexOf(g)]}`, `${pos}º de ${g.length}`, pos <= 2 ? ['Classificando (2 passam)', 'ok'] : ['Fora da classificação', 'erro']];
+    let proximo = null;
+    for (let j = k; k != null && !tor.campeao && j < S.continentais.datas.length && !proximo; j++) {
+      const x = jogosDaDataCont(tor, j).find(y => (y.h === me || y.a === me) && y.hg == null);
+      if (x) proximo = { rot: 'Rod.', n: S.continentais.datas[j] + 1, nomeAdv: clubeCont(x.h === me ? x.a : x.h).name, perna: dataCont(j).volta === undefined ? '' : dataCont(j).volta ? 'volta' : 'ida', ordem: S.continentais.datas[j] + 1 };
     }
-    return { fase, situacao: situacao(tor, me), proximo };
+    return { ...base, fase: fas, destaque, status, proximo, botao: tor.final || fase ? 'Chaveamento' : 'Grupo' };
   }
 });
 /** Cartões da aba Competições (#102). */

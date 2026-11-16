@@ -55,6 +55,7 @@ Os nomes antigos (`--panel`, `--accent`, `--danger`…) apontam para os novos e 
 | `ui/elenco.mjs`, `ui/jogadores.mjs` | tabela do Elenco; filtros, busca e ordenação reaproveitados pelo Mercado (#60) |
 | `ui/escalacao.mjs`, `css/escalacao.css` | campo com cartas (#61) |
 | `ui/partida.mjs` | linha do tempo, escudo e modal; `ui/aovivo.mjs` é a tela da rodada ao vivo (#62, #135) |
+| `ui/competicoes.mjs` | painel de Competições: próximos jogos, uma linha por competição e as que ficaram de fora; cada competição devolve o cartão dela (#175, maquete em `docs/maquetes/competicoes.png`) |
 | `ui/avisos.mjs` | `avisar` (toasts), `confirmar` e `pedirValor` no lugar de `alert`, `confirm` e `prompt` (#64) |
 
 Atributos de evento (ligados em `ui/main.mjs`): `data-acao` (clique), `data-mudar` (change) e `data-digitar` (cada tecla; use quando a tela não pode ser redesenhada inteira, para o campo não perder o foco).

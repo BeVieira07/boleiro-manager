@@ -43,19 +43,17 @@ function proximoJogo(me) {
   const i = copa.fases.length - 1, volta = !!j.ida;
   return { volta, adv: clubById(j.h === me ? j.a : j.h), rodada: copa.datas[2 * i + (volta ? 1 : 0)] + 1 };
 }
-/** Cartão da Copa do Brasil na aba Competições (#102). */
+/** Cartão da Copa do Brasil na aba Competições (#102, #175). */
 export const cartaoCopa = {
   id: 'copa', nome: COPA, tela: 'copa',
   cartao() {
     const copa = S.copa, me = tec().clubId;
-    if (!copa) return { fase: 'Sem copa', situacao: 'Não há copa nesta temporada. Ela começa na próxima.' };
+    if (!copa) return { sigla: 'CDB', tom: 'aviso', fora: 'Não há copa nesta temporada. Ela começa na próxima.' };
     const nome = nomeFase(copa.fases[copa.fases.length - 1]), meu = confrontoDe(me), vivo = meu && (!meu.v || meu.v === me);
-    const nela = copa.fases[0].jogos.some(j => j.h === me || j.a === me);
-    const situacao = copa.campeao === me ? 'Seu clube é o <b>campeão</b>!'
-      : copa.campeao ? `Campeão: <b>${esc(clubById(copa.campeao).name)}</b>. ${nela ? 'Seu clube foi eliminado.' : 'Seu clube não se classificou.'}`
-      : !nela ? 'Seu clube não se classificou para a copa.' : vivo ? `Seu clube está na ${nome.toLowerCase()}.` : 'Seu clube foi eliminado.';
+    if (!copa.fases[0].jogos.some(j => j.h === me || j.a === me)) return { sigla: 'CDB', tom: 'aviso', fora: 'Seu clube não se classificou para a copa. Vaga: ganhe a Copa do Brasil ou termine bem na Série A.' };
     const p = copa.campeao ? null : proximoJogo(me);
-    return { fase: copa.campeao ? 'Encerrada' : nome, situacao,
-      proximo: p ? `Próximo jogo: ${p.volta ? 'volta' : 'ida'} contra ${esc(p.adv.name)}, na rodada ${p.rodada}.` : '' };
+    const [destaque, status] = copa.campeao === me ? ['Campeão', ['Título conquistado', 'ok']] : copa.campeao ? ['Encerrada', ['Eliminado', 'erro']] : [nome, vivo ? ['Na disputa', 'ok'] : ['Eliminado', 'erro']];
+    return { sigla: 'CDB', tom: 'aviso', fase: 'Mata-mata', destaque, status, botao: 'Chaveamento',
+      proximo: p && { rot: 'Rod.', n: p.rodada, nomeAdv: p.adv.name, perna: p.volta ? 'volta' : 'ida', ordem: p.rodada } };
   }
 };
