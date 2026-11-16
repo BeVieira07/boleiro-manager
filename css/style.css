@@ -262,6 +262,24 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
   .filtros>.busca{flex:1 1 100%}
   .busca input{width:100%}
 }
+/* #180: no computador, cada jogador numa linha só (nome, etiquetas e botões lado a lado), com fonte e espaços menores */
+@media(min-width:800px){
+  .tabela-jogadores{min-width:0;font-size:12.5px}
+  .tabela-jogadores td,.tabela-jogadores tbody th{padding:3px 4px;white-space:nowrap}
+  .tabela-jogadores tbody th{font-size:12.5px}
+  .tabela-jogadores .c-pos{width:46px;padding-left:10px}
+  .tabela-jogadores thead .c-nome,.tabela-jogadores tbody th{left:46px}
+  .tabela-jogadores .c-nome{min-width:0}
+  .tabela-jogadores th button.ordem{padding:4px 1px}
+  .jogador{gap:6px}
+  .jogador>div{flex-direction:row;align-items:center;gap:6px;white-space:nowrap}
+  .tabela-jogadores .camisa{width:22px;height:22px;font-size:10px}
+  .tabela-jogadores .c-energia .barra{width:36px}
+  .tabela-jogadores .c-pot .estrelas{font-size:11px;letter-spacing:0}
+  .tabela-jogadores .acoes{gap:4px}
+  .tabela-jogadores .acoes .btn.sm{min-height:24px;padding:1px 6px;font-size:11px;white-space:nowrap}
+  .tabela-jogadores thead th{padding:6px 4px;font-size:11px}
+}
 
 /* ================= jogo ao vivo (#62) ================= */
 .ao-vivo{display:flex;flex-direction:column;gap:var(--e4)}
@@ -476,8 +494,6 @@ body.em-jogo .avisos{bottom:24px}
 .proposta-clube .btn{min-height:44px}
 /* #166: sem rolagem horizontal desnecessária */
 .club{white-space:normal}
-.tabela-jogadores .acoes{flex-direction:column;align-items:stretch}
-@media(max-width:799px){.tabela-jogadores .acoes{flex-direction:row}}
 @media(max-width:520px){
   .classif th:nth-child(n+5):nth-child(-n+9),.classif td:nth-child(n+5):nth-child(-n+9){display:none}
   .tabela-base .c-idade{display:none}
@@ -486,10 +502,6 @@ body.em-jogo .avisos{bottom:24px}
   .tabela-base tbody th{white-space:normal}
 }
 .grupos{grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr))}
-/* elenco em telas médias: as colunas menos usadas saem (no celular o salário já sai) */
-@media(min-width:800px) and (max-width:1499px){.tabela-jogadores .c-sal{display:none}}
-@media(min-width:800px) and (max-width:1299px){.tabela-jogadores .c-gols{display:none}}
-.tabela-jogadores .c-contr{white-space:normal}
 /* #170: cabeçalho do seu jogo (placar, último lance, relógio, pausa) com as estatísticas ao lado, e a rodada em linhas */
 .vivo-cab{display:grid;gap:var(--e3) var(--e5);grid-template-columns:minmax(0,1fr);margin:0}
 .cab-jogo{display:flex;flex-direction:column;gap:var(--e3);min-width:0}
