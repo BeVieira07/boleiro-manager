@@ -7,7 +7,7 @@ import { DATA_KEY, store } from './utils.mjs';
 import { avisar } from './avisos.mjs';
 
 // estado só da tela (não vai para o save)
-export const ui={view:'clube',lastRound:null,selEsc:null,vDiv:null,jogosRound:null,mf:{grupo:'',q:'',max:'',club:'',ord:'ovr',dir:-1},ef:{grupo:'',q:'',ord:'pos',dir:1},tvAoVivo:null,vivo:null,artComp:null,artSo:false,novos:[],liga:null}; // liga: jogando uma liga online (#34)
+export const ui={view:'clube',lastRound:null,selEsc:null,vDiv:null,jogosRound:null,mf:{grupo:'',q:'',max:'',club:'',liga:'',aba:'todos',ord:'ovr',dir:-1},ef:{grupo:'',q:'',ord:'pos',dir:1},tvAoVivo:null,vivo:null,artComp:null,artSo:false,novos:[],liga:null}; // liga: jogando uma liga online (#34)
 export function save(){if(S)salvarJogo()} // js/saves.js: grava no save da campanha atual
 export function getData(){const d=store.get(DATA_KEY);return d&&Array.isArray(d.clubs)&&!erroIds(d.clubs)?d:( // dados importados antes da #47 com id inválido são ignorados
   typeof DADOS_PADRAO!=='undefined'?DADOS_PADRAO:sampleData())}
