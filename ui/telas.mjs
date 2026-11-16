@@ -3,7 +3,7 @@ import { vCarreira } from './diretoria.mjs';
 import { vConfig } from './configuracoes.mjs';
 import { wageBill } from '../core/emprestimos.mjs';
 import { escalarMelhores } from '../core/escalacao.mjs';
-import { DIVS, MOVE_N, S, clubById, divOf, divisions, divsOf, hasTwoDivs, table, tec, topScorers, tvQuota, userClub } from '../core/estado.mjs';
+import { DIVS, MOVE_N, S, clubById, divOf, divisions, divsOf, hasTwoDivs, table, tec, tvQuota, userClub } from '../core/estado.mjs';
 import { clamp, esc, money } from '../core/utils.mjs';
 import { vClube } from './clube.mjs';
 import { vCompeticoes } from './competicoes.mjs';
@@ -12,6 +12,7 @@ import { jogosCopa, vCopa } from './copa.mjs';
 import { jogosEstadual, proximoEstadual, rotuloRodada, vEstadual } from './estadual.mjs';
 import { chip, stat, tag } from './componentes.mjs';
 import { vAoVivo } from './aovivo.mjs';
+import { vArt } from './artilharia.mjs';
 import { vElenco } from './elenco.mjs';
 import { vEscalacao } from './escalacao.mjs';
 import { MAX_TECNICOS, getData, save, ui } from './estado.mjs';
@@ -22,7 +23,6 @@ import { bloqueadoNaLiga, vLigaJogo } from './ligajogo.mjs';
 import { vMercado } from './mercado.mjs';
 import { botaoRodada } from './motor.mjs';
 import { crest, newSeason, seasonEnd } from './partida.mjs';
-import { posTag } from './posicoes.mjs';
 import { vMenu } from './saves.mjs';
 import { DATA_KEY, store } from './utils.mjs';
 
@@ -116,12 +116,6 @@ export function vTabela(){
   <thead><tr><th scope="col">#</th><th scope="col">Clube</th><th scope="col" class="n">Pts</th><th scope="col" class="n">J</th><th scope="col" class="n">V</th><th scope="col" class="n">E</th><th scope="col" class="n">D</th><th scope="col" class="n">GP</th><th scope="col" class="n">GC</th><th scope="col" class="n">SG</th></tr></thead>
   <tbody>${T.map((t,i)=>{const c=clubById(t.id),[z,nz]=zona(i);return `<tr class="${t.id===me?'me':''}"><td class="${z}"${nz?` title="${esc(nz)}"`:''}>${i+1}${nz?`<span class="sr"> (${esc(nz)})</span>`:''}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n"><b>${t.Pts}</b></td><td class="n">${t.J}</td><td class="n">${t.V}</td><td class="n">${t.E}</td><td class="n">${t.D}</td><td class="n">${t.GP}</td><td class="n">${t.GC}</td><td class="n">${t.GP-t.GC}</td></tr>`}).join('')}</tbody>
   </table></div></section>`;
-}
-export function vArt(){
-  const d=curDiv(),L=topScorers(25,d);
-  return `${divTabs()}<section class="card tabela-card"><div class="tw"><table><caption class="sr">Artilharia da ${DIVS[d]}</caption>
-  <thead><tr><th scope="col">#</th><th scope="col">Jogador</th><th scope="col">Clube</th><th scope="col" class="n">Gols</th></tr></thead>
-  <tbody>${L.map((p,i)=>{const c=clubById(p.clubId);return `<tr class="${p.clubId===tec().clubId?'me':''}"><td>${i+1}</td><td>${posTag(p)} ${esc(p.name)}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n"><b>${p.goals}</b></td></tr>`}).join('')||'<tr><td colspan="4" class="muted">Nenhum gol ainda.</td></tr>'}</tbody></table></div></section>`;
 }
 
 /* ---------- finanças ---------- */

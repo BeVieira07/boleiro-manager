@@ -1,0 +1,83 @@
+// #184: tela Artilharia com filtros por competição, pódio, ranking com empate e "seus artilheiros"
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { carregarJogo, clubeDaSerie, jogarRodada, problemasNasTelas } from './jogo.mjs';
+
+const comGols = j => {
+  j.run(`newGame('${clubeDaSerie(j)}')`);
+  jogarRodada(j, 3);
+  // 7 (outro clube), 6 (meu clube), 6 (outro clube), 4 (outro clube): posições 1º, 2º, 2º, 4º
+  j.run(`(()=>{const A=S.clubs.filter(c=>c.division===divOf(userClub())),ps=A.flatMap(c=>c.players);for(const p of ps)p.goals=0;
+    const meus=userClub().players,outros=ps.filter(p=>p.clubId!==userClub().id);
+    outros[0].goals=7;meus[0].goals=6;outros[1].goals=6;outros[2].goals=4;go('artilharia')})()`);
+};
+
+test('pódio e ranking repetem a posição no empate, e o seu clube fica em destaque', () => {
+  const j = carregarJogo({ boot: true });
+  comGols(j);
+  const h = j.html();
+  assert.equal((h.match(/class="podio-card/g) || []).length, 3);
+  assert.deepEqual([...h.matchAll(/class="medalha (\w+)">(\d)º/g)].map(m => [m[1], m[2]]), [['ouro', '1'], ['prata', '2'], ['prata', '2']], 'a medalha repete a posição do empate');
+  assert.equal((h.match(/class="podio-card meu"/g) || []).length, 1);
+  assert.deepEqual([...h.matchAll(/<tr class="(?:me)?"><td>(\d)º<\/td>/g)].map(m => m[1]).slice(0, 4), ['1', '2', '2', '4']);
+  assert.equal((h.match(/<tr class="me">/g) || []).length, 1);
+  assert.match(h, /Série A \d{4}/);
+  assert.match(h, /Em andamento · após 3 rodadas/);
+  assert.match(h, /<caption class="sr">Artilharia: Série A/);
+  assert.match(h, /<th scope="col" class="n">Média<\/th>/);
+  // painel lateral: só os jogadores do meu clube, com a posição no ranking
+  assert.match(h, /Seus artilheiros/);
+  assert.match(h, /2º no ranking/);
+  assert.equal((h.match(/<li><div><b>/g) || []).length, 1);
+});
+
+test('"Só o seu clube" mostra só as linhas dele, mantendo a posição do ranking geral', () => {
+  const j = carregarJogo({ boot: true });
+  comGols(j);
+  j.acao('artSoMeu');
+  const h = j.html();
+  assert.match(h, /type="checkbox" data-mudar="artSoMeu" checked/);
+  const linhas = [...h.matchAll(/<tr class="(?:me)?"><td>(\d)º<\/td>/g)];
+  assert.deepEqual(linhas.map(m => m[1]), ['2']);
+  j.acao('artSoMeu');
+  assert.ok(([...j.html().matchAll(/<tr class="(?:me)?"><td>/g)]).length > 1);
+});
+
+test('chips por competição: série, copa e continentais, com o ativo marcado e estado vazio claro', () => {
+  const j = carregarJogo({ boot: true });
+  j.run(`newGame('${clubeDaSerie(j)}');go('artilharia')`);
+  assert.match(j.html(), /aria-pressed="true" data-acao="verArtilharia\|A">Série A/);
+  j.acao('verArtilharia|B');
+  assert.match(j.html(), /aria-pressed="true" data-acao="verArtilharia\|B">Série B/);
+  assert.match(j.html(), /<h2>Série B \d{4}<\/h2>/);
+  assert.match(j.html(), /Ainda sem jogos/);
+  assert.match(j.html(), /Nenhum gol ainda nesta série/);
+  assert.doesNotMatch(j.html(), /class="podio"/, 'sem gols não há pódio');
+  j.acao('verArtilharia|copa');
+  assert.match(j.html(), /não guarda quem fez os gols/);
+  j.acao('verArtilharia|libertadores');
+  assert.match(j.html(), /<h2>Libertadores \d{4}<\/h2>/);
+  assert.match(j.html(), /aria-pressed="true" data-acao="verArtilharia\|libertadores">Libertadores/);
+});
+
+test('continentais usam os gols guardados no torneio', () => {
+  const j = carregarJogo({ boot: true, continentais: true });
+  j.run(`newGame('${clubeDaSerie(j)}')`);
+  const tem = j.run(`!!(S.continentais&&S.continentais.torneios.find(t=>t.id==='libertadores'))`);
+  assert.ok(tem, 'a Libertadores existe no jogo novo');
+  j.run(`S.continentais.torneios.find(t=>t.id==='libertadores').gols={a:{nome:'Fulano',clube:userClub().id,gols:3},b:{nome:'Beltrano',clube:userClub().id,gols:1}};go('artilharia')`);
+  j.acao('verArtilharia|libertadores');
+  const h = j.html();
+  assert.match(h, /Fulano/);
+  assert.deepEqual([...h.matchAll(/class="medalha (\w+)">(\d)º/g)].map(m => m[2]), ['1', '2']);
+  assert.match(h, /class="podio-card meu"/);
+});
+
+test('temporada e país só mostram o que existe, e todas as telas seguem sem texto estranho', () => {
+  const j = carregarJogo({ boot: true });
+  j.run(`newGame('${clubeDaSerie(j)}');go('artilharia')`);
+  const h = j.html();
+  assert.match(h, /<label for="artTemporada">Temporada<\/label><select id="artTemporada" disabled><option>\d{4} · atual<\/option><\/select>/);
+  assert.match(h, /<label for="artPais">País<\/label><select id="artPais" disabled><option>Brasil<\/option><\/select>/);
+  for (const c of ['A', 'copa', 'libertadores', 'sulamericana']) { j.acao(`verArtilharia|${c}`); assert.deepEqual(problemasNasTelas(j, ['artilharia']), []) }
+});
