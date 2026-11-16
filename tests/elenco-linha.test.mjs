@@ -12,7 +12,7 @@ test('o CSS do computador não empilha os botões nem esconde colunas do Elenco'
   const bloco = css.slice(css.indexOf('@media(min-width:800px){\n  .tabela-jogadores{min-width:0'));
   assert.match(bloco, /\.jogador>div\{flex-direction:row/, 'nome e etiquetas na mesma linha');
   assert.match(bloco, /\.tabela-jogadores \.acoes \.btn\.sm\{[^}]*white-space:nowrap/, 'botão não quebra o rótulo');
-  assert.match(bloco, /td,\.tabela-jogadores tbody th\{padding:3px 4px;white-space:nowrap\}/, 'célula compacta e sem quebra');
+  assert.match(bloco, /td,\.tabela-jogadores tbody th\{padding:3px 3px;white-space:nowrap\}/, 'célula compacta e sem quebra');
 });
 
 test('os botões de um jogador ficam juntos numa única .acoes, com os rótulos completos', () => {
