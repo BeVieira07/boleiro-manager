@@ -33,7 +33,7 @@ export const SLOTS={
 };
 for(const k in SLOTS)SLOTS[k]=SLOTS[k].split(' ');
 export const slotsDe=f=>SLOTS[f]||SLOTS['4-4-2'];
-// cada vaga recebe quem perde menos ali (posição principal, secundária, depois o mais próximo); o resto completa as vagas livres
+// cada vaga recebe quem perde menos ali (a posição do jogador, depois o mais próximo); o resto completa as vagas livres
 export function reslot(ids,f){
   const slots=slotsDe(f),left=ids.filter(id=>P[id]),out=slots.map(()=>null);
   slots.forEach((s,i)=>{
