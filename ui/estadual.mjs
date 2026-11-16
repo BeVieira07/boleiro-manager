@@ -63,22 +63,24 @@ function semEstadual() {
   return uc.uf ? `O estado do seu clube (${esc(uc.uf)}) não tem clubes suficientes no jogo para um estadual.` : 'Seu clube não tem estado nos dados, então fica sem estadual.';
 }
 
-/** Cartão do estadual do seu clube na aba Competições (#102). */
+/** Cartão do estadual do seu clube na aba Competições (#102, #175). */
 export const cartaoEstadual = {
   id: 'estadual', get nome() { const t = torneioDe(tec().clubId); return t ? t.nome : 'Estadual' }, tela: 'estadual',
   cartao() {
     const me = tec().clubId, tor = torneioDe(me);
-    if (!tor || S.estaduais.temporada !== S.season) return { fase: 'Sem estadual', situacao: semEstadual() };
-    const grupo = tor.grupos.find(g => g.includes(me)), pos = tabelaGrupo(tor, grupo).findIndex(t => t.id === me) + 1, f = tor.final;
-    const situacao = tor.campeao === me ? 'Seu clube é o <b>campeão</b>!'
-      : tor.campeao ? `Campeão: <b>${esc(clubById(tor.campeao).name)}</b>. ${f.h === me || f.a === me ? 'Seu clube foi vice.' : 'Seu clube ficou fora da final.'}`
-      : f ? (f.h === me || f.a === me ? `Seu clube está na final contra o ${esc(clubById(f.h === me ? f.a : f.h).name)}.` : 'Seu clube ficou fora da final.')
-      : `Seu clube é o ${pos}º de ${grupo.length}${tor.grupos.length > 1 ? ' no grupo' : ''}.`;
-    let proximo = '';
-    if (emPreTemporada()) for (let d = S.estaduais.dia; d < S.estaduais.datas && !proximo; d++) {
+    if (!tor || S.estaduais.temporada !== S.season) return { sigla: 'EST', tom: 'erro', fora: semEstadual() };
+    const grupo = tor.grupos.find(g => g.includes(me)), pos = tabelaGrupo(tor, grupo).findIndex(t => t.id === me) + 1, f = tor.final, vaga = tor.grupos.length === 1 ? 2 : 1;
+    const naFinal = f && (f.h === me || f.a === me);
+    const [destaque, status] = tor.campeao === me ? ['Campeão', ['Título conquistado', 'ok']]
+      : tor.campeao ? ['Encerrado', naFinal ? ['Vice-campeão', 'aviso'] : ['Fora da final', 'erro']]
+      : f ? ['Final', naFinal ? ['Na disputa', 'ok'] : ['Fora da final', 'erro']]
+      : [`${pos}º de ${grupo.length}`, pos <= vaga ? [`Classificando (${vaga} passa${vaga > 1 ? 'm' : ''})`, 'ok'] : ['Fora da classificação', 'erro']];
+    let proximo = null;
+    if (emPreTemporada() && !tor.campeao) for (let d = S.estaduais.dia; d < S.estaduais.datas && !proximo; d++) {
       const g = jogosDaData(tor, d).find(x => x.h === me || x.a === me);
-      if (g) proximo = `Próximo jogo: ${nomeData(tor, d).toLowerCase()} contra ${esc(clubById(g.h === me ? g.a : g.h).name)}.`;
+      if (g) proximo = { rot: 'Rod.', n: d + 1, nomeAdv: clubById(g.h === me ? g.a : g.h).name, perna: g.final === 'ida' ? 'ida' : g.final === 'volta' ? 'volta' : '', ordem: d - 1000 };
     }
-    return { fase: tor.campeao ? 'Encerrado' : f ? 'Final' : 'Fase de grupos', situacao, proximo };
+    const sigla = tor.nome.normalize('NFD').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase();
+    return { sigla, tom: 'erro', fase: tor.campeao ? 'Encerrado' : f ? 'Final em ida e volta' : 'Fase de grupos · em andamento', destaque, status, proximo, botao: 'Tabela' };
   }
 };

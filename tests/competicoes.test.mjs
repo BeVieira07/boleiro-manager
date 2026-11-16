@@ -23,7 +23,7 @@ test('o cartão da copa mostra a fase, a situação e o próximo jogo, e a copa 
   jogarRodada(j, 1);
   j.run(`go('competicoes')`);
   const h = j.html();
-  if (copa) { assert.match(h, /Seu clube está na/); assert.match(h, /Próximo jogo: (ida|volta) contra/) }
+  if (copa) { assert.match(h, /Na disputa|Eliminado/); assert.match(h, /Rod\. \d+ · x [^<]+ \((ida|volta)\)/); assert.match(h, /data-acao="go\|copa">Chaveamento/) }
   else assert.match(h, /não se classificou/);
   j.acao('go|copa');
   assert.match(j.html(), /data-acao="go\|competicoes">← Competições/);
@@ -33,13 +33,14 @@ test('sem copa na temporada (liga antiga), o cartão diz que ela começa na pró
   const j = carregarJogo({ boot: true });
   j.run(`newGame('${clubeDaSerie(j)}');delete S.copa;go('competicoes')`);
   assert.match(j.html(), /Não há copa nesta temporada/);
+  assert.match(j.html(), /Fora nesta temporada/);
 });
 
 test('competição nova entra só com o cartão dela e uma linha no registro', () => {
   const j = carregarJogo({ boot: true });
   j.run(`newGame('${clubeDaSerie(j)}')`);
-  const h = j.run(`vCompeticoes([...COMPETICOES,{id:'x',nome:'Torneio de Mentira',tela:'clube',cartao:()=>({fase:'Fase 1',situacao:'Tudo certo.',acoes:[['Extra','go|elenco']]})}])`);
+  const h = j.run(`vCompeticoes([...COMPETICOES,{id:'x',nome:'Torneio de Mentira',tela:'clube',cartao:()=>({sigla:'TDM',fase:'Fase 1',destaque:'Tudo certo.',acoes:[['Extra','go|elenco']]})}])`);
   assert.match(h, /Torneio de Mentira/);
   assert.match(h, /Tudo certo\./);
-  assert.equal((h.match(/class="card competicao"/g) || []).length, j.run('COMPETICOES.length') + 1); // #132: o estadual também tem cartão
+  assert.equal((h.match(/class="comp-(linha|fora)"/g) || []).length, j.run('COMPETICOES.length') + 1); // #132: o estadual também tem linha
 });

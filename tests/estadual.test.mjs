@@ -68,7 +68,7 @@ test('clube de estado sem estadual vai direto para a rodada 1, e os estaduais da
   assert.equal(j.run('S.round'), 1);
   assert.ok(j.run('S.estaduais.torneios.every(t=>t.campeao)'));
   j.run(`go('competicoes')`);
-  assert.match(j.html(), /Sem estadual/);
+  assert.match(j.html(), /Fora nesta temporada/);
   assert.match(j.html(), /\(PA\) não tem clubes suficientes/);
 });
 
@@ -78,7 +78,7 @@ test('telas: cartão em Competições, tela do torneio, Jogos e Resultados mostr
   j.run(`go('competicoes')`);
   assert.match(j.html(), /Carioca/);
   assert.match(j.html(), /Fase de grupos/);
-  assert.match(j.html(), /Próximo jogo: rodada \d contra/);
+  assert.match(j.html(), /Próximo jogo<\/span><b>Rod\. \d+ · x /);
   j.run(`go('jogos')`);
   assert.match(j.html(), /Pré-temporada: o estadual vem antes da rodada 1/);
   assert.match(j.html(), /Carioca · Rodada \d/);

@@ -67,7 +67,7 @@ test('telas: cartões em Competições, jogos da rodada e o clube fora das copas
   const datas = JSON.parse(j.run('JSON.stringify(S.continentais.datas)'));
   j.run(`go('competicoes')`);
   assert.match(j.html(), /Libertadores/); assert.match(j.html(), /Sul-Americana/);
-  assert.match(j.html(), /Próximo jogo: fase de grupos, rodada 1/);
+  assert.match(j.html(), /Rod\. \d+ · x /);
   j.run(`go('jogos')`); j.acao(`verRodadaJogos|${datas[0]}`);
   assert.match(j.html(), /Libertadores · Fase de grupos, rodada 1/);
   assert.match(j.html(), /Sul-Americana · Fase de grupos, rodada 1/);
