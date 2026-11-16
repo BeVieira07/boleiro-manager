@@ -56,6 +56,7 @@ Os nomes antigos (`--panel`, `--accent`, `--danger`…) apontam para os novos e 
 | `ui/escalacao.mjs`, `css/escalacao.css` | campo com cartas (#61) |
 | `ui/partida.mjs` | linha do tempo, escudo e modal; `ui/aovivo.mjs` é a tela da rodada ao vivo (#62, #135) |
 | `ui/competicoes.mjs` | painel de Competições: próximos jogos, uma linha por competição e as que ficaram de fora; cada competição devolve o cartão dela (#175, maquete em `docs/maquetes/competicoes.png`) |
+| `ui/mercado.mjs` | tela Mercado: indicadores (`stat`), abas com contagem, filtros (país, liga, clube, posição, busca, valor máx.) e tabela com situação e negociação (#186, maquete em `docs/maquetes/mercado.png`); o botão de ver o jogador fica de fora até haver tela de detalhe |
 | `ui/artilharia.mjs` | tela Artilharia: filtros por competição, pódio, ranking com empate e "seus artilheiros"; todas as competições viram o mesmo modelo de linhas (`linhasDe`) (#184, maquete em `docs/maquetes/artilharia.png`) |
 | `ui/avisos.mjs` | `avisar` (toasts), `confirmar` e `pedirValor` no lugar de `alert`, `confirm` e `prompt` (#64) |
 

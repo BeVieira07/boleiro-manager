@@ -522,6 +522,41 @@ body.em-jogo .avisos{bottom:24px}
 .linha-placar{font-family:var(--f-titulo);font-size:20px;font-weight:700;min-width:52px;text-align:center;font-variant-numeric:tabular-nums}
 .linha-lance{grid-column:1/-1;font-size:12px;color:var(--texto2);display:flex;gap:6px;justify-content:center;align-items:center;text-align:center}
 
+/* ---- Mercado (#186) ---- (usa .art-campo e .art-rotulo do bloco da Artilharia) */
+.stat.stat-alerta{border-color:var(--ouro-borda);background:var(--ouro-esc)}
+.stat.stat-alerta .stat-sub{color:var(--ouro-claro)}
+.mer-stats{grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr))}
+@media(max-width:700px){.mer-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.mer-stats .stat{padding:var(--e3)}.mer-stats .stat-valor{font-size:28px}}
+.mer-abas{display:flex;flex-wrap:wrap;gap:6px;padding:6px;margin-bottom:var(--e4);background:var(--painel);border:1px solid var(--linha);border-radius:var(--r-lg);width:fit-content;max-width:100%}
+.mer-aba{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px;border-radius:var(--r);border:0;background:transparent;color:var(--texto2);font:inherit;font-weight:600;cursor:pointer}
+.mer-aba:hover{color:var(--texto)}
+.mer-aba.on,.mer-aba[aria-pressed="true"]{background:var(--verde-esc);color:var(--verde-claro)}
+.mer-aba .n{background:var(--painel2);border-radius:var(--r-pill);padding:1px 8px;font-size:12px}
+.mer-aba.on .n{background:var(--verde);color:#08150d}
+.mer-filtros{display:flex;flex-direction:column;gap:var(--e4)}
+.mer-linha{display:flex;flex-wrap:wrap;gap:var(--e4);align-items:flex-end}
+.mer-linha .art-campo{min-width:150px}
+.mer-pos{min-width:0}
+.mer-busca{flex:1 1 260px}
+.mer-busca .busca{width:100%}
+.mer-resumo{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--e2) var(--e4);font-size:13px;margin-bottom:var(--e3)}
+.btn.emp{background:#1f3f73;color:#dbe8ff;border-color:#2f5a9e}
+.mercado .c-sit{max-width:none}
+@media(max-width:799px){.tabela-jogadores.mercado{min-width:0}.mercado .c-sit{order:3;flex-basis:100%}}
+.sit-tags{display:flex;flex-wrap:wrap;gap:4px}
+.sit-txt{display:block;font-size:11.5px;line-height:1.35;color:var(--muted);margin-top:3px}
+.clubes-mercado{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(min(240px,100%),1fr))}
+.clube-mercado{display:flex;align-items:center;gap:var(--e3);margin:0;text-align:left;font:inherit;color:var(--texto);cursor:pointer}
+.clube-mercado:hover{border-color:var(--verde)}
+.clube-mercado>span{display:flex;flex-direction:column;min-width:0}
+@media(min-width:800px){
+  .mercado td.c-sit{white-space:normal;min-width:170px;max-width:230px}
+  .mercado .c-acoes .acoes{flex-direction:row;flex-wrap:wrap;justify-content:flex-end}
+  .mercado .c-nome{min-width:150px}
+  .mercado .jogador>div{flex-direction:column;align-items:flex-start;gap:0}
+  .mercado td,.mercado tbody th{padding:8px 6px}
+}
+@media(min-width:800px) and (max-width:1499px){.mercado .c-sal,.mercado thead th:nth-child(7){display:none}}
 /* ---- Artilharia (#184) ---- */
 .art-selects{display:flex;flex-wrap:wrap;gap:var(--e4);padding-bottom:var(--e4);margin-bottom:var(--e4);border-bottom:1px solid var(--linha2)}
 .art-campo{display:flex;flex-direction:column;gap:6px;min-width:170px}
