@@ -265,7 +265,7 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 /* #180: no computador, cada jogador numa linha só (nome, etiquetas e botões lado a lado), com fonte e espaços menores */
 @media(min-width:800px){
   .tabela-jogadores{min-width:0;font-size:12.5px}
-  .tabela-jogadores td,.tabela-jogadores tbody th{padding:3px 4px;white-space:nowrap}
+  .tabela-jogadores td,.tabela-jogadores tbody th{padding:3px 3px;white-space:nowrap}
   .tabela-jogadores tbody th{font-size:12.5px}
   .tabela-jogadores .c-pos{width:46px;padding-left:10px}
   .tabela-jogadores thead .c-nome,.tabela-jogadores tbody th{left:46px}
