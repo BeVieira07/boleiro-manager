@@ -1,5 +1,6 @@
 import { novoContrato } from './contratos.mjs';
 import { UM_ANO, loanOf, startLoan } from './emprestimos.mjs';
+import { clubeDe } from './estrangeiros.mjs';
 import { P, S, addFin, addNews, clubById, ehHumano, tec, tecnicos, userClub } from './estado.mjs';
 import { ensureSquad } from './partida.mjs';
 import { money, pick, rnd } from './utils.mjs';
@@ -7,7 +8,7 @@ import { money, pick, rnd } from './utils.mjs';
 /* ================= transferências ================= */
 // emprestimo: ida ou volta de empréstimo, que não mexe no contrato com o clube dono (#49)
 export function movePlayer(p,to,emprestimo=false){
-  const from=clubById(p.clubId);from.players=from.players.filter(x=>x!==p);
+  const from=clubeDe(p.clubId);from.players=from.players.filter(x=>x!==p); // #172: o clube de origem pode ser estrangeiro
   if(from.lineup)from.lineup=from.lineup.filter(id=>id!==p.id);
   to.players.push(p);p.clubId=to.id;p.listed=false;delete p.emprestar;if(!emprestimo)novoContrato(p);
   for(const t of tecnicos())t.offers=t.offers.filter(o=>o.pid!==p.id);
@@ -15,7 +16,7 @@ export function movePlayer(p,to,emprestimo=false){
 }
 // regra: pode fazer proposta por este jogador agora? (texto do erro ou null)
 export function podeProporCompra(pid){
-  const p=P[pid],seller=clubById(p.clubId),uc=userClub();
+  const p=P[pid],seller=clubeDe(p.clubId),uc=userClub();
   if(loanOf(pid))return `${p.name} está emprestado ao ${seller.name}: o contrato é com o clube de origem.`; // #117
   if(p.bidRound===S.round+'_'+S.season)return `${seller.name} não quer negociar ${p.name} de novo nesta rodada.`;
   if(uc.players.length>=32)return 'Seu elenco já tem 32 jogadores. Venda alguém antes.';
@@ -23,7 +24,7 @@ export function podeProporCompra(pid){
 }
 // regra: proposta de compra a um clube da IA. Devolve {erro} ou {ok, msg}.
 export function proporCompra(pid,amt){
-  const p=P[pid],seller=clubById(p.clubId),uc=userClub();
+  const p=P[pid],seller=clubeDe(p.clubId),uc=userClub();
   const e=podeProporCompra(pid);if(e)return {erro:e};
   if(!(amt>0))return {erro:'Valor inválido.'};
   if(amt>userClub().balance)return {erro:'Caixa insuficiente.'};
@@ -40,7 +41,7 @@ export function proporCompra(pid,amt){
   addNews(`❌ ${seller.name} recusou ${money(amt)} por ${p.name}.`);return {ok:false,msg:`${seller.name} recusou a proposta.`};
 }
 // #103: o caixa do clube da IA acompanha os negócios com o técnico
-const caixaIA=(c,v)=>{if(!ehHumano(c))c.balance=Math.round((c.balance+v)*1000)/1000};
+const caixaIA=(c,v)=>{if(!ehHumano(c)&&c.balance!=null)c.balance=Math.round((c.balance+v)*1000)/1000};
 // regras de venda: devolvem {erro} ou {ok}. Emprestado não se vende: o contrato é com o clube de origem (#117)
 const emprestado=pid=>loanOf(pid)?{erro:`${P[pid].name} está emprestado: só o clube de origem pode negociá-lo.`}:null;
 export function aceitarOferta(oid){

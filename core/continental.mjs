@@ -1,7 +1,8 @@
 /* ================= Libertadores e Sul-Americana (#133, #134) =================
    Os brasileiros se classificam pela Série A (e pela Copa do Brasil) e completam 32 vagas com clubes estrangeiros reais
    (core/dados-continentais.mjs, da API-Football). Os estrangeiros são só da IA e só disputam estas copas: ficam em
-   S.continentais.estrangeiros, nunca em S.clubs, então não aparecem na escolha de clube, no mercado nem nas tabelas.
+   S.continentais.estrangeiros, nunca em S.clubs, então não aparecem na escolha de clube nem nas tabelas. Os jogadores
+   deles estão em P e no mercado (#172, core/estrangeiros.mjs); quem foi comprado ou emprestado sai do elenco estrangeiro.
    S.continentais = {temporada, datas, estrangeiros: {id: clube}, torneios: [torneio]}; datas[k] = rodada da liga do jogo k
    (6 de grupos, ida e volta de oitavas, quartas e semi, e a final em jogo único: 13 datas, as mesmas nas duas copas).
    torneio = {id, nome, grupos: [[4 ids]], rodadas: [[{h, a, hg, ag}]] (6 datas), fases: [{jogos: [{h, a, ida, volta, pen, v}]}],
@@ -10,7 +11,8 @@
    Estado de antes da #133 não tem S.continentais: as copas começam na temporada seguinte. */
 import { DADOS_CONTINENTAIS } from './dados-continentais.mjs';
 import { aplicarConfianca } from './diretoria.mjs';
-import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, divOf, ehHumano, table, tecDoClube } from './estado.mjs';
+import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, divOf, ehHumano, reindex, table, tecDoClube } from './estado.mjs';
+import { prepararEstrangeiro } from './estrangeiros.mjs';
 import { pickScorer, power } from './motor.mjs';
 import { golsSegmento, taticaDe } from './taticas.mjs';
 import { clamp, money, poisson, rnd, shuffle } from './utils.mjs';
@@ -52,11 +54,23 @@ export function criarContinentais(vagas) {
   const R = S.fixtures.length;
   if (!CONTINENTAIS.ligados || !vagas || R < DATAS + 1) { S.continentais = null; return }
   const estrangeiros = {}, torneios = [];
+  // quem já joga no Brasil (comprado ou emprestado) não volta ao elenco estrangeiro; cada jogador existe uma vez só
+  const vistos = new Set(S.clubs.flatMap(c => [...c.players, ...(c.base || [])].map(p => p.id)));
+  // clube estrangeiro com jogador emprestado fora fica no jogo (mesmo sem a edição nova) para o jogador voltar a ele
+  const antigos = S.continentais ? S.continentais.estrangeiros : {};
+  for (const id of Object.keys(antigos)) if ((S.loans || []).some(l => l.from === id)) estrangeiros[id] = antigos[id];
   for (const cfg of TORNEIOS) {
     const br = vagas[cfg.id].filter(id => clubById(id)), fora = DADOS_CONTINENTAIS.clubs.filter(c => c.torneio === cfg.id)
       .sort((a, b) => b.strength - a.strength || (a.id < b.id ? -1 : 1)).slice(0, VAGAS - br.length);
     if (br.length + fora.length < VAGAS) continue;
-    for (const c of fora) estrangeiros[c.id] = JSON.parse(JSON.stringify(c));
+    for (const c of fora) {
+      if (!estrangeiros[c.id]) {
+        const novo = JSON.parse(JSON.stringify(c));
+        novo.players = novo.players.filter(p => !vistos.has(p.id) && vistos.add(p.id));
+        estrangeiros[c.id] = novo;
+      }
+      for (const p of estrangeiros[c.id].players) vistos.add(p.id);
+    }
     // um brasileiro por grupo (enquanto der), o resto sorteado
     const grupos = Array.from({ length: GRUPOS }, () => []), resto = shuffle(fora.map(c => c.id));
     shuffle([...br]).forEach((id, i) => grupos[i % GRUPOS].push(id));
@@ -64,6 +78,7 @@ export function criarContinentais(vagas) {
     torneios.push({ id: cfg.id, nome: cfg.nome, grupos, rodadas: grupoJogos(grupos), fases: [], final: null, campeao: null, gols: {} });
   }
   S.continentais = torneios.length ? { temporada: S.season, datas: Array.from({ length: DATAS }, (_, k) => Math.floor((k + 1) * R / (DATAS + 1))), estrangeiros, torneios } : null;
+  if (S.continentais) { for (const c of Object.values(S.continentais.estrangeiros)) prepararEstrangeiro(c); reindex() }
 }
 
 /** Classificação de um grupo (só jogos feitos). */
