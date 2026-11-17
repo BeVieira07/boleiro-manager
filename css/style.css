@@ -113,7 +113,7 @@ input[type=checkbox]{min-height:0;width:18px;height:18px;accent-color:var(--verd
 .busca:focus-within,label.btn:focus-within{box-shadow:var(--foco)}
 
 /* ---------- escudo ---------- */
-.crest{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;vertical-align:middle;object-fit:contain;background:var(--painel2);flex:none}
+.crest{width:28px;height:28px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;vertical-align:middle;object-fit:contain;background:var(--painel2);flex:none}
 .crest.g{width:68px;height:68px;font-size:18px}
 .crest.m{width:40px;height:40px;font-size:12px}
 img.crest{border-radius:0;background:none} /* #101: o escudo aparece inteiro; o círculo colorido é só da sigla (span.crest) */
@@ -226,7 +226,7 @@ body.em-jogo .conteudo{max-width:1280px;padding:0 28px 40px}
 .tabela-jogadores tr.indisp td{opacity:.85}
 th button.ordem{appearance:none;background:none;border:0;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer;display:inline-flex;gap:4px;align-items:center;padding:6px 2px;border-radius:4px}
 th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
-.seta{font-size:9px;min-width:8px}
+.seta{font-size:11px;min-width:8px}
 .tabela-jogadores .c-nome{min-width:190px}
 .jogador{display:flex;align-items:center;gap:10px}
 .jogador>div{display:flex;flex-direction:column;line-height:1.3;white-space:normal;min-width:0}
@@ -273,7 +273,7 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
   .tabela-jogadores th button.ordem{padding:4px 1px}
   .jogador{gap:6px}
   .jogador>div{flex-direction:row;align-items:center;gap:6px;white-space:nowrap}
-  .tabela-jogadores .camisa{width:22px;height:22px;font-size:10px}
+  .tabela-jogadores .camisa{width:22px;height:22px;font-size:11px}
   .tabela-jogadores .c-energia .barra{width:36px}
   .tabela-jogadores .c-pot .estrelas{font-size:11px;letter-spacing:0}
   .tabela-jogadores .acoes{gap:4px}
