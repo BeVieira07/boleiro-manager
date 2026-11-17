@@ -47,18 +47,18 @@ export function vConfig() {
   const p = prefs(), opcoes = (lista, atual) => lista.map(([v, r]) => `<option value="${v}"${v === atual ? ' selected' : ''}>${r}</option>`).join('');
   const marca = (chave, rotulo, ligado) => `<label class="opcao"><input type="checkbox" data-mudar="mudarPref|${chave}"${ligado ? ' checked' : ''}>${esc(rotulo)}</label>`;
   return `${S ? '' : '<h1>Configurações</h1>'}<div class="config">
-  <section class="card"><h3>Jogo ao vivo</h3>
+  <section class="card"><h2 class="t3">Jogo ao vivo</h2>
    <div class="config-campo"><label for="cfgVelocidade">Velocidade</label>
     <select id="cfgVelocidade" data-mudar="mudarPref|velocidade">${opcoes([['lenta', 'Lenta'], ['normal', 'Normal'], ['rapida', 'Rápida']], p.velocidade)}</select></div>
    <div class="config-campo"><label for="cfgAoVivo">Ver os jogos do seu clube ao vivo</label>
     <select id="cfgAoVivo" data-mudar="mudarPref|aoVivo">${opcoes([['sempre', 'Sempre'], ['decisivos', 'Só os decisivos'], ['nunca', 'Nunca (direto para o resultado)']], p.aoVivo)}</select>
     <p class="muted">Decisivos: contra um dos 4 primeiros da tabela, ou nas 5 últimas rodadas. Vale também para o replay da liga.</p></div>
   </section>
-  <section class="card"><h3>Confirmações</h3>
+  <section class="card"><h2 class="t3">Confirmações</h2>
    ${marca('confirmar', 'Pedir confirmação na venda rápida, na venda de jovens da base e ao simular até o fim', p.confirmar)}
    <p class="muted">Excluir um jogo salvo sempre pede confirmação.</p>
   </section>
-  <section class="card"><h3>Notícias no Painel do clube</h3>
+  <section class="card"><h2 class="t3">Notícias no Painel do clube</h2>
    <fieldset class="config-grupo"><legend class="sr">Categorias de notícias que aparecem</legend>
     ${Object.entries(CATEGORIAS).map(([k, r]) => marca('noticias.' + k, r, p.noticias[k])).join('')}</fieldset>
   </section>

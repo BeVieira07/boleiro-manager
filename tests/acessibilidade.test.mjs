@@ -47,3 +47,24 @@ test('link para pular o menu, idioma da página e regras de toque e movimento', 
   assert.match(css, /:focus-visible\{outline:0;box-shadow:var\(--foco\)\}/);
   assert.match(css, /prefers-reduced-motion:reduce/);
 });
+
+test('títulos de cada tela: um só h1 e nenhum salto de nível (#201)', () => {
+  const j = carregarJogo({ boot: true, estaduais: true, continentais: true });
+  j.run(`newGame('${clubeDaSerie(j, 'A', 0)}')`);
+  const telas = [...new Set([...TELAS, 'estadual', 'libertadores', 'sulamericana'])];
+  const ruins = [];
+  for (const t of telas) {
+    j.run(`go('${t}')`);
+    const niveis = [...j.html().matchAll(/<h([1-4])[\s>]/g)].map(m => +m[1]);
+    if (niveis.filter(n => n === 1).length !== 1) ruins.push(`${t}: ${niveis.filter(n => n === 1).length} títulos h1`);
+    for (let i = 1; i < niveis.length; i++) if (niveis[i] - niveis[i - 1] > 1) { ruins.push(`${t}: h${niveis[i - 1]} → h${niveis[i]}`); break }
+  }
+  assert.deepEqual(ruins, []);
+});
+
+test('o título h2 de seção (.t3) herda o visual do antigo h3 no CSS', () => {
+  const css = readFileSync(new URL('../css/style.css', import.meta.url), 'utf8');
+  assert.match(css, /\nh3,\.t3\{/);
+  assert.match(css, /\.card-topo h3,\.card-topo \.t3\{margin:0\}/);
+  assert.match(css, /\.card\.tabela-card>h3,\.card\.tabela-card>\.t3,/);
+});

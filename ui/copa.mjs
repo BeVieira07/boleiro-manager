@@ -20,18 +20,18 @@ function confronto(j, me) {
 export function jogosCopa(r) {
   const q = copaNaRodada(r); if (!q || S.copa.fases.length <= q.fase) return '';
   const me = tec().clubId, jogos = [...S.copa.fases[q.fase].jogos].sort((a, b) => (b.h === me || b.a === me) - (a.h === me || a.a === me));
-  return `<section class="fase-copa"><div class="card-topo"><h3>${COPA} · ${q.nome} (${q.volta ? 'volta' : 'ida'})</h3><button class="btn fantasma sm" data-acao="go|copa">Ver o chaveamento</button></div>
+  return `<section class="fase-copa"><div class="card-topo"><h2 class="t3">${COPA} · ${q.nome} (${q.volta ? 'volta' : 'ida'})</h2><button class="btn fantasma sm" data-acao="go|copa">Ver o chaveamento</button></div>
     <ul class="jogos">${jogos.map(j => confronto(j, me)).join('')}</ul></section>`;
 }
 
 export function vCopa() {
   const copa = S.copa, me = tec().clubId;
-  if (!copa) return `<section class="card"><h3>${COPA}</h3><p class="muted">Não há copa nesta temporada. Ela começa na próxima.</p></section>`;
+  if (!copa) return `<section class="card"><h2 class="t3">${COPA}</h2><p class="muted">Não há copa nesta temporada. Ela começa na próxima.</p></section>`;
   const meu = confrontoDe(me), vivo = meu && (!meu.v || meu.v === me);
   const situacao = copa.campeao ? `Campeão: <b>${esc(clubById(copa.campeao).name)}</b>.` : vivo ? `Seu clube está na ${nomeFase(copa.fases[copa.fases.length - 1]).toLowerCase()}.` : 'Seu clube não está mais na copa.';
   const fases = copa.fases.map((f, i) => {
     const ida = copa.datas[2 * i] + 1, volta = copa.datas[2 * i + 1] + 1, n = f.jogos.length;
-    return `<section class="fase-copa"><div class="card-topo"><h3>${nomeFase(f)}</h3><span class="muted">Ida na rodada ${ida}, volta na rodada ${volta} · ${n === 1 ? 'título' : 'quem passa'}: ${money(PREMIO_COPA[n] ?? 0.3)}</span></div>
+    return `<section class="fase-copa"><div class="card-topo"><h2 class="t3">${nomeFase(f)}</h2><span class="muted">Ida na rodada ${ida}, volta na rodada ${volta} · ${n === 1 ? 'título' : 'quem passa'}: ${money(PREMIO_COPA[n] ?? 0.3)}</span></div>
       <ul class="jogos">${[...f.jogos].sort((a, b) => (b.h === me || b.a === me) - (a.h === me || a.a === me)).map(j => confronto(j, me)).join('')}</ul></section>`;
   }).reverse().join('');
   return `<p><button class="btn fantasma sm" data-acao="go|competicoes">← Competições</button></p><p class="muted resumo">Mata-mata em ida e volta, jogado junto com rodadas da liga, com a escalação e a tática da rodada. Empate na soma dos dois jogos vai para os pênaltis. ${situacao}</p>${fases}`;

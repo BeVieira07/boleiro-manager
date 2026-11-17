@@ -41,7 +41,7 @@ export function vLoans(){
   const uc=userClub(),inn=loansIn(uc),out=loansOut(uc);
   if(!inn.length&&!out.length)return '';
   const row=(l,isIn)=>{const p=P[l.pid];return `<tr><td><span class="pos ${p.pos}">${posDSigla(p)}</span> ${esc(p.name)}</td><td class="n ovr">${p.ovr}</td><td>${isIn?'de '+esc(clubeDe(l.from).name):'para '+esc(clubById(l.to).name)}</td><td>${fimTxt(l)} (${loanLeft(l)} rod.)</td><td>Salário: ${salarioTxt(l)}</td><td>${l.buy?'Opção de compra '+money(l.buy)+(isIn?` <button class="btn sm" data-acao="buyLoaned|${l.pid}">Comprar</button>`:''):'Sem opção de compra'}</td></tr>`};
-  return `<div class="card tw"><h3>Empréstimos</h3>
+  return `<div class="card tw"><h2 class="t3">Empréstimos</h2>
    ${inn.length?`<p class="muted">Emprestados ao meu clube</p><table>${inn.map(l=>row(l,true)).join('')}</table>`:''}
    ${out.length?`<p class="muted">Emprestados pelo meu clube</p><table>${out.map(l=>row(l,false)).join('')}</table>`:''}</div>`;
 }

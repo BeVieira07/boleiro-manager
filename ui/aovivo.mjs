@@ -152,7 +152,7 @@ function htmlControles(v) {
   const reservas = banco(v.g).sort((a, b) => !a.motivo - !b.motivo || b.p.ovr - a.p.ovr);
   return `<div class="tatica-vivo" id="ltat">${chipsTaticaAoVivo()}</div>
     <div class="chips" role="group" aria-label="Formação"><span class="muted">Formação</span>${Object.keys(FORMS).map(f => chip(f, `avFormacao|${f}`, f === form)).join('')}</div>
-    <section class="trocas" aria-label="Substituições"><div class="card-topo"><h3>Substituições</h3><span class="muted">${feitas} de ${MAX_TROCAS}</span></div>
+    <section class="trocas" aria-label="Substituições"><div class="card-topo"><h2 class="t3">Substituições</h2><span class="muted">${feitas} de ${MAX_TROCAS}</span></div>
       <p class="muted dica" aria-live="polite">${dica}</p>
       <div class="trocas-listas">
         ${campoHtml(uc, { acao: 'avSair', sel: v.sel, bloqueado: cheio, mini: true })}
@@ -189,13 +189,13 @@ function htmlRodada(v) {
   if (comp === 'copa') {
     const fase = S.copa.fases[copa.fase];
     const aJogar = j => `<li class="jogo${j.h === me || j.a === me ? ' meu' : ''}"><span class="jogo-time casa">${esc(clubById(j.h).name)} ${crest(clubById(j.h))}</span><span class="jogo-placar"><span class="muted">x</span></span><span class="jogo-time fora">${crest(clubById(j.a))} ${esc(clubById(j.a).name)}</span></li>`;
-    const lista = v.fim || !fase ? jogosCopa(v.rodada) : `<section class="fase-copa"><div class="card-topo"><h3>${COPA} · ${copa.nome} (${copa.volta ? 'volta' : 'ida'})</h3></div>
+    const lista = v.fim || !fase ? jogosCopa(v.rodada) : `<section class="fase-copa"><div class="card-topo"><h2 class="t3">${COPA} · ${copa.nome} (${copa.volta ? 'volta' : 'ida'})</h2></div>
       <p class="muted">O resultado da copa aparece quando a rodada termina.</p><ul class="jogos">${[...fase.jogos].sort(meusPrimeiro(me)).map(aJogar).join('')}</ul></section>`;
-    return `<h3>Outros jogos</h3>${comps}${lista}`;
+    return `<h2 class="t3">Outros jogos</h2>${comps}${lista}`;
   }
   const gs = v.jogos.filter(g => divOf(clubById(g.h)) === v.div).sort(meusPrimeiro(me));
   // #170: uma linha por jogo, com o último lance embaixo
-  return `<h3>Jogos da rodada</h3>${comps}${serieChips(v)}<ul class="rodada-lista">${gs.map(g => {
+  return `<h2 class="t3">Jogos da rodada</h2>${comps}${serieChips(v)}<ul class="rodada-lista">${gs.map(g => {
     const p = placarNoMinuto(g, v.min), H = clubById(g.h), A = clubById(g.a), lance = lanceTxt(g, v.min);
     return `<li class="linha-jogo${g.h === me || g.a === me ? ' meu' : ''}"><span class="jogo-time casa">${esc(H.name)} ${crest(H)}</span><span class="linha-placar">${p.h}<span aria-hidden="true"> x </span><span class="sr"> a </span>${p.a}</span><span class="jogo-time fora">${crest(A)} ${esc(A.name)}</span>${lance ? `<span class="linha-lance">${lance}</span>` : ''}</li>`;
   }).join('')}</ul>`;
@@ -206,7 +206,7 @@ function htmlClassif(v) {
     const d = antes.indexOf(id) - i;
     return d > 0 ? `<span class="ok">${icone('subir', { tam: 12, rotulo: `subiu ${d}` })}</span>` : d < 0 ? `<span class="bad">${icone('descer', { tam: 12, rotulo: `caiu ${-d}` })}</span>` : '';
   };
-  return `<h3>Classificação provisória</h3>${serieChips(v)}<section class="card tabela-card"><div class="tw"><table><caption class="sr">Classificação da ${DIVS[v.div]} no minuto ${v.min}</caption>
+  return `<h2 class="t3">Classificação provisória</h2>${serieChips(v)}<section class="card tabela-card"><div class="tw"><table><caption class="sr">Classificação da ${DIVS[v.div]} no minuto ${v.min}</caption>
     <thead><tr><th scope="col">#</th><th scope="col"><span class="sr">Variação</span></th><th scope="col">Clube</th><th scope="col" class="n">J</th><th scope="col" class="n">SG</th><th scope="col" class="n">Pts</th></tr></thead>
     <tbody>${T.map((t, i) => { const c = clubById(t.id); return `<tr class="${t.id === me ? 'me' : ''}"><td>${i + 1}</td><td>${mov(t.id, i)}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n">${t.J}</td><td class="n">${t.GP - t.GC}</td><td class="n"><b>${t.Pts}</b></td></tr>` }).join('')}</tbody>
   </table></div></section>`;

@@ -104,13 +104,13 @@ export function vLigas() {
       <td><button class="btn sm" data-acao="abrirLobby|${esc(l.id)}">Abrir</button>${l.status === 'andamento' ? ` <button class="btn sm" data-acao="entrarNaLiga|${esc(l.id)}">Jogar</button>` : ''}</td></tr>`;
   }).join('');
   return `<div class="menu-ini"><h2>Ligas com amigos</h2>
-  <div class="card tw"><h3>Minhas ligas</h3>
+  <div class="card tw"><h2 class="t3">Minhas ligas</h2>
    ${liga.erro ? `<p class="bad">${esc(liga.erro)}</p>` : !liga.lista ? '<p class="muted">Carregando…</p>' : linhas ? `<table>${linhas}</table>` : '<p class="muted">Você ainda não está em nenhuma liga.</p>'}
   </div>
-  <div class="card"><h3>Entrar com código</h3><div class="row">
+  <div class="card"><h2 class="t3">Entrar com código</h2><div class="row">
    <input id="codigoLiga" aria-label="Código de convite" placeholder="Código de convite" maxlength="12" style="width:160px;text-transform:uppercase">
    <button class="btn" data-acao="entrarLiga">Entrar</button></div></div>
-  <div class="card"><h3>Criar liga</h3><div class="row">
+  <div class="card"><h2 class="t3">Criar liga</h2><div class="row">
    <input id="nomeLiga" aria-label="Nome da liga" placeholder="Nome da liga" maxlength="60" style="width:220px">
    ${SERIES.map(s => `<label><input type="checkbox" id="serieLiga${s}"${s === 'A' ? ' checked' : ''}> Série ${s}</label>`).join(' ')}
    <select id="clubeLiga" aria-label="Seu clube"><option value="">Seu clube…</option>${opcoesClubes(SERIES)}</select>
@@ -133,7 +133,7 @@ export function vLobby() {
   return `<div class="menu-ini"><h2>${esc(l.nome)}</h2>
   <div class="card row"><span>Código de convite: <b style="font-size:1.3em;letter-spacing:2px">${esc(l.codigo_convite)}</b></span>
    <span class="muted">Séries ${l.series.join(', ')} · ${STATUS[l.status] || esc(l.status)}</span></div>
-  <div class="card tw"><h3>Técnicos (${l.membros.length})</h3><table>${membros}</table></div>
+  <div class="card tw"><h2 class="t3">Técnicos (${l.membros.length})</h2><table>${membros}</table></div>
   ${meu && l.status === 'aberta' ? `<div class="card row"><span>Seu clube:</span>
    <select aria-label="Seu clube" data-mudar="escolherClubeLiga|${esc(l.id)}"><option value="">Escolha…</option>${opcoesClubes(l.series, ocupados, meu.club_id)}</select></div>` : ''}
   ${acaoLiga(l, eu)}
