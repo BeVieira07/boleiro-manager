@@ -81,6 +81,7 @@ export const cartaoEstadual = {
       if (g) proximo = { rot: 'Rod.', n: d + 1, nomeAdv: clubById(g.h === me ? g.a : g.h).name, perna: g.final === 'ida' ? 'ida' : g.final === 'volta' ? 'volta' : '', ordem: d - 1000 };
     }
     const sigla = tor.nome.normalize('NFD').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase();
-    return { sigla, tom: 'erro', fase: tor.campeao ? 'Encerrado' : f ? 'Final em ida e volta' : 'Fase de grupos · em andamento', destaque, status, proximo, botao: 'Tabela' };
+    return { sigla, tom: 'erro', fase: tor.campeao ? 'Encerrado' : f ? 'Final em ida e volta' : 'Fase de grupos · em andamento', destaque, status, proximo, botao: 'Tabela',
+      semProximo: tor.campeao ? 'Competição encerrada' : 'Seu clube foi eliminado' };
   }
 };
