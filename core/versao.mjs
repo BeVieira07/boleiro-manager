@@ -10,6 +10,7 @@ import { migrarContratos } from './contratos.mjs';
 import { DADOS_PADRAO } from './dados-padrao.mjs';
 import { migrarDiretoria } from './diretoria.mjs';
 import { migrarTecnicos, reindex, usarEstado } from './estado.mjs';
+import { limparEventosAntigos } from './aovivo.mjs';
 import { prepararEstrangeiro } from './estrangeiros.mjs';
 import { migrarPosicoes, simplificarPosicoes } from './posicoes.mjs';
 import { novaSemente } from './utils.mjs';
@@ -26,7 +27,8 @@ const MIGRACOES = [
   s => { const uf = Object.fromEntries(DADOS_PADRAO.clubs.map(c => [c.id, c.uf])); for (const c of s.clubs) if (!c.uf && uf[c.id]) c.uf = uf[c.id] }, // 9: estado de cada clube (#132); os estaduais começam na temporada seguinte
   s => { for (const c of s.clubs) for (const p of [...c.players, ...(c.base || [])]) if (p.energia == null) p.energia = 100 }, // 10: energia dos jogadores (#136)
   s => { for (const c of s.clubs) for (const p of [...c.players, ...(c.base || [])]) delete p.ps }, // 11: sem posição secundária (#181)
-  s => { if (s.continentais) for (const c of Object.values(s.continentais.estrangeiros)) prepararEstrangeiro(c) } // 12: jogadores dos clubes estrangeiros no mercado (#172)
+  s => { if (s.continentais) for (const c of Object.values(s.continentais.estrangeiros)) prepararEstrangeiro(c) }, // 12: jogadores dos clubes estrangeiros no mercado (#172)
+  s => limparEventosAntigos(s.formaPendente ? s.formaPendente.r : s.round) // 13: apaga os lances das rodadas antigas, que o save carregava à toa (#195)
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 
