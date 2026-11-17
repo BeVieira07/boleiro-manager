@@ -37,6 +37,16 @@ export function energiaDepois(p, jogos, fad = 0.02) {
   return Math.round(clamp(e, 0, ENERGIA_MAX) * 10) / 10;
 }
 
+/** #198: troca ao vivo no minuto `min` (core/substituicoes.mjs). A rodada já gastou o jogo inteiro do titular e deu folga a quem
+ *  estava no banco; aqui se acerta pelos minutos de cada um: quem sai recupera a parte que não jogou, quem entra paga a que jogou. */
+export function energiaDaTroca(sai, entra, min, clube) {
+  const f = clamp((93 - min) / 93, 0, 1), fad = fadDe(clube), k = p => RECUPERA * idadeRecupera(p.age);
+  const ajusta = (p, delta) => { p.energia = Math.round(clamp(energiaDe(p) + delta, 0, ENERGIA_MAX) * 10) / 10 };
+  // f = o que faltava do jogo na troca: quem sai deixa de jogar f, quem entra joga f
+  ajusta(sai, f * ((1 - k(sai)) * gastoPorJogo(sai, fad) + DESCANSO));
+  ajusta(entra, -f * (DESCANSO + (1 - k(entra)) * gastoPorJogo(entra, fad)));
+}
+
 /** Fim de uma rodada. `jogaram` = Map clube -> {xi: ids dos titulares, jogos}; clube que não está nele descansou. */
 export function atualizarEnergia(jogaram) {
   for (const c of S.clubs) {
