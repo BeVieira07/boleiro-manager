@@ -1,4 +1,4 @@
-import { S, clubById, divOf } from './estado.mjs';
+import { S, contarJogo, divOf, linhaDaTabela, ordenarTabela } from './estado.mjs';
 import { hashStr, mulberry32 } from './utils.mjs';
 
 /* ================= o campeonato inteiro no mesmo relógio (#135) =================
@@ -13,15 +13,10 @@ export function placarNoMinuto(g, min) {
 /** Classificação da série `div` com as rodadas antes de `rodada` (índice) mais os `jogos` dela até o minuto `min`. */
 export function tabelaNoMinuto(div, rodada, jogos, min) {
   const T = {};
-  for (const c of S.clubs) if (divOf(c) === div) T[c.id] = { id: c.id, J: 0, V: 0, E: 0, D: 0, GP: 0, GC: 0, Pts: 0 };
-  const conta = (g, gh, ga) => {
-    const h = T[g.h], a = T[g.a]; if (!h || !a) return;
-    h.J++; a.J++; h.GP += gh; h.GC += ga; a.GP += ga; a.GC += gh;
-    if (gh > ga) { h.V++; a.D++; h.Pts += 3 } else if (gh < ga) { a.V++; h.D++; a.Pts += 3 } else { h.E++; a.E++; h.Pts++; a.Pts++ }
-  };
-  for (let r = 0; r < rodada; r++) for (const g of S.fixtures[r]) if (g.hg != null) conta(g, g.hg, g.ag);
-  for (const g of jogos) { const p = placarNoMinuto(g, min); conta(g, p.h, p.a) }
-  return Object.values(T).sort((x, y) => y.Pts - x.Pts || y.V - x.V || (y.GP - y.GC) - (x.GP - x.GC) || y.GP - x.GP || clubById(x.id).name.localeCompare(clubById(y.id).name));
+  for (const c of S.clubs) if (divOf(c) === div) T[c.id] = linhaDaTabela(c.id);
+  for (let r = 0; r < rodada; r++) for (const g of S.fixtures[r]) if (g.hg != null) contarJogo(T, g.h, g.a, g.hg, g.ag);
+  for (const g of jogos) { const p = placarNoMinuto(g, min); contarJogo(T, g.h, g.a, p.h, p.a) }
+  return ordenarTabela(T);
 }
 
 /* ---------- estatísticas do jogo (#170): só para a tela ----------

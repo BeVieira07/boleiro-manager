@@ -116,15 +116,21 @@ export function makeAllFixtures(clubs){
   const n=Math.max(...per.map(f=>f.length));
   return Array.from({length:n},(_,r)=>per.flatMap(f=>f[r]||[]));
 }
+/* Classificação de uma série (#199): a conta de cada jogo e o critério de desempate ficam num lugar só, usado pela tabela real
+   (table) e pela provisória do ao vivo (tabelaNoMinuto, core/aovivo.mjs). Pontos, vitórias, saldo, gols pró e nome. */
+export const linhaDaTabela=id=>({id,J:0,V:0,E:0,D:0,GP:0,GC:0,Pts:0});
+/** Conta um jogo de placar gh x ga entre h e a (linhas da tabela); ignora quem não está na tabela. */
+export function contarJogo(T,h,a,gh,ga){
+  const x=T[h],y=T[a];if(!x||!y)return;
+  x.J++;y.J++;x.GP+=gh;x.GC+=ga;y.GP+=ga;y.GC+=gh;
+  if(gh>ga){x.V++;y.D++;x.Pts+=3}else if(gh<ga){y.V++;x.D++;y.Pts+=3}else{x.E++;y.E++;x.Pts++;y.Pts++}
+}
+export const ordenarTabela=T=>Object.values(T).sort((x,y)=>y.Pts-x.Pts||y.V-x.V||(y.GP-y.GC)-(x.GP-x.GC)||y.GP-x.GP||clubById(x.id).name.localeCompare(clubById(y.id).name));
 export function table(div){
   div=div||divOf(userClub());
-  const T={};for(const c of S.clubs)if(divOf(c)===div)T[c.id]={id:c.id,J:0,V:0,E:0,D:0,GP:0,GC:0,Pts:0};
-  for(let r=0;r<S.round;r++)for(const g of S.fixtures[r]){
-    if(g.hg==null||!T[g.h])continue;const h=T[g.h],a=T[g.a];
-    h.J++;a.J++;h.GP+=g.hg;h.GC+=g.ag;a.GP+=g.ag;a.GC+=g.hg;
-    if(g.hg>g.ag){h.V++;a.D++;h.Pts+=3}else if(g.hg<g.ag){a.V++;h.D++;a.Pts+=3}else{h.E++;a.E++;h.Pts++;a.Pts++}
-  }
-  return Object.values(T).sort((x,y)=>y.Pts-x.Pts||y.V-x.V||(y.GP-y.GC)-(x.GP-x.GC)||y.GP-x.GP||clubById(x.id).name.localeCompare(clubById(y.id).name));
+  const T={};for(const c of S.clubs)if(divOf(c)===div)T[c.id]=linhaDaTabela(c.id);
+  for(let r=0;r<S.round;r++)for(const g of S.fixtures[r])if(g.hg!=null)contarJogo(T,g.h,g.a,g.hg,g.ag);
+  return ordenarTabela(T);
 }
 
 export function topScorers(n=20,div){return Object.values(P).filter(p=>p.goals>0&&(!div||divOf(clubById(p.clubId))===div)).sort((a,b)=>b.goals-a.goals||b.ovr-a.ovr).slice(0,n)}
