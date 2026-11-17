@@ -1,11 +1,18 @@
 /* ================= componentes do front (#56) =================
    Pedaços de HTML que várias telas usam. As classes estão em css/style.css e documentadas em docs/front.md. */
 import { energiaDe } from '../core/energia.mjs';
+import { ESTILOS, MODOS } from '../core/taticas.mjs';
 import { esc } from '../core/utils.mjs';
 
 /** Faixa do overall: alto (76+), médio (68–75) ou baixo. */
 export const faixaOvr = v => (v >= 76 ? 'alto' : v >= 68 ? 'medio' : 'baixo');
 export const ovrChip = (v, titulo = '') => `<span class="ovr ${faixaOvr(v)}"${titulo ? ` title="${esc(titulo)}"` : ''}>${v}</span>`;
+
+/** Dica sob o estilo e o modo (#202): só o que muda o jogo, sem repetir "Sem ajustes." quando os dois são equilibrados. */
+export function dicaTatica(t) {
+  const partes = [['estilo', ESTILOS], ['modo', MODOS]].filter(([c, M]) => M[t[c]] && t[c] !== 'equilibrado').map(([c, M]) => `${esc(M[t[c]].nome)}: ${esc(M[t[c]].desc)}`);
+  return partes.length ? partes.join(' ') : 'Estilo e modo equilibrados: sem ajustes.';
+}
 
 /** Barra de progresso; `pct` de 0 a 100. */
 export const barra = (pct, cor = '', classe = '') =>

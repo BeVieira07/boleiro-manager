@@ -9,7 +9,7 @@ import { DIVS, P, S, clubById, divOf, table, tec, userClub } from '../core/estad
 import { penalidadePosicao } from '../core/posicoes.mjs';
 import { ESTILOS, MODOS, taticaUser } from '../core/taticas.mjs';
 import { esc, money } from '../core/utils.mjs';
-import { chip, stat } from './componentes.mjs';
+import { chip, dicaTatica, stat } from './componentes.mjs';
 import { icone } from './icones.mjs';
 import { crest } from './partida.mjs';
 import { zonas } from './telas.mjs';
@@ -66,7 +66,7 @@ function proximoJogo(uc, T) {
       <div class="chips" role="group" aria-label="Modo"><span class="muted">Modo</span>${Object.entries(MODOS).map(([k, v]) => chip(v.nome, `tvPainel|modo|${k}`, t.modo === k)).join('')}</div>
       <div class="chips"><span class="muted">Formação</span><button type="button" class="chip on" data-acao="go|escalacao">${esc(uc.formation)} ${icone('seguir', { tam: 14 })}<span class="sr">mudar na Escalação</span></button></div>
     </div>
-    <p class="muted dica">${esc(ESTILOS[t.estilo].desc)} ${esc(MODOS[t.modo].desc)} Dá para mudar também durante a partida.</p>
+    <p class="muted dica">${dicaTatica(t)} Dá para mudar também durante a partida.</p>
   </section>`;
 }
 
