@@ -54,6 +54,7 @@ export const cartaoCopa = {
     const p = copa.campeao ? null : proximoJogo(me);
     const [destaque, status] = copa.campeao === me ? ['Campeão', ['Título conquistado', 'ok']] : copa.campeao ? ['Encerrada', ['Eliminado', 'erro']] : [nome, vivo ? ['Na disputa', 'ok'] : ['Eliminado', 'erro']];
     return { sigla: 'CDB', tom: 'aviso', fase: 'Mata-mata', destaque, status, botao: 'Chaveamento',
-      proximo: p && { rot: 'Rod.', n: p.rodada, nomeAdv: p.adv.name, perna: p.volta ? 'volta' : 'ida', ordem: p.rodada } };
+      proximo: p && { rot: 'Rod.', n: p.rodada, nomeAdv: p.adv.name, perna: p.volta ? 'volta' : 'ida', ordem: p.rodada },
+      semProximo: copa.campeao ? 'Competição encerrada' : 'Seu clube foi eliminado' };
   }
 };

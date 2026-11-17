@@ -3,7 +3,7 @@
    Uma competição nova entra só com a própria função de cartão (no arquivo dela) e uma linha em COMPETICOES: o menu não muda.
    Cada competição: { id, nome, tela (a tela que o botão principal abre), cartao() } e cartao() devolve
    { sigla, tom ('erro'|'info'|'aviso'|'ok'|''), fase, destaque?, status?: [texto, tipo], proximo?: { rot, n, adv, perna?, ordem },
-     botao ('Tabela'...), acoes?: [[rótulo, 'ação|arg'], ...] }
+     semProximo? (por que não há próximo jogo: 'Competição encerrada', 'Seu clube foi eliminado'...), botao ('Tabela'...), acoes?: [[rótulo, 'ação|arg'], ...] }
    ou, se o clube não está nela, { sigla, tom, fora: 'motivo (HTML já escapado)' }. */
 import { DIVS, S, clubById, divOf, table, userClub } from '../core/estado.mjs';
 import { emPreTemporada } from '../core/estadual.mjs';
@@ -26,7 +26,7 @@ const brasileirao = {
     return {
       sigla: 'BRA', tom: 'info', fase: `${DIVS[d]} · ${fim ? 'encerrado' : `rodada ${S.round + 1} de ${total}`}`,
       destaque: S.round ? `${pos}º de ${T.length}` : '—', status,
-      proximo: g ? { rot: 'Rod.', n: S.round + 1, nomeAdv: clubById(g.h === uc.id ? g.a : g.h).name, ordem: S.round + 1 } : null,
+      proximo: g ? { rot: 'Rod.', n: S.round + 1, nomeAdv: clubById(g.h === uc.id ? g.a : g.h).name, ordem: S.round + 1 } : null, semProximo: 'Temporada encerrada',
       botao: 'Tabela', acoes: [['Artilharia', 'go|artilharia']]
     };
   }
@@ -41,7 +41,7 @@ const textoProximo = p => `${esc(p.rot)} ${p.n} · x ${esc(p.nomeAdv)}${p.perna 
 const linha = (c, d) => `<div class="comp-linha"><span class="sigla ${d.tom || ''}" aria-hidden="true">${esc(d.sigla)}</span>
   <div class="comp-nome"><b>${esc(c.nome)}</b><span class="muted">${esc(d.fase)}</span></div>
   <div class="comp-situacao">${d.destaque ? `<span class="destaque-num">${esc(d.destaque)}</span>` : ''}${d.status ? tag(d.status[0], d.status[1]) : ''}</div>
-  <div class="comp-proximo"><span class="rotulo">Próximo jogo</span><b>${d.proximo ? textoProximo(d.proximo) : 'Ainda sem jogos'}</b></div>
+  <div class="comp-proximo"><span class="rotulo">Próximo jogo</span><b>${d.proximo ? textoProximo(d.proximo) : esc(d.semProximo || 'Sem mais jogos')}</b></div>
   <div class="comp-acoes">${(d.acoes || []).map(([r, a]) => `<button class="btn sec" data-acao="${esc(a)}">${esc(r)}</button>`).join('')}<button class="btn" data-acao="go|${esc(c.tela)}">${esc(d.botao || 'Abrir')}${seta}</button></div></div>`;
 
 const fora = (c, d) => `<div class="comp-fora"><span class="sigla ${d.tom || ''}" aria-hidden="true">${esc(d.sigla)}</span>

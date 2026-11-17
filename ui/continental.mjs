@@ -52,7 +52,8 @@ const cartaoDe = cfg => ({
       const x = jogosDaDataCont(tor, j).find(y => (y.h === me || y.a === me) && y.hg == null);
       if (x) proximo = { rot: 'Rod.', n: S.continentais.datas[j] + 1, nomeAdv: clubeCont(x.h === me ? x.a : x.h).name, perna: dataCont(j).volta === undefined ? '' : dataCont(j).volta ? 'volta' : 'ida', ordem: S.continentais.datas[j] + 1 };
     }
-    return { ...base, fase: fas, destaque, status, proximo, botao: tor.final || fase ? 'Chaveamento' : 'Grupo' };
+    return { ...base, fase: fas, destaque, status, proximo, botao: tor.final || fase ? 'Chaveamento' : 'Grupo',
+      semProximo: tor.campeao ? 'Competição encerrada' : !vivo ? 'Seu clube foi eliminado' : 'Aguardando a próxima fase' };
   }
 });
 /** Cartões da aba Competições (#102). */
