@@ -1,5 +1,6 @@
 import { P, S, addFin, addNews, addNewsTodos, clubById, ehHumano, tec, userClub } from './estado.mjs';
 import { novoContrato } from './contratos.mjs';
+import { clubeDe } from './estrangeiros.mjs';
 import { movePlayer } from './mercado.mjs';
 import { ensureSquad } from './partida.mjs';
 import { money, rnd } from './utils.mjs';
@@ -37,7 +38,7 @@ export const CHANCE_LISTA=0.95;
 // regra: pedir emprestado um jogador de um clube da IA. Devolve {erro} ou {ok, msg} (ok=false: recusou).
 export function proporEmprestimo({pid}){
   const p=P[pid],uc=userClub();if(!p)return {erro:'Jogador inválido para esta ação.'};
-  const lender=clubById(p.clubId);
+  const lender=clubeDe(p.clubId);
   if(lender.id===uc.id)return {erro:'Para emprestar um jogador seu, ponha-o na lista de empréstimo no Elenco.'};
   if(ehHumano(lender))return {erro:'O clube é de outro técnico: faça uma proposta a ele.'};
   if(!p.emprestar)return {erro:`${lender.name} não pôs ${p.name} na lista de empréstimo.`};
@@ -60,13 +61,13 @@ export function loanCheck(p,lender,borrower){
 export function startLoan(l){
   const p=P[l.pid];movePlayer(p,clubById(l.to),true); // movePlayer garante o elenco mínimo de quem cedeu
   loans().push(l);
-  const msg=`🤝 ${p.name} emprestado do ${clubById(l.from).name} ao ${clubById(l.to).name} ${fimTxt(l)}.`;
+  const msg=`🤝 ${p.name} emprestado do ${clubeDe(l.from).name} ao ${clubById(l.to).name} ${fimTxt(l)}.`;
   addNews(msg,l.from);addNews(msg,l.to); // para os técnicos dos dois clubes (clube da IA: descarta)
 }
 export function endLoan(l,back){ // back: devolve ao clube de origem
   S.loans=loans().filter(x=>x!==l);
   const p=P[l.pid];if(!p||!back)return;
-  const from=clubById(l.from),to=clubById(l.to);
+  const from=clubeDe(l.from),to=clubById(l.to);
   movePlayer(p,from,true);ensureSquad(to);
   const msg=`🔙 ${p.name} voltou ao ${from.name} (fim do empréstimo).`;addNews(msg,from.id);if(to.id!==from.id)addNews(msg,to.id);
 }

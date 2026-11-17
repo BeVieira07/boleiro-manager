@@ -36,7 +36,9 @@ export const clubById=id=>S.clubs.find(c=>c.id===id);
 export function usarEstado(s){S=s} // único jeito de trocar o jogo atual de fora deste módulo
 // índice de jogadores; as migrações de saves antigos ficam em core/versao.mjs (#46)
 export function reindex(){
-  P={};for(const c of S.clubs)for(const p of c.players){p.clubId=c.id;P[p.id]=p}}
+  P={};for(const c of S.clubs)for(const p of c.players){p.clubId=c.id;P[p.id]=p}
+  if(S.continentais)for(const c of Object.values(S.continentais.estrangeiros))for(const p of c.players)if(!P[p.id]){p.clubId=c.id;P[p.id]=p} // #172: os dos clubes estrangeiros também estão no mercado
+}
 /* ================= divisões ================= */
 export const DIVS={A:'Série A',B:'Série B',C:'Série C',D:'Série D'};
 export const divOf=c=>(c&&c.division)||'A';
