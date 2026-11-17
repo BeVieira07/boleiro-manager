@@ -1,3 +1,4 @@
+import { clubeDe } from '../core/estrangeiros.mjs';
 import { UM_ANO, exercerOpcaoCompra, fimTxt, loanLeft, loanOf, loansIn, loansOut, proporEmprestimo, salarioTxt } from '../core/emprestimos.mjs';
 import { P, clubById, ehHumano, userClub } from '../core/estado.mjs';
 import { posDSigla } from '../core/posicoes.mjs';
@@ -20,7 +21,7 @@ export function loanBtn(p,mode){
 }
 /** Pedir emprestado um jogador da lista de um clube da IA (#142): 1 ano, salário dividido, sem opção de compra. */
 export function loanForm(pid){
-  const p=P[pid],c=clubById(p.clubId);
+  const p=P[pid],c=clubeDe(p.clubId);
   if(!p.emprestar||ehHumano(c)){avisar(`${p.name} não está na lista de empréstimo.`,'erro');return}
   confirmar({titulo:`Pedir ${p.name} emprestado?`,ok:'Pedir emprestado',
     texto:`${posDSigla(p)}, força ${p.ovr}, do ${c.name}. Fica no seu clube por 1 ano (${fimTxt({fim:UM_ANO()})}). O salário de ${money(p.wage)} por rodada é dividido: ${money(p.wage/2)} para cada clube. Sem opção de compra.`},()=>{
@@ -39,7 +40,7 @@ export function buyLoaned(pid){
 export function vLoans(){
   const uc=userClub(),inn=loansIn(uc),out=loansOut(uc);
   if(!inn.length&&!out.length)return '';
-  const row=(l,isIn)=>{const p=P[l.pid];return `<tr><td><span class="pos ${p.pos}">${posDSigla(p)}</span> ${esc(p.name)}</td><td class="n ovr">${p.ovr}</td><td>${isIn?'de '+esc(clubById(l.from).name):'para '+esc(clubById(l.to).name)}</td><td>${fimTxt(l)} (${loanLeft(l)} rod.)</td><td>Salário: ${salarioTxt(l)}</td><td>${l.buy?'Opção de compra '+money(l.buy)+(isIn?` <button class="btn sm" data-acao="buyLoaned|${l.pid}">Comprar</button>`:''):'Sem opção de compra'}</td></tr>`};
+  const row=(l,isIn)=>{const p=P[l.pid];return `<tr><td><span class="pos ${p.pos}">${posDSigla(p)}</span> ${esc(p.name)}</td><td class="n ovr">${p.ovr}</td><td>${isIn?'de '+esc(clubeDe(l.from).name):'para '+esc(clubById(l.to).name)}</td><td>${fimTxt(l)} (${loanLeft(l)} rod.)</td><td>Salário: ${salarioTxt(l)}</td><td>${l.buy?'Opção de compra '+money(l.buy)+(isIn?` <button class="btn sm" data-acao="buyLoaned|${l.pid}">Comprar</button>`:''):'Sem opção de compra'}</td></tr>`};
   return `<div class="card tw"><h3>Empréstimos</h3>
    ${inn.length?`<p class="muted">Emprestados ao meu clube</p><table>${inn.map(l=>row(l,true)).join('')}</table>`:''}
    ${out.length?`<p class="muted">Emprestados pelo meu clube</p><table>${out.map(l=>row(l,false)).join('')}</table>`:''}</div>`;
