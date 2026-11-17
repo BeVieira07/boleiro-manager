@@ -10,6 +10,7 @@ import { DIVS, MOVE_N, P, S, addFin, addNews, addNewsTodos, clubById, clubDo, di
 import { autoXI, getXI } from './motor.mjs';
 import { POSD } from './posicoes.mjs';
 import { clamp, ri, rnd } from './utils.mjs';
+import { limparEventosAntigos } from './aovivo.mjs';
 import { aplicarFormaPendente } from './forma.mjs';
 import { processLoans } from './emprestimos.mjs';
 
@@ -18,6 +19,7 @@ import { processLoans } from './emprestimos.mjs';
 export function fecharTemporada(){
   if(S.seasonClosed===S.season)return null;
   aplicarFormaPendente(); // a última rodada (#44)
+  limparEventosAntigos(S.fixtures.length); // #195
   const two=hasTwoDivs(),mv=MOVE_N(),ds=divisions(),res={};
   for(const t of tecnicos()){ // premiação e diretoria de cada técnico
     const uc=clubDo(t),dv=divOf(uc),Tb=table(dv),ps=Tb.findIndex(x=>x.id===uc.id)+1,pr=seasonPrize(dv,ps);
