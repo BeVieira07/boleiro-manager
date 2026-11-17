@@ -29,7 +29,7 @@ body{margin:0;background:var(--bg);color:var(--texto);font:14px/1.45 var(--f-tex
 h1,h2{font-family:var(--f-titulo);font-weight:700;letter-spacing:.02em;line-height:1.05}
 h1{font-size:38px;margin:0}
 h2{font-size:30px;margin:4px 0 14px}
-h3{margin:0 0 10px;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--ouro);font-family:var(--f-texto)}
+h3,.t3{margin:0 0 10px;line-height:inherit;font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--ouro);font-family:var(--f-texto)}
 a{color:var(--verde)}
 .muted{color:var(--muted)} .ok{color:var(--verde)} .bad{color:var(--perigo)} .gold{color:var(--ouro)}
 .num,table,.stat-valor{font-variant-numeric:tabular-nums}
@@ -40,7 +40,7 @@ a{color:var(--verde)}
 .card{background:var(--painel);border:1px solid var(--linha);border-radius:var(--r-lg);padding:var(--e4) 18px;margin-bottom:var(--e4)}
 .card.destaque{background:linear-gradient(135deg,#17331f,var(--painel) 60%)}
 .card-topo{display:flex;justify-content:space-between;align-items:center;gap:var(--e2);flex-wrap:wrap;margin-bottom:var(--e3)}
-.card-topo h3{margin:0}
+.card-topo h3,.card-topo .t3{margin:0}
 
 /* ---------- botões ---------- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--e2);min-height:40px;padding:8px 16px;border-radius:10px;border:1px solid transparent;
@@ -102,7 +102,7 @@ td.n,th.n{text-align:right} td.c,th.c{text-align:center}
 tr.me td{background:rgba(47,191,113,.14);font-weight:700}
 tr.tit td{background:rgba(47,191,113,.07)}
 .card.tabela-card{padding:0;overflow:hidden}
-.card.tabela-card>h3,.card.tabela-card>.card-topo{padding:var(--e4) 18px 0}
+.card.tabela-card>h3,.card.tabela-card>.t3,.card.tabela-card>.card-topo{padding:var(--e4) 18px 0}
 
 /* ---------- formulários ---------- */
 input,select{background:var(--painel2);color:var(--texto);border:1px solid var(--linha);border-radius:10px;padding:9px 11px;font:inherit;min-height:40px}
@@ -578,11 +578,11 @@ body.em-jogo .avisos{bottom:24px}
 .art-corpo{display:grid;gap:14px;grid-template-columns:minmax(0,1fr);align-items:start}
 .art-ranking{padding:0}
 .art-topo{display:flex;justify-content:space-between;align-items:center;gap:var(--e3);flex-wrap:wrap;padding:var(--e4) 18px var(--e3)}
-.art-topo h3{margin:0;color:var(--ouro);text-transform:uppercase;letter-spacing:.08em;font-size:15px}
+.art-topo h3,.art-topo .t3{margin:0;color:var(--ouro);text-transform:uppercase;letter-spacing:.08em;font-size:15px}
 .art-sub{display:block;font-size:12px;color:var(--muted)}
 .art-gols{display:inline-flex;align-items:center;gap:10px;justify-content:flex-end}
 .art-gols .barra{width:48px}
-.art-lado h3{margin:0 0 var(--e3);color:var(--ouro);text-transform:uppercase;letter-spacing:.08em;font-size:15px}
+.art-lado h3,.art-lado .t3{margin:0 0 var(--e3);color:var(--ouro);text-transform:uppercase;letter-spacing:.08em;font-size:15px}
 .art-seus{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--e2)}
 .art-seus li{display:flex;justify-content:space-between;align-items:center;gap:var(--e3);background:var(--painel2);border-radius:var(--r);padding:10px 14px}
 .art-seus li>div{display:flex;flex-direction:column;min-width:0}

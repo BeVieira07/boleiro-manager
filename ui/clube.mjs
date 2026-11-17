@@ -55,11 +55,11 @@ export function alertas() {
 
 function proximoJogo(uc, T) {
   const me = uc.id, g = S.round < S.fixtures.length ? meuJogo(S.round, me) : null;
-  if (!g) return `<section class="card destaque"><h3>Próximo jogo</h3><p>Temporada encerrada. Use o botão no topo para fechar a temporada e começar a próxima.</p></section>`;
+  if (!g) return `<section class="card destaque"><h2 class="t3">Próximo jogo</h2><p>Temporada encerrada. Use o botão no topo para fechar a temporada e começar a próxima.</p></section>`;
   const t = taticaUser(uc), posDe = id => { const i = T.findIndex(x => x.id === id); return S.round && i >= 0 ? ' · ' + ord(i + 1) : '' };
   const lado = c => `<div class="time">${crest(c, 'g')}<b>${esc(c.name)}</b><span class="muted">Força ${c.strength}${posDe(c.id)}</span></div>`;
   return `<section class="card destaque" aria-label="Próximo jogo">
-    <div class="card-topo"><h3>Próximo jogo</h3><span class="pill">${g.h === me ? 'Em casa' : 'Fora de casa'} · Rodada ${S.round + 1}</span></div>
+    <div class="card-topo"><h2 class="t3">Próximo jogo</h2><span class="pill">${g.h === me ? 'Em casa' : 'Fora de casa'} · Rodada ${S.round + 1}</span></div>
     <div class="confronto">${lado(clubById(g.h))}<span class="x" aria-hidden="true">X</span><span class="sr">contra</span>${lado(clubById(g.a))}</div>
     <div class="taticas">
       <div class="chips" role="group" aria-label="Estilo de jogo"><span class="muted">Estilo</span>${Object.entries(ESTILOS).map(([k, v]) => chip(v.nome, `tvPainel|estilo|${k}`, t.estilo === k)).join('')}</div>
@@ -72,17 +72,17 @@ function proximoJogo(uc, T) {
 
 function blocoForma(me) {
   const f = formaRecente(me);
-  if (!f.length) return `<section class="card"><h3>Forma recente</h3><p class="muted">Ainda não houve jogos nesta temporada.</p></section>`;
+  if (!f.length) return `<section class="card"><h2 class="t3">Forma recente</h2><p class="muted">Ainda não houve jogos nesta temporada.</p></section>`;
   const n = k => f.filter(x => x.res === k).length, pl = (k, s, p) => `${n(k)} ${n(k) === 1 ? s : p}`;
   const NOME = { V: 'Vitória', E: 'Empate', D: 'Derrota' };
-  return `<section class="card"><h3>Forma recente</h3>
+  return `<section class="card"><h2 class="t3">Forma recente</h2>
     <ol class="forma" aria-label="Últimos jogos, do mais antigo ao mais recente">${f.slice().reverse().map(x => `<li class="bola-forma ${x.res}" title="${NOME[x.res]} ${x.pro} x ${x.contra} contra ${esc(x.adv.name)} (rodada ${x.r + 1})"><span aria-hidden="true">${x.res}</span><span class="sr">${NOME[x.res]} por ${x.pro} a ${x.contra} contra ${esc(x.adv.name)}</span></li>`).join('')}</ol>
     <p class="muted">${pl('V', 'vitória', 'vitórias')}, ${pl('E', 'empate', 'empates')} e ${pl('D', 'derrota', 'derrotas')} nos últimos ${f.length} jogos.</p></section>`;
 }
 
 function blocoAlertas() {
   const a = alertas();
-  return `<section class="card"><h3>Pede atenção</h3>${a.length ? `<ul class="alertas">${a.map(x => `<li class="alerta ${x.tipo}">
+  return `<section class="card"><h2 class="t3">Pede atenção</h2>${a.length ? `<ul class="alertas">${a.map(x => `<li class="alerta ${x.tipo}">
     ${icone(x.tipo === 'erro' ? 'alerta' : x.tipo === 'aviso' ? 'alerta' : 'info', { rotulo: x.tipo === 'erro' ? 'Problema' : x.tipo === 'aviso' ? 'Aviso' : 'Informação' })}
     <div class="alerta-texto"><b>${esc(x.titulo)}</b><span class="muted">${esc(x.texto)}</span></div>
     <div class="alerta-acoes">${x.botoes || `<button class="btn sec sm" data-acao="${x.acao}">${esc(x.rotulo)}</button>`}</div></li>`).join('')}</ul>`
@@ -93,7 +93,7 @@ function miniTabela(uc) {
   const d = divOf(uc), T = table(d), i = T.findIndex(t => t.id === uc.id), { top, bottom } = zonas(d);
   const ini = Math.max(0, Math.min(i - 3, T.length - 7)), linhas = T.slice(ini, ini + 7);
   const zona = k => (k < top ? 'zona-lib' : bottom && k >= T.length - bottom ? 'zona-z4' : '');
-  return `<section class="card"><div class="card-topo"><h3>Classificação</h3><span class="muted">${DIVS[d]}</span></div>
+  return `<section class="card"><div class="card-topo"><h2 class="t3">Classificação</h2><span class="muted">${DIVS[d]}</span></div>
     <div class="tw"><table><caption class="sr">Classificação perto do seu clube</caption>
     <thead><tr><th scope="col">#</th><th scope="col">Clube</th><th scope="col" class="n">J</th><th scope="col" class="n">SG</th><th scope="col" class="n">Pts</th></tr></thead>
     <tbody>${linhas.map((t, k) => { const c = clubById(t.id), pos = ini + k; return `<tr class="${t.id === uc.id ? 'me' : ''}"><td class="${zona(pos)}">${pos + 1}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n">${t.J}</td><td class="n">${t.GP - t.GC}</td><td class="n"><b>${t.Pts}</b></td></tr>` }).join('')}</tbody></table></div>
@@ -113,12 +113,12 @@ export function vClube() {
   </section>`;
   const ch = h => h.champs || { A: h.champ, ...(h.champB ? { B: h.champB } : {}) };
   const hd = [...new Set(S.history.flatMap(h => Object.keys(ch(h))))].sort(), many = hd.length > 1;
-  const historico = S.history.length ? `<section class="card tw"><h3>Histórico</h3><table><thead><tr><th>Temporada</th>${hd.map(x => `<th>Campeão${many ? ' ' + DIVS[x] : ''}</th>`).join('')}${S.history.some(h => h.copa) ? '<th>Copa do Brasil</th>' : ''}<th>Sua posição</th><th>Artilheiro</th></tr></thead><tbody>${S.history.map(h => `<tr><td>${h.season}</td>${hd.map(x => `<td>${esc(ch(h)[x] || '-')}</td>`).join('')}${S.history.some(x => x.copa) ? `<td>${esc(h.copa || '-')}</td>` : ''}<td>${h.me}º${many && h.div ? ' (' + DIVS[h.div] + ')' : ''}</td><td>${esc(h.scorer)}</td></tr>`).join('')}</tbody></table></section>` : '';
+  const historico = S.history.length ? `<section class="card tw"><h2 class="t3">Histórico</h2><table><thead><tr><th>Temporada</th>${hd.map(x => `<th>Campeão${many ? ' ' + DIVS[x] : ''}</th>`).join('')}${S.history.some(h => h.copa) ? '<th>Copa do Brasil</th>' : ''}<th>Sua posição</th><th>Artilheiro</th></tr></thead><tbody>${S.history.map(h => `<tr><td>${h.season}</td>${hd.map(x => `<td>${esc(ch(h)[x] || '-')}</td>`).join('')}${S.history.some(x => x.copa) ? `<td>${esc(h.copa || '-')}</td>` : ''}<td>${h.me}º${many && h.div ? ' (' + DIVS[h.div] + ')' : ''}</td><td>${esc(h.scorer)}</td></tr>`).join('')}</tbody></table></section>` : '';
   return `${indicadores}
   <div class="painel">
     <div class="painel-principal">${proximoJogo(uc, T)}${blocoForma(me)}${blocoAlertas()}</div>
     <div class="painel-lateral">${miniTabela(uc)}
-      <section class="card"><h3>Notícias</h3><ul class="noticias">${t.news.filter(noticiaVisivel).slice(0, 10).map(n => `<li><span class="muted num">R${(n.r ?? 0) + 1}</span><span>${esc(n.t)}</span></li>`).join('') || '<li class="muted">Sem notícias ainda.</li>'}</ul></section>
+      <section class="card"><h2 class="t3">Notícias</h2><ul class="noticias">${t.news.filter(noticiaVisivel).slice(0, 10).map(n => `<li><span class="muted num">R${(n.r ?? 0) + 1}</span><span>${esc(n.t)}</span></li>`).join('') || '<li class="muted">Sem notícias ainda.</li>'}</ul></section>
     </div>
   </div>${historico}`;
 }

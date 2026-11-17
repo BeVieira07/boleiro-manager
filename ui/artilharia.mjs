@@ -68,7 +68,7 @@ function ranking(c, linhas, vazio, uc) {
     <td><b>${esc(x.nome)}</b>${x.sub ? `<span class="art-sub">${esc(x.sub)}</span>` : ''}</td>
     <td><span class="club">${crest(x.clube)} ${esc(x.clube.name)}</span></td><td class="n">${x.j ?? '—'}</td>
     <td class="n"><span class="art-gols"><b>${x.gols}</b>${barra(x.gols / lider * 100, x.meu ? 'var(--verde)' : '', 'fina')}</span></td><td class="n">${media(x)}</td></tr>`).join('');
-  return `<section class="card tabela-card art-ranking"><div class="art-topo"><h3>Ranking</h3>
+  return `<section class="card tabela-card art-ranking"><div class="art-topo"><h2 class="t3">Ranking</h2>
     <label class="opcao"><input type="checkbox" data-mudar="artSoMeu"${ui.artSo ? ' checked' : ''}>Só o ${esc(uc.name)}</label></div>
     <div class="tw"><table><caption class="sr">Artilharia: ${esc(c.nome)} ${S.season}</caption>
     <thead><tr><th scope="col">#</th><th scope="col">Jogador</th><th scope="col">Clube</th><th scope="col" class="n">J</th><th scope="col" class="n">Gols</th><th scope="col" class="n">Média</th></tr></thead>
@@ -76,7 +76,7 @@ function ranking(c, linhas, vazio, uc) {
 }
 function seus(linhas) {
   const meus = linhas.filter(x => x.meu);
-  return `<aside class="card art-lado"><h3>Seus artilheiros</h3>${meus.length ? `<ul class="art-seus">${meus.map(x => `<li><div><b>${esc(x.nome)}</b>
+  return `<aside class="card art-lado"><h2 class="t3">Seus artilheiros</h2>${meus.length ? `<ul class="art-seus">${meus.map(x => `<li><div><b>${esc(x.nome)}</b>
     <span class="muted">${[x.sub && esc(x.sub), `${posicao(x.rank)} no ranking`].filter(Boolean).join(' · ')}</span></div><b class="art-n">${x.gols}</b></li>`).join('')}</ul>`
     : '<p class="muted">Nenhum jogador do seu clube marcou nesta competição.</p>'}</aside>`;
 }

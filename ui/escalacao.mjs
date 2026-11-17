@@ -81,14 +81,14 @@ export function vEscalacao() {
   <div class="esc">
     ${campoHtml(uc)}
     <div class="esc-lado">
-      <section class="card"><div class="card-topo"><h3>Força do time</h3><button class="btn sm" data-acao="escalarMelhoresTela">Escalar melhores</button></div>
+      <section class="card"><div class="card-topo"><h2 class="t3">Força do time</h2><button class="btn sm" data-acao="escalarMelhoresTela">Escalar melhores</button></div>
         <p class="muted titulares">Titulares: <b class="${xi.length === 11 ? 'ok' : 'bad'}">${xi.length}/11</b> · energia média <b>${xi.length ? Math.round(xi.reduce((t, id) => t + energiaDe(P[id]), 0) / xi.length) : 0}</b></p>
         ${[['Ataque', pw.att, 'var(--pos-a)'], ['Meio', pw.mid, 'var(--verde)'], ['Defesa', pw.def, 'var(--info)']].map(([n, v, c]) => `<div class="setor"><div class="setor-topo"><span>${n}</span><b>${v.toFixed(0)}</b></div>${barra(v, c)}</div>`).join('')}
       </section>
       ${avisos.length ? `<section class="aviso-posicao" role="status">${icone('alerta', { tam: 20 })}<div><b>${avisos.length} aviso${avisos.length > 1 ? 's' : ''} na escalação</b>
         <ul>${avisos.map(a => `<li>${esc(a)}</li>`).join('')}</ul>
         ${sug.map(x => `<button class="btn sm" data-acao="trocarTitulares|${x.a}|${x.b}">Trocar ${esc(P[x.a].name)} e ${esc(P[x.b].name)} de vaga (+${x.ganho}%)</button>`).join('')}</div></section>` : ''}
-      <section class="card"><h3>Reservas (${bench.length})</h3><ul class="reservas">${bench.map(p => { const [n, t] = notaReserva(p), sel = ui.selEsc === p.id;
+      <section class="card"><h2 class="t3">Reservas (${bench.length})</h2><ul class="reservas">${bench.map(p => { const [n, t] = notaReserva(p), sel = ui.selEsc === p.id;
         return `<li><button type="button" class="reserva${sel ? ' sel' : ''}${unavailable(p) ? ' indisp' : ''}" data-acao="clickEsc|${p.id}" aria-pressed="${sel}">
           <span class="pos ${p.pos}">${posDSigla(p)}</span><span class="reserva-nome"><b>${esc(p.name)}</b><span class="st ${t}">${esc(n)}</span></span>${energiaBarra(p)}${ovrChip(p.ovr)}</button></li>` }).join('')}</ul></section>
     </div>

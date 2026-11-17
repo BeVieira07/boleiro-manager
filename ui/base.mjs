@@ -18,7 +18,7 @@ export function potTag(p) {
 export function vBase() {
   const base = [...(userClub().base || [])].sort((a, b) => estrelasPot(b) - estrelasPot(a) || b.ovr - a.ovr);
   if (!userClub().base) return '';
-  return `<section class="card tabela-card"><div class="card-topo base-topo"><h3>Categorias de base</h3><span class="muted">Sub-${BASE_IDADE_MAX} · fora do elenco e da folha</span></div>
+  return `<section class="card tabela-card"><div class="card-topo base-topo"><h2 class="t3">Categorias de base</h2><span class="muted">Sub-${BASE_IDADE_MAX} · fora do elenco e da folha</span></div>
   ${base.length ? `<div class="tw"><table class="tabela-base"><caption class="sr">Jovens da base</caption>
     <thead><tr><th scope="col">Pos</th><th scope="col">Jogador</th><th scope="col" class="n c-idade">Idade</th><th scope="col" class="c">Força</th><th scope="col">Potencial</th><th scope="col">Ações</th></tr></thead>
     <tbody>${base.map(p => `<tr><td>${posTag(p)}</td><th scope="row">${esc(p.name)}</th><td class="n c-idade">${p.age}</td><td class="c">${ovrChip(p.ovr)}</td><td>${potTag(p)}</td>
