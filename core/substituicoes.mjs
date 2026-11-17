@@ -1,3 +1,4 @@
+import { energiaDaTroca } from './energia.mjs';
 import { P, userClub } from './estado.mjs';
 import { SLOTS, reslot, unavailable } from './escalacao.mjs';
 import { getXI } from './motor.mjs';
@@ -31,6 +32,7 @@ export function substituir(g, min, sai, entra) {
   if (m) return { erro: `${e.name} está ${m} e não pode entrar.` };
   if ((P[sai].pos === 'G') !== (e.pos === 'G')) return { erro: 'Goleiro só troca com goleiro.' };
   uc.lineup = xi.map((id, k) => k === i ? entra : id); // entra na mesma vaga de quem saiu
+  energiaDaTroca(P[sai], e, min, uc); // #198: a energia acompanha os minutos jogados
   (g.trocas || (g.trocas = [])).push({ m: min, clube: uc.id, sai, entra });
   g.ev.push({ m: min, t: 'troca', side: lado(g, uc.id), name: `${e.name} entra no lugar de ${P[sai].name}` });
   ressimularDepois(g, min);
