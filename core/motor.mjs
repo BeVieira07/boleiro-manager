@@ -1,5 +1,6 @@
 import { jogarContinentais } from './continental.mjs';
 import { jogarCopa } from './copa.mjs';
+import { limparEventosAntigos } from './aovivo.mjs';
 import { anotarTitulares, atualizarEnergia, fatorEnergia } from './energia.mjs';
 import { atualizarConfianca } from './diretoria.mjs';
 import { jogarPreTemporada } from './estadual.mjs';
@@ -79,6 +80,7 @@ export function jogarRodada(){
     return {jogos:pre.jogos,meu:pre.jogos.find(g=>g.h===uc.id||g.a===uc.id)||null,estadual:{dia:pre.dia}};
   }
   aplicarFormaPendente(); // forma da rodada anterior, com o resultado final do jogo ao vivo (#44)
+  limparEventosAntigos(); // #195: os lances das rodadas anteriores já foram usados; só o placar fica no save
   S.rng=semente(S.seed,S.season,S.round); // a rodada depende só do estado e das escolhas, não do que foi sorteado antes
   if(ehJanela(S.round))janelaIA(); // #103: começo e metade da temporada
   const games=S.fixtures[S.round].map(simulate);

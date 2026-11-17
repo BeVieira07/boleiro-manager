@@ -14,7 +14,7 @@ import { sairDaLiga } from './ligajogo.mjs';
 /* ================= jogos salvos e tela inicial (#21) =================
    Cada campanha fica em localStorage[SAVE_PREFIX+id]; SAVES_KEY guarda o índice {cur, list:[resumo]}.
    S.saveId diz em qual save o jogo atual é gravado. O save antigo de slot único (SAVE_KEY) é migrado na primeira abertura. */
-export const SAVES_KEY='brasfoot_saves_v2', SAVE_PREFIX='brasfoot_save_v2_', MAX_SAVES=5; // cada save ocupa uns 600 mil caracteres; o navegador costuma dar uns 5 milhões por site
+export const SAVES_KEY='brasfoot_saves_v2', SAVE_PREFIX='brasfoot_save_v2_', MAX_SAVES=5; // cada save ocupa de 650 mil a 900 mil caracteres (#195); o navegador costuma dar uns 5 milhões por site
 export const indiceSaves=()=>{const i=store.get(SAVES_KEY);return i&&Array.isArray(i.list)?i:{cur:null,list:[]}};
 export function resumoSave(s){
   const ts=s.managers?Object.values(s.managers):[],t=ts.find(x=>x.id===s.atual);
