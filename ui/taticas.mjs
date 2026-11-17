@@ -1,7 +1,7 @@
 import { userClub } from '../core/estado.mjs';
 import { ESTILOS, MODOS, mudarTatica, ressimularDepois, taticaUser } from '../core/taticas.mjs';
 import { esc } from '../core/utils.mjs';
-import { chip } from './componentes.mjs';
+import { chip, dicaTatica } from './componentes.mjs';
 import { save, ui } from './estado.mjs';
 import { render } from './telas.mjs';
 
@@ -12,7 +12,7 @@ export function tvLive(c,v){mudarTatica(c,v);if(ui.tvAoVivo)ressimularDepois(ui.
 // #62: tática durante a partida, em chips; vale dos próximos minutos em diante (os gols seguintes são refeitos)
 export function chipsTaticaAoVivo(aviso=''){
   const t=taticaUser(userClub()),grupo=(rot,campo,obj)=>`<div class="chips" role="group" aria-label="${rot}"><span class="muted">${rot}</span>${Object.entries(obj).map(([k,v])=>chip(esc(v.nome),`tvLiveChip|${campo}|${k}`,t[campo]===k)).join('')}</div>`;
-  return `${grupo('Estilo','estilo',ESTILOS)}${grupo('Modo','modo',MODOS)}<p class="muted dica" aria-live="polite">${aviso||`${esc(ESTILOS[t.estilo].desc)} ${esc(MODOS[t.modo].desc)}`}</p>`;
+  return `${grupo('Estilo','estilo',ESTILOS)}${grupo('Modo','modo',MODOS)}<p class="muted dica" aria-live="polite">${aviso||dicaTatica(t)}</p>`;
 }
 export function tvLiveChip(c,v){
   tvLive(c,v);
