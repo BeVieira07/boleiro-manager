@@ -23,8 +23,8 @@ export const CONTINENTAIS = { ligados: true };
 export const VAGAS = 32, DATAS = 13, GRUPOS = 8;
 // vagas brasileiras e premiação em milhões (por chegar à fase; o título é o prêmio da final)
 export const TORNEIOS = [
-  { id: 'libertadores', nome: 'Libertadores', vagas: 7, premio: { grupos: 2, oitavas: 1.5, quartas: 2, semi: 3, titulo: 15 } },
-  { id: 'sulamericana', nome: 'Sul-Americana', vagas: 7, premio: { grupos: 1, oitavas: 0.8, quartas: 1, semi: 1.5, titulo: 7 } }
+  { id: 'libertadores', nome: 'Libertadores', vagas: 7, premio: { grupos: 1, oitavas: 0.9, quartas: 1.3, semi: 1.7, titulo: 7 } },
+  { id: 'sulamericana', nome: 'Sul-Americana', vagas: 7, premio: { grupos: 0.55, oitavas: 0.5, quartas: 0.7, semi: 1, titulo: 3.5 } }
 ];
 const FASES = ['Oitavas de final', 'Quartas de final', 'Semifinal'];
 // 4 clubes, ida e volta: [casa, fora] por posição no grupo em cada data

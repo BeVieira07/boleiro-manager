@@ -23,7 +23,7 @@ export const RODADA_ESTADUAL = -100;
 // os testes de outras funcionalidades desligam (tests/jogo.mjs), para cada "Jogar" continuar sendo uma rodada da liga
 export const ESTADUAIS = { ligados: true };
 // premiação em milhões: bem menor que a do Brasileirão e a da copa
-export const PREMIO_ESTADUAL = { campeao: 1.2, vice: 0.4 };
+export const PREMIO_ESTADUAL = { campeao: 0.8, vice: 0.3 };
 const NOMES = { SP: 'Paulistão', RJ: 'Carioca', RS: 'Gauchão', MG: 'Mineiro', PR: 'Paranaense', SC: 'Catarinense', GO: 'Goiano',
   CE: 'Cearense', BA: 'Baiano', PE: 'Pernambucano', AM: 'Amazonense', PA: 'Paraense' };
 export const nomeEstadual = uf => NOMES[uf] || `Estadual (${uf})`;
