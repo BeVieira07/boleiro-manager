@@ -7,16 +7,16 @@ import { poisson } from './utils.mjs';
 const NEUTRA = { estilo: 'equilibrado', modo: 'equilibrado' };
 const forca = c => clubById(c.id) ? power(c) : { att: c.strength, def: c.strength, mid: c.strength, xi: c.players };
 
-function sortearAutores(tor, clube, candidatos, gols) {
+/** Soma (ou tira, delta -1) um gol de `p` pelo clube `clubeId` na artilharia do torneio. */
+export function creditarGolCopa(tor, clubeId, p, delta = 1) {
   const ranking = tor.gols ||= {};
-  return Array.from({ length: gols }, () => {
-    const p = pickScorer(candidatos);
-    // Um jogador transferido mantém os gols creditados ao clube em que marcou.
-    const chave = ranking[p.id] && ranking[p.id].clube !== clube.id ? p.id + ':' + clube.id : p.id;
-    const reg = ranking[chave] ||= { nome: p.name, clube: clube.id, gols: 0 };
-    reg.gols++;
-    return p.id;
-  });
+  // Um jogador transferido mantém os gols creditados ao clube em que marcou.
+  const chave = ranking[p.id] && ranking[p.id].clube !== clubeId ? p.id + ':' + clubeId : p.id;
+  const reg = ranking[chave] ||= { nome: p.name, clube: clubeId, gols: 0 };
+  reg.gols = Math.max(0, reg.gols + delta);
+}
+function sortearAutores(tor, clube, candidatos, gols) {
+  return Array.from({ length: gols }, () => { const p = pickScorer(candidatos); creditarGolCopa(tor, clube.id, p); return p.id });
 }
 
 /** Simula uma partida de copa em tempo normal e aplica a forma a partir dos autores e titulares dela. */

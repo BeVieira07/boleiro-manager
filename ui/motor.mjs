@@ -20,10 +20,10 @@ export function playRound(aoVivo=true){
   if(r.fim){seasonEnd();return}
   if(r.erro){if(r.tecnico)usarTecnico(r.tecnico);avisar(r.erro,'erro');ui.view=r.faltam?'clube':'escalacao';render();return}
   const games=r.jogos,mine=r.meu;
-  ui.lastRound=r.estadual?{pre:r.estadual.dia,games}:{round:S.round,games}; // #132: data do estadual, sem jogo ao vivo
+  ui.lastRound=r.estadual?{pre:r.estadual.dia,games}:{round:S.round,games}; // #132: data do estadual
   save();
   const fim=()=>{ui.view='rodada';render();if(S.round>=S.fixtures.length)seasonEnd();if(tec().demitido)demissao()};
-  if(mine&&!r.estadual&&aoVivo&&verAoVivo(mine))iniciarVivo(games,mine,fim,{rodada:S.round-1}); // #106: sempre, só os decisivos ou nunca
+  if(mine&&aoVivo&&verAoVivo(mine))iniciarVivo(games,mine,fim,r.estadual?{estadual:r.estadual.dia}:{rodada:S.round-1}); // #106; o estadual também (#230)
   else if(aoVivo)fim();
 }
 export function simToEnd(){

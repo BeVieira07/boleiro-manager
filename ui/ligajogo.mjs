@@ -164,10 +164,10 @@ export async function atualizarAposRodada() {
   const { data: r } = await clienteLogado().from('liga_resultados').select('temporada, rodada, jogos').eq('liga_id', L.id)
     .order('temporada', { ascending: false }).order('rodada', { ascending: false }).limit(1).maybeSingle();
   if (!r) { render(); return }
-  const pre = r.rodada < 0; // #132: data do estadual (RODADA_ESTADUAL = primeira data), sem jogo ao vivo
+  const pre = r.rodada < 0; // #132: data do estadual (RODADA_ESTADUAL = primeira data)
   const fim = () => { ui.lastRound = pre ? { pre: r.rodada - RODADA_ESTADUAL, games: r.jogos } : { round: r.rodada + 1, games: r.jogos }; ui.view = 'rodada'; render() };
   const me = userClub().id, meu = r.jogos.find(g => g.h === me || g.a === me);
-  if (!tec().demitido && meu && !pre && verAoVivo(meu)) iniciarVivo(r.jogos, meu, fim, { replay: true, rodada: r.rodada }); else fim(); // #106
+  if (!tec().demitido && meu && verAoVivo(meu)) iniciarVivo(r.jogos, meu, fim, pre ? { replay: true, estadual: r.rodada - RODADA_ESTADUAL } : { replay: true, rodada: r.rodada }); else fim(); // #106; estadual também (#230)
 }
 
 /** Envia a sua escalação, formação e tática da rodada e pede ao servidor para jogar (ele só joga quando todos confirmaram). */
