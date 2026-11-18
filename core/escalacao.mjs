@@ -1,8 +1,7 @@
-import { P, S, addNews, clubById, userClub } from './estado.mjs';
+import { P, S, addNews, tecnicos, userClub } from './estado.mjs';
 import { autoXI, getXI } from './motor.mjs';
 import { POSD, ovrNaPosicao, penalidadePosicao } from './posicoes.mjs';
-import { fatorEnergia, riscoLesao } from './energia.mjs';
-import { ri, rnd } from './utils.mjs';
+import { fatorEnergia } from './energia.mjs';
 
 /* ================= escalação: tela, disponibilidade e trocas ================= */
 // Disponibilidade: p.inj = rodadas de lesão restantes, p.susp = rodadas de suspensão restantes (ausentes em saves antigos = disponível)
@@ -11,18 +10,28 @@ export function unavailable(p){
   if(p.susp>0)return `suspenso (${p.susp} rod.)`;
   return null;
 }
-// depois de cada rodada: cumpre as ausências e sorteia novas lesões e suspensões entre os titulares
+const noticiaDe = e => e.t === 'lesao'
+  ? `🩹 ${e.name} se lesionou e desfalca o time por ${e.rodadas} rodada(s).`
+  : `🟥 ${e.name} foi expulso e cumpre 1 jogo de suspensão.`;
+
+// Depois da rodada, cumpre as ausências anteriores e aplica os desfalques do jogo.
 export function aplicarDisponibilidade(games){
   for(const c of S.clubs)for(const p of c.players){if(p.inj>0)p.inj--;if(p.susp>0)p.susp--}
-  for(const g of games)for(const id of [g.h,g.a]){
-    const c=clubById(id);
-    for(const pid of getXI(c)){
-      const p=P[pid];if(!p)continue;
-      let msg=null;
-      if(rnd()<0.012*riscoLesao(p)){p.inj=ri(1,5);msg=`🩹 ${p.name} se lesionou e desfalca o time por ${p.inj} rodada(s).`}
-      else if(rnd()<0.015){p.susp=1;msg=`🟥 ${p.name} foi expulso e cumpre 1 jogo de suspensão.`}
-      if(msg)addNews(msg,c.id);
-    }
+  for(const g of games)for(const e of g.ev||[]){
+    if(e.t==='lesao')P[e.pid].inj=e.rodadas;
+    else if(e.t==='vermelho')P[e.pid].susp=1;
+    else continue;
+    addNews(noticiaDe(e),g[e.side]);
+  }
+}
+
+// Uma troca manual pode tirar o jogador antes de um lance previsto.
+export function cancelarDesfalque(g,e){
+  if(e.t==='lesao')P[e.pid].inj=0;
+  else P[e.pid].susp=0;
+  for(const t of tecnicos().filter(t=>t.clubId===g[e.side])){
+    const i=t.news.findIndex(n=>n.r===S.round-1&&n.t===noticiaDe(e));
+    if(i>=0)t.news.splice(i,1);
   }
 }
 // vagas detalhadas de cada formação, em ordem: goleiro, defesa, meio, ataque (mesmas contagens de FORMS)
@@ -34,14 +43,14 @@ export const SLOTS={
 for(const k in SLOTS)SLOTS[k]=SLOTS[k].split(' ');
 export const slotsDe=f=>SLOTS[f]||SLOTS['4-4-2'];
 // cada vaga recebe quem perde menos ali (a posição do jogador, depois o mais próximo); o resto completa as vagas livres
-export function reslot(ids,f){
+export function reslot(ids,f,manterVagas=false){
   const slots=slotsDe(f),left=ids.filter(id=>P[id]),out=slots.map(()=>null);
   slots.forEach((s,i)=>{
     let best=-1,bp=9;
     left.forEach((id,k)=>{const pen=penalidadePosicao(P[id],s).pen;if(pen<bp||(pen===bp&&best>=0&&P[id].ovr>P[left[best]].ovr)){bp=pen;best=k}});
     if(best>=0)out[i]=left.splice(best,1)[0];
   });
-  return out.filter(v=>v!=null);
+  return manterVagas?out:out.filter(v=>v!=null);
 }
 // melhor time para a formação, já na ordem das vagas; evita indisponíveis
 export function autoSlotXI(club,f){
@@ -69,8 +78,8 @@ export function trocarNaEscalacao(a,b){
   uc.lineup=L;return {ok:true};
 }
 // vaga i da formação = lineup[i] (com 11 titulares); com menos que isso, reposiciona automaticamente
-export function slotLayout(uc){
-  const xi=getXI(uc);
-  const ids=xi.length===11?xi:reslot(xi,uc.formation);
+export function slotLayout(uc,emCampo){
+  const xi=emCampo||getXI(uc);
+  const ids=(emCampo||xi.length===11)?xi:reslot(xi,uc.formation);
   return slotsDe(uc.formation).map((d,i)=>({g:POSD[d].grupo,d,id:ids[i]||null}));
 }

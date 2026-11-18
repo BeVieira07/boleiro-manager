@@ -6,6 +6,7 @@
 import { estatisticas, minutoDoTempo, placarNoMinuto, tabelaNoMinuto, ultimoLance } from '../core/aovivo.mjs';
 import { COPA, copaNaRodada } from '../core/copa.mjs';
 import { DIVS, P, S, clubById, divOf, divisions, hasTwoDivs, userClub } from '../core/estado.mjs';
+import { escalacaoNoMinuto, saidaForcada } from '../core/lances.mjs';
 import { MAX_TROCAS, banco, mudarFormacaoAoVivo, substituir, trocasDe } from '../core/substituicoes.mjs';
 import { FORMS, esc } from '../core/utils.mjs';
 import { avisar } from './avisos.mjs';
@@ -15,7 +16,7 @@ import { VELOCIDADES, prefs } from './configuracoes.mjs';
 import { jogosCopa } from './copa.mjs';
 import { save, ui } from './estado.mjs';
 import { icone } from './icones.mjs';
-import { DURACAO, crest, itemEvento, marcador } from './partida.mjs';
+import { DURACAO, EVENTO, crest, itemEvento, marcador, textoEvento } from './partida.mjs';
 import { posTag } from './posicoes.mjs';
 import { chipsTaticaAoVivo } from './taticas.mjs';
 import { go, render } from './telas.mjs';
@@ -56,6 +57,9 @@ function tick(v) {
   if (ui.view !== 'aovivo' || v.pausado) return; // pausado: saiu da tela ou apertou Pausar (#170)
   if (v.min >= DURACAO) return;
   v.min++; pintar(v);
+  if (!v.replay && v.g.ev.some(e => e.m === v.min && v.g[e.side] === v.clube.id && saidaForcada(e))) {
+    v.sel = null; controles(v);
+  }
   if (v.min >= DURACAO) terminar(v);
 }
 function terminar(v) {
@@ -100,11 +104,11 @@ function aplicar(v, r) {
 
 /* ---------- pedaços da página ---------- */
 const relogio = v => { if (v.fim) return 'Fim de jogo'; const t = minutoDoTempo(v.min); return `${t.m}' · ${t.tempo}º tempo${v.pausado ? ' · pausado' : ''}` };
-// último lance de um jogo: "⚽ Fulano 10' · 2º" (gol) ou cartão
 function lanceTxt(g, min) {
   const e = ultimoLance(g, min); if (!e) return '';
   const t = minutoDoTempo(e.m), c = clubById(e.side === 'h' ? g.h : g.a);
-  return `${icone(e.t === 'gol' ? 'bola' : 'cartao', { tam: 14, rotulo: e.t === 'gol' ? 'Gol' : 'Cartão', classe: e.t === 'gol' ? '' : 'ev-cartao' })}<span>${esc(e.name)} <span class="muted">(${esc(c.short || c.name)}) ${t.m}' · ${t.tempo}º</span></span>`;
+  const [ic, rotulo] = EVENTO[e.t];
+  return `${icone(ic, { tam: 14, rotulo, classe: e.t === 'cartao' ? 'ev-cartao' : e.t === 'vermelho' ? 'ev-vermelho' : e.t === 'lesao' ? 'ev-lesao' : '' })}<span>${esc(textoEvento(e))} <span class="muted">(${esc(c.short || c.name)}) ${t.m}' · ${t.tempo}º</span></span>`;
 }
 const ESTAT = [['posse', 'Posse de bola'], ['fin', 'Finalizações'], ['noGol', 'No gol'], ['fora', 'Para fora'], ['desarmes', 'Desarmes'], ['erros', 'Erros de passe']];
 function htmlEst(v) {
@@ -146,16 +150,17 @@ function htmlControles(v) {
   if (v.fim) return '';
   if (v.replay) return `<p class="muted dica">${icone('info', { tam: 14 })} Replay do jogo simulado no servidor. Na liga, escalação, formação e tática valem para a rodada inteira: as trocas ficam bloqueadas.</p>`;
   const uc = userClub(), feitas = trocasDe(v.g, uc.id).length, cheio = feitas >= MAX_TROCAS;
+  const elenco = escalacaoNoMinuto(v.g, v.g.h === uc.id ? 'h' : 'a', v.min);
   const sel = v.sel && P[v.sel], form = uc.formation || '4-4-2';
   const jog = p => `${posTag(p)}<span class="troca-nome">${esc(p.name)}</span>${ovrChip(p.ovr)}`;
   const dica = cheio ? `As ${MAX_TROCAS} substituições já foram feitas.` : sel ? `Escolha no banco quem entra no lugar de ${esc(sel.name)}.` : 'Escolha em campo quem sai.';
-  const reservas = banco(v.g).sort((a, b) => !a.motivo - !b.motivo || b.p.ovr - a.p.ovr);
+  const reservas = banco(v.g, v.min).sort((a, b) => !a.motivo - !b.motivo || b.p.ovr - a.p.ovr);
   return `<div class="tatica-vivo" id="ltat">${chipsTaticaAoVivo()}</div>
     <div class="chips" role="group" aria-label="Formação"><span class="muted">Formação</span>${Object.keys(FORMS).map(f => chip(f, `avFormacao|${f}`, f === form)).join('')}</div>
     <section class="trocas" aria-label="Substituições"><div class="card-topo"><h2 class="t3">Substituições</h2><span class="muted">${feitas} de ${MAX_TROCAS}</span></div>
       <p class="muted dica" aria-live="polite">${dica}</p>
       <div class="trocas-listas">
-        ${campoHtml(uc, { acao: 'avSair', sel: v.sel, bloqueado: cheio, mini: true })}
+        ${campoHtml(uc, { acao: 'avSair', sel: v.sel, bloqueado: cheio, mini: true, emCampo: elenco?.xi })}
         <ul class="lista-troca" aria-label="Banco">${reservas.map(({ p, motivo }) =>
           `<li><button type="button" class="troca-item" data-acao="avEntrar|${p.id}"${!sel || cheio || motivo ? ' disabled' : ''}>${jog(p)}${motivo ? `<span class="muted">${esc(motivo)}</span>` : ''}</button></li>`).join('')}</ul>
       </div></section>`;

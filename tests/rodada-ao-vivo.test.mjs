@@ -83,7 +83,10 @@ test('substituição: entra na mesma vaga, vale dali em diante, e o placar conti
 test('substituição: no máximo 5, só disponíveis, goleiro só por goleiro, e não depois do apito', () => {
   const j = novo(); comRelogioManual(j);
   for (let k = 0; k < 5; k++) {
-    const ok = j.run(`(()=>{const uc=userClub(),xi=getXI(uc),sai=xi.find(id=>P[id].pos!=='G'),e=banco(ui.vivo.g).find(b=>!b.motivo&&b.p.pos!=='G');return substituir(ui.vivo.g,${10 + k},sai,e.p.id)})()`);
+    const ok = j.run(`(()=>{const uc=userClub(),g=ui.vivo.g,min=${10 + k},lado=g.h===uc.id?'h':'a';
+      const sai=escalacaoNoMinuto(g,lado,min).xi.find(id=>id&&P[id].pos!=='G');
+      const entra=banco(g,min).find(b=>!b.motivo&&b.p.pos!=='G').p.id;
+      return substituir(g,min,sai,entra)})()`);
     assert.ok(ok.ok, ok.erro);
   }
   const sexta = j.run(`(()=>{const uc=userClub(),xi=getXI(uc),sai=xi.find(id=>P[id].pos!=='G'),e=banco(ui.vivo.g).find(b=>!b.motivo&&b.p.pos!=='G');return substituir(ui.vivo.g,40,sai,e.p.id)})()`);

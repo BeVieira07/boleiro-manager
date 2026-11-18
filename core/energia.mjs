@@ -1,4 +1,4 @@
-import { S, ehHumano } from './estado.mjs';
+import { P, S, ehHumano } from './estado.mjs';
 import { ESTILOS, MODOS, taticaUser } from './taticas.mjs';
 import { clamp } from './utils.mjs';
 
@@ -40,11 +40,23 @@ export function energiaDepois(p, jogos, fad = 0.02) {
 /** #198: troca ao vivo no minuto `min` (core/substituicoes.mjs). A rodada já gastou o jogo inteiro do titular e deu folga a quem
  *  estava no banco; aqui se acerta pelos minutos de cada um: quem sai recupera a parte que não jogou, quem entra paga a que jogou. */
 export function energiaDaTroca(sai, entra, min, clube) {
-  const f = clamp((93 - min) / 93, 0, 1), fad = fadDe(clube), k = p => RECUPERA * idadeRecupera(p.age);
-  const ajusta = (p, delta) => { p.energia = Math.round(clamp(energiaDe(p) + delta, 0, ENERGIA_MAX) * 10) / 10 };
-  // f = o que faltava do jogo na troca: quem sai deixa de jogar f, quem entra joga f
-  ajusta(sai, f * ((1 - k(sai)) * gastoPorJogo(sai, fad) + DESCANSO));
-  ajusta(entra, -f * (DESCANSO + (1 - k(entra)) * gastoPorJogo(entra, fad)));
+  ajustarMinutos(sai, min - 93, clube);
+  ajustarMinutos(entra, 93 - min, clube);
+}
+
+function ajustarMinutos(p, minutos, clube) {
+  if (!p || !minutos) return;
+  const gasto = DESCANSO + (1 - RECUPERA * idadeRecupera(p.age)) * gastoPorJogo(p, fadDe(clube));
+  p.energia = Math.round(clamp(energiaDe(p) - minutos / 93 * gasto, 0, ENERGIA_MAX) * 10) / 10;
+}
+
+export function energiaDaSaidaForcada(clube, antes, depois) {
+  const m = (depois || antes).m;
+  if (!antes || !depois) ajustarMinutos(P[(depois || antes).pid], depois ? m - 93 : 93 - m, clube);
+  if (antes?.entra !== depois?.entra) {
+    ajustarMinutos(P[antes?.entra], m - 93, clube);
+    ajustarMinutos(P[depois?.entra], 93 - m, clube);
+  }
 }
 
 /** Fim de uma rodada. `jogaram` = Map clube -> {xi: ids dos titulares, jogos}; clube que não está nele descansou. */
@@ -56,10 +68,11 @@ export function atualizarEnergia(jogaram) {
 }
 /** Anota os titulares de cada clube dos jogos `jogos` ({h, a}) antes de a rodada mexer em lesões e escalações. */
 export function anotarTitulares(jogaram, jogos, getXI, clubById) {
-  for (const g of jogos) for (const id of [g.h, g.a]) {
+  for (const g of jogos) for (const side of ['h', 'a']) {
+    const id = g[side];
     const j = jogaram.get(id);
     const c = clubById(id); if (!c) continue; // estrangeiro da Libertadores/Sul-Americana: sem energia (#133)
-    if (j) j.jogos++; else jogaram.set(id, { xi: [...getXI(c)], jogos: 1 });
+    if (j) j.jogos++; else jogaram.set(id, { xi: g.escalacoes?.[side].xi.filter(Boolean) || [...getXI(c)], jogos: 1 });
   }
   return jogaram;
 }

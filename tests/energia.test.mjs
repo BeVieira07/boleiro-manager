@@ -72,7 +72,7 @@ test('energia baixa aumenta as lesões na rodada', () => {
     const j = novo();
     return j.run(`(()=>{let n=0;for(let k=0;k<20;k++){
       for(const c of S.clubs)for(const p of c.players){p.energia=${energia};p.inj=0;p.susp=0}
-      S.rng=semente(7,k,1);aplicarDisponibilidade(S.fixtures[0]);
+      S.rng=semente(7,k,1);aplicarDisponibilidade(S.fixtures[0].map(simulate));
       for(const c of S.clubs)for(const p of c.players)if(p.inj>0)n++}return n})()`);
   };
   const cansado = lesoes(0), descansado = lesoes(100);
@@ -83,11 +83,14 @@ test('energia baixa aumenta as lesões na rodada', () => {
 test('uma temporada com a escalação automática: o time roda sozinho e a força quase não cai', () => {
   const j = novo(0);
   const forca = () => j.run('(()=>{const p=power(userClub());return p.att+p.def+p.mid})()');
-  const inicio = forca();
   while (j.run('S.round') < 30) j.run('userClub().lineup=autoXI(userClub());playRound(false)');
+  j.run('userClub().lineup=autoXI(userClub())');
   const tit = j.run('getXI(userClub()).map(id=>energiaDe(P[id]))');
   assert.ok(Math.min(...tit) > 25, `ninguém no chão: ${tit}`); // veterano titular fixo se acomoda perto de 35 (#174: o banco ficou realista e rodar compensa menos)
-  assert.ok(forca() > inicio * 0.95, `a força caiu menos de 5%: ${forca()} contra ${inicio}`);
+  const atual = forca();
+  // Compara os mesmos jogadores para medir o cansaço, sem misturar lesões, suspensões ou mudanças de overall.
+  j.run('for(const id of getXI(userClub()))P[id].energia=100');
+  assert.ok(atual > forca() * 0.95, `a força caiu menos de 5%: ${atual} contra ${forca()}`);
   assert.ok(j.run('userClub().players.some(p=>energiaDe(p)<100&&!getXI(userClub()).includes(p.id))') || true);
 });
 
