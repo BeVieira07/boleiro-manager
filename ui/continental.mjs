@@ -1,7 +1,8 @@
 /* ================= Libertadores e Sul-Americana na tela (#133, #134): cartões, tela de cada copa e jogos da rodada ================= */
-import { TORNEIOS, agregadoCont, artilhariaCont, clubeCont, dataCont, jogosDaDataCont, tabelaGrupoCont, torneioContDe } from '../core/continental.mjs';
+import { TORNEIOS, agregadoCont, clubeCont, dataCont, jogosDaDataCont, tabelaGrupoCont, torneioContDe } from '../core/continental.mjs';
 import { S, tec } from '../core/estado.mjs';
 import { esc, money } from '../core/utils.mjs';
+import { artilhariaDoTorneio } from './artilharia.mjs';
 import { crest } from './partida.mjs';
 
 const C = () => S.continentais && S.continentais.temporada === S.season ? S.continentais : null;
@@ -79,12 +80,6 @@ function mataMata(tor, me) {
       return jogo({ h: j.h, a: j.a, hg: j.ida ? t.h : null, ag: j.ida ? t.a : null }, me, det) }).join('')}</ul></section>`));
   return sec.reverse().join('');
 }
-function artilharia(tor) {
-  const L = artilhariaCont(tor); if (!L.length) return '';
-  return `<section class="card tabela-card"><h2 class="t3">Artilharia</h2><div class="tw"><table><caption class="sr">Artilharia da ${esc(tor.nome)}</caption>
-    <thead><tr><th scope="col">#</th><th scope="col">Jogador</th><th scope="col">Clube</th><th scope="col" class="n">Gols</th></tr></thead>
-    <tbody>${L.map((x, i) => { const c = clubeCont(x.clube); return `<tr><td>${i + 1}</td><td>${esc(x.nome)}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n"><b>${x.gols}</b></td></tr>` }).join('')}</tbody></table></div></section>`;
-}
 function vTorneio(id) {
   const cfg = TORNEIOS.find(t => t.id === id), tor = doTorneio(id), me = tec().clubId, voltar = '<p><button class="btn fantasma sm" data-acao="go|competicoes">← Competições</button></p>';
   if (!tor) return `${voltar}<section class="card"><h2 class="t3">${esc(cfg.nome)}</h2><p class="muted">${semVaga(cfg)}</p></section>`;
@@ -92,7 +87,7 @@ function vTorneio(id) {
   return `${voltar}<p class="muted resumo">32 clubes em 8 grupos de 4 (ida e volta); os dois primeiros de cada grupo vão às oitavas. Mata-mata em ida e volta e final em jogo único, junto com as rodadas do Brasileirão.
     Premiação: ${money(p.grupos)} pela fase de grupos, ${money(p.oitavas)} pelas oitavas, ${money(p.quartas)} pelas quartas, ${money(p.semi)} pela semifinal e ${money(p.titulo)} pelo título.
     ${tor.campeao ? `Campeão: <b>${esc(clubeCont(tor.campeao).name)}</b>.` : ''}</p>
-    ${mataMata(tor, me)}<div class="cartoes-acao grupos">${tor.grupos.map((g, i) => tabelaGrupo(tor, g, i, me)).join('')}</div>${artilharia(tor)}`;
+    ${mataMata(tor, me)}<div class="cartoes-acao grupos">${tor.grupos.map((g, i) => tabelaGrupo(tor, g, i, me)).join('')}</div>${artilhariaDoTorneio(tor, id)}`;
 }
 export const vLibertadores = () => vTorneio('libertadores');
 export const vSulamericana = () => vTorneio('sulamericana');

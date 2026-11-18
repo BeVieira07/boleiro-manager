@@ -5,12 +5,11 @@
    clube naquele jogo; a ida é na casa de h), pen = quem venceu nos pênaltis, v = quem passou. O vencedor do confronto 2i
    pega o do 2i+1 na fase seguinte, então o chaveamento inteiro sai do sorteio da primeira fase.
    shortcut: o jogo da copa é simulado junto com a rodada da liga, com a escalação e a tática da rodada, sem jogo ao vivo e
-   sem cartões, lesões, forma nem artilharia; dar à copa uma data e uma partida próprias mexe no fluxo da rodada (solo e liga).
+   sem cartões ou lesões; dar à copa uma data própria mexe no fluxo da rodada (solo e liga).
    Estado de antes da #51 não tem S.copa: a copa começa na temporada seguinte. */
 import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, ehHumano, tecnicos } from './estado.mjs';
-import { power } from './motor.mjs';
-import { golsSegmento, taticaDe } from './taticas.mjs';
-import { clamp, money, poisson, rnd, shuffle } from './utils.mjs';
+import { jogarPartidaCopa, noticiaAutores, placarDaPerna } from './gols-copa.mjs';
+import { clamp, money, rnd, shuffle } from './utils.mjs';
 
 export const COPA = 'Copa do Brasil', COPA_MAX = 64;
 // pelo número de confrontos da fase: 1 = final, 2 = semifinal...
@@ -26,7 +25,7 @@ export function criarCopa() {
   if (n < 4 || R < 2 * fases + 1) { S.copa = null; return }
   const fortes = S.clubs.filter(c => !ehHumano(c)).sort((a, b) => b.strength - a.strength || (a.id < b.id ? -1 : 1));
   const ids = shuffle([...S.clubs.filter(ehHumano), ...fortes].slice(0, n).map(c => c.id));
-  S.copa = { temporada: S.season, datas: Array.from({ length: 2 * fases }, (_, k) => Math.floor((k + 1) * R / (2 * fases + 1))), fases: [{ jogos: pares(ids) }], campeao: null };
+  S.copa = { temporada: S.season, datas: Array.from({ length: 2 * fases }, (_, k) => Math.floor((k + 1) * R / (2 * fases + 1))), fases: [{ jogos: pares(ids) }], campeao: null, gols: {} };
 }
 /** Jogo k da copa: {fase (índice), volta (bool)}. A rodada da liga dele é S.copa.datas[k]. */
 export const jogoDaData = k => ({ fase: Math.floor(k / 2), volta: k % 2 === 1 });
@@ -35,14 +34,6 @@ export function copaNaRodada(r) {
   const k = S.copa ? S.copa.datas.indexOf(r) : -1; if (k < 0) return null;
   const { fase, volta } = jogoDaData(k), n = S.copa.fases[0].jogos.length / 2 ** fase;
   return { fase, volta, nome: NOMES[n] || 'Fase preliminar' };
-}
-// placar de um jogo da copa (mandante M contra V), com a mesma conta da liga; os estaduais (#132) usam o mesmo
-export function placar(M, V) {
-  const pm = power(M), pv = power(V);
-  const lm = clamp(1.1 * Math.pow(pm.att / pv.def, 3) * Math.pow(pm.mid / pv.mid, 0.8) * 1.12, 0.15, 4.5);
-  const lv = clamp(1.1 * Math.pow(pv.att / pm.def, 3) * Math.pow(pv.mid / pm.mid, 0.8) * 0.9, 0.15, 4.5);
-  const sg = golsSegmento(lm, lv, taticaDe(M, V), taticaDe(V, M), 1, 93);
-  return [poisson(sg.h), poisson(sg.a)];
 }
 /** Total de gols de cada clube no confronto (o que já foi jogado). */
 export const agregado = j => ({ h: (j.ida ? j.ida.h : 0) + (j.volta ? j.volta.h : 0), a: (j.ida ? j.ida.a : 0) + (j.volta ? j.volta.a : 0) });
@@ -54,18 +45,19 @@ export function jogarCopa(r) {
   const nome = nomeFase(fase), n = fase.jogos.length;
   for (const j of fase.jogos) {
     const H = clubById(j.h), A = clubById(j.a);
-    if (!quando.volta) { const [gh, ga] = placar(H, A); j.ida = { h: gh, a: ga } }
+    const casa = quando.volta ? A : H, fora = quando.volta ? H : A;
+    const partida = jogarPartidaCopa(copa, casa, fora), jogo = placarDaPerna(partida, quando.volta);
+    if (!quando.volta) j.ida = jogo;
     else {
-      const [ga, gh] = placar(A, H); j.volta = { h: gh, a: ga };
+      j.volta = jogo;
       const t = agregado(j);
       if (t.h === t.a) j.pen = rnd() < clamp(0.5 + (H.strength - A.strength) / 100, 0.4, 0.6) ? j.h : j.a;
       j.v = t.h > t.a ? j.h : t.a > t.h ? j.a : j.pen;
     }
-    const casa = quando.volta ? A : H, jogo = quando.volta ? j.volta : j.ida;
     for (const c of [H, A]) if (ehHumano(c)) { // dinheiro, notícia e diretoria só para clube com técnico
       const adv = c === H ? A : H, meus = c === H ? jogo.h : jogo.a, dele = c === H ? jogo.a : jogo.h, t = tecnicos().find(x => x.clubId === c.id);
       if (c === casa) addFin(`Bilheteria ${COPA} vs ${adv.name}`, Math.round(Math.max(0, bilheteriaBase(c)) * 100) / 100, c);
-      addNews(`🏆 ${COPA}, ${nome.toLowerCase()} (${quando.volta ? 'volta' : 'ida'}): ${c.name} ${meus} x ${dele} ${adv.name}.`, c.id);
+      addNews(`🏆 ${COPA}, ${nome.toLowerCase()} (${quando.volta ? 'volta' : 'ida'}): ${c.name} ${meus} x ${dele} ${adv.name}.${noticiaAutores(partida)}`, c.id);
       if (!quando.volta) continue;
       const passou = j.v === c.id, penaltis = j.pen ? ' nos pênaltis' : '';
       if (passou) {

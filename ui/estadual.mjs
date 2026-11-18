@@ -2,6 +2,7 @@
 import { PREMIO_ESTADUAL, agregadoFinal, emPreTemporada, estadualPelaFrente, jogosDaData, nomeData, tabelaGrupo, torneioDe } from '../core/estadual.mjs';
 import { S, clubById, tec } from '../core/estado.mjs';
 import { esc, money } from '../core/utils.mjs';
+import { artilhariaDoTorneio } from './artilharia.mjs';
 import { crest } from './partida.mjs';
 
 /** O que o botão da rodada joga agora: 'estadual' na pré-temporada com jogo de técnico pela frente, senão 'rodada N'. */
@@ -55,7 +56,7 @@ export function vEstadual() {
   const situacao = tor.campeao ? `Campeão: <b>${esc(clubById(tor.campeao).name)}</b>.` : 'Em andamento.';
   const formato = tor.grupos.length === 1 ? 'Pontos corridos em turno único' : 'Dois grupos em turno único';
   return `${voltar}<p class="muted resumo">${esc(tor.nome)}, na pré-temporada (antes da rodada 1). ${formato}, e final em ida e volta; empate na soma vai para os pênaltis. ${situacao}</p>
-    ${final(tor, me)}${tor.grupos.map((g, i) => tabela(tor, g, tor.grupos.length === 1 ? 'Classificação' : `Grupo ${'AB'[i]}`, me)).join('')}`;
+    ${artilhariaDoTorneio(tor, 'estadual-' + tor.uf)}${final(tor, me)}${tor.grupos.map((g, i) => tabela(tor, g, tor.grupos.length === 1 ? 'Classificação' : `Grupo ${'AB'[i]}`, me)).join('')}`;
 }
 function semEstadual() {
   const uc = clubById(tec().clubId);

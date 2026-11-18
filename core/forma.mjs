@@ -12,10 +12,17 @@ import { getXI } from './motor.mjs';
 export const FORMA_LIM=2,FORMA_MAX_TEMP=3;
 // xiDe: quem foi titular em cada clube (padrão: a escalação atual)
 export function atualizarForma(games,xiDe=id=>getXI(clubById(id))){
+  for(const g of games)atualizarFormaDoJogo(g,xiDe);
+}
+
+function atualizarFormaDoJogo(g,xiDe){
   const gols={};
-  for(const g of games)for(const e of g.ev)if(e.t==='gol')gols[e.pid]=(gols[e.pid]||0)+1;
-  for(const g of games)for(const [id,meu,dele] of [[g.h,g.hg,g.ag],[g.a,g.ag,g.hg]]){
-    const c=clubById(id),xi=xiDe(id),res=Math.sign(meu-dele);
+  const autores=g.autores?[...g.autores.h,...g.autores.a]:(g.ev||[]).filter(e=>e.t==='gol').map(e=>e.pid);
+  for(const pid of autores)gols[pid]=(gols[pid]||0)+1;
+  for(const [id,meu,dele] of [[g.h,g.hg,g.ag],[g.a,g.ag,g.hg]]){
+    const c=clubById(id);
+    if(!c)continue; // só os clubes brasileiros têm forma nas copas continentais
+    const xi=xiDe(id),res=Math.sign(meu-dele);
     for(const p of c.players){
       if(p.o0==null)p.o0=p.ovr;
       if(p.oT==null)p.oT=p.o0;

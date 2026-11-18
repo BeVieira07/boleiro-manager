@@ -1,27 +1,29 @@
 /* ================= Artilharia (#184): filtros, pódio, ranking e "seus artilheiros" =================
    Maquete em docs/maquetes/artilharia.png. Cada competição vira o mesmo modelo de linhas (linhasDe), então o pódio, o ranking
-   e o painel lateral não sabem de onde os gols vieram. Liga: gols dos jogadores (topScorers). Continentais: artilhariaCont.
-   Copa do Brasil: o jogo da copa não guarda quem fez os gols (core/copa.mjs), então mostra o estado vazio. */
-import { TORNEIOS, artilhariaCont, clubeCont } from '../core/continental.mjs';
+   e o painel lateral não sabem de onde os gols vieram. Liga: topScorers. Copas e estaduais: artilhariaCopa. */
+import { TORNEIOS, clubeCont } from '../core/continental.mjs';
+import { artilhariaCopa } from '../core/gols-copa.mjs';
 import { DIVS, S, clubById, divOf, divisions, table, tec, topScorers, userClub } from '../core/estado.mjs';
 import { posDNome } from '../core/posicoes.mjs';
 import { esc } from '../core/utils.mjs';
 import { barra, chip, tag } from './componentes.mjs';
 import { ui } from './estado.mjs';
 import { crest } from './partida.mjs';
-import { render } from './telas.mjs';
+import { go, render } from './telas.mjs';
 
 const COPA = { id: 'copa', nome: 'Copa do Brasil' };
+const estaduais = () => S.estaduais?.temporada === S.season ? S.estaduais.torneios : [];
 const GRUPOS = () => [
   ['Liga', divisions().map(d => ({ id: d, nome: DIVS[d] }))],
   ['Copa nacional', [COPA]],
+  ['Estaduais', estaduais().map(t => ({ id: 'estadual-' + t.uf, nome: t.nome }))],
   ['Continental · América do Sul', TORNEIOS.map(t => ({ id: t.id, nome: t.nome }))]
-];
+].filter(([, torneios]) => torneios.length);
 const todas = () => GRUPOS().flatMap(([, l]) => l);
 /** Competição aberta: a escolhida, ou a série do seu clube. */
 export const competicaoAtual = () => todas().find(c => c.id === ui.artComp) || todas().find(c => c.id === divOf(userClub()));
 
-export function verArtilharia(id) { ui.artComp = id; render() }
+export function verArtilharia(id) { ui.artComp = id; if (ui.view === 'artilharia') render(); else go('artilharia') }
 export function artSoMeu() { ui.artSo = !ui.artSo; render() }
 
 // posição do ranking com empate: 1º, 2º, 2º, 4º
@@ -30,18 +32,25 @@ const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
 function linhasDe(c) {
   const me = tec().clubId;
-  if (c.id === COPA.id) return { status: S.copa ? (S.copa.campeao ? 'Encerrada' : 'Em andamento') : 'Sem copa', linhas: [],
-    vazio: 'A Copa do Brasil não guarda quem fez os gols, então não há artilharia dela.' };
-  const tor = TORNEIOS.some(t => t.id === c.id) && S.continentais && S.continentais.temporada === S.season ? S.continentais.torneios.find(t => t.id === c.id) : null;
-  if (TORNEIOS.some(t => t.id === c.id)) {
+  if (!divisions().includes(c.id)) {
+    const tor = c.id === COPA.id ? S.copa : c.id.startsWith('estadual-') ? estaduais().find(t => 'estadual-' + t.uf === c.id)
+      : S.continentais?.temporada === S.season ? S.continentais.torneios.find(t => t.id === c.id) : null;
     if (!tor) return { status: 'Sem torneio', linhas: [], vazio: `Não há ${c.nome} nesta temporada.` };
-    const L = artilhariaCont(tor, 1000).map(x => ({ nome: x.nome, sub: '', clube: clubeCont(x.clube), j: null, gols: x.gols, meu: x.clube === me }));
-    return { status: tor.campeao ? 'Encerrada' : 'Em andamento', linhas: ranquear(L), vazio: 'Nenhum gol ainda.' };
+    const L = artilhariaCopa(tor, 1000).map(x => ({ nome: x.nome, sub: '', clube: clubeCont(x.clube), j: null, gols: x.gols, meu: x.clube === me }));
+    return { status: tor.campeao ? 'Encerrada' : 'Em andamento', linhas: ranquear(L), vazio: 'Nenhum gol registrado nesta competição.' };
   }
   const J = Object.fromEntries(table(c.id).map(t => [t.id, t.J]));
   const L = topScorers(1000, c.id).map(p => ({ nome: p.name, sub: posDNome(p), clube: clubById(p.clubId), j: J[p.clubId] ?? 0, gols: p.goals, meu: p.clubId === me }));
   const total = S.fixtures.length;
   return { status: S.round >= total ? 'Encerrado' : S.round ? `Em andamento · após ${plural(S.round, 'rodada', 'rodadas')}` : 'Ainda sem jogos', linhas: ranquear(L), vazio: 'Nenhum gol ainda nesta série.' };
+}
+
+export function artilhariaDoTorneio(tor, id, nome = tor.nome) {
+  const L = ranquear(artilhariaCopa(tor));
+  return `<section class="card tabela-card"><div class="card-topo"><h2 class="t3">Artilharia</h2><button class="btn fantasma sm" data-acao="verArtilharia|${id}">Ver ranking</button></div>
+    <div class="tw"><table><caption class="sr">Artilharia · ${esc(nome)}</caption>
+    <thead><tr><th scope="col">#</th><th scope="col">Jogador</th><th scope="col">Clube</th><th scope="col" class="n">Gols</th></tr></thead>
+    <tbody>${L.map(x => { const c = clubeCont(x.clube); return `<tr><td>${x.rank}</td><td>${esc(x.nome)}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n"><b>${x.gols}</b></td></tr>` }).join('') || '<tr><td colspan="4" class="muted">Nenhum gol registrado nesta competição.</td></tr>'}</tbody></table></div></section>`;
 }
 
 const media = x => x.j ? (x.gols / x.j).toFixed(2).replace('.', ',') : '—';

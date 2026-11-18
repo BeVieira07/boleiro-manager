@@ -8,11 +8,11 @@
    montada assim que a fase acaba e jogada nas duas últimas datas da pré-temporada (a mesma para todos os estados).
    jogarRodada joga, a cada clique, as datas até a próxima com jogo de clube com técnico; sem jogo de técnico pela frente,
    joga o resto da pré-temporada e a rodada 1 na mesma chamada.
-   shortcut: como na copa, os jogos não têm ao vivo, cartões, lesões, forma nem artilharia, e a pré-temporada não paga
+   shortcut: como na copa, os jogos não têm ao vivo, cartões ou lesões, e a pré-temporada não paga
    cota de TV nem salários. Estado de antes da #132 não tem S.estaduais: os estaduais começam na temporada seguinte. */
 import { S, addFin, addNews, bilheteriaBase, clubById, ehHumano, tecDoClube } from './estado.mjs';
 import { aplicarConfianca } from './diretoria.mjs';
-import { placar } from './copa.mjs';
+import { jogarPartidaCopa, jogoDaPerna, noticiaAutores, placarDaPerna } from './gols-copa.mjs';
 import { anotarTitulares, atualizarEnergia } from './energia.mjs';
 import { getXI } from './motor.mjs';
 import { clamp, money, rnd, semente, shuffle } from './utils.mjs';
@@ -54,7 +54,7 @@ export function criarEstaduais() {
   const torneios = Object.keys(por).sort().filter(uf => por[uf].length >= ESTADUAL_MIN).map(uf => {
     const ids = shuffle(por[uf].map(c => c.id)), grupos = ids.length >= GRUPOS_DESDE ? [ids.filter((_, i) => i % 2 === 0), ids.filter((_, i) => i % 2 === 1)] : [ids];
     const fases = grupos.map(turno), rodadas = Array.from({ length: Math.max(...fases.map(f => f.length)) }, (_, d) => fases.flatMap(f => f[d] || []));
-    return { uf, nome: nomeEstadual(uf), grupos, rodadas, final: null, campeao: null };
+    return { uf, nome: nomeEstadual(uf), grupos, rodadas, final: null, campeao: null, gols: {} };
   });
   S.estaduais = torneios.length ? { temporada: S.season, datas: Math.max(...torneios.map(t => t.rodadas.length)) + 2, dia: 0, torneios } : null;
 }
@@ -83,8 +83,8 @@ export function jogosDaData(tor, d) {
   const E = S.estaduais;
   if (d < tor.rodadas.length) return tor.rodadas[d];
   const f = tor.final; if (!f) return [];
-  if (d === E.datas - 2) return [{ h: f.h, a: f.a, hg: f.ida ? f.ida.h : null, ag: f.ida ? f.ida.a : null, final: 'ida' }];
-  if (d === E.datas - 1) return [{ h: f.a, a: f.h, hg: f.volta ? f.volta.a : null, ag: f.volta ? f.volta.h : null, final: 'volta' }];
+  if (d === E.datas - 2) return [{ ...jogoDaPerna(f, false), final: 'ida' }];
+  if (d === E.datas - 1) return [{ ...jogoDaPerna(f, true), final: 'volta' }];
   return [];
 }
 /** Nome da data d de um torneio: "Rodada 3", "Final (ida)"... ou '' se ele não joga nela. */
@@ -111,14 +111,19 @@ function jogarData(d) {
   const jogaram = anotarTitulares(new Map(), E.torneios.flatMap(t => jogosDaData(t, d)), getXI, clubById); // #136: a energia também gasta aqui
   for (const tor of E.torneios) {
     if (d < tor.rodadas.length) {
-      for (const g of tor.rodadas[d]) { [g.hg, g.ag] = placar(clubById(g.h), clubById(g.a)); dinheiroDoJogo(tor, g, `Rodada ${d + 1}`) }
+      for (const g of tor.rodadas[d]) {
+        Object.assign(g, jogarPartidaCopa(tor, clubById(g.h), clubById(g.a)));
+        dinheiroDoJogo(tor, g, `Rodada ${d + 1}`);
+      }
       if (d === tor.rodadas.length - 1) montarFinal(tor);
     } else if (tor.final && d === E.datas - 2) {
-      const f = tor.final, [h, a] = placar(clubById(f.h), clubById(f.a)); f.ida = { h, a };
-      dinheiroDoJogo(tor, { h: f.h, a: f.a, hg: h, ag: a }, 'Final (ida)');
+      const f = tor.final, g = jogarPartidaCopa(tor, clubById(f.h), clubById(f.a));
+      f.ida = placarDaPerna(g, false);
+      dinheiroDoJogo(tor, g, 'Final (ida)');
     } else if (tor.final && d === E.datas - 1) {
-      const f = tor.final, H = clubById(f.h), A = clubById(f.a), [ga, gh] = placar(A, H); f.volta = { h: gh, a: ga };
-      dinheiroDoJogo(tor, { h: f.a, a: f.h, hg: ga, ag: gh }, 'Final (volta)');
+      const f = tor.final, H = clubById(f.h), A = clubById(f.a), g = jogarPartidaCopa(tor, A, H);
+      f.volta = placarDaPerna(g, true);
+      dinheiroDoJogo(tor, g, 'Final (volta)');
       const t = agregadoFinal(f);
       if (t.h === t.a) f.pen = rnd() < clamp(0.5 + (H.strength - A.strength) / 100, 0.4, 0.6) ? f.h : f.a;
       f.v = t.h > t.a ? f.h : t.a > t.h ? f.a : f.pen; tor.campeao = f.v;
@@ -131,7 +136,7 @@ function jogarData(d) {
 function dinheiroDoJogo(tor, g, fase) {
   const H = clubById(g.h), A = clubById(g.a);
   if (ehHumano(H)) addFin(`Bilheteria ${tor.nome} vs ${A.name}`, Math.round(Math.max(0, bilheteriaBase(H)) * 50) / 100, H);
-  for (const c of [H, A]) if (ehHumano(c)) addNews(`🏟️ ${tor.nome}, ${fase.toLowerCase()}: ${H.name} ${g.hg} x ${g.ag} ${A.name}.`, c.id);
+  for (const c of [H, A]) if (ehHumano(c)) addNews(`🏟️ ${tor.nome}, ${fase.toLowerCase()}: ${H.name} ${g.hg} x ${g.ag} ${A.name}.${noticiaAutores(g)}`, c.id);
 }
 // fim do torneio: premiação, notícia e diretoria (peso baixo) dos clubes com técnico
 function encerrar(tor) {

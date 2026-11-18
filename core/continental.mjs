@@ -7,15 +7,16 @@
    (6 de grupos, ida e volta de oitavas, quartas e semi, e a final em jogo único: 13 datas, as mesmas nas duas copas).
    torneio = {id, nome, grupos: [[4 ids]], rodadas: [[{h, a, hg, ag}]] (6 datas), fases: [{jogos: [{h, a, ida, volta, pen, v}]}],
    final: {h, a, hg, ag, pen, v}, campeao, gols: {pid: {nome, clube, gols}}}.
-   shortcut: como na Copa do Brasil, os jogos são simulados junto com a rodada, sem ao vivo, cartões, lesões nem forma.
+   shortcut: como na Copa do Brasil, os jogos são simulados junto com a rodada, sem ao vivo, cartões ou lesões.
    Estado de antes da #133 não tem S.continentais: as copas começam na temporada seguinte. */
 import { DADOS_CONTINENTAIS } from './dados-continentais.mjs';
 import { aplicarConfianca } from './diretoria.mjs';
 import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, divOf, ehHumano, reindex, table, tecDoClube } from './estado.mjs';
 import { prepararEstrangeiro } from './estrangeiros.mjs';
-import { pickScorer, power } from './motor.mjs';
-import { golsSegmento, taticaDe } from './taticas.mjs';
-import { clamp, money, poisson, rnd, shuffle } from './utils.mjs';
+import { jogarPartidaCopa, jogoDaPerna, noticiaAutores, placarDaPerna } from './gols-copa.mjs';
+import { clamp, money, rnd, shuffle } from './utils.mjs';
+
+export { artilhariaCopa as artilhariaCont } from './gols-copa.mjs';
 
 // os testes de outras funcionalidades desligam (tests/jogo.mjs), como os estaduais
 export const CONTINENTAIS = { ligados: true };
@@ -26,13 +27,11 @@ export const TORNEIOS = [
   { id: 'sulamericana', nome: 'Sul-Americana', vagas: 7, premio: { grupos: 1, oitavas: 0.8, quartas: 1, semi: 1.5, titulo: 7 } }
 ];
 const FASES = ['Oitavas de final', 'Quartas de final', 'Semifinal'];
-const NEUTRA = { estilo: 'equilibrado', modo: 'equilibrado' };
 // 4 clubes, ida e volta: [casa, fora] por posição no grupo em cada data
 const TABELA_GRUPO = [[[0, 1], [2, 3]], [[0, 2], [3, 1]], [[3, 0], [1, 2]], [[1, 0], [3, 2]], [[2, 0], [1, 3]], [[0, 3], [2, 1]]];
 
 /** Clube do jogo ou estrangeiro das copas (para nome, escudo e força). */
 export const clubeCont = id => clubById(id) || (S.continentais && S.continentais.estrangeiros[id]) || null;
-const estrangeiro = id => !clubById(id);
 const torneioCfg = id => TORNEIOS.find(t => t.id === id);
 
 /** Brasileiros classificados para a próxima temporada, pela Série A desta (e o campeão da copa na Libertadores).
@@ -99,36 +98,14 @@ export function dataCont(k) {
   return { tipo: 'final', nome: 'Final' };
 }
 
-// força e tática: brasileiro pelo elenco e escalação (como na liga); estrangeiro pela força do clube
-const forca = c => estrangeiro(c.id) ? { att: c.strength, def: c.strength, mid: c.strength, xi: null } : power(c);
-const tatica = c => ehHumano(c) ? taticaDe(c, c) : NEUTRA;
-const PESO = { G: 0.02, D: 0.8, M: 2.6, A: 6 };
-function autor(c, f) {
-  if (f.xi) { const p = pickScorer(f.xi); return p && { id: p.id, nome: p.name } }
-  const peso = p => PESO[p.pos] * Math.pow((p.ovr || 60) / 70, 2); // como pickScorer: posição e nota
-  const ps = (c.players || []).filter(p => PESO[p.pos]), tot = ps.reduce((s, p) => s + peso(p), 0);
-  let x = rnd() * tot; for (const p of ps) { x -= peso(p); if (x <= 0) return { id: p.id, nome: p.name } }
-  return ps.length ? { id: ps[ps.length - 1].id, nome: ps[ps.length - 1].name } : null;
-}
-// placar de M (em casa, salvo neutro) contra V, com os autores dos gols na artilharia do torneio
-function placarCont(tor, M, V, neutro = false) {
-  const fm = forca(M), fv = forca(V), casa = neutro ? 1 : 1.12, fora = neutro ? 1 : 0.9;
-  const lm = clamp(1.1 * Math.pow(fm.att / fv.def, 3) * Math.pow(fm.mid / fv.mid, 0.8) * casa, 0.15, 4.5);
-  const lv = clamp(1.1 * Math.pow(fv.att / fm.def, 3) * Math.pow(fv.mid / fm.mid, 0.8) * fora, 0.15, 4.5);
-  const sg = golsSegmento(lm, lv, tatica(M), tatica(V), 1, 93), gm = poisson(sg.h), gv = poisson(sg.a);
-  for (const [c, f, n] of [[M, fm, gm], [V, fv, gv]]) for (let i = 0; i < n; i++) {
-    const p = autor(c, f); if (!p) continue;
-    const reg = tor.gols[p.id] || (tor.gols[p.id] = { nome: p.nome, clube: c.id, gols: 0 }); reg.gols++;
-  }
-  return [gm, gv];
-}
+const placarCont = (tor, H, A, neutro = false) => jogarPartidaCopa(tor, H, A, { continental: true, neutro });
 const penaltis = (H, A) => rnd() < clamp(0.5 + (H.strength - A.strength) / 100, 0.4, 0.6) ? H.id : A.id;
 
 // dinheiro, notícia e diretoria: só para clube com técnico
-function noticiaJogo(tor, d, h, a, gh, ga) {
-  const H = clubeCont(h), A = clubeCont(a);
+function noticiaJogo(tor, d, g) {
+  const H = clubeCont(g.h), A = clubeCont(g.a);
   if (ehHumano(H) && d.tipo !== 'final') addFin(`Bilheteria ${tor.nome} vs ${A.name}`, Math.round(Math.max(0, bilheteriaBase(H)) * 100) / 100, H);
-  for (const c of [H, A]) if (ehHumano(c)) addNews(`🌎 ${tor.nome}, ${d.nome.toLowerCase()}: ${H.name} ${gh} x ${ga} ${A.name}.`, c.id);
+  for (const c of [H, A]) if (ehHumano(c)) addNews(`🌎 ${tor.nome}, ${d.nome.toLowerCase()}: ${H.name} ${g.hg} x ${g.ag} ${A.name}.${noticiaAutores(g)}`, c.id);
 }
 function premiar(tor, id, fase, valor, fat) {
   const c = clubById(id), t = c && tecDoClube(id); if (!t) return;
@@ -144,7 +121,10 @@ function eliminar(tor, id, adv, fase) {
 function jogarGrupo(tor, n, d) {
   const cfg = torneioCfg(tor.id);
   if (n === 0) for (const id of tor.grupos.flat()) premiar(tor, id, 'participação na fase de grupos', cfg.premio.grupos);
-  for (const g of tor.rodadas[n]) { [g.hg, g.ag] = placarCont(tor, clubeCont(g.h), clubeCont(g.a)); noticiaJogo(tor, d, g.h, g.a, g.hg, g.ag) }
+  for (const g of tor.rodadas[n]) {
+    Object.assign(g, placarCont(tor, clubeCont(g.h), clubeCont(g.a)));
+    noticiaJogo(tor, d, g);
+  }
   if (n < 5) return;
   // fim dos grupos: 1º de cada grupo pega o 2º do grupo vizinho; o 2º manda a ida
   const tabs = tor.grupos.map(g => tabelaGrupoCont(tor, g));
@@ -160,8 +140,10 @@ function jogarMata(tor, n, volta, d) {
   const cfg = torneioCfg(tor.id), proxima = ['quartas', 'semi', 'titulo'][n];
   for (const j of fase.jogos) {
     const H = clubeCont(j.h), A = clubeCont(j.a);
-    if (!volta) { const [gh, ga] = placarCont(tor, H, A); j.ida = { h: gh, a: ga }; noticiaJogo(tor, d, j.h, j.a, gh, ga); continue }
-    const [ga, gh] = placarCont(tor, A, H); j.volta = { h: gh, a: ga }; noticiaJogo(tor, d, j.a, j.h, ga, gh);
+    const g = volta ? placarCont(tor, A, H) : placarCont(tor, H, A);
+    noticiaJogo(tor, d, g);
+    if (!volta) { j.ida = placarDaPerna(g, false); continue }
+    j.volta = placarDaPerna(g, true);
     const t = agregadoCont(j); if (t.h === t.a) j.pen = penaltis(H, A);
     j.v = t.h > t.a ? j.h : t.a > t.h ? j.a : j.pen;
     const perdeu = j.v === j.h ? j.a : j.h;
@@ -176,7 +158,7 @@ function jogarMata(tor, n, volta, d) {
 function jogarFinal(tor, d) {
   const f = tor.final; if (!f) return;
   const H = clubeCont(f.h), A = clubeCont(f.a), cfg = torneioCfg(tor.id);
-  [f.hg, f.ag] = placarCont(tor, H, A, true); noticiaJogo(tor, d, f.h, f.a, f.hg, f.ag);
+  Object.assign(f, placarCont(tor, H, A, true)); noticiaJogo(tor, d, f);
   if (f.hg === f.ag) f.pen = penaltis(H, A);
   f.v = f.hg > f.ag ? f.h : f.ag > f.hg ? f.a : f.pen; tor.campeao = f.v;
   const campeao = clubeCont(f.v), vice = f.v === f.h ? f.a : f.h;
@@ -202,12 +184,10 @@ export function jogarContinentais(r) {
 export function jogosDaDataCont(tor, k) {
   const d = dataCont(k);
   if (d.tipo === 'grupo') return tor.rodadas[d.n];
-  if (d.tipo === 'final') return tor.final ? [{ h: tor.final.h, a: tor.final.a, hg: tor.final.hg, ag: tor.final.ag }] : [];
+  if (d.tipo === 'final') return tor.final ? [tor.final] : [];
   const fase = tor.fases[d.n]; if (!fase) return [];
-  return fase.jogos.map(j => d.volta ? { h: j.a, a: j.h, hg: j.volta ? j.volta.a : null, ag: j.volta ? j.volta.h : null } : { h: j.h, a: j.a, hg: j.ida ? j.ida.h : null, ag: j.ida ? j.ida.a : null });
+  return fase.jogos.map(j => jogoDaPerna(j, d.volta));
 }
 /** Torneio de que o clube participa nesta temporada, ou null. */
 export const torneioContDe = (id, torId) => S.continentais && S.continentais.temporada === S.season
   ? S.continentais.torneios.find(t => t.id === torId && t.grupos.some(g => g.includes(id))) || null : null;
-/** Artilharia do torneio: [{nome, clube, gols}], do maior para o menor. */
-export const artilhariaCont = (tor, n = 10) => Object.values(tor.gols).sort((a, b) => b.gols - a.gols || (a.nome < b.nome ? -1 : 1)).slice(0, n);
