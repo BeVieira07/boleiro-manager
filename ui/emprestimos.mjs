@@ -10,7 +10,7 @@ import { avisar, confirmar } from './avisos.mjs';
 
 export function loanTag(p){
   const l=loanOf(p.id);if(!l)return '';
-  const incoming=l.to===p.clubId,c=clubById(incoming?l.from:l.to);
+  const incoming=l.to===p.clubId,c=clubeDe(incoming?l.from:l.to);
   return ` <span class="pill" title="Salário: ${salarioTxt(l)}">${incoming?'emprestado de':'emprestado a'} ${esc(c.name)} · ${fimTxt(l)}</span>`;
 }
 /* #142: 'in' = pedir emprestado da lista de um clube da IA (Mercado); 'out' = pôr ou tirar da sua lista de empréstimo (Elenco). */

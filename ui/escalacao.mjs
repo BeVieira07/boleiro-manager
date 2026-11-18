@@ -10,6 +10,7 @@ import { FORMS, PORD, esc } from '../core/utils.mjs';
 import { barra, chip, energiaBarra, ovrChip } from './componentes.mjs';
 import { save, ui } from './estado.mjs';
 import { icone } from './icones.mjs';
+import { botaoFicha } from './ficha-jogador.mjs';
 import { autoLineup, render } from './telas.mjs';
 import { avisar } from './avisos.mjs';
 
@@ -81,7 +82,7 @@ export function vEscalacao() {
   <div class="esc">
     ${campoHtml(uc)}
     <div class="esc-lado">
-      <section class="card"><div class="card-topo"><h2 class="t3">Força do time</h2><button class="btn sm" data-acao="escalarMelhoresTela">Escalar melhores</button></div>
+      <section class="card"><div class="card-topo"><h2 class="t3">Força do time</h2><div class="acoes">${P[ui.selEsc] ? botaoFicha(P[ui.selEsc]) : ''}<button class="btn sm" data-acao="escalarMelhoresTela">Escalar melhores</button></div></div>
         <p class="muted titulares">Titulares: <b class="${xi.length === 11 ? 'ok' : 'bad'}">${xi.length}/11</b> · energia média <b>${xi.length ? Math.round(xi.reduce((t, id) => t + energiaDe(P[id]), 0) / xi.length) : 0}</b></p>
         ${[['Ataque', pw.att, 'var(--pos-a)'], ['Meio', pw.mid, 'var(--verde)'], ['Defesa', pw.def, 'var(--info)']].map(([n, v, c]) => `<div class="setor"><div class="setor-topo"><span>${n}</span><b>${v.toFixed(0)}</b></div>${barra(v, c)}</div>`).join('')}
       </section>

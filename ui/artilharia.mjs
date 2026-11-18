@@ -3,11 +3,12 @@
    e o painel lateral não sabem de onde os gols vieram. Liga: topScorers. Copas e estaduais: artilhariaCopa. */
 import { TORNEIOS, clubeCont } from '../core/continental.mjs';
 import { artilhariaCopa } from '../core/gols-copa.mjs';
-import { DIVS, S, clubById, divOf, divisions, table, tec, topScorers, userClub } from '../core/estado.mjs';
+import { DIVS, P, S, clubById, divOf, divisions, table, tec, topScorers, userClub } from '../core/estado.mjs';
 import { posDNome } from '../core/posicoes.mjs';
 import { esc } from '../core/utils.mjs';
 import { barra, tag } from './componentes.mjs';
 import { ui } from './estado.mjs';
+import { botaoFicha } from './ficha-jogador.mjs';
 import { crest } from './partida.mjs';
 import { go, render } from './telas.mjs';
 
@@ -32,6 +33,14 @@ export function artSoMeu() { ui.artSo = !ui.artSo; render() }
 // posição do ranking com empate: 1º, 2º, 2º, 4º
 const ranquear = L => L.map(x => ({ ...x, rank: 1 + L.filter(y => y.gols > x.gols).length }));
 const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+function artilheirosComId(tor, n) {
+  const porRegistro = new Map(Object.entries(tor.gols || {}).map(([id, x]) => {
+    const sufixo = ':' + x.clube;
+    return [x, id.endsWith(sufixo) ? id.slice(0, -sufixo.length) : id];
+  }));
+  return artilhariaCopa(tor, n).map(x => ({ ...x, pid: porRegistro.get(x) }));
+}
+const fichaArtilheiro = x => P[x.pid] ? botaoFicha(P[x.pid]) : '';
 
 function linhasDe(c) {
   const me = tec().clubId;
@@ -39,21 +48,21 @@ function linhasDe(c) {
     const tor = c.id === COPA.id ? S.copa : c.id.startsWith('estadual-') ? estaduais().find(t => 'estadual-' + t.uf === c.id)
       : S.continentais?.temporada === S.season ? S.continentais.torneios.find(t => t.id === c.id) : null;
     if (!tor) return { status: 'Sem torneio', linhas: [], vazio: `Não há ${c.nome} nesta temporada.` };
-    const L = artilhariaCopa(tor, 1000).map(x => ({ nome: x.nome, sub: '', clube: clubeCont(x.clube), j: null, gols: x.gols, meu: x.clube === me }));
+    const L = artilheirosComId(tor, 1000).map(x => ({ pid: x.pid, nome: x.nome, sub: '', clube: clubeCont(x.clube), j: null, gols: x.gols, meu: x.clube === me }));
     return { status: tor.campeao ? 'Encerrada' : 'Em andamento', linhas: ranquear(L), vazio: 'Nenhum gol registrado nesta competição.' };
   }
   const J = Object.fromEntries(table(c.id).map(t => [t.id, t.J]));
-  const L = topScorers(1000, c.id).map(p => ({ nome: p.name, sub: posDNome(p), clube: clubById(p.clubId), j: J[p.clubId] ?? 0, gols: p.goals, meu: p.clubId === me }));
+  const L = topScorers(1000, c.id).map(p => ({ pid: p.id, nome: p.name, sub: posDNome(p), clube: clubById(p.clubId), j: J[p.clubId] ?? 0, gols: p.goals, meu: p.clubId === me }));
   const total = S.fixtures.length;
   return { status: S.round >= total ? 'Encerrado' : S.round ? `Em andamento · após ${plural(S.round, 'rodada', 'rodadas')}` : 'Ainda sem jogos', linhas: ranquear(L), vazio: 'Nenhum gol ainda nesta série.' };
 }
 
 export function artilhariaDoTorneio(tor, id, nome = tor.nome) {
-  const L = ranquear(artilhariaCopa(tor));
+  const L = ranquear(artilheirosComId(tor, 10));
   return `<section class="card tabela-card"><div class="card-topo"><h2 class="t3">Artilharia</h2><button class="btn fantasma sm" data-acao="verArtilharia|${id}">Ver ranking</button></div>
     <div class="tw"><table><caption class="sr">Artilharia · ${esc(nome)}</caption>
     <thead><tr><th scope="col">#</th><th scope="col">Jogador</th><th scope="col">Clube</th><th scope="col" class="n">Gols</th></tr></thead>
-    <tbody>${L.map(x => { const c = clubeCont(x.clube); return `<tr><td>${x.rank}</td><td>${esc(x.nome)}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n"><b>${x.gols}</b></td></tr>` }).join('') || '<tr><td colspan="4" class="muted">Nenhum gol registrado nesta competição.</td></tr>'}</tbody></table></div></section>`;
+    <tbody>${L.map(x => { const c = clubeCont(x.clube); return `<tr><td>${x.rank}</td><td>${esc(x.nome)}${fichaArtilheiro(x)}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n"><b>${x.gols}</b></td></tr>` }).join('') || '<tr><td colspan="4" class="muted">Nenhum gol registrado nesta competição.</td></tr>'}</tbody></table></div></section>`;
 }
 
 const media = x => x.j ? (x.gols / x.j).toFixed(2).replace('.', ',') : '—';
@@ -78,7 +87,7 @@ function podio(linhas) {
 function ranking(c, linhas, vazio, uc) {
   const lider = linhas.length ? linhas[0].gols : 1, vistas = ui.artSo ? linhas.filter(x => x.meu) : linhas;
   const corpo = vistas.slice(0, 25).map(x => `<tr class="${x.meu ? 'me' : ''}"><td>${posicao(x.rank)}</td>
-    <td><b>${esc(x.nome)}</b>${x.sub ? `<span class="art-sub">${esc(x.sub)}</span>` : ''}</td>
+    <td><b>${esc(x.nome)}</b>${fichaArtilheiro(x)}${x.sub ? `<span class="art-sub">${esc(x.sub)}</span>` : ''}</td>
     <td><span class="club">${crest(x.clube)} ${esc(x.clube.name)}</span></td><td class="n">${x.j ?? '—'}</td>
     <td class="n"><span class="art-gols"><b>${x.gols}</b>${barra(x.gols / lider * 100, x.meu ? 'var(--verde)' : '', 'fina')}</span></td><td class="n">${media(x)}</td></tr>`).join('');
   return `<section class="card tabela-card art-ranking"><div class="art-topo"><h2 class="t3">Ranking</h2>
