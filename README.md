@@ -45,7 +45,9 @@ O plano gratuito **pausa o projeto depois de cerca de uma semana sem uso**: os d
 
 ## Dados do Brasileirão (API-Football)
 
-O jogo já vem com as **Séries A, B, C e D de 2024** (80 clubes, 2435 jogadores reais), salvas em `data/brasileirao-2024.json` e `data/brasileirao-serie-<b|c|d>-2024.json`. Elas ficam embutidas em `core/dados-padrao.mjs`, para o jogo funcionar sem internet. Se mudar os JSONs, rode `npm run dados:padrao` para gerar o `core/dados-padrao.mjs` de novo. Para usar outros dados, baixe com os passos abaixo e carregue em **Dados → Carregar JSON**.
+O jogo já vem com as **Séries A, B, C e D de 2024** (80 clubes). Os registros importados ficam em `data/brasileirao-2024.json` e `data/brasileirao-serie-<b|c|d>-2024.json`. Rode `npm run dados:padrao` após mudar os JSONs para gerar os elencos jogáveis em `core/dados-padrao.mjs`.
+
+Na geração, elencos grandes são reduzidos a até 26 jogadores. Minutos e partidas têm prioridade quando disponíveis, com vagas reservadas por posição. Sem estatísticas completas, a seleção conserva os elencos menores e considera as notas disponíveis, o valor de mercado e a presença do número da camisa. Em campanhas novas, o jogo completa os grupos que vieram com poucos jogadores.
 
 1. Copie `.env.example` para `.env` e coloque sua chave.
 2. Rode:
