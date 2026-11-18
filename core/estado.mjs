@@ -49,7 +49,12 @@ export const tvQuota=div=>({A:1.2,B:0.5,C:0.2,D:0.1})[div];
 // bilheteria de um jogo em casa, antes do bônus pela posição na tabela
 export const bilheteriaBase=c=>0.5+(c.strength-60)*0.06;
 // premiação de fim de temporada e caixa inicial, por série
-export const seasonPrize=(div,pos)=>Math.round(({A:5+(20-pos)*2.1,B:1+(20-pos)*0.5,C:0.3+(20-pos)*0.15,D:0.1+(20-pos)*0.08})[div]*10)/10;
+// Prêmios em milhões de reais. Referências de mercado em docs/premiacoes.md.
+const PREMIO_LIGA = { A: [2, 0.45], B: [0.45, 0.18], C: [0.2, 0.075], D: [0.1, 0.04] };
+export function seasonPrize(div, pos) {
+  const [piso, porPosicao] = PREMIO_LIGA[div];
+  return Math.round((piso + (20 - pos) * porPosicao) * 100) / 100;
+}
 export const startBalance=(div,s)=>Math.round(({A:10+(s-60)*1.5,B:Math.max(2,3+(s-55)*0.5),C:Math.max(1,1.5+(s-50)*0.2),D:Math.max(0.8,1+(s-48)*0.1)})[div]*10)/10;
 export const MOVE_N=()=>Math.min(4,...divisions().map(d=>S.clubs.filter(c=>divOf(c)===d).length-1));
 

@@ -1,5 +1,5 @@
 /* ================= Copa do Brasil na tela (#51): chaveamento por fase ================= */
-import { COPA, PREMIO_COPA, agregado, confrontoDe, copaNaRodada, nomeFase } from '../core/copa.mjs';
+import { COPA, agregado, confrontoDe, copaNaRodada, nomeFase, premioCopa } from '../core/copa.mjs';
 import { S, clubById, tec } from '../core/estado.mjs';
 import { esc, money } from '../core/utils.mjs';
 import { artilhariaDoTorneio } from './artilharia.mjs';
@@ -31,7 +31,7 @@ export function vCopa() {
   const situacao = copa.campeao ? `Campeão: <b>${esc(clubById(copa.campeao).name)}</b>.` : vivo ? `Seu clube está na ${nomeFase(copa.fases[copa.fases.length - 1]).toLowerCase()}.` : 'Seu clube não está mais na copa.';
   const fases = copa.fases.map((f, i) => {
     const ida = copa.datas[2 * i] + 1, volta = copa.datas[2 * i + 1] + 1, n = f.jogos.length;
-    return `<section class="fase-copa"><div class="card-topo"><h2 class="t3">${nomeFase(f)}</h2><span class="muted">Ida na rodada ${ida}, volta na rodada ${volta} · ${n === 1 ? 'título' : 'quem passa'}: ${money(PREMIO_COPA[n] ?? 0.3)}</span></div>
+    return `<section class="fase-copa"><div class="card-topo"><h2 class="t3">${nomeFase(f)}</h2><span class="muted">Ida na rodada ${ida}, volta na rodada ${volta} · ${n === 1 ? 'título' : 'quem passa'}: ${money(premioCopa(n))}</span></div>
       <ul class="jogos">${[...f.jogos].sort((a, b) => (b.h === me || b.a === me) - (a.h === me || a.a === me)).map(j => confronto(j, me)).join('')}</ul></section>`;
   }).reverse().join('');
   return `<p><button class="btn fantasma sm" data-acao="go|competicoes">← Competições</button></p><p class="muted resumo">Mata-mata em ida e volta, jogado junto com rodadas da liga, com a escalação e a tática da rodada. Empate na soma dos dois jogos vai para os pênaltis. ${situacao}</p>${artilhariaDoTorneio(copa, 'copa', COPA)}${fases}`;
