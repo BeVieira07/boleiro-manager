@@ -15,15 +15,16 @@ const linha = (h, id) => h.split('<tr>').find(t => t.includes(`makeBid|${id}"`))
 
 test('indicadores: caixa, folha, elenco e propostas', () => {
   const j = carregarJogo({ boot: true });
-  j.run(`newGame('${clubeDaSerie(j)}');userClub().players=userClub().players.slice(0,30);go('mercado')`); // os elencos iniciais já passam de 32
+  j.run(`newGame('${clubeDaSerie(j)}');userClub().players.splice(30);go('mercado')`);
   const h = j.html();
   assert.equal((h.match(/<div class="stat[ "]/g) || []).length, 4);
   assert.match(h, /Caixa<\/span>/);
   assert.match(h, new RegExp(`Folha salarial<\\/span>[\\s\\S]*?${j.run('money(wageBill(userClub()))').replace(/[$ ]/g, '.')}[\\s\\S]*?\\/ rodada`));
-  assert.match(h, /Elenco<\/span>[\s\S]*?30 \/ 32[\s\S]*?2 vagas livres/);
+  const tamanho = j.run('userClub().players.length');
+  assert.match(h, new RegExp(`Elenco<\\/span>[\\s\\S]*?${tamanho} / 32[\\s\\S]*?${32 - tamanho} vagas livres`));
   assert.match(h, /Suas propostas<\/span>[\s\S]*?>0<[\s\S]*?aguardando resposta/);
   assert.doesNotMatch(h, /stat-alerta/, 'elenco abaixo do limite não alerta');
-  j.run(`(()=>{const c=userClub(),o=S.clubs.find(x=>x.id!==c.id);while(c.players.length<34)c.players.push({...o.players[c.players.length],id:'x'+c.players.length,clubId:c.id});go('mercado')})()`);
+  j.run(`(()=>{const c=userClub();while(c.players.length<34)c.players.push({...c.players[0],id:'x'+c.players.length});go('mercado')})()`);
   assert.match(j.html(), /class="stat stat-alerta"/);
   assert.match(j.html(), /34 \/ 32/);
   assert.match(j.html(), /2 acima do limite: venda ou empreste antes de contratar/);

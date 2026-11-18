@@ -101,7 +101,7 @@ test('save antigo: recebe potencial pela idade e pelo overall, e a base do clube
 
 test('telas: potencial em estrelas (sem o número) no Elenco e no Mercado, e a base com Promover e Vender', () => {
   const j = novo();
-  j.run('userClub().players.length=28;userClub().players[0].pot=94;userClub().players[0].ovr=60;userClub().base[0].pot=93');
+  j.run('userClub().players.splice(28);userClub().players[0].pot=94;userClub().players[0].ovr=60;userClub().base[0].pot=93');
   j.run(`go('elenco')`);
   let h = j.html();
   assert.match(h, /filtrarElenco\|ord\|pot/);
@@ -128,7 +128,7 @@ test('telas: potencial em estrelas (sem o número) no Elenco e no Mercado, e a b
 test('liga: promover e vender da base passam pelo servidor e só valem para a base do próprio clube', async () => {
   const { acaoMercadoLiga } = await import(new URL('../core/liga.mjs', import.meta.url));
   const j = novo();
-  j.run('userClub().players.length=28');
+  j.run('userClub().players.splice(28)');
   const s = JSON.parse(j.run('JSON.stringify(S)')), meu = s.clubs.find(c => c.id === s.managers.local.clubId);
   const alheio = s.clubs.find(c => c.id !== meu.id).players[0].id;
   assert.match(acaoMercadoLiga(s, 'local', { tipo: 'promoverBase', pid: alheio }).erro, /não encontrado/);

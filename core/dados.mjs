@@ -29,6 +29,7 @@ export const BASE_CLUBS=[
 export const FN=['Lucas','Gabriel','Matheus','Pedro','João','Rafael','Bruno','Thiago','Vitor','Caio','Diego','Felipe','Gustavo','Igor','Leandro','Marcelo','Nicolas','Otávio','Renan','Samuel','Wesley','Yuri','André','Davi','Enzo','Fábio','Hugo','Kauã','Luan','Murilo','Ruan','Erick','Alan','Kaio','Jefferson'];
 export const LN=['Silva','Santos','Oliveira','Souza','Lima','Pereira','Costa','Rodrigues','Almeida','Nascimento','Carvalho','Araújo','Ribeiro','Gomes','Martins','Rocha','Barbosa','Cardoso','Teixeira','Moreira','Batista','Freitas','Mendes','Pinto','Ramos','Vieira','Monteiro','Farias'];
 export const SQUAD_SHAPE={G:3,D:8,M:9,A:6};
+export const SQUAD_MIN={G:2,D:6,M:5,A:4};
 
 export function fakePlayer(clubId,i,strength,pos,r,ageRange){
   return {id:'s'+clubId+'_'+i+'_'+Math.floor(r()*1e6),name:pick(FN,r)+' '+pick(LN,r),age:ageRange?ri(ageRange[0],ageRange[1],r):ri(18,34,r),pos,pd:sorteiaPosD(pos,r),number:i+1,photo:null};
