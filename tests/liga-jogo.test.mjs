@@ -26,8 +26,9 @@ function servidorFalso(clubes) {
   // tempo real: avisa os canais assinados
   srv.emitir = (table, novo) => srv.ouvintes.filter(o => o.table === table).forEach(o => o.cb({ new: copia(novo) }));
   // a função jogar-rodada, como no servidor
-  const funcao = (uid, { acao, forcar, mercado, membro }) => {
+  const funcao = (uid, { acao, forcar, mercado, membro, rodada }) => {
     const L = srv.liga;
+    if (rodada != null && rodada !== L.rodada) return { ok: true, jaJogada: true };
     if (acao === 'sair' || acao === 'remover') { // #37, como liga_remover_membro
       const alvo = acao === 'sair' ? uid : membro;
       if (acao === 'remover' && L.dono_id !== uid) return { erro: 'Só o dono remove membros.' };
@@ -52,7 +53,7 @@ function servidorFalso(clubes) {
     }
     if (forcar && L.dono_id !== uid) return { erro: 'Só o dono pode forçar a rodada.' };
     const ents = srv.entradas.filter(e => e.rodada === L.rodada);
-    const faltam = srv.membros.filter(m => !ents.some(e => e.user_id === m.user_id && e.pronto)).length;
+    const faltam = srv.membros.filter(m => !srv.estado.managers[m.user_id].demitido && !ents.some(e => e.user_id === m.user_id && e.pronto)).length;
     if (faltam && !forcar) return { ok: true, jogada: false, faltam };
     const r = jogarRodadaLiga(copia(srv.estado), Object.fromEntries(ents.map(e => [e.user_id, e])));
     srv.estado = copia(est.S);
@@ -119,6 +120,26 @@ function pararRelogio() {
   globalThis.setInterval = () => 0;
   return { soltar: () => { globalThis.setInterval = setI } };
 }
+
+test('recusar clubes na liga espera outra confirmação e abre novas propostas ao virar a rodada', async () => {
+  const j = carregarJogo({ boot: true });
+  const srv = servidorFalso([clubeDaSerie(j, 'A', 0), clubeDaSerie(j, 'A', 1)]);
+  await como(srv, 'a');
+  await j.acao('comecarLiga|L1'); await esperar();
+  await j.acao('pedirDemissaoUI'); await esperar();
+  assert.match(j.html(), /Recusar todas/);
+  await j.acao('recusarClubesUI'); await esperar();
+  assert.equal(srv.liga.rodada, 0);
+  assert.equal(srv.estado.managers.a.recusouClubes, true);
+  assert.match(j.html(), /Aguardando a rodada/);
+  srv.entradas.push({ user_id: 'b', rodada: 0, pronto: true });
+  await srv.cliente('b').functions.invoke('jogar-rodada', { body: { liga: 'L1', acao: 'jogar' } });
+  await esperar();
+  assert.equal(srv.liga.rodada, 1);
+  assert.equal(srv.estado.managers.a.demitido, true);
+  assert.ok(srv.estado.managers.a.propostasClube.length);
+  assert.match(j.html(), /Recusar todas/);
+});
 
 test('dono começa a liga, confirmações chegam em tempo real e a rodada é jogada quando todos confirmam', async () => {
   const j0 = carregarJogo();

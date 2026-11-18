@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
 
     if (acao === 'jogar') {
       if (forcar && liga.dono_id !== eu) return erro('Só o dono pode forçar a rodada.', 403);
+      if (corpo.rodada != null && corpo.rodada !== liga.rodada) return resposta({ ok: true, jogada: false, jaJogada: true });
       // false na gravação: outra rodada ou uma ação de mercado gravou antes. Se a rodada mudou, ela já foi jogada
       // (duas confirmações ao mesmo tempo, não é erro); senão foi o mercado, e a rodada é refeita com o estado novo.
       for (let tentativa = 0; tentativa < 3; tentativa++) {
@@ -95,6 +96,10 @@ Deno.serve(async (req) => {
       for (let tentativa = 0; tentativa < 3; tentativa++) {
         const est = await lerEstado(admin, ligaId);
         if (!est || liga.status !== 'andamento') return erro('A liga ainda não começou.', 409);
+        if (corpo.mercado?.tipo === 'recusarClubes') {
+          const { data: atual } = await admin.from('ligas').select('rodada').eq('id', ligaId).single();
+          if (atual?.rodada !== corpo.rodada) return resposta({ ok: true, jaJogada: true });
+        }
         // bloco síncrono, como na rodada
         const r = acaoMercadoLiga(est.estado, eu, corpo.mercado || {});
         if (r.erro) return erro(r.erro);

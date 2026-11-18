@@ -243,6 +243,21 @@ test('liga: pedir demissão, mercado bloqueado sem clube, escolher clube; quem n
   assert.notEqual(antigo, ids[0]);
 });
 
+test('liga: recusar as propostas conserva o técnico sem clube e atualiza a lista após jogar', () => {
+  const estado = JSON.parse(novaLiga(['A']));
+  const saida = passo(estado, 'u-ana', { tipo: 'pedirDemissao' });
+  const recusa = passo(saida.s, 'u-ana', { tipo: 'recusarClubes' });
+  assert.equal(recusa.r.ok, true);
+  assert.deepEqual(recusa.s.managers['u-ana'].propostasClube, []);
+  const { trocas } = jogarRodadaLiga(recusa.s, {});
+  assert.deepEqual(trocas, []);
+  assert.equal(est.S.round, 1);
+  const ana = est.S.managers['u-ana'];
+  assert.equal(ana.demitido, true);
+  assert.equal(ana.recusouClubes, undefined);
+  assert.ok(ana.propostasClube.length >= 1);
+});
+
 test('nada derivado da semente sai na rodada: nem a da liga, nem a da rodada (#79, #116)', async () => {
   const { semente } = await import(new URL('utils.mjs', raiz));
   const s = JSON.parse(novaLiga(['A'])), seed = s.seed, daRodada = semente(seed, s.season, s.round);
