@@ -17,7 +17,7 @@ export function playRound(aoVivo=true){
   encerrarVivo(); // a rodada anterior ao vivo, se ficou aberta, termina aqui
   const r=jogarRodada();
   if(r.demitido){if(r.tecnico)usarTecnico(r.tecnico);demissao();return} // #37: escolher o novo clube antes da rodada
-  if(r.fim)return;
+  if(r.fim){seasonEnd();return}
   if(r.erro){if(r.tecnico)usarTecnico(r.tecnico);avisar(r.erro,'erro');ui.view=r.faltam?'clube':'escalacao';render();return}
   const games=r.jogos,mine=r.meu;
   ui.lastRound=r.estadual?{pre:r.estadual.dia,games}:{round:S.round,games}; // #132: data do estadual, sem jogo ao vivo
@@ -48,7 +48,7 @@ export function confirmarVez(){
 // botão da rodada: no solo joga direto; com vários técnicos, cada um confirma a sua vez
 export function botaoRodada(cls,txt){
   if(vivoAtivo())return `<button class="${cls}" data-acao="go|aovivo">${icone('play',{tam:16})}Voltar ao jogo ao vivo</button>`; // #135: o jogo pausa quando se sai da tela
-  if(!ui.liga&&tecnicos().some(t=>t.demitido))return `<button class="${cls}" data-acao="go|carreira">Escolher novo clube</button>` // #37 (na liga, botaoLiga olha só o técnico da vez); // #37
+  if(!ui.liga&&tec().demitido)return `<button class="${cls}" data-acao="go|carreira">Escolher novo clube</button>`
   if(ui.liga)return botaoLiga(cls); // #34: confirmar a rodada da liga (e forçar, para o dono)
   if(tecnicos().length>1)return `<button class="${cls}" data-acao="confirmarVez">${icone('ok',{tam:16})}Confirmar ${rotuloRodada()} — ${esc(tec().nome)}</button>`;
   return `<button class="${cls}" data-acao="playRound">${txt}</button>`;

@@ -55,7 +55,7 @@ export function proporTecnico(a) {
   const t = tec(), jog = P[a.pid];
   if (!jog || !NEGOCIOS.includes(a.negocio)) return { erro: 'Proposta inválida.' };
   const outro = jog.clubId === t.clubId ? S.managers[a.para] : tecDoClube(jog.clubId);
-  if (!outro || outro.id === t.id) return { erro: 'Escolha um jogador ou um técnico de outro clube da liga.' };
+  if (!outro || outro.demitido || outro.id === t.id) return { erro: 'Escolha um jogador ou um técnico de outro clube da liga.' };
   if (propostas().some(x => x.de === t.id && x.pid === jog.id)) return { erro: `Você já tem uma proposta aberta por ${jog.name}.` };
   const tr = termos(a, a.negocio); if (tr.erro) return tr;
   const pr = { id: novoId(), de: t.id, para: outro.id, pid: jog.id, negocio: a.negocio, ...tr, r: S.round };

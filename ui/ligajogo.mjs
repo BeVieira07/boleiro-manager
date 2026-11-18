@@ -63,8 +63,8 @@ async function carregar(id) {
   ]);
   if (l.error || e.error || !l.data || !e.data) { avisar('Não foi possível abrir a liga.', 'erro'); return false }
   // a escalação e a tática ainda não confirmadas só existem aqui: o estado novo não pode apagá-las
-  const uc0 = ui.liga && ui.liga.id === id && S && S.managers[eu] && clubDo(S.managers[eu]);
-  const meu = uc0 && { lineup: uc0.lineup || [], formation: uc0.formation, tatica: uc0.tatica };
+  const uc0 = ui.liga && ui.liga.id === id && S && S.managers[eu] && !S.managers[eu].demitido && clubDo(S.managers[eu]);
+  const meu = uc0 && { clube: uc0.id, lineup: uc0.lineup || [], formation: uc0.formation, tatica: uc0.tatica };
   const paraMim = () => (S.propostas || []).filter(x => x.para === eu).length, antes = uc0 ? paraMim() : null;
   usarEstado(e.data); reindex();
   if (!S.managers[eu]) { // #37: saiu ou foi removido da liga
@@ -73,7 +73,7 @@ async function carregar(id) {
     return false;
   }
   usarTecnico(eu);
-  if (meu && S.managers[eu]) {
+  if (meu && !tec().demitido && meu.clube === tec().clubId) {
     const uc = userClub(); uc.formation = meu.formation || uc.formation; uc.tatica = meu.tatica || uc.tatica;
     uc.lineup = meu.lineup.filter(pid => uc.players.some(p => p.id === pid && !unavailable(p))); // quem saiu ou se machucou
     if (validateLineup(uc)) uc.lineup = autoXI(uc);
@@ -138,6 +138,22 @@ export async function mercadoLiga(acao, msgOk) {
   const msg = r.msg || msgOk; if (msg) avisar(msg, r.aceita === false ? 'info' : 'ok');
 }
 
+let recusando = false;
+export async function recusarClubesLiga() {
+  const L = ui.liga;
+  if (!L || recusando) return;
+  recusando = true;
+  try {
+    const rodada = L.rodada;
+    const r = await chamarFuncao({ liga: L.id, acao: 'mercado', rodada, mercado: { tipo: 'recusarClubes' } });
+    if (!r || !ui.liga || ui.liga.id !== L.id) return;
+    if (r.jaJogada) { await atualizarAposRodada(); return }
+    const jogo = await chamarFuncao({ liga: L.id, acao: 'jogar', rodada });
+    if (jogo?.jogada || jogo?.jaJogada) await atualizarAposRodada();
+    else if (await carregar(L.id)) render();
+  } finally { recusando = false }
+}
+
 /** A rodada foi jogada no servidor: baixa o estado novo e mostra o seu jogo como replay (uma vez só). */
 export async function atualizarAposRodada() {
   const L = ui.liga; if (!L || L.atualizando) return;
@@ -151,7 +167,7 @@ export async function atualizarAposRodada() {
   const pre = r.rodada < 0; // #132: data do estadual (RODADA_ESTADUAL = primeira data), sem jogo ao vivo
   const fim = () => { ui.lastRound = pre ? { pre: r.rodada - RODADA_ESTADUAL, games: r.jogos } : { round: r.rodada + 1, games: r.jogos }; ui.view = 'rodada'; render() };
   const me = userClub().id, meu = r.jogos.find(g => g.h === me || g.a === me);
-  if (meu && !pre && verAoVivo(meu)) iniciarVivo(r.jogos, meu, fim, { replay: true, rodada: r.rodada }); else fim(); // #106
+  if (!tec().demitido && meu && !pre && verAoVivo(meu)) iniciarVivo(r.jogos, meu, fim, { replay: true, rodada: r.rodada }); else fim(); // #106
 }
 
 /** Envia a sua escalação, formação e tática da rodada e pede ao servidor para jogar (ele só joga quando todos confirmaram). */
@@ -211,7 +227,7 @@ export const botaoProposta = p => ui.liga && tecnicos().length > 1
   ? `<button class="btn sec sm" data-acao="propostaForm|${p.id}">${p.clubId === userClub().id ? 'Oferecer' : 'Proposta'}</button>` : '';
 export function propostaForm(pid) {
   const p = P[pid], meu = p.clubId === userClub().id;
-  const alvo = meu ? `<label>Para <select id="ppPara">${tecnicos().filter(t => t.id !== S.atual).map(t => `<option value="${esc(t.id)}">${esc(t.nome)} (${esc(clubDo(t).name)})</option>`).join('')}</select></label>`
+  const alvo = meu ? `<label>Para <select id="ppPara">${tecnicos().filter(t => t.id !== S.atual && !t.demitido).map(t => `<option value="${esc(t.id)}">${esc(t.nome)} (${esc(clubDo(t).name)})</option>`).join('')}</select></label>`
     : `<p>Clube: <b>${esc(clubById(p.clubId).name)}</b> (${esc(tecnicos().find(t => t.clubId === p.clubId).nome)})</p>`;
   openModal(`<h2>${meu ? 'Oferecer' : 'Proposta por'} ${esc(p.name)}</h2>
    <p class="muted">${posDSigla(p)} · força ${p.ovr} · valor ${money(p.value)} · salário ${money(p.wage)}/rod.</p>

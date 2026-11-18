@@ -1,5 +1,6 @@
 import { jogarContinentais } from './continental.mjs';
 import { jogarCopa } from './copa.mjs';
+import { renovarPropostasDeClubes } from './carreira.mjs';
 import { limparEventosAntigos } from './aovivo.mjs';
 import { anotarTitulares, atualizarEnergia, energiaDaSaidaForcada, fatorEnergia } from './energia.mjs';
 import { atualizarConfianca } from './diretoria.mjs';
@@ -73,18 +74,20 @@ export function validateLineup(uc=userClub()){
 // copa = confrontos da Copa do Brasil jogados nesta rodada, #51). Na pré-temporada, joga uma data dos estaduais (#132) e
 // devolve {jogos, meu, estadual} (jogos = os do estadual; estadual = a data), sem a rodada avançar.
 export function jogarRodada(){
-  const semClube=tecnicos().find(t=>t.demitido); // #37: quem saiu do clube escolhe o novo antes da rodada
+  const semClube=tecnicos().find(t=>t.demitido&&!t.recusouClubes);
   if(semClube)return {demitido:true,tecnico:semClube.id};
   if(S.round>=S.fixtures.length)return {fim:true};
-  const faltam=tecnicos().length>1?tecnicos().filter(t=>!t.pronto):[];
+  const ativos=tecnicos().filter(t=>!t.demitido);
+  const faltam=tecnicos().length>1?ativos.filter(t=>!t.pronto):[];
   if(faltam.length)return {erro:`Falta confirmar a rodada: ${faltam.map(t=>t.nome).join(', ')}.`,faltam:faltam.map(t=>t.id)};
-  for(const t of tecnicos()){const e=validateLineup(clubDo(t));if(e)return {erro:(tecnicos().length>1?t.nome+': ':'')+e,tecnico:t.id}}
+  for(const t of ativos){const e=validateLineup(clubDo(t));if(e)return {erro:(tecnicos().length>1?t.nome+': ':'')+e,tecnico:t.id}}
   const pre=jogarPreTemporada(); // #132: estaduais antes da rodada 1
   if(pre){
     for(const t of tecnicos())t.pronto=false;
     S.atual=tecnicos()[0].id;
     const uc=userClub();
-    return {jogos:pre.jogos,meu:pre.jogos.find(g=>g.h===uc.id||g.a===uc.id)||null,estadual:{dia:pre.dia}};
+    renovarPropostasDeClubes();
+    return {jogos:pre.jogos,meu:tec().demitido?null:pre.jogos.find(g=>g.h===uc.id||g.a===uc.id)||null,estadual:{dia:pre.dia}};
   }
   aplicarFormaPendente(); // forma da rodada anterior, com o resultado final do jogo ao vivo (#44)
   limparEventosAntigos(); // #195: os lances das rodadas anteriores já foram usados; só o placar fica no save
@@ -95,7 +98,7 @@ export function jogarRodada(){
   aplicarDisponibilidade(games);
   adiarForma(games);
   const jogoDe=c=>games.find(g=>g.h===c.id||g.a===c.id);
-  for(const t of tecnicos()){
+  for(const t of ativos){
     const uc=clubDo(t),mine=jogoDe(uc);
     // finanças de cada clube com técnico
     addFin(`Cota de TV — rodada ${S.round+1}`,tvQuota(divOf(uc)),uc);
@@ -136,16 +139,16 @@ export function jogarRodada(){
   for(const t of tecnicos())t.pronto=false;
   S.atual=tecnicos()[0].id; // depois da rodada, a vez volta ao primeiro técnico
   S.round++;processLoans();
-  for(const t of tecnicos()){const uc=clubDo(t);atualizarConfianca(t,jogoDe(uc));if(uc.balance<0)addNews('⚠️ Caixa negativo! Venda jogadores para equilibrar as contas.',uc.id)}
-  return {jogos:games,meu:jogoDe(userClub()),copa};
+  for(const t of ativos){const uc=clubDo(t);atualizarConfianca(t,jogoDe(uc));if(uc.balance<0)addNews('⚠️ Caixa negativo! Venda jogadores para equilibrar as contas.',uc.id)}
+  renovarPropostasDeClubes();
+  return {jogos:games,meu:ativos.some(t=>t.id===S.atual)?jogoDe(userClub()):null,copa};
 }
 
 // revezamento (#29): o técnico da vez confirma a escalação; a vez passa ao próximo que falta.
 // Devolve {erro}, {proximo: técnico} ou {todos: true} (todos confirmaram: pode jogar a rodada).
 export function confirmarRodada(){
-  const e=validateLineup();if(e)return {erro:e};
-  tec().pronto=true;
-  const falta=tecnicos().filter(t=>!t.pronto);
+  if(!tec().demitido){const e=validateLineup();if(e)return {erro:e};tec().pronto=true}
+  const falta=tecnicos().filter(t=>t.demitido?!t.recusouClubes:!t.pronto);
   if(falta.length){S.atual=falta[0].id;return {proximo:falta[0]}}
   return {todos:true};
 }

@@ -17,7 +17,7 @@ export let P={};          // índice jogador por id
 // S.atual é o técnico da vez (no solo, sempre 'local'). Caixa e finanças ficam no clube (c.balance, c.fin).
 export const tecnicos=()=>Object.values(S.managers||{});
 export const tec=()=>S.managers[S.atual];
-export const tecDoClube=id=>tecnicos().find(t=>t.clubId===id);
+export const tecDoClube=id=>tecnicos().find(t=>t.clubId===id&&!t.demitido);
 export const ehHumano=c=>!!tecDoClube(typeof c==='string'?c:c.id);
 export const clubDo=t=>clubById(t.clubId);
 export const userClub=()=>clubById(tec().clubId);
