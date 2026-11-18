@@ -2,8 +2,10 @@
    Uma página só, sem modal, com tudo andando no mesmo relógio: o seu jogo (com trocas e formação), os outros jogos
    da rodada e a classificação provisória. A rodada já foi calculada (core/motor.mjs); aqui só se mostra até o minuto
    `v.min`. Sair da tela pausa o jogo; "Voltar ao jogo" retoma. Na liga o jogo é um replay do servidor: trocas e
-   formação ficam bloqueadas, o painel do campeonato funciona. */
-import { estatisticas, minutoDoTempo, placarNoMinuto, tabelaNoMinuto, ultimoLance } from '../core/aovivo.mjs';
+   formação ficam bloqueadas, o painel do campeonato funciona.
+   #230: também a data do estadual (v.estadual = a data): jogos por estado e a classificação do grupo no lugar dos da série. */
+import { estatisticas, minutoDoTempo, placarNoMinuto, tabelaGrupoNoMinuto, tabelaNoMinuto, ultimoLance } from '../core/aovivo.mjs';
+import { nomeData } from '../core/estadual.mjs';
 import { COPA, copaNaRodada } from '../core/copa.mjs';
 import { DIVS, P, S, clubById, divOf, divisions, hasTwoDivs, userClub } from '../core/estado.mjs';
 import { escalacaoNoMinuto, saidaForcada } from '../core/lances.mjs';
@@ -29,11 +31,12 @@ const soma = (v, min) => v.jogos.map(g => { const q = placarNoMinuto(g, min); re
 export const vivoAtivo = () => !!(ui.vivo && !ui.vivo.fim && ui.vivo.S === S);
 
 /** Começa a rodada ao vivo: `jogos` = todos os jogos da rodada `rodada` (índice), `meu` = o seu; `done` roda no "Continuar". */
-export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round - 1 } = {}) {
+export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round - 1, estadual = null } = {}) {
   encerrarVivo();
   const uc = userClub();
   const v = ui.vivo = { g: meu, jogos, rodada, done, replay, min: 0, fim: false, aba: 'meu', div: divOf(uc), comp: 'liga', sel: null, sig: '',
-    S, clube: uc, xi0: [...(uc.lineup || [])], f0: uc.formation, timer: null }; // xi0/f0: trocas e formação valem só neste jogo
+    S, clube: uc, xi0: [...(uc.lineup || [])], f0: uc.formation, timer: null, // xi0/f0: trocas e formação valem só neste jogo
+    estadual, uf: meu.uf || null }; // #230: data do estadual e o estado mostrado na lista
   ui.tvAoVivo = replay ? null : { g: meu, min: () => v.min };
   go('aovivo');
   v.timer = setInterval(() => tick(v), VELOCIDADES[prefs().velocidade] || 55); // #106
@@ -75,6 +78,7 @@ function terminar(v) {
 export function avAba(a) { if (ui.vivo && ABAS[a]) { ui.vivo.aba = a; render() } }
 export function avDiv(d) { if (ui.vivo) { ui.vivo.div = d; paineis(ui.vivo) } }
 export function avComp(c) { if (ui.vivo) { ui.vivo.comp = c; paineis(ui.vivo) } }
+export function avUf(uf) { if (ui.vivo) { ui.vivo.uf = uf; paineis(ui.vivo) } }
 export function avSair(id) { const v = ui.vivo; if (!v || v.fim || v.replay) return; v.sel = v.sel === id ? null : id; controles(v) }
 export function avEntrar(id) {
   const v = ui.vivo; if (!v || v.fim || v.replay || !v.sel) return;
@@ -166,11 +170,13 @@ function htmlControles(v) {
       </div></section>`;
 }
 
+const torneioDoVivo = v => v.estadual != null && S.estaduais ? S.estaduais.torneios.find(t => t.uf === v.g.uf) : null;
+const competicao = v => { const tor = torneioDoVivo(v); return tor ? `${tor.nome} · ${nomeData(tor, v.estadual)}` : `${DIVS[divOf(userClub())] || 'Campeonato'} · Rodada ${v.rodada + 1}` };
 // cabeçalho do seu jogo (#170): competição, relógio, placar, último lance, barra de tempo, pausa e estatísticas
 function htmlCab(v) {
   const H = clubById(v.g.h), A = clubById(v.g.a), p = placarNoMinuto(v.g, v.min), { marcas } = lances(v);
   const lado = (c, cls) => `<div class="placar-time ${cls}">${crest(c, 'g')}<b>${esc(c.name)}</b></div>`;
-  return `<div class="cab-jogo"><div class="cab-topo"><span class="sobretitulo">${esc(DIVS[divOf(userClub())] || 'Campeonato')} · Rodada ${v.rodada + 1}</span><span class="relogio" id="lclk" aria-live="off">${relogio(v)}</span></div>
+  return `<div class="cab-jogo"><div class="cab-topo"><span class="sobretitulo">${esc(competicao(v))}</span><span class="relogio" id="lclk" aria-live="off">${relogio(v)}</span></div>
     <div class="placar">${lado(H, 'casa')}<div class="placar-centro"><div class="placar-num" id="lsc" aria-live="polite">${p.h} x ${p.a}</div></div>${lado(A, 'fora')}</div>
     <p class="ult-lance" id="lult">${lanceTxt(v.g, v.min)}</p>
     <div class="tempo" aria-hidden="true"><div class="tempo-trilho"><div class="tempo-feito" id="lbar" style="width:${Math.min(100, v.min / DURACAO * 100)}%"></div></div><div class="tempo-marcas" id="lmarcas">${marcas}</div>
@@ -188,7 +194,20 @@ function serieChips(v) {
   return hasTwoDivs() ? `<div class="chips abas" role="group" aria-label="Série">${divisions().map(d => chip(DIVS[d], `avDiv|${d}`, v.div === d)).join('')}</div>` : '';
 }
 const meusPrimeiro = me => (a, b) => (b.h === me || b.a === me) - (a.h === me || a.a === me);
+// #170: uma linha por jogo, com o último lance embaixo
+const listaJogos = (gs, v, me) => `<ul class="rodada-lista">${gs.map(g => {
+  const p = placarNoMinuto(g, v.min), H = clubById(g.h), A = clubById(g.a), lance = lanceTxt(g, v.min);
+  return `<li class="linha-jogo${g.h === me || g.a === me ? ' meu' : ''}"><span class="jogo-time casa">${esc(H.name)} ${crest(H)}</span><span class="linha-placar">${p.h}<span aria-hidden="true"> x </span><span class="sr"> a </span>${p.a}</span><span class="jogo-time fora">${crest(A)} ${esc(A.name)}</span>${lance ? `<span class="linha-lance">${lance}</span>` : ''}</li>`;
+}).join('')}</ul>`;
+// #230: jogos da data do estadual, com abas por estado (o seu primeiro)
+function htmlRodadaEstadual(v) {
+  const me = userClub().id, ufs = [...new Set(v.jogos.map(g => g.uf))].sort((a, b) => (b === v.g.uf) - (a === v.g.uf) || a.localeCompare(b));
+  const nome = uf => S.estaduais.torneios.find(t => t.uf === uf).nome;
+  const abas = ufs.length > 1 ? `<div class="chips abas" role="group" aria-label="Estadual">${ufs.map(uf => chip(nome(uf), `avUf|${uf}`, v.uf === uf)).join('')}</div>` : '';
+  return `<h2 class="t3">Jogos da data</h2>${abas}${listaJogos(v.jogos.filter(g => g.uf === v.uf).sort(meusPrimeiro(me)), v, me)}`;
+}
 function htmlRodada(v) {
+  if (v.estadual != null) return htmlRodadaEstadual(v);
   const me = userClub().id, copa = copaNaRodada(v.rodada), comp = copa && v.comp === 'copa' ? 'copa' : 'liga';
   const comps = copa ? `<div class="chips abas" role="group" aria-label="Competição">${chip('Campeonato', 'avComp|liga', comp === 'liga')}${chip(COPA, 'avComp|copa', comp === 'copa')}</div>` : '';
   if (comp === 'copa') {
@@ -199,13 +218,18 @@ function htmlRodada(v) {
     return `<h2 class="t3">Outros jogos</h2>${comps}${lista}`;
   }
   const gs = v.jogos.filter(g => divOf(clubById(g.h)) === v.div).sort(meusPrimeiro(me));
-  // #170: uma linha por jogo, com o último lance embaixo
-  return `<h2 class="t3">Jogos da rodada</h2>${comps}${serieChips(v)}<ul class="rodada-lista">${gs.map(g => {
-    const p = placarNoMinuto(g, v.min), H = clubById(g.h), A = clubById(g.a), lance = lanceTxt(g, v.min);
-    return `<li class="linha-jogo${g.h === me || g.a === me ? ' meu' : ''}"><span class="jogo-time casa">${esc(H.name)} ${crest(H)}</span><span class="linha-placar">${p.h}<span aria-hidden="true"> x </span><span class="sr"> a </span>${p.a}</span><span class="jogo-time fora">${crest(A)} ${esc(A.name)}</span>${lance ? `<span class="linha-lance">${lance}</span>` : ''}</li>`;
-  }).join('')}</ul>`;
+  return `<h2 class="t3">Jogos da rodada</h2>${comps}${serieChips(v)}${listaJogos(gs, v, me)}`;
 }
 function htmlClassif(v) {
+  const tor = torneioDoVivo(v);
+  if (tor) { // #230: o grupo do seu clube no estadual, andando com os placares do minuto
+    const me = userClub().id, ids = tor.grupos.find(g => g.includes(me)) || tor.grupos[0], vaga = tor.grupos.length === 1 ? 2 : 1;
+    const T = tabelaGrupoNoMinuto(tor, ids, v.estadual, v.jogos, v.min), titulo = tor.grupos.length > 1 ? `Grupo ${'AB'[tor.grupos.indexOf(ids)]}` : 'Classificação';
+    return `<h2 class="t3">${esc(tor.nome)}: ${titulo}</h2><section class="card tabela-card"><div class="tw"><table><caption class="sr">${esc(tor.nome)}, ${titulo.toLowerCase()} no minuto ${v.min}</caption>
+      <thead><tr><th scope="col">#</th><th scope="col">Clube</th><th scope="col" class="n">J</th><th scope="col" class="n">SG</th><th scope="col" class="n">Pts</th></tr></thead>
+      <tbody>${T.map((t, i) => { const c = clubById(t.id), z = i < vaga; return `<tr class="${t.id === me ? 'me' : ''}"><td class="${z ? 'zona-lib' : ''}"${z ? ' title="Vai à final"' : ''}>${i + 1}${z ? '<span class="sr"> (vai à final)</span>' : ''}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n">${t.J}</td><td class="n">${t.GP - t.GC}</td><td class="n"><b>${t.Pts}</b></td></tr>` }).join('')}</tbody>
+    </table></div></section>`;
+  }
   const me = userClub().id, T = tabelaNoMinuto(v.div, v.rodada, v.jogos, v.min), antes = tabelaNoMinuto(v.div, v.rodada, [], 0).map(t => t.id);
   const mov = (id, i) => {
     const d = antes.indexOf(id) - i;

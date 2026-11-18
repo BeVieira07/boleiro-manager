@@ -48,7 +48,7 @@ export function alternarMais() { ui.maisAberto = !ui.maisAberto; render() }
 export function barraAcoes(titulo) {
   const uc = userClub(), T = table(divOf(uc)), pos = T.findIndex(t => t.id === uc.id) + 1, fim = S.round >= S.fixtures.length;
   const varios = tecnicos().length > 1;
-  const sub = [ui.view === 'aovivo' && ui.vivo ? `Rodada ${ui.vivo.rodada + 1} de ${S.fixtures.length}` : rotuloRodada() === 'estadual' ? 'Pré-temporada: estaduais' : `Rodada ${Math.min(S.round + 1, S.fixtures.length)} de ${S.fixtures.length}`, `temporada ${S.season}`,
+  const sub = [ui.view === 'aovivo' && ui.vivo && ui.vivo.estadual == null ? `Rodada ${ui.vivo.rodada + 1} de ${S.fixtures.length}` : ui.view === 'aovivo' && ui.vivo ? 'Pré-temporada: estaduais' : rotuloRodada() === 'estadual' ? 'Pré-temporada: estaduais' : `Rodada ${Math.min(S.round + 1, S.fixtures.length)} de ${S.fixtures.length}`, `temporada ${S.season}`,
     S.round ? `${pos}º lugar${hasTwoDivs() ? ' na ' + DIVS[divOf(uc)] : ''}` : '', `caixa <b class="${uc.balance < 0 ? 'bad' : ''}">${money(uc.balance)}</b>`].filter(Boolean).join(' · ');
   const vez = ui.liga ? situacaoLiga() : varios ? `<div class="vez">Vez de <b>${esc(tec().nome)}</b> ${tecnicos().map(t => `<span class="pill" title="${t.pronto ? 'confirmou' : 'falta confirmar'}">${t.pronto ? icone('ok', { tam: 12, rotulo: 'confirmou' }) : '…'} ${esc(t.nome)}</span>`).join(' ')}</div>` : '';
   const botoes = ui.view === 'aovivo' ? '' : fim

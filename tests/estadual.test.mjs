@@ -83,6 +83,8 @@ test('telas: cartão em Competições, tela do torneio, Jogos e Resultados mostr
   assert.match(j.html(), /Pré-temporada: o estadual vem antes da rodada 1/);
   assert.match(j.html(), /Carioca · Rodada \d/);
   j.run('if(validateLineup())userClub().lineup=autoXI(userClub());playRound()');
+  assert.equal(j.run('ui.view'), 'aovivo', 'a data do estadual abre ao vivo (#230)');
+  j.acao('avPular'); j.acao('avContinuar');
   assert.equal(j.run('ui.view'), 'rodada');
   assert.match(j.html(), /Data \d da pré-temporada encerrada/);
   assert.match(j.html(), /Carioca · Rodada \d/);
@@ -143,4 +145,66 @@ test('liga online: a data do estadual vai para os resultados com rodada negativa
   assert.equal(ultima.rodada, 0, 'depois da pré-temporada vem a rodada 1 (índice 0)');
   assert.equal(j.run('S.round'), 1);
   assert.ok(j.run('S.estaduais.torneios.filter(t=>t.uf==="SP"||t.uf==="RJ").every(t=>t.campeao)'));
+});
+
+/* ---------- #230: o estadual ao vivo ---------- */
+// joga a próxima data com o relógio parado; devolve o passo() que anda um minuto, como o setInterval faria
+function dataAoVivo(j) {
+  const setI = globalThis.setInterval; let fn = null;
+  globalThis.setInterval = f => { fn = f; return { unref() {} } };
+  try { j.run('if(validateLineup())userClub().lineup=autoXI(userClub());playRound()') } finally { globalThis.setInterval = setI }
+  return { passo: (n = 1) => { for (let i = 0; i < n; i++) fn() } };
+}
+
+test('a data do estadual abre ao vivo: cabeçalho do estadual, jogos por estado e classificação do grupo (#230)', () => {
+  const j = carregarJogo({ boot: true, estaduais: true });
+  novo(j, 'c121'); // Palmeiras, Paulistão (dois grupos)
+  const r = dataAoVivo(j);
+  assert.equal(j.run('ui.view'), 'aovivo');
+  r.passo(60); j.run('render()');
+  const h = j.html();
+  assert.match(h, /Paulistão · (Rodada \d|Final)/, 'o cabeçalho diz o estadual e a data');
+  assert.match(h, /Jogos da data/);
+  assert.match(h, /data-acao="avUf\|RJ"/, 'abas para os outros estaduais');
+  assert.match(h, /Paulistão: Grupo [AB]/, 'classificação do grupo do seu clube');
+  assert.equal(j.run('ui.vivo.jogos.every(g=>g.ev&&g.uf)'), true, 'todos os jogos da data têm lances');
+  assert.match(h, /data-acao="avSair\|/, 'dá para trocar jogador');
+  assert.match(h, /data-acao="avFormacao\|4-3-3"/);
+  j.acao('avUf|RJ');
+  assert.match(j.html(), /Flamengo|Fluminense|Vasco|Botafogo/);
+  assert.deepEqual(problemasNasTelas(j, ['aovivo']), []);
+});
+
+test('troca ao vivo muda o placar guardado do estadual; o resto da data só é concluído na chamada seguinte (#230)', () => {
+  const j = carregarJogo({ boot: true, estaduais: true });
+  novo(j, 'c121');
+  const artilhariaLiga = () => j.run('Object.values(P).reduce((s,p)=>s+(p.goals||0),0)');
+  const antesLiga = artilhariaLiga();
+  const r = dataAoVivo(j);
+  const d = j.run('S.estaduais.pendente');
+  assert.equal(typeof d, 'number', 'a data jogada fica pendente até a próxima chamada');
+  // o jogo do ao vivo é o próprio objeto guardado no torneio: mudar o placar dele muda a tabela
+  assert.equal(j.run(`(()=>{const tor=torneioDe(userClub().id);return tor.rodadas[${d}].includes(ui.vivo.g)})()`), true);
+  r.passo(30);
+  j.acao('avFormacao|4-3-3'); // refaz os gols dos minutos seguintes
+  const final = j.run('({h:ui.vivo.g.hg,a:ui.vivo.g.ag,gols:ui.vivo.g.ev.filter(e=>e.t==="gol").length})');
+  assert.equal(final.h + final.a, final.gols, 'placar e lances batem depois da troca');
+  assert.equal(artilhariaLiga(), antesLiga, 'gol de estadual não entra na artilharia do Brasileirão');
+  const golsEstadual = j.run('Object.values(torneioDe(userClub().id).gols).reduce((s,x)=>s+x.gols,0)');
+  const golsDosJogos = j.run(`torneioDe(userClub().id).rodadas.slice(0,${d + 1}).flat().reduce((s,g)=>s+(g.hg||0)+(g.ag||0),0)`);
+  assert.equal(golsEstadual, golsDosJogos, 'a artilharia do estadual acompanha os gols, mesmo depois da troca');
+  j.acao('avPular'); j.acao('avContinuar');
+  // próxima chamada: a data anterior é concluída (notícia com o placar final) e os lances dela saem do save
+  j.run('if(validateLineup())userClub().lineup=autoXI(userClub());playRound(false)');
+  assert.equal(j.run(`torneioDe(userClub().id).rodadas[${d}].some(g=>g.ev)`), false, 'lances da data anterior apagados');
+  assert.match(j.run('tec().news.map(n=>n.t).join(" | ")'), new RegExp(`Paulistão, rodada ${d + 1}: [^|]* ${final.h} x ${final.a} `));
+});
+
+test('a final é decidida com o placar final da volta, e o campeão sai na chamada seguinte (#230)', () => {
+  const j = carregarJogo({ boot: true, estaduais: true });
+  novo(j, 'c121');
+  jogarPre(j); // até a rodada 1 do Brasileirão
+  const r = JSON.parse(j.run('JSON.stringify(S.estaduais.torneios.map(t=>({uf:t.uf,c:t.campeao,v:t.final&&t.final.v,ida:!!(t.final&&t.final.ida),volta:!!(t.final&&t.final.volta),jogo:!!(t.final&&t.final.jogo)})))'));
+  for (const t of r) { assert.ok(t.c && t.c === t.v, `${t.uf} sem campeão`); assert.ok(t.ida && t.volta && !t.jogo, `${t.uf}: final incompleta`) }
+  assert.equal(j.run('S.estaduais.pendente'), null);
 });

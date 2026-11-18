@@ -55,3 +55,11 @@ export const minutoDoTempo = m => m <= 45 ? { m, tempo: 1 } : { m: m - 45, tempo
 export function limparEventosAntigos(ate = S.round) {
   for (let r = 0; r < ate && r < S.fixtures.length; r++) for (const g of S.fixtures[r]) { delete g.ev; delete g.trocas; delete g.bicho; delete g.escalacoes }
 }
+
+/** #230: classificação do grupo `ids` do estadual com as datas antes de `d` mais os `jogos` da data d até o minuto `min`. */
+export function tabelaGrupoNoMinuto(tor, ids, d, jogos, min) {
+  const T = Object.fromEntries(ids.map(id => [id, linhaDaTabela(id)]));
+  for (let k = 0; k < Math.min(d, tor.rodadas.length); k++) for (const g of tor.rodadas[k]) if (g.hg != null && T[g.h] && T[g.a]) contarJogo(T, g.h, g.a, g.hg, g.ag);
+  if (d < tor.rodadas.length) for (const g of jogos) if (T[g.h] && T[g.a]) { const p = placarNoMinuto(g, min); contarJogo(T, g.h, g.a, p.h, p.a) }
+  return ordenarTabela(T);
+}
