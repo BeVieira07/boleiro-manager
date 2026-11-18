@@ -4,7 +4,7 @@
    Atenção: usa o estado global do core (S). Quem chama precisa fazer usarEstado -> regra -> JSON.stringify(S)
    num bloco síncrono, sem await no meio (várias requisições podem dividir o mesmo processo). */
 import { promoverDaBase, venderDaBase } from './base.mjs';
-import { escolherClube, gerarPropostas, pedirDemissao } from './carreira.mjs';
+import { escolherClube, gerarPropostas, pedirDemissao, recusarClubes } from './carreira.mjs';
 import { renovarContrato } from './contratos.mjs';
 import { exercerOpcaoCompra, proporEmprestimo } from './emprestimos.mjs';
 import { unavailable } from './escalacao.mjs';
@@ -57,13 +57,14 @@ export function jogarRodadaLiga(estado, entradas) {
   const m = migrarSave(estado); if (m.erro) throw new Error(m.erro); // liga criada antes de uma mudança no save ganha os campos novos
   // #37: quem saiu do clube e não escolheu até agora assume a melhor proposta (a liga não espera)
   const trocas = [];
-  for (const t of tecnicos()) if (t.demitido) {
+  for (const t of tecnicos()) if (t.demitido && !t.recusouClubes) {
     const assume = id => escolherClube(id, t).ok;
     // sem proposta que ainda sirva (outro técnico assumiu o clube): propostas novas
     if (!(t.propostasClube || []).some(assume)) { t.propostasClube = gerarPropostas(t); t.propostasClube.some(assume) }
     if (!t.demitido) trocas.push({ user_id: t.id, club_id: t.clubId });
+    else recusarClubes(t);
   }
-  for (const t of tecnicos()) {
+  for (const t of tecnicos().filter(t => !t.demitido)) {
     const uc = clubDo(t), e = entradas[t.id];
     if (e && e.pronto) aplicarEntrada(uc, e);
     if (validateLineup(uc)) uc.lineup = autoXI(uc);
@@ -113,9 +114,10 @@ const MERCADO = {
   contraproposta: a => contraproposta(a.id, a),
   // carreira (#37)
   pedirDemissao: () => pedirDemissao(),
+  recusarClubes: () => recusarClubes(),
   escolherClube: a => escolherClube(String(a.clubeId))
 };
-const SO_SEM_CLUBE = new Set(['escolherClube']), SEM_REPASSE = new Set(['escolherClube', 'pedirDemissao']); // já viram notícia para todos
+const SO_SEM_CLUBE = new Set(['escolherClube', 'recusarClubes']), SEM_REPASSE = new Set(['escolherClube', 'pedirDemissao', 'recusarClubes']);
 /** Ação de mercado de um técnico (a: {tipo, ...}, vinda do navegador: tudo é conferido). Devolve {erro} (nada muda) ou {ok, msg}
  *  (o estado em S mudou e deve ser gravado; ok=false é proposta recusada). Negócio fechado vira notícia para todos da liga. */
 export function acaoMercadoLiga(estado, eu, a) {

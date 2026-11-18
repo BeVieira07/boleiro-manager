@@ -1,10 +1,11 @@
 /* ================= carreira na tela (#37): propostas de clubes depois de sair do clube ================= */
-import { detalheProposta, escolherClube, pedirDemissao } from '../core/carreira.mjs';
-import { DIVS, clubDo, divOf, tec } from '../core/estado.mjs';
+import { detalheProposta, escolherClube, pedirDemissao, recusarClubes } from '../core/carreira.mjs';
+import { DIVS, clubDo, divOf, tec, tecnicos } from '../core/estado.mjs';
 import { esc } from '../core/utils.mjs';
 import { avisar, confirmar } from './avisos.mjs';
 import { save, ui } from './estado.mjs';
-import { mercadoLiga } from './ligajogo.mjs';
+import { mercadoLiga, recusarClubesLiga } from './ligajogo.mjs';
+import { confirmarVez, playRound } from './motor.mjs';
 import { crest } from './partida.mjs';
 import { go } from './telas.mjs';
 
@@ -19,8 +20,16 @@ export function vCarreira() {
     return `<li class="proposta-clube">${crest(c, 'm')}<div class="cresce"><b>${esc(c.name)}</b> <span class="muted">· ${DIVS[divOf(c)]} · ${pos}º lugar</span><br><span class="texto2">Meta da diretoria: ${esc(meta.texto)}</span></div>
       <button class="btn" data-acao="escolherClubeNovo|${esc(id)}" aria-label="Assumir o ${esc(c.name)}">Assumir</button></li>` };
   return `<section class="card"><h2>${t.saida === 'pediu' ? `Você deixou o ${antigo}` : `Você foi demitido do ${antigo}`}</h2>
-    <p class="muted">${n === 1 ? 'Um clube quer você.' : `${n} clubes querem você.`} Escolha onde continuar a carreira.${ui.liga ? ' Se não escolher até a próxima rodada, você assume a primeira proposta.' : ''}</p>
-    <ul class="propostas-clube">${ids.map(linha).join('')}</ul></section>`;
+    <p class="muted">${t.recusouClubes ? 'Aguardando a rodada para receber novas propostas.' : n ? 'Escolha onde continuar a carreira ou avance para avaliar novas propostas.' : 'Nenhum clube disponível nesta rodada.'}</p>
+    <ul class="propostas-clube">${ids.map(linha).join('')}</ul>
+    <button class="btn sec" data-acao="recusarClubesUI"${t.recusouClubes ? ' disabled' : ''}>${n ? 'Recusar todas' : 'Aguardar próxima rodada'}</button></section>`;
+}
+export function recusarClubesUI() {
+  if (ui.liga) return recusarClubesLiga();
+  const r = recusarClubes();
+  if (r.erro) { avisar(r.erro, 'erro'); return }
+  save();
+  if (tecnicos().length > 1) confirmarVez(); else playRound();
 }
 export async function escolherClubeNovo(id) {
   if (ui.liga) { await mercadoLiga({ tipo: 'escolherClube', clubeId: id }); if (!tec().demitido) go('clube'); return }

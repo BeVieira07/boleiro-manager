@@ -4,9 +4,9 @@
 // Sempre que core/ mudar, troque o commit nos três imports abaixo e publique a função de novo, senão site e servidor
 // rodam motores diferentes. Veja supabase/functions/README.md.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
-import { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga, removerTecnicoLiga } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@cd757b3220b7174ee406d3cc5c34e120eb34d17a/core/liga.mjs';
-import { S } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@cd757b3220b7174ee406d3cc5c34e120eb34d17a/core/estado.mjs';
-import { DADOS_PADRAO } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@cd757b3220b7174ee406d3cc5c34e120eb34d17a/core/dados-padrao.mjs';
+import { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga, removerTecnicoLiga } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@2488855b54b3ab327ba9cfc8d1df37db804bf850/core/liga.mjs';
+import { S } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@2488855b54b3ab327ba9cfc8d1df37db804bf850/core/estado.mjs';
+import { DADOS_PADRAO } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@2488855b54b3ab327ba9cfc8d1df37db804bf850/core/dados-padrao.mjs';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -61,6 +61,7 @@ Deno.serve(async (req) => {
 
     if (acao === 'jogar') {
       if (forcar && liga.dono_id !== eu) return erro('Só o dono pode forçar a rodada.', 403);
+      if (corpo.rodada != null && corpo.rodada !== liga.rodada) return resposta({ ok: true, jogada: false, jaJogada: true });
       // false na gravação: outra rodada ou uma ação de mercado gravou antes. Se a rodada mudou, ela já foi jogada
       // (duas confirmações ao mesmo tempo, não é erro); senão foi o mercado, e a rodada é refeita com o estado novo.
       for (let tentativa = 0; tentativa < 3; tentativa++) {
@@ -95,6 +96,10 @@ Deno.serve(async (req) => {
       for (let tentativa = 0; tentativa < 3; tentativa++) {
         const est = await lerEstado(admin, ligaId);
         if (!est || liga.status !== 'andamento') return erro('A liga ainda não começou.', 409);
+        if (corpo.mercado?.tipo === 'recusarClubes') {
+          const { data: atual } = await admin.from('ligas').select('rodada').eq('id', ligaId).single();
+          if (atual?.rodada !== corpo.rodada) return resposta({ ok: true, jaJogada: true });
+        }
         // bloco síncrono, como na rodada
         const r = acaoMercadoLiga(est.estado, eu, corpo.mercado || {});
         if (r.erro) return erro(r.erro);

@@ -21,15 +21,16 @@ export function fecharTemporada(){
   aplicarFormaPendente(); // a última rodada (#44)
   limparEventosAntigos(S.fixtures.length); // #195
   const two=hasTwoDivs(),mv=MOVE_N(),ds=divisions(),res={};
-  for(const t of tecnicos()){ // premiação e diretoria de cada técnico
+  const ativos=tecnicos().filter(t=>!t.demitido);
+  for(const t of ativos){ // premiação e diretoria de cada técnico
     const uc=clubDo(t),dv=divOf(uc),Tb=table(dv),ps=Tb.findIndex(x=>x.id===uc.id)+1,pr=seasonPrize(dv,ps);
     addFin(`Premiação ${DIVS[dv]} — ${ps}º lugar`,pr,uc);res[t.id]={div:dv,T:Tb,pos:ps,prize:pr};
   }
-  const {div,T,pos,prize}=res[S.atual],di=ds.indexOf(div);
+  const {div=null,T=[],pos=null,prize=0}=res[S.atual]||{},di=ds.indexOf(div);
   const champs=divisions().map(d=>({d,c:clubById(table(d)[0].id)}));
   const top=topScorers(1,divisions()[0])[0];
   S.history.unshift({season:S.season,champ:champs[0].c.name,champs:Object.fromEntries(champs.map(x=>[x.d,x.c.name])),me:pos,div,tecnicos:Object.fromEntries(Object.entries(res).map(([k,v])=>[k,{pos:v.pos,div:v.div}])),scorer:top?`${top.name} (${top.goals})`:'-',...(S.copa&&S.copa.campeao?{copa:clubById(S.copa.campeao).name}:{})});
-  for(const t of tecnicos())confiancaFimTemporada(t,res[t.id].pos);S.seasonClosed=S.season;
+  for(const t of ativos)confiancaFimTemporada(t,res[t.id].pos);S.seasonClosed=S.season;
   return {div,T,pos,two,mv,prize,ds,di,champs,top};
 }
 // regra: começa a temporada seguinte (acesso/rebaixamento, fim de contratos, idade, aposentadoria, calendário)
@@ -62,7 +63,7 @@ export function iniciarTemporada(){
   S.season++;S.round=0;S.fixtures=makeAllFixtures(S.clubs);
   reindex();criarCopa();criarEstaduais();criarContinentais(vagas);
   processLoans(); // #142: empréstimo de 1 ano feito na rodada 0 volta agora
-  for(const t of tecnicos()){t.offers=[];confiancaNovaTemporada(t);const uc=clubDo(t);uc.lineup=getXI(uc);if(uc.lineup.length<11)uc.lineup=autoXI(uc)}
+  for(const t of tecnicos().filter(t=>!t.demitido)){t.offers=[];confiancaNovaTemporada(t);const uc=clubDo(t);uc.lineup=getXI(uc);if(uc.lineup.length<11)uc.lineup=autoXI(uc)}
   addNewsTodos(`📅 Começa a temporada ${S.season}!`);
 }
 export function ensureSquad(c){
