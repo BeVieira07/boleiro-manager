@@ -20,7 +20,7 @@ export function atualizarForma(games,xiDe=id=>getXI(clubById(id))){
       if(p.o0==null)p.o0=p.ovr;
       if(p.oT==null)p.oT=p.o0;
       let f=(p.forma||0)*0.93;
-      if(xi.includes(p.id))f+=0.04+0.3*res+0.5*(gols[p.id]||0);
+      if(xi.includes(p.id)||gols[p.id])f+=0.04+0.3*res+0.5*(gols[p.id]||0);
       else if(!unavailable(p))f-=0.13;
       const d=p.ovr-p.oT;
       if(f>=FORMA_LIM&&p.ovr<Math.min(95,tetoOvr(p))){if(d<FORMA_MAX_TEMP){p.ovr++;refreshEconomics(p);addNews(`📈 ${p.name} está em grande fase e subiu para ${p.ovr}.`,c.id)}f=FORMA_LIM-0.1}
@@ -34,8 +34,9 @@ export function atualizarForma(games,xiDe=id=>getXI(clubById(id))){
    é aplicada no começo da rodada seguinte (ou no fechamento da temporada), com o placar final e os titulares da rodada. */
 export function adiarForma(games){
   const comTecnico=games.filter(g=>ehHumano(g.h)||ehHumano(g.a));
-  atualizarForma(games.filter(g=>!comTecnico.includes(g)));
-  S.formaPendente={r:S.round,xi:Object.fromEntries(comTecnico.flatMap(g=>[g.h,g.a]).map(id=>[id,getXI(clubById(id))]))};
+  const xi=Object.fromEntries(games.flatMap(g=>['h','a'].map(side=>[g[side],g.escalacoes?.[side].xi.filter(Boolean)||getXI(clubById(g[side]))])));
+  atualizarForma(games.filter(g=>!comTecnico.includes(g)),id=>xi[id]);
+  S.formaPendente={r:S.round,xi:Object.fromEntries(comTecnico.flatMap(g=>[g.h,g.a].map(id=>[id,xi[id]])))};
 }
 export function aplicarFormaPendente(){
   const f=S.formaPendente;if(!f)return;

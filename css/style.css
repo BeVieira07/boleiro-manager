@@ -320,6 +320,7 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 @media(min-width:900px){.vivo{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}.vivo-abas{display:none}.vivo-cab{grid-column:1/-1;grid-row:1}.vivo-meu{grid-column:1;grid-row:2/span 2}.vivo-rodada{grid-column:2;grid-row:2}.vivo-classif{grid-column:2;grid-row:3}}
 .ev.troca .ev-ic,.ev.formacao .ev-ic{color:var(--verde-claro)}
 .marca-ev.troca,.marca-ev.formacao{background:var(--verde-claro);height:12px;top:4px}
+.marca-ev.troca.auto{height:6px;top:14px}
 .trocas{display:flex;flex-direction:column;gap:var(--e2)}
 .trocas-listas{display:grid;gap:var(--e3);grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));align-items:start}
 .lista-troca{list-style:none;margin:0;padding:0;display:grid;gap:6px}
@@ -506,6 +507,8 @@ body.em-jogo .avisos{bottom:24px}
 .cab-topo .relogio{margin:0}
 .ult-lance{margin:0;min-height:20px;font-size:13px;color:var(--texto2);display:flex;gap:6px;align-items:center;justify-content:center;text-align:center}
 .ev-cartao{color:var(--ouro)}
+.ev-vermelho{color:var(--perigo)}
+.ev-lesao{color:var(--info)}
 .estat{width:100%;border-collapse:collapse;align-self:start}
 .estat th,.estat td{padding:7px 8px;text-align:center;white-space:normal;border-bottom:1px solid var(--linha2)}
 .estat thead th{background:none;position:static;color:var(--texto2)}

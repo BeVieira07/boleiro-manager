@@ -1,6 +1,9 @@
-import { P, S, addFin, clubById, ehHumano, tec, userClub } from './estado.mjs';
+import { P, addFin, clubById, ehHumano, tec, userClub } from './estado.mjs';
 import { wageBill } from './emprestimos.mjs';
-import { pickScorer, power } from './motor.mjs';
+import { energiaDaSaidaForcada } from './energia.mjs';
+import { cancelarDesfalque } from './escalacao.mjs';
+import { aplicarLanceAoElenco, escalacaoInicial, melhorReserva, saidaForcada } from './lances.mjs';
+import { chancesDoJogo, pickScorer, power } from './motor.mjs';
 import { clamp, hashStr, poisson, ri } from './utils.mjs';
 
 /* ================= estilos de jogo e modo (ataque/defesa) ================= */
@@ -24,13 +27,13 @@ export function taticaUser(club){
   return {estilo:ESTILOS[t.estilo]?t.estilo:'equilibrado',modo:MODOS[t.modo]?t.modo:'equilibrado'};
 }
 // computador: modo pela diferença de força, estilo por sorteio fixo do clube
-export function autoTatica(club,opp){
-  const a=power(club),b=power(opp),d=a.att+a.def-b.att-b.def;
+export function autoTatica(club,opp,a=power(club),b=power(opp)){
+  const d=a.att+a.def-b.att-b.def;
   const modo=d>14?'ofensivo':d<-14?'defensivo':'equilibrado';
   const estilo=modo==='defensivo'?'contra':modo==='ofensivo'?'toque':['toque','direto','laterais','equilibrado'][hashStr(club.id)%4];
   return {estilo,modo};
 }
-export function taticaDe(club,opp){return ehHumano(club)?taticaUser(club):autoTatica(club,opp)}
+export function taticaDe(club,opp,a,b){return ehHumano(club)?taticaUser(club):autoTatica(club,opp,a,b)}
 // multiplicadores de um time contra um adversário no minuto médio `mid`
 export function efeitoTatica(t,tOpp,mid){
   const e=ESTILOS[t.estilo],m=MODOS[t.modo],f=(e.fad+m.fad)*mid/93;
@@ -44,25 +47,84 @@ export function golsSegmento(lh,la,tH,tA,de,ate){
   return {h:clamp(lh*eh.att*ea.sof,0.05,6)*n,a:clamp(la*ea.att*eh.sof,0.05,6)*n};
 }
 export function novosGols(g,ph,pa,nh,na,de,ate){
-  const gol=(side,xi)=>{if(!xi.length)return;const p=pickScorer(xi);p.goals=(p.goals||0)+1;g.ev.push({m:ri(de,ate),t:'gol',side,pid:p.id,name:p.name})};
-  g.hg+=nh;g.ag+=na;
+  const gol=(side,xi)=>{if(!xi.length)return;const p=pickScorer(xi);p.goals=(p.goals||0)+1;g.ev.push({m:ri(de,ate),t:'gol',side,pid:p.id,name:p.name});if(side==='h')g.hg++;else g.ag++};
   for(let i=0;i<nh;i++)gol('h',ph.xi);for(let i=0;i<na;i++)gol('a',pa.xi);
+}
+
+// A força da escalação muda nos lances. Um time que perdeu jogadores tem
+// também um teto menor de criação, mesmo que a média dos que ficaram suba.
+export function chancesComDesfalques(ph,pa,base,inicial){
+  const chances=chancesDoJogo(ph,pa);
+  for(const [side,p] of [['h',ph],['a',pa]]){
+    const faltam=inicial[side].xi.length-p.xi.length;
+    if(faltam>0)chances[side]=Math.min(chances[side],base[side]*0.9**faltam);
+  }
+  return chances;
+}
+
+export function simularLances(g,min,revisao=false){
+  const clubes={h:clubById(g.h),a:clubById(g.a)};
+  const h=clubes.h,a=clubes.a;
+  const elencos={h:escalacaoInicial(g.escalacoes.h),a:escalacaoInicial(g.escalacoes.a)};
+  const inicial={h:power(h,elencos.h),a:power(a,elencos.a)};
+  const base=chancesDoJogo(inicial.h,inicial.a);
+  const th=taticaDe(h,a,inicial.h,inicial.a),ta=taticaDe(a,h,inicial.a,inicial.h);
+  const amarelos=new Set();
+  const pendentes=g.ev.filter(e=>e.t!=='gol'&&!e.auto&&!e.segundo).sort((x,y)=>x.m-y.m);
+  const desfalques=g.ev.filter(saidaForcada);
+  g.ev=g.ev.filter(e=>e.t==='gol');
+  let de=min+1;
+  const sortearGols=ate=>{
+    if(de>ate)return;
+    const ph=power(h,elencos.h),pa=power(a,elencos.a);
+    const chances=chancesComDesfalques(ph,pa,base,inicial);
+    const s=golsSegmento(chances.h,chances.a,th,ta,de,ate);
+    novosGols(g,ph,pa,poisson(s.h),poisson(s.a),de,ate);
+    de=ate+1;
+  };
+  for(const lance of pendentes){
+    const elenco=elencos[lance.side];
+    if(lance.pid&&!elenco.xi.includes(lance.pid))continue;
+    let e=lance;
+    if(e.t==='cartao'){
+      g.ev.push(e);
+      if(!amarelos.has(e.pid)){amarelos.add(e.pid);continue}
+      e={...e,t:'vermelho',segundo:true};
+    }
+    sortearGols(e.m);
+    if(e.t==='lesao'){
+      let entra=e.entra;
+      if(e.m>min)entra=ehHumano(clubes[e.side])?melhorReserva(elenco,e.pid):null;
+      e={...e,entra};
+      if(entra)g.ev.push(e,{m:e.m,t:'troca',side:e.side,auto:true,name:`${P[entra].name} entra no lugar de ${e.name} (lesão)`});
+      else g.ev.push(e);
+    }else g.ev.push(e);
+    aplicarLanceAoElenco(elenco,e);
+  }
+  sortearGols(93);
+  g.ev.sort((x,y)=>x.m-y.m);
+  if(revisao)for(const e of desfalques){
+    const atual=g.ev.find(n=>n.t===e.t&&n.pid===e.pid&&n.m===e.m);
+    if(!atual)cancelarDesfalque(g,e);
+    energiaDaSaidaForcada(clubes[e.side],e,atual);
+  }
 }
 export function mudarTatica(campo,valor){
   const uc=userClub();uc.tatica=Object.assign(taticaUser(uc),{[campo]:valor});
 }
 // jogo ao vivo: refaz os gols dos minutos seguintes com a tática nova
 export function ressimularDepois(g,min){
-  const H=clubById(g.h),A=clubById(g.a),uid=tec().clubId,ph=power(H),pa=power(A);
+  const H=clubById(g.h),A=clubById(g.a),uid=tec().clubId;
   const saldo=()=>g.h===uid?g.hg-g.ag:g.ag-g.hg,antes=saldo();
   g.ev=g.ev.filter(e=>{
     if(e.t!=='gol'||e.m<=min)return true;
     if(P[e.pid])P[e.pid].goals=Math.max(0,(P[e.pid].goals||0)-1);
     e.side==='h'?g.hg--:g.ag--;return false;
   });
-  if(min<93){
+  if(g.escalacoes)simularLances(g,min,true);
+  else if(min<93){
     const s=golsSegmento(g.lh,g.la,taticaDe(H,A),taticaDe(A,H),min+1,93);
-    novosGols(g,ph,pa,poisson(s.h),poisson(s.a),min+1,93);
+    novosGols(g,power(H),power(A),poisson(s.h),poisson(s.a),min+1,93);
     g.ev.sort((x,y)=>x.m-y.m);
   }
   // bicho por vitória foi lançado antes do jogo acabar: acerta se o resultado virou

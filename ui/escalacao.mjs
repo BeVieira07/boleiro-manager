@@ -43,7 +43,7 @@ export function sugestoesTroca(lay) {
 function carta(s, o = {}) {
   const acao = o.acao || 'clickEsc', selId = 'sel' in o ? o.sel : ui.selEsc;
   if (!s.id) return `<div class="carta vazia"><span class="carta-vaga">${s.d}</span><span>vaga livre</span></div>`;
-  const p = P[s.id], u = unavailable(p), pp = penalidadePosicao(p, s.d), sel = selId === p.id;
+  const p = P[s.id], u = o.emCampo ? null : unavailable(p), pp = penalidadePosicao(p, s.d), sel = selId === p.id;
   const est = u ? 'indisp' : pp.tipo === 'fora' ? 'fora' : '', nota = u ? (p.inj > 0 ? `${p.inj} rod.` : `susp. ${p.susp}`) : pp.pen ? `-${Math.round(pp.pen * 100)}%` : '';
   const desc = `${POSD[s.d].nome}: ${p.name}, força ${ovrNaPosicao(p, s.d)}, energia ${Math.round(energiaDe(p))}${u ? ', ' + u : pp.tipo === 'fora' ? ', fora de posição, ' + nota : ''}`;
   return `<button type="button" class="carta ${est}${sel ? ' sel' : ''}" data-acao="${acao}|${p.id}" aria-pressed="${sel}" aria-label="${esc(desc)}" title="${esc(p.name)}"${o.bloqueado ? ' disabled' : ''}>
@@ -54,7 +54,7 @@ function carta(s, o = {}) {
 /** Campo com uma carta por vaga, no esquema do clube. o = {acao, sel, bloqueado, mini}: a ação do clique (padrão: trocar na
  *  Escalação), quem está selecionado, se as cartas ficam desabilitadas e a versão menor (substituições ao vivo, #172). */
 export function campoHtml(uc, o = {}) {
-  const lay = slotLayout(uc), xi = lay.map(s => s.id).filter(Boolean);
+  const lay = slotLayout(uc, o.emCampo), xi = lay.map(s => s.id).filter(Boolean);
   // vagas em linhas: ataque em cima, goleiro embaixo. Linhas desenhadas da esquerda para a direita do campo (LE à esquerda, LD à direita; #54)
   const sz = FORMS[uc.formation] || FORMS['4-4-2'], idx = (de, n) => Array.from({ length: n }, (_, k) => de + k);
   const linhas = [idx(1 + sz[0] + sz[1], sz[2]), idx(1 + sz[0], sz[1]), idx(1, sz[0]).reverse(), [0]];

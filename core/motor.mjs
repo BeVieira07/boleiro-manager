@@ -1,17 +1,18 @@
 import { jogarContinentais } from './continental.mjs';
 import { jogarCopa } from './copa.mjs';
 import { limparEventosAntigos } from './aovivo.mjs';
-import { anotarTitulares, atualizarEnergia, fatorEnergia } from './energia.mjs';
+import { anotarTitulares, atualizarEnergia, energiaDaSaidaForcada, fatorEnergia } from './energia.mjs';
 import { atualizarConfianca } from './diretoria.mjs';
 import { jogarPreTemporada } from './estadual.mjs';
 import { processLoans, wageBill } from './emprestimos.mjs';
 import { aplicarDisponibilidade, autoSlotXI, slotsDe, unavailable } from './escalacao.mjs';
 import { P, S, addFin, addNews, bilheteriaBase, clubById, clubDo, divOf, ehHumano, table, tec, tecnicos, tvQuota, userClub } from './estado.mjs';
 import { adiarForma, aplicarFormaPendente } from './forma.mjs';
+import { elencoDoJogo, saidaForcada, sortearLances } from './lances.mjs';
 import { ehJanela, janelaIA } from './mercadoIA.mjs';
 import { ovrNaPosicao } from './posicoes.mjs';
-import { golsSegmento, novosGols, taticaDe } from './taticas.mjs';
-import { clamp, money, pick, poisson, ri, rnd, semente } from './utils.mjs';
+import { simularLances } from './taticas.mjs';
+import { clamp, money, pick, rnd, semente } from './utils.mjs';
 
 /* ================= escalação e força ================= */
 export function autoXI(club,formation){return autoSlotXI(club,formation)} // em escalacao.js: já na ordem das vagas
@@ -19,11 +20,14 @@ export function getXI(club){
   if(ehHumano(club)){club.lineup=(club.lineup||[]).filter(id=>P[id]&&P[id].clubId===club.id);return club.lineup}
   return autoXI(club);
 }
-export function power(club){
-  const xi=getXI(club).map(id=>P[id]).filter(Boolean);
+export function power(club,elenco){
+  const vagas=elenco?.xi||getXI(club),xi=vagas.map(id=>P[id]).filter(Boolean);
   // com 11 titulares na ordem das vagas, quem joga fora de posição rende menos
-  const sl=xi.length===11?slotsDe(club.formation||'4-4-2'):null;
-  const xe=xi.map((p,i)=>({pos:p.pos,ovr:(sl?ovrNaPosicao(p,sl[i]):p.ovr)*fatorEnergia(p)})); // #136: cansaço tira rendimento
+  const sl=(elenco||xi.length===11)?slotsDe(elenco?.form||club.formation):null;
+  const xe=vagas.flatMap((id,i)=>{
+    const p=P[id];
+    return p?[{pos:p.pos,ovr:(sl?ovrNaPosicao(p,sl[i]):p.ovr)*fatorEnergia(p)}]:[];
+  });
   const grp=pos=>xe.filter(p=>p.pos===pos);
   const avg=(arr,f)=>arr.length?arr.reduce((s,p)=>s+p.ovr,0)/arr.length:f;
   const base=avg(xe,45),g=grp('G'),d=grp('D'),m=grp('M'),a=grp('A');
@@ -40,16 +44,19 @@ export function pickScorer(xi){
   const ws=xi.map(p=>w[p.pos]*Math.pow(p.ovr/70,2));const tot=ws.reduce((a,b)=>a+b,0);
   let x=rnd()*tot;for(let i=0;i<xi.length;i++){x-=ws[i];if(x<=0)return xi[i]}return xi[xi.length-1];
 }
-export function simulate(g){
-  const H=clubById(g.h),A=clubById(g.a),ph=power(H),pa=power(A);
+export function chancesDoJogo(ph,pa){
   const lh=clamp(1.1*Math.pow(ph.att/pa.def,3)*Math.pow(ph.mid/pa.mid,0.8)*1.12,0.15,4.5);
   const la=clamp(1.1*Math.pow(pa.att/ph.def,3)*Math.pow(pa.mid/ph.mid,0.8)*0.9,0.15,4.5);
-  g.lh=lh;g.la=la;g.hg=0;g.ag=0;g.ev=[]; // estilo e modo entram em golsSegmento (taticas.js)
-  const sg=golsSegmento(lh,la,taticaDe(H,A),taticaDe(A,H),1,93);
-  novosGols(g,ph,pa,poisson(sg.h),poisson(sg.a),1,93);
-  const ev=g.ev;
-  for(const [side,xi] of [['h',ph.xi],['a',pa.xi]])for(let k=ri(0,3);k>0;k--){if(!xi.length)break;const p=pick(xi);ev.push({m:ri(5,90),t:'cartao',side,name:p.name})}
-  ev.sort((x,y)=>x.m-y.m);g.ev=ev;
+  return {h:lh,a:la};
+}
+export function simulate(g){
+  const H=clubById(g.h),A=clubById(g.a);
+  const h=elencoDoJogo(H,getXI(H)),a=elencoDoJogo(A,getXI(A));
+  g.escalacoes={h,a};
+  const chances=chancesDoJogo(power(H,h),power(A,a));
+  g.lh=chances.h;g.la=chances.a;g.hg=0;g.ag=0;
+  g.ev=[...sortearLances(h,'h'),...sortearLances(a,'a')];
+  simularLances(g,0);
   return g;
 }
 
@@ -125,6 +132,7 @@ export function jogarRodada(){
   const copa=jogarCopa(S.round); // #51: a Copa do Brasil, quando esta rodada tem jogo dela
   const continentais=jogarContinentais(S.round); // #133, #134: Libertadores e Sul-Americana
   atualizarEnergia(anotarTitulares(jogaram,[...copa,...continentais],getXI,clubById)); // #136: as copas são outros jogos na mesma rodada
+  for(const g of games)for(const e of g.ev.filter(saidaForcada))energiaDaSaidaForcada(clubById(g[e.side]),null,e);
   for(const t of tecnicos())t.pronto=false;
   S.atual=tecnicos()[0].id; // depois da rodada, a vez volta ao primeiro técnico
   S.round++;processLoans();

@@ -45,13 +45,13 @@ export function estatisticas(g, min) {
   const par = k => ({ h: h[k], a: a[k] });
   return { posse: { h: t.posse, a: 100 - t.posse }, fin: par('fin'), noGol: par('noGol'), fora: par('fora'), desarmes: par('desarmes'), erros: par('erros') };
 }
-/** Último lance do jogo até o minuto `min` (gol ou cartão), ou null. */
-export const ultimoLance = (g, min) => (g.ev || []).filter(e => e.m <= min && ['gol', 'cartao', 'vermelho'].includes(e.t)).sort((x, y) => x.m - y.m).pop() || null;
+/** Último gol, cartão ou lesão até o minuto `min`. */
+export const ultimoLance = (g, min) => (g.ev || []).filter(e => e.m <= min && ['gol', 'cartao', 'vermelho', 'lesao'].includes(e.t)).sort((x, y) => x.m - y.m).pop() || null;
 /** Minuto no formato do tempo de jogo: 14' do 2º tempo = {m: 14, tempo: 2}. */
 export const minutoDoTempo = m => m <= 45 ? { m, tempo: 1 } : { m: m - 45, tempo: 2 };
 
 /** Apaga os eventos (g.ev, g.trocas, g.bicho) dos jogos das rodadas antes de `ate` (índice): depois de a forma e o ao vivo
  *  usarem os da rodada, ninguém relê. Mantém placar e o resto do jogo. Sem isso o save passava de 1,3 MB numa temporada (#195). */
 export function limparEventosAntigos(ate = S.round) {
-  for (let r = 0; r < ate && r < S.fixtures.length; r++) for (const g of S.fixtures[r]) { delete g.ev; delete g.trocas; delete g.bicho }
+  for (let r = 0; r < ate && r < S.fixtures.length; r++) for (const g of S.fixtures[r]) { delete g.ev; delete g.trocas; delete g.bicho; delete g.escalacoes }
 }
