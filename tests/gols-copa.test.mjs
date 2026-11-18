@@ -76,12 +76,16 @@ test('copa e estadual mostram seus artilheiros e abrem o ranking da competição
     torneioDe(userClub().id).gols={b:{nome:'Autor do Estadual',clube:userClub().id,gols:3}};`);
   j.acao('go|copa');
   assert.match(j.html(), /Autor da Copa/);
+  assert.match(j.html(), /data-acao="verArtilharia\|copa">Ver ranking/);
   j.acao('verArtilharia|copa');
   assert.match(j.html(), /<h2>Copa do Brasil \d{4}<\/h2>/);
+  assert.match(j.html(), /<option value="copa" selected>Copa do Brasil<\/option>/);
   assert.match(j.html(), /Autor da Copa/);
   j.acao('go|estadual');
   assert.match(j.html(), /Autor do Estadual/);
+  assert.match(j.html(), /data-acao="verArtilharia\|estadual-SP">Ver ranking/);
   j.acao('verArtilharia|estadual-SP');
   assert.match(j.html(), /<h2>Paulistão \d{4}<\/h2>/);
+  assert.match(j.html(), /<option value="estadual-SP" selected>Paulistão<\/option>/);
   assert.match(j.html(), /Autor do Estadual/);
 });

@@ -43,21 +43,39 @@ test('"Só o seu clube" mostra só as linhas dele, mantendo a posição do ranki
   assert.ok(([...j.html().matchAll(/<tr class="(?:me)?"><td>/g)]).length > 1);
 });
 
-test('chips por competição: série, copa e continentais, com o ativo marcado e estado vazio claro', () => {
-  const j = carregarJogo({ boot: true });
-  j.run(`newGame('${clubeDaSerie(j)}');go('artilharia')`);
-  assert.match(j.html(), /aria-pressed="true" data-acao="verArtilharia\|A">Série A/);
-  j.acao('verArtilharia|B');
-  assert.match(j.html(), /aria-pressed="true" data-acao="verArtilharia\|B">Série B/);
-  assert.match(j.html(), /<h2>Série B \d{4}<\/h2>/);
+test('seletor agrupa as competições da temporada e começa na série do clube', () => {
+  const j = carregarJogo({ boot: true, estaduais: true });
+  j.run(`newGame('${clubeDaSerie(j, 'B')}');go('artilharia')`);
+  const h = j.html();
+  assert.match(h, /<label for="artCompeticao">Competição<\/label><select id="artCompeticao" data-mudar="verArtilharia">/);
+  assert.deepEqual([...h.matchAll(/<optgroup label="([^"]+)">/g)].map(m => m[1]), ['Liga', 'Copa Nacional', 'Estaduais', 'Continentais']);
+  for (const id of [...j.run('divisions()'), 'copa', ...j.run('S.estaduais.torneios.map(t => "estadual-" + t.uf)'), 'libertadores', 'sulamericana']) {
+    assert.ok(h.includes(`<option value="${id}"`), `${id} deve aparecer no seletor`);
+  }
+  assert.match(h, /<option value="B" selected>Série B<\/option>/);
+  j.acao('verArtilharia', 'A');
+  assert.match(j.html(), /<option value="A" selected>Série A<\/option>/);
+  assert.match(j.html(), /<h2>Série A \d{4}<\/h2>/);
   assert.match(j.html(), /Ainda sem jogos/);
   assert.match(j.html(), /Nenhum gol ainda nesta série/);
   assert.doesNotMatch(j.html(), /class="podio"/, 'sem gols não há pódio');
-  j.acao('verArtilharia|copa');
+  j.acao('verArtilharia', 'copa');
   assert.match(j.html(), /Nenhum gol registrado nesta competição/);
-  j.acao('verArtilharia|libertadores');
+  j.acao('verArtilharia', 'libertadores');
   assert.match(j.html(), /<h2>Libertadores \d{4}<\/h2>/);
-  assert.match(j.html(), /aria-pressed="true" data-acao="verArtilharia\|libertadores">Libertadores/);
+  assert.match(j.html(), /<option value="libertadores" selected>Libertadores<\/option>/);
+});
+
+test('a seleção de competição é independente em cada save', () => {
+  const j = carregarJogo({ boot: true });
+  j.run(`newGame('${clubeDaSerie(j)}');go('artilharia')`);
+  const primeiro = j.run('S.saveId');
+  j.acao('verArtilharia', 'copa');
+  j.run(`voltarMenu();newGame('${clubeDaSerie(j, 'C')}');go('artilharia')`);
+  assert.match(j.html(), /<option value="C" selected>Série C<\/option>/);
+  j.acao(`abrirSave|${primeiro}`);
+  j.acao('go|artilharia');
+  assert.match(j.html(), /<option value="copa" selected>Copa do Brasil<\/option>/);
 });
 
 test('continentais usam os gols guardados no torneio', () => {
@@ -66,9 +84,11 @@ test('continentais usam os gols guardados no torneio', () => {
   const tem = j.run(`!!(S.continentais&&S.continentais.torneios.find(t=>t.id==='libertadores'))`);
   assert.ok(tem, 'a Libertadores existe no jogo novo');
   j.run(`S.continentais.torneios.find(t=>t.id==='libertadores').gols={a:{nome:'Fulano',clube:userClub().id,gols:3},b:{nome:'Beltrano',clube:userClub().id,gols:1}};go('artilharia')`);
-  j.acao('verArtilharia|libertadores');
+  j.acao('verArtilharia', 'libertadores');
   const h = j.html();
-  assert.match(h, /Fulano/);
+  assert.match(h, /<h2>Libertadores \d{4}<\/h2>/);
+  assert.match(h, /<section class="card tabela-card art-ranking">[\s\S]*Fulano[\s\S]*<\/section>/);
+  assert.match(h, /<aside class="card art-lado">[\s\S]*Fulano[\s\S]*<\/aside>/);
   assert.deepEqual([...h.matchAll(/class="medalha (\w+)">(\d)º/g)].map(m => m[2]), ['1', '2']);
   assert.match(h, /class="podio-card meu"/);
 });
