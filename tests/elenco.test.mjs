@@ -30,6 +30,7 @@ test('clicar no título da coluna ordena crescente e depois decrescente', () => 
   j.acao('filtrarElenco|ord|idade');
   assert.deepEqual(idades(), [...idades()].sort((a, b) => a - b));
   assert.match(j.html(), /aria-sort="ascending"><button[^>]*filtrarElenco\|ord\|idade/);
+  assert.match(j.html(), /<option value="idade" selected>Idade<\/option>/);
   j.acao('filtrarElenco|ord|idade');
   assert.deepEqual(idades(), [...idades()].sort((a, b) => b - a));
   assert.match(j.html(), /aria-sort="descending"><button[^>]*filtrarElenco\|ord\|idade/);
@@ -45,6 +46,8 @@ test('a tendência mostra o valor real; a forma não aparece na tela (age no ove
   assert.doesNotMatch(j.html(), /Forma \d+%/);
   j.acao(`toggleListed|${id}`);
   assert.equal(j.run(`P['${id}'].listed`), true);
+  const jogador = j.html().split('<tr class="').find(l => l.includes(`data-acao="toggleListed|${id}"`));
+  assert.match(jogador, /<span class="elenco-situacao"><span class="st [^"]*">(?:Titular|Reserva|<svg)/);
   assert.match(j.html(), new RegExp(`data-acao="toggleListed\\|${id}" aria-pressed="true">À venda`));
   assert.match(j.html(), /data-acao="quickSell\|/);
   assert.match(j.html(), /data-acao="toggleEmprestimo\|[^"]+" aria-pressed="false">Pôr para empréstimo/); // #142

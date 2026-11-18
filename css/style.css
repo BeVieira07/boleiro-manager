@@ -281,6 +281,34 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
   .tabela-jogadores thead th{padding:6px 4px;font-size:11px}
 }
 
+/* ---- Elenco (#220) ---- */
+.elenco-ordem{display:none}
+.tabela-elenco .jogador>div{align-items:flex-start;flex-direction:column;gap:4px;white-space:normal}
+.tabela-elenco .jogador b{font-size:14px;overflow-wrap:anywhere}
+.elenco-situacao{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.elenco-situacao .pill{white-space:normal;overflow-wrap:anywhere}
+.tabela-elenco :is(.c-idade,.c-pot,.c-gols,.c-valor,.c-sal,.c-contr){color:var(--muted)}
+.tabela-elenco .acoes .btn.sec{background:transparent;color:var(--texto2)}
+.tabela-elenco .acoes .btn.sec:hover{background:var(--painel2);color:var(--texto)}
+@media(max-width:799px){
+  .elenco-ordem{display:flex;flex-wrap:wrap;align-items:center;gap:6px;width:100%;font-size:13px}
+  .elenco-ordem label{flex-basis:100%;color:var(--muted)}
+  .elenco-ordem select{flex:1;min-width:0}
+  .tabela-elenco tr{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 10px}
+  .tabela-elenco tbody th{position:static}
+  .tabela-elenco .c-pos{grid-column:1;text-align:center}
+  .tabela-elenco .c-nome{grid-column:2/-1}
+  .tabela-elenco .c-energia{grid-column:2;grid-row:2}
+  .tabela-elenco .c-ovr,.tabela-elenco .c-pot,.tabela-elenco .c-energia{align-self:start;text-align:left}
+  .tabela-elenco :is(.c-ovr,.c-pot,.c-energia) .rot{display:block;color:var(--muted);font-size:12px}
+  .tabela-elenco .forca{gap:4px;flex-wrap:wrap}
+  .tabela-elenco .c-energia .barra{width:34px;max-width:100%}
+  .tabela-elenco .c-sal{display:block;order:3}
+  .tabela-elenco :is(.c-idade,.c-gols,.c-valor,.c-sal,.c-contr){font-size:12px;text-align:left;overflow-wrap:anywhere}
+  .tabela-elenco .c-acoes,.tabela-elenco .elenco-vazio{grid-column:1/-1}
+  .tabela-elenco .c-acoes{padding-top:4px}
+}
+
 /* ================= jogo ao vivo (#62) ================= */
 .ao-vivo{display:flex;flex-direction:column;gap:var(--e4)}
 .placar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:var(--e3)}
