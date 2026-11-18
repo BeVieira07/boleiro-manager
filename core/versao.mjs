@@ -28,7 +28,11 @@ const MIGRACOES = [
   s => { for (const c of s.clubs) for (const p of [...c.players, ...(c.base || [])]) if (p.energia == null) p.energia = 100 }, // 10: energia dos jogadores (#136)
   s => { for (const c of s.clubs) for (const p of [...c.players, ...(c.base || [])]) delete p.ps }, // 11: sem posição secundária (#181)
   s => { if (s.continentais) for (const c of Object.values(s.continentais.estrangeiros)) prepararEstrangeiro(c) }, // 12: jogadores dos clubes estrangeiros no mercado (#172)
-  s => limparEventosAntigos(s.formaPendente ? s.formaPendente.r : s.round) // 13: apaga os lances das rodadas antigas, que o save carregava à toa (#195)
+  s => limparEventosAntigos(s.formaPendente ? s.formaPendente.r : s.round), // 13: apaga os lances das rodadas antigas, que o save carregava à toa (#195)
+  s => { // 14: artilharia nacional. Os placares anteriores à #197 ficam sem autoria.
+    if (s.copa) s.copa.gols ??= {};
+    for (const tor of s.estaduais?.torneios || []) tor.gols ??= {};
+  }
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 

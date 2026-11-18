@@ -54,7 +54,7 @@ test('chips por competição: série, copa e continentais, com o ativo marcado e
   assert.match(j.html(), /Nenhum gol ainda nesta série/);
   assert.doesNotMatch(j.html(), /class="podio"/, 'sem gols não há pódio');
   j.acao('verArtilharia|copa');
-  assert.match(j.html(), /não guarda quem fez os gols/);
+  assert.match(j.html(), /Nenhum gol registrado nesta competição/);
   j.acao('verArtilharia|libertadores');
   assert.match(j.html(), /<h2>Libertadores \d{4}<\/h2>/);
   assert.match(j.html(), /aria-pressed="true" data-acao="verArtilharia\|libertadores">Libertadores/);
