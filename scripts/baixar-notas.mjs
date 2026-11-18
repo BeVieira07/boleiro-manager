@@ -38,12 +38,16 @@ const file = `data/notas-${SEASON}.json`;
 const d = existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) : { season: SEASON, times: {}, jogadores: {} };
 
 // junta as linhas de estatística (um jogador pode ter passado por 2 clubes ou 2 séries no ano)
-function junta(it) {
+function junta(it, tid, serie, guardarParticipacao) {
   const id = String(it.player.id);
   const j = d.jogadores[id] || (d.jogadores[id] = { n: it.player.name, p: null, L: {} });
   for (const x of it.statistics || []) {
     const L = LIGA[x.league?.id]; if (!L) continue;
     const min = x.games?.minutes || 0, r = parseFloat(x.games?.rating) || 0;
+    if (guardarParticipacao && L === serie && String(x.team?.id) === tid) {
+      const t = ((j.T ||= {})[tid] ||= { m: 0, a: 0 });
+      t.m += min; t.a += x.games?.appearences || 0;
+    }
     const e = j.L[L] || (j.L[L] = { m: 0, a: 0, g: 0, s: 0, r: 0 });
     e.r = (e.m + min) ? Math.round((e.r * e.m + r * min) / (e.m + min) * 1000) / 1000 : 0; // média ponderada pelos minutos
     e.m += min; e.a += x.games?.appearences || 0; e.g += x.goals?.total || 0; e.s += x.goals?.assists || 0;
@@ -56,13 +60,13 @@ outer: for (const s of SERIES) {
   if (!existsSync(ARQ[s])) { console.log(`Sem ${ARQ[s]}, pulando a Série ${s.toUpperCase()}.`); continue; }
   const clubes = JSON.parse(readFileSync(ARQ[s], 'utf8')).clubs;
   for (const c of clubes) {
-    const tid = c.id.replace(/^c/, ''), t = d.times[tid] || (d.times[tid] = { next: 1, total: null, ok: false, nome: c.name });
+    const tid = c.id.replace(/^c/, ''), t = d.times[tid] || (d.times[tid] = { next: 1, total: null, ok: false, nome: c.name, participacaoPorClube: true });
     while (!t.ok) {
       if (restam <= 0) { console.log(`Cota do dia acabou (${Object.values(d.times).filter(x => x.ok).length} clubes prontos). Rode de novo amanhã.`); parou = true; break outer; }
       try {
         const j = await api(`/players?team=${tid}&league=${ID_LIGA[s]}&season=${SEASON}&page=${t.next}`);
         restam--; t.total = j.paging.total;
-        j.response.forEach(junta);
+        j.response.forEach(it => junta(it, tid, s.toUpperCase(), t.participacaoPorClube));
         t.next++; t.ok = t.next > t.total;
         if (t.total > 3 && !t.ok && t.next > 3) { console.log(`  ${c.name}: ${t.total} páginas, mas o plano só libera 3. Ficou parcial.`); t.ok = true; }
         writeFileSync(file, JSON.stringify(d));

@@ -20,6 +20,7 @@ test('proposta valida o valor e o caixa antes de enviar', () => {
   j.run(`globalThis.__enviado=null;pedirValor({titulo:'t',texto:'x',rotulo:'r',validar:v=>isNaN(v)||v<=0?'zero':v>userClub().balance?'caixa':''},v=>{globalThis.__enviado=v})`);
   assert.equal(j.run('lerNumero("4,5")'), 4.5);
   assert.equal(j.run('lerNumero("4.5")'), 4.5);
+  j.run(`{ const c = userClub(); while (c.players.length < ELENCO_MAX) c.players.push({ ...c.players[0], id: 'teste-' + c.players.length }); }`);
   j.acao(`makeBid|${pid}`);
   assert.ok(j.alertas.some(a => a.includes('32 jogadores')), 'elenco cheio: avisa em vez de abrir a proposta');
   j.run('userClub().players=userClub().players.slice(0,25)');

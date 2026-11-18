@@ -41,6 +41,42 @@ test('pedir demissão: confirma, deixa o clube e mostra as propostas', () => {
   assert.match(j.run('pedirDemissao().erro'), /já está sem clube/);
 });
 
+test('recusar todas joga uma rodada com o ex-clube na IA e apresenta novas propostas', () => {
+  const j = carregarJogo({ boot: true });
+  j.run(`newGame('${clubeDaSerie(j)}')`);
+  j.acao('pedirDemissaoUI');
+  assert.match(j.html(), /Recusar todas/);
+  const antigo = j.run('userClub().id');
+  j.run('userClub().lineup=[]'); // o ex-clube depende da escalação automática
+  j.acao('recusarClubesUI');
+  assert.deepEqual(j.run(`[S.round,tec().demitido,ehHumano('${antigo}'),tec().recusouClubes,ui.view]`),
+    [1, true, false, undefined, 'carreira']);
+  assert.ok(j.run('tec().propostasClube.length > 0'));
+  assert.equal(j.run('userClub().fin.some(f=>f.desc.includes("Cota de TV"))'), false);
+  j.acao('recusarClubesUI');
+  assert.equal(j.run('S.round'), 2);
+  assert.equal(j.run('S.atual'), 'local');
+});
+
+test('no revezamento a recusa fica salva e espera a confirmação do outro técnico', () => {
+  const j = carregarJogo({ boot: true });
+  const a = clubeDaSerie(j, 'A', 0), b = clubeDaSerie(j, 'A', 1);
+  const r = j.run(`(()=>{
+    criarJogo([{id:'a',nome:'Ana',clubId:'${a}'},{id:'b',nome:'Bia',clubId:'${b}'}],getData());
+    pedirDemissao();recusarClubes();const proximo=confirmarRodada().proximo.id;
+    migrarSave(JSON.parse(JSON.stringify(S)));
+    const antes=jogarRodada();const salvo=S.managers.a.recusouClubes;
+    confirmarRodada();const rodada=jogarRodada();
+    return {proximo,salvo,faltam:antes.faltam,round:S.round,meu:rodada.meu,propostas:S.managers.a.propostasClube.length};
+  })()`);
+  assert.equal(r.proximo, 'b');
+  assert.ok(r.salvo);
+  assert.deepEqual(r.faltam, ['b']);
+  assert.equal(r.round, 1);
+  assert.equal(r.meu, null);
+  assert.ok(r.propostas > 0);
+});
+
 test('reputação: quem vai bem recebe em média mais propostas e de séries melhores, mas não sempre', () => {
   const j = carregarJogo({ boot: true });
   j.run(`newGame('${clubeDaSerie(j, 'B', 5)}')`); // Série B: dá para subir ou descer

@@ -1,10 +1,10 @@
 /* ================= carreira do técnico: demissão, pedido de demissão e propostas de clubes (#37) =================
    Quem é demitido ou pede demissão continua no jogo: recebe de 1 a 4 propostas de clubes da IA e escolhe uma.
    Enquanto escolhe, t.demitido = true, t.saida = 'demitido' | 'pediu', t.propostasClube = [clubId, ...] (a melhor primeiro),
-   e t.clubId ainda aponta o clube antigo, que só passa para a IA quando ele assume o novo (entre rodadas nada acontece).
+   e t.clubId ainda aponta o clube antigo para a tela e o cálculo da reputação. A IA comanda esse clube.
    t.historico = [{s, div, pos, alvo}] de cada temporada fechada, para a reputação. */
 import { CONF_INICIO, definirMeta, metaDe } from './diretoria.mjs';
-import { DIVS, S, addNewsTodos, clubById, clubDo, divOf, divisions, ehHumano, table, tec } from './estado.mjs';
+import { DIVS, S, addNewsTodos, clubById, clubDo, divOf, divisions, table, tec, tecnicos } from './estado.mjs';
 import { autoXI } from './motor.mjs';
 import { clamp, rnd } from './utils.mjs';
 
@@ -31,7 +31,9 @@ export function gerarPropostas(t, rep = reputacao(t)) {
   const ds = divisions(), atual = ds.indexOf(divOf(clubDo(t))), idx = c => ds.indexOf(divOf(c));
   const melhor = rep >= 70 && rnd() < (rep - 60) / 60 ? Math.max(0, atual - 1) : atual; // subir de série: só com sorte
   const pior = Math.min(ds.length - 1, atual + (rep < 60 ? 1 : 0));
-  const candidatos = S.clubs.filter(c => c.id !== t.clubId && !ehHumano(c) && idx(c) >= melhor && idx(c) <= pior);
+  // O vínculo do ex-clube fica reservado até o técnico assumir outro, inclusive na lista de membros da liga.
+  const vinculados = new Set(tecnicos().map(o => o.clubId));
+  const candidatos = S.clubs.filter(c => !vinculados.has(c.id) && idx(c) >= melhor && idx(c) <= pior);
   // a maioria das propostas vem de quem está em crise; clube bem colocado só aparece com reputação, e com peso menor
   const peso = c => (emCrise(c) ? 3 : rep >= 60 ? 1 : 0.25) * (idx(c) < atual ? 0.6 : 1);
   const n = clamp(1 + Math.floor(rep / 30) + (rnd() < 0.35 ? 1 : 0) - (rnd() < 0.35 ? 1 : 0), 1, 4), escolhidos = [];
@@ -42,7 +44,7 @@ export function gerarPropostas(t, rep = reputacao(t)) {
     escolhidos.push(pool.splice(k, 1)[0].c);
   }
   if (!escolhidos.length) { // ninguém quis: o clube mais fraco da série mais baixa, para o técnico não ficar de fora
-    const ultima = S.clubs.filter(c => c.id !== t.clubId && !ehHumano(c) && idx(c) === ds.length - 1).sort((a, b) => a.strength - b.strength);
+    const ultima = S.clubs.filter(c => !vinculados.has(c.id) && idx(c) === ds.length - 1).sort((a, b) => a.strength - b.strength);
     if (ultima[0]) escolhidos.push(ultima[0]);
   }
   return escolhidos.sort((a, b) => idx(a) - idx(b) || b.strength - a.strength).map(c => c.id); // a melhor primeiro
@@ -51,6 +53,7 @@ export function gerarPropostas(t, rep = reputacao(t)) {
 export function sairDoClube(t, motivo) {
   if (t.demitido) return;
   t.saida = motivo; t.demitido = true; t.propostasClube = gerarPropostas(t, reputacao(t, motivo));
+  t.pronto = false;
   S.propostas = (S.propostas || []).filter(p => p.de !== t.id && p.para !== t.id); // propostas entre técnicos (#36) deixam de valer
   const c = clubDo(t);
   addNewsTodos(motivo === 'demitido' ? `🔥 ${t.nome} foi demitido do ${c.name}.` : `🚪 ${t.nome} pediu demissão do ${c.name}.`);
@@ -61,14 +64,29 @@ export function pedirDemissao() {
   sairDoClube(t, 'pediu');
   return { ok: true, msg: `Você deixou o ${clubDo(t).name}. Escolha um dos clubes interessados.` };
 }
+
+export function recusarClubes(t = tec()) {
+  if (!t.demitido) return { erro: 'Você já tem clube.' };
+  if (t.recusouClubes) return { ok: true };
+  t.recusouClubes = true;
+  t.propostasClube = [];
+  return { ok: true };
+}
+
+export function renovarPropostasDeClubes() {
+  for (const t of tecnicos().filter(t => t.demitido && t.recusouClubes)) {
+    t.propostasClube = gerarPropostas(t);
+    delete t.recusouClubes;
+  }
+}
 /** Regra: o técnico (padrão: o da vez) assume um dos clubes que fizeram proposta. Devolve {erro} ou {ok, msg, clube}. */
 export function escolherClube(clubeId, t = tec()) {
   if (!t.demitido) return { erro: 'Você já tem clube.' };
   const c = clubById(clubeId);
   if (!c || !(t.propostasClube || []).includes(clubeId)) return { erro: 'Esse clube não fez proposta.' };
-  if (ehHumano(c)) return { erro: `${c.name} já tem técnico. Escolha outra proposta.` };
+  if (tecnicos().some(o => o.clubId === c.id)) return { erro: `${c.name} já tem vínculo com um técnico. Escolha outra proposta.` };
   const antigo = clubDo(t);
-  t.clubId = c.id; t.demitido = false; delete t.saida; delete t.propostasClube;
+  t.clubId = c.id; t.demitido = false; delete t.saida; delete t.propostasClube; delete t.recusouClubes;
   t.conf = CONF_INICIO; t.confBaixa = 0; t.confFat = []; t.offers = []; t.pronto = false;
   definirMeta(t);
   c.lineup = autoXI(c);

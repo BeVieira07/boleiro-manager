@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { carregarJogo, clubeDaSerie, jogarRodada, jogarTemporada, virarTemporada, problemasNasTelas } from './jogo.mjs';
 
-const novo = (div = 'A', i = 10) => { const j = carregarJogo({ boot: true }); j.run(`newGame('${clubeDaSerie(j, div, i)}')`); j.run('userClub().players.length=26'); return j };
+const novo = (div = 'A', i = 10) => { const j = carregarJogo({ boot: true }); j.run(`newGame('${clubeDaSerie(j, div, i)}')`); j.run('userClub().players.splice(26)'); return j };
 // um reserva de um clube da IA, com reposição na posição, posto na lista de empréstimo
 const daLista = (j, k = 0) => j.run(`(()=>{const L=S.clubs.filter(c=>!ehHumano(c)).flatMap(c=>{const top=[...c.players].sort((a,b)=>b.ovr-a.ovr).slice(0,14);return c.players.filter(p=>!top.includes(p)&&c.players.filter(x=>x.pos===p.pos).length>4)});const p=L[${k}];p.emprestar=true;return p.id})()`);
 
