@@ -6,7 +6,7 @@ import { render } from './telas.mjs';
 import { avisar } from './avisos.mjs';
 
 // estado só da tela (não vai para o save)
-export const ui={view:'clube',lastRound:null,selEsc:null,vDiv:null,jogosRound:null,mf:{grupo:'',q:'',max:'',club:'',liga:'',aba:'todos',ord:'ovr',dir:-1},ef:{grupo:'',q:'',ord:'pos',dir:1},tvAoVivo:null,vivo:null,artComp:null,artSo:false,novos:[],liga:null}; // liga: jogando uma liga online (#34)
+export const ui={view:'clube',lastRound:null,selEsc:null,vDiv:null,jogosRound:null,mf:{grupo:'',q:'',max:'',club:'',liga:'',aba:'todos',ord:'ovr',dir:-1},ef:{grupo:'',q:'',ord:'pos',dir:1},tvAoVivo:null,vivo:null,artComp:{},artSo:false,novos:[],liga:null}; // liga: jogando uma liga online (#34)
 export function save(){if(S)salvarJogo()} // js/saves.js: grava no save da campanha atual
 export function getData(){return typeof DADOS_PADRAO!=='undefined'?DADOS_PADRAO:sampleData()} // os dados só mudam por scripts/ (npm run dados:padrao); importar pela tela saiu (#187)
 
