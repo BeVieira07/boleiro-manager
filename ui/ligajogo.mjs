@@ -19,7 +19,7 @@ import { closeModal, crest, openModal } from './partida.mjs';
 import { iniciarVivo } from './aovivo.mjs';
 import { go, render } from './telas.mjs';
 import { verAoVivo } from './configuracoes.mjs';
-import { abrirLigas, abrirLobby } from './liga.mjs';
+import { abrirLigas, abrirLobby, pararLobby } from './liga.mjs';
 import { rotuloRodada } from './estadual.mjs';
 import { RODADA_ESTADUAL } from '../core/estadual.mjs';
 
@@ -49,8 +49,9 @@ export function bloqueadoNaLiga() {
 /** O dono começa a liga: o servidor monta o estado com os clubes de cada técnico. */
 export function comecarLiga(id) {
   confirmar({ titulo: 'Começar a liga?', texto: 'Depois de começar, ninguém mais entra e os clubes ficam fixos.', ok: 'Começar' }, async () => {
+    pararLobby(); // o dono entra por aqui; o tempo real do lobby é para os outros (#235)
     const r = await chamarFuncao({ liga: id, acao: 'iniciar' });
-    if (r && r.iniciada) { avisar('A liga começou!', 'ok'); await entrarNaLiga(id) }
+    if (r && r.iniciada) { avisar('A liga começou!', 'ok'); await entrarNaLiga(id) } else await abrirLobby(id); // não começou: volta a escutar o lobby
   });
 }
 
