@@ -49,6 +49,7 @@ function servidorFalso(clubes) {
       if (L.dono_id !== uid) return { erro: 'Só o dono começa a liga.' };
       assert.ok(iniciarLiga(srv.membros, L.series, DADOS_PADRAO).ok);
       srv.estado = copia(est.S); Object.assign(L, { status: 'andamento', rodada: 0, versao: 1 });
+      srv.emitir('ligas', L); // como o banco: a mudança de status chega pelo tempo real (#235)
       return { ok: true, iniciada: true };
     }
     if (forcar && L.dono_id !== uid) return { erro: 'Só o dono pode forçar a rodada.' };
@@ -67,7 +68,7 @@ function servidorFalso(clubes) {
   // consulta encadeada (.eq().order().limit()...): o filtro é ignorado, só há uma liga
   // a lista de ligas (sem maybeSingle) vem como lista, com os membros, só para quem é membro
   const consulta = (dados, lista) => {
-    const q = { eq: () => q, order: () => q, limit: () => q, maybeSingle: async () => resp(dados()), then: (ok, ko) => Promise.resolve(resp(lista ? lista(dados()) : dados())).then(ok, ko) };
+    const q = { eq: () => q, in: () => q, order: () => q, limit: () => q, maybeSingle: async () => resp(dados()), then: (ok, ko) => Promise.resolve(resp(lista ? lista(dados()) : dados())).then(ok, ko) };
     return q;
   };
   srv.cliente = uid => ({
@@ -86,7 +87,8 @@ function servidorFalso(clubes) {
         liga_entradas: srv.entradas.filter(e => e.user_id === uid), // #78: cada um lê só a sua
         liga_membros: srv.membros,
         liga_resultados: srv.resultados.at(-1) ?? null
-      })[tabela], tabela === 'ligas' ? l => srv.membros.some(m => m.user_id === uid) ? [{ ...l, liga_membros: srv.membros }] : [] : null),
+      })[tabela], tabela === 'ligas' ? l => srv.membros.some(m => m.user_id === uid) ? [{ ...l, liga_membros: srv.membros }] : []
+        : tabela === 'profiles' ? () => srv.membros.map(m => ({ id: m.user_id, nome: m.nome })) : null), // lista de perfis (lobby)
       upsert: async linha => {
         if (linha.rodada !== srv.liga.rodada) return { error: { message: 'RLS' } }; // a regra do banco recusa rodada velha
         srv.entradas = srv.entradas.filter(e => e.user_id !== linha.user_id).concat(copia(linha));
@@ -363,4 +365,25 @@ test('várias mudanças seguidas do estado viram uma recarga só (#124)', async 
     assert.equal(srv.cargas, antes + 2);
     assert.equal(recarga.timer, null);
   } finally { recarga.espera = 0; j.run('sairDaLiga()') }
+});
+
+test('ao começar a liga, quem está no lobby entra no jogo sozinho; o lobby acompanha os membros (#235)', async () => {
+  const j0 = carregarJogo();
+  const srv = servidorFalso([clubeDaSerie(j0, 'A', 0), clubeDaSerie(j0, 'A', 1)]);
+  await como(srv, 'b'); // a Bia, no computador dela, está no lobby
+  const j = carregarJogo({ boot: true });
+  await j.acao('abrirLobby|L1'); await esperar();
+  assert.equal(j.run('ui.view'), 'lobby');
+  // alguém escolheu outro clube: o lobby se redesenha sem atualizar
+  srv.membros[0].club_id = clubeDaSerie(j0, 'A', 2); srv.emitir('liga_membros', srv.membros[0]); await esperar();
+  assert.match(j.html(), new RegExp(j.run(`getData().clubs.find(c=>c.id==='${srv.membros[0].club_id}').name`)), 'o clube novo aparece');
+  // a Ana começa a liga no computador dela
+  const r = await srv.cliente('a').functions.invoke('jogar-rodada', { body: { liga: 'L1', acao: 'iniciar' } });
+  assert.ok(r.data && r.data.iniciada);
+  await esperar(); await esperar();
+  assert.equal(j.run('ui.view'), 'clube', 'a Bia entrou no painel do clube sem clicar');
+  assert.equal(j.run('S.atual'), 'b');
+  assert.equal(j.run('userClub().id'), srv.membros[1].club_id);
+  assert.ok(j.alertas.some(a => a.includes('A liga começou')));
+  assert.match(j.html(), /Confirmar rodada 1/);
 });

@@ -10,7 +10,7 @@ import { getData, ui } from './estado.mjs';
 import { crest } from './partida.mjs';
 import { go, render } from './telas.mjs';
 import { avisar } from './avisos.mjs';
-import { botaoRemover, botaoSairLiga } from './ligajogo.mjs';
+import { botaoRemover, botaoSairLiga, entrarNaLiga } from './ligajogo.mjs';
 
 const liga = { lista: null, atual: null, erro: null };
 const SERIES = ['A', 'B', 'C', 'D'];
@@ -24,8 +24,25 @@ async function chamar(promessa) {
   return data ?? true;
 }
 
+// #235: o lobby escuta a liga em tempo real. Começou: todo mundo que está no lobby entra no jogo. Mudou um membro ou um clube: redesenha.
+let canalLobby = null, lobbyId = null;
+export function pararLobby() { const c = clienteLogado(); if (canalLobby && c) c.removeChannel(canalLobby); canalLobby = null; lobbyId = null }
+function ouvirLobby(id) {
+  const c = clienteLogado(); if (!c || !c.channel || lobbyId === id) return;
+  pararLobby(); lobbyId = id;
+  const aqui = () => ui.view === 'lobby' && liga.atual && liga.atual.id === id;
+  canalLobby = c.channel('lobby-' + id)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'ligas', filter: `id=eq.${id}` }, p => {
+      if (!aqui() || !p.new || p.new.status !== 'andamento') return;
+      pararLobby(); avisar('A liga começou!', 'ok'); entrarNaLiga(id);
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'liga_membros', filter: `liga_id=eq.${id}` }, () => { if (aqui()) abrirLobby(id) })
+    .subscribe();
+}
+
 /** Abre a tela "Minhas ligas". */
 export async function abrirLigas() {
+  pararLobby();
   const c = clienteLogado();
   if (!c) { avisar('Entre na sua conta (na tela inicial) para jogar ligas com amigos.'); return }
   liga.lista = null; liga.erro = null; go('ligas');
@@ -69,6 +86,7 @@ export async function abrirLobby(id) {
   const nomes = Object.fromEntries((p.data || []).map(x => [x.id, x.nome]));
   liga.atual = { ...l.data, membros: m.data.map(x => ({ ...x, nome: nomes[x.user_id] || 'Técnico' })) };
   go('lobby');
+  if (l.data.status === 'aberta') ouvirLobby(id); else pararLobby();
 }
 
 /** data-mudar no seletor de clube do lobby: (ligaId, clubId). */
