@@ -14,6 +14,7 @@ import { potTag, vBase } from './base.mjs';
 import { save, ui } from './estado.mjs';
 import { botaoProposta, mercadoLiga } from './ligajogo.mjs';
 import { tendenciaTag } from './forma.mjs';
+import { botaoFicha } from './ficha-jogador.mjs';
 import { icone } from './icones.mjs';
 import { campoBusca, chipsGrupo, filtrar, mudarFiltro, th } from './jogadores.mjs';
 import { posTag } from './posicoes.mjs';
@@ -49,7 +50,7 @@ function linha(p, xi) {
     <td class="n c-valor"><span class="rot">Valor </span>${money(p.value)}</td>
     <td class="n c-sal"><span class="rot">Salário </span>${money(p.wage)}</td>
     <td class="c-contr"><span class="rot">Contrato: </span>${contratoTxt(p)}</td>
-    <td class="c-acoes"><div class="acoes">${podeRenovar(p) ? `<button class="btn sec sm" data-acao="renovar|${p.id}">Renovar</button>` : ''}${acoes}${loanBtn(p, 'out')}</div></td></tr>`;
+    <td class="c-acoes"><div class="acoes">${botaoFicha(p)}${podeRenovar(p) ? `<button class="btn sec sm" data-acao="renovar|${p.id}">Renovar</button>` : ''}${acoes}${loanBtn(p, 'out')}</div></td></tr>`;
 }
 
 export const corpoElenco = () => { const uc = userClub(), xi = getXI(uc); return filtrar(uc.players, ui.ef).map(p => linha(p, xi)).join('') || '<tr><td colspan="11" class="muted elenco-vazio">Nenhum jogador com esse filtro.</td></tr>' };

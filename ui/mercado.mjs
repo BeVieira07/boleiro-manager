@@ -8,6 +8,7 @@ import { esc, money } from '../core/utils.mjs';
 import { potTag } from './base.mjs';
 import { ovrChip, stat, tag } from './componentes.mjs';
 import { loanTag } from './emprestimos.mjs';
+import { botaoFicha } from './ficha-jogador.mjs';
 import { save, ui } from './estado.mjs';
 import { campoBusca, chipsGrupo, filtrar, mudarFiltro, th } from './jogadores.mjs';
 import { icone } from './icones.mjs';
@@ -59,14 +60,14 @@ function situacao(p, c) {
   }
   return `<span class="sit-tags">${tags.join(' ')}</span>${txt.map(t => `<span class="sit-txt">${t}</span>`).join('')}`;
 }
-const negociar = (p, c) => loanOf(p.id) ? '' : ehHumano(c) ? botaoProposta(p)
+export const negociar = (p, c) => loanOf(p.id) ? '' : ehHumano(c) ? botaoProposta(p)
   : `${p.emprestar ? `<button class="btn emp sm" data-acao="loanForm|${p.id}|in">Pedir empréstimo</button>` : ''}<button class="btn${p.emprestar ? ' sec' : ''} sm" data-acao="makeBid|${p.id}">Fazer proposta</button>`;
 export function corpoMercado() {
   const C = clubesPor(), L = filtrar(listaMercado().filter(p => daAba[ui.mf.aba] ? daAba[ui.mf.aba](p, C) : true), ui.mf);
   const linhas = L.slice(0, LIMITE).map(p => { const c = C[p.clubId];
     return `<tr><td class="c-pos">${posTag(p)}</td><th scope="row" class="c-nome"><div class="jogador">${crest(c)}<div><b>${esc(p.name)}</b><span class="st">${esc(c.name)} · ${esc(ligaTxt(c))}</span></div></div></th>
     <td class="n c-idade"><span class="rot">Idade </span>${p.age}</td><td class="c c-ovr">${ovrChip(p.ovr)}</td><td class="c-pot">${potTag(p)}</td><td class="n c-valor">${money(p.value)}</td><td class="n c-sal">${money(p.wage)}</td>
-    <td class="c-sit">${situacao(p, c)}</td><td class="c-acoes"><div class="acoes">${negociar(p, c)}</div></td></tr>` }).join('');
+    <td class="c-sit">${situacao(p, c)}</td><td class="c-acoes"><div class="acoes">${botaoFicha(p, 'mercado')}${negociar(p, c)}</div></td></tr>` }).join('');
   return { linhas: linhas || '<tr><td colspan="9" class="muted">Nenhum jogador com esse filtro.</td></tr>', total: L.length };
 }
 const contagem = t => `${t} jogador${t === 1 ? '' : 'es'}${t > LIMITE ? ` (mostrando os ${LIMITE} primeiros)` : ''}`;
