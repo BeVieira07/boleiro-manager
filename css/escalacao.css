@@ -1,17 +1,17 @@
 /* ================= Escalação visual (#61) ================= */
 .esc-topo{display:flex;flex-wrap:wrap;gap:var(--e3);align-items:center;justify-content:space-between;margin-bottom:var(--e4)}
 .esc-topo p{margin:0;flex:1 1 300px}
-.esc{display:flex;flex-wrap:wrap;gap:var(--e5);align-items:flex-start}
-.campo{flex:1.6 1 480px;min-width:0;position:relative;border-radius:18px;overflow:hidden;border:2px solid rgba(233,243,238,.2);
-  background:repeating-linear-gradient(180deg,#1d6b3c 0 64px,#1a6337 64px 128px);min-height:640px;padding:28px 10px;
+.esc{display:grid;grid-template-columns:minmax(0,1.52fr) minmax(0,1fr);gap:var(--e5);align-items:start}
+.campo{min-width:0;position:relative;border-radius:var(--r-lg);overflow:hidden;border:2px solid rgba(233,243,238,.2);
+  background:url("../img/figma/linhas-campo.svg") center / 95% 94% no-repeat,repeating-linear-gradient(180deg,#1f6b3a 0 66px,#23763f 66px 132px);
+  min-height:660px;padding:36px 20px;
   display:flex;flex-direction:column;justify-content:space-between;gap:var(--e5)}
-.campo-linhas{position:absolute;inset:0;width:100%;height:100%;fill:none;stroke:#e9f3ee;stroke-opacity:.28;stroke-width:2;pointer-events:none}
 .campo .linha{position:relative;display:flex;justify-content:space-evenly;gap:6px}
-.carta{appearance:none;font:inherit;color:var(--texto);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:88px;max-width:120px;
-  padding:8px 8px 9px;border-radius:var(--r);background:rgba(6,20,12,.72);border:2px solid rgba(255,255,255,.14)}
+.carta{appearance:none;font:inherit;color:var(--texto);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;flex:0 1 104px;min-width:0;min-height:97px;
+  padding:8px 6px;border-radius:var(--r-sm);background:var(--lateral);border:2px solid var(--linha);box-shadow:0 6px 10px #04100b80}
 .carta:hover{border-color:var(--ouro-borda)}
 .carta-vaga{font-size:11px;font-weight:800;letter-spacing:.04em;padding:1px 7px;border-radius:5px;color:var(--tinta-verde);background:var(--verde-claro)}
-.carta-nome{font-weight:700;font-size:13px;line-height:1.2;text-align:center;overflow-wrap:anywhere}
+.carta-nome{font-weight:700;font-size:13px;line-height:1.2;text-align:center;overflow-wrap:anywhere;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .carta-pe{display:flex;gap:6px;align-items:center}
 .carta .energia{width:100%}
 .carta .energia .barra{flex:1;min-width:24px}
@@ -24,7 +24,7 @@
 .carta.indisp .carta-vaga{background:var(--perigo-claro)}
 .carta.indisp .carta-nota{color:var(--perigo-claro)}
 .carta.vazia{border-style:dashed;color:var(--texto2);cursor:default}
-.esc-lado{flex:1 1 320px;min-width:0}
+.esc-lado{min-width:0}
 .titulares{margin:0 0 var(--e3)}
 .setor{margin-bottom:var(--e3)}
 .setor-topo{display:flex;justify-content:space-between;color:var(--texto2);margin-bottom:6px}
@@ -40,14 +40,20 @@
 .reserva.sel{background:var(--ouro-esc);box-shadow:inset 3px 0 var(--ouro)}
 .reserva.indisp .reserva-nome b{text-decoration:line-through;text-decoration-color:var(--perigo-claro)}
 .reserva-nome{flex:1;display:flex;flex-direction:column;line-height:1.3;min-width:0}
-@media(max-width:799px){
-  .campo{flex-basis:100%;min-height:520px;padding:18px 4px}
-  .carta{min-width:0;flex:1 1 0;max-width:96px;padding:6px 4px}
+@media(max-width:900px){
+  .esc{grid-template-columns:minmax(0,1fr)}
+  .campo{min-height:500px;padding:20px 6px}
+  .carta{min-width:0;flex:1 1 0;max-width:96px;min-height:80px;padding:6px 3px}
   .carta-nome{font-size:12px}
+  .carta .energia .barra{min-width:0}
+  .carta .energia{gap:3px}
+  .carta .ovr{min-width:26px}
+  .carta-pe{gap:3px;flex-wrap:wrap;justify-content:center}
+  .esc-topo .chip{padding-inline:8px}
 }
 /* #172: o mesmo campo, menor, nas substituições da rodada ao vivo */
 .campo.mini{flex:none;min-height:360px;padding:14px 6px;gap:var(--e3);border-radius:14px}
-.campo.mini .carta{min-width:0;flex:1 1 0;max-width:86px;padding:4px 3px 5px;gap:3px;border-width:1px}
+.campo.mini .carta{min-width:0;flex:1 1 0;max-width:86px;min-height:65px;padding:4px 3px 5px;gap:3px;border-width:1px}
 .campo.mini .carta-nome{font-size:11px}
 .campo.mini .carta-vaga{font-size:11px;letter-spacing:.02em;padding:0 4px}
 .campo.mini .ovr{font-size:12px;min-width:28px}

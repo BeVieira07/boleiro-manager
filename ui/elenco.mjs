@@ -2,6 +2,7 @@
    Filtros por grupo com contagem, busca, ordenação por coluna, cabeçalho e coluna do jogador fixos,
    força em chip com a tendência, energia e as ações de mercado (a forma age por trás, no overall). No celular cada linha vira um cartão. */
 import { RENOVA_ATE, pedidoRenovacao, renovarContrato } from '../core/contratos.mjs';
+import { energiaDe } from '../core/energia.mjs';
 import { loanOf, wageBill } from '../core/emprestimos.mjs';
 import { unavailable } from '../core/escalacao.mjs';
 import { P, userClub } from '../core/estado.mjs';
@@ -27,8 +28,8 @@ function status(p, tit) {
 }
 
 const COLUNAS = [
-  ['Pos.', 'pos'], ['Jogador', 'nome', 'c-nome'], ['Força', 'ovr', 'c'], ['Energia', 'energia'],
-  ['Potencial', 'pot'], ['Idade', 'idade', 'n'], ['Gols', 'gols', 'n'], ['Valor', 'valor', 'n'],
+  ['Pos.', 'pos', 'c-pos'], ['Jogador', 'nome', 'c-nome'], ['Idade', 'idade', 'n'],
+  ['Força', 'ovr', 'c'], ['Potencial', 'pot'], ['Energia', 'energia'], ['Gols', 'gols', 'n'], ['Valor', 'valor', 'n'],
   ['Salário', 'salario', 'n'], ['Contrato', 'contrato']
 ];
 
@@ -42,10 +43,10 @@ function linha(p, xi) {
   return `<tr class="${tit ? 'tit' : ''}${unavailable(p) ? ' indisp' : ''}">
     <td class="c-pos">${posTag(p)}</td>
     <th scope="row" class="c-nome"><div class="jogador"><span class="camisa" aria-hidden="true">${p.number ?? ''}</span>${p.number != null ? `<span class="sr">camisa ${p.number}, </span>` : ''}<div><b>${esc(p.name)}</b><span class="elenco-situacao">${status(p, tit)}${loanTag(p)}</span></div></div></th>
-    <td class="c c-ovr"><span class="rot">Força</span><span class="forca">${ovrChip(p.ovr)}${tendenciaTag(p)}</span></td>
-    <td class="c-energia"><span class="rot" aria-hidden="true">Energia</span>${energiaBarra(p)}</td>
-    <td class="c-pot"><span class="rot">Potencial</span>${potTag(p)}</td>
     <td class="n c-idade"><span class="rot">Idade </span>${p.age}</td>
+    <td class="c c-ovr"><span class="rot">Força</span><span class="forca">${ovrChip(p.ovr)}${tendenciaTag(p)}</span></td>
+    <td class="c-pot"><span class="rot">Potencial</span>${potTag(p)}</td>
+    <td class="c-energia"><span class="rot" aria-hidden="true">Energia</span>${energiaBarra(p)}</td>
     <td class="n c-gols"><span class="rot">Gols </span>${p.goals || 0}</td>
     <td class="n c-valor"><span class="rot">Valor </span>${money(p.value)}</td>
     <td class="n c-sal"><span class="rot">Salário </span>${money(p.wage)}</td>
@@ -53,13 +54,19 @@ function linha(p, xi) {
     <td class="c-acoes"><div class="acoes">${botaoFicha(p)}${podeRenovar(p) ? `<button class="btn sec sm" data-acao="renovar|${p.id}">Renovar</button>` : ''}${acoes}${loanBtn(p, 'out')}</div></td></tr>`;
 }
 
-export const corpoElenco = () => { const uc = userClub(), xi = getXI(uc); return filtrar(uc.players, ui.ef).map(p => linha(p, xi)).join('') || '<tr><td colspan="11" class="muted elenco-vazio">Nenhum jogador com esse filtro.</td></tr>' };
+export function corpoElenco(lista = filtrar(userClub().players, ui.ef), titulares = getXI(userClub())) {
+  return lista.map(p => linha(p, titulares)).join('') || '<tr><td colspan="11" class="muted elenco-vazio">Nenhum jogador com esse filtro.</td></tr>';
+}
 
 /** Filtro do elenco: chips e colunas redesenham a tela; a busca só troca as linhas, para não perder o foco do campo. */
 export function filtrarElenco(campo, valor) {
   mudarFiltro(ui.ef, campo, valor);
   const corpo = campo === 'q' && document.getElementById('corpoElenco');
-  if (corpo && corpo.isConnected === true) corpo.innerHTML = corpoElenco(); else render();
+  if (corpo && corpo.isConnected === true) {
+    const lista = filtrar(userClub().players, ui.ef);
+    corpo.innerHTML = corpoElenco(lista);
+    document.getElementById('totalElenco').textContent = lista.length;
+  } else render();
 }
 
 /** Renovação de contrato (#49): mostra o que o jogador pede e, confirmado, faz a proposta (ele pode recusar). */
@@ -74,16 +81,21 @@ export function renovar(pid) {
 
 export function vElenco() {
   const uc = userClub(), f = ui.ef, a = 'filtrarElenco';
-  return `<div class="filtros elenco-filtros">${chipsGrupo(uc.players, f, a)}${campoBusca(f, a)}
+  const titulares = getXI(uc);
+  const energia = titulares.length ? Math.round(titulares.reduce((total, id) => total + energiaDe(P[id]), 0) / titulares.length) : '—';
+  const lista = filtrar(uc.players, f);
+  return `<p class="muted resumo elenco-resumo">${titulares.length} titulares · energia média ${energia} · folha ${money(wageBill(uc))} por rodada</p>
+  <div class="filtros elenco-filtros">${chipsGrupo(uc.players, f, a)}${campoBusca(f, a)}
     <div class="elenco-ordem"><label for="elencoOrdenar">Ordenar por</label>
       <select id="elencoOrdenar" data-mudar="${a}|ord">${COLUNAS.map(([rotulo, chave]) => `<option value="${chave}"${f.ord === chave ? ' selected' : ''}>${rotulo}</option>`).join('')}</select>
       <button type="button" class="btn fantasma" data-acao="${a}|ord|${f.ord}">${f.dir === -1 ? 'Decrescente' : 'Crescente'}</button></div>
     <button class="btn sec" data-acao="go|escalacao">${icone('escalacao', { tam: 16 })}Mudar escalação</button></div>
-  <p class="muted resumo">${uc.players.length} jogadores · folha de ${money(wageBill(uc))} por rodada</p>
-  <section class="card tabela-card"><div class="tabela-rolavel"><table class="tabela-jogadores tabela-elenco">
+  <section class="card tabela-card">
+    <div class="card-topo elenco-cabecalho"><h2 class="t3">Elenco (<span id="totalElenco" aria-live="polite">${lista.length}</span>)</h2><span class="muted">Ordenado por ${COLUNAS.find(([, chave]) => chave === f.ord)?.[0].toLowerCase() || 'posição'}</span></div>
+    <div class="tabela-rolavel"><table class="tabela-jogadores tabela-elenco">
     <caption class="sr">Elenco do ${esc(uc.name)}</caption>
     <thead><tr>${COLUNAS.map(([rotulo, chave, classe]) => th(rotulo, chave, f, a, classe)).join('')}${th('Mercado', '', f, a)}</tr></thead>
-    <tbody id="corpoElenco">${corpoElenco()}</tbody></table></div></section>
+    <tbody id="corpoElenco">${corpoElenco(lista, titulares)}</tbody></table></div></section>
   <p class="muted nota">As setas mostram a variação do overall desde o início da temporada, e as estrelas, até onde o jogador pode chegar. A barra de forma sobe com bons jogos e cai no banco. A energia cai a cada jogo como titular e volta no descanso; abaixo de 70 o jogador rende menos e abaixo de 30 também se lesiona mais. Quem chega ao fim do contrato sem renovar sai de graça na virada da temporada.</p>
   ${vBase()}
   ${vLoans()}`;

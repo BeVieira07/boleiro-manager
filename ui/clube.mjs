@@ -5,6 +5,7 @@ import { cansados, energiaDe } from '../core/energia.mjs';
 import { faixaConf, receitaEsperada } from '../core/diretoria.mjs';
 import { loanLeft, loanOf, loansIn, wageBill } from '../core/emprestimos.mjs';
 import { slotLayout, unavailable } from '../core/escalacao.mjs';
+import { emPreTemporada, jogosDaData, nomeData, torneioDe } from '../core/estadual.mjs';
 import { DIVS, P, S, clubById, divOf, table, tec, userClub } from '../core/estado.mjs';
 import { penalidadePosicao } from '../core/posicoes.mjs';
 import { ESTILOS, MODOS, taticaUser } from '../core/taticas.mjs';
@@ -53,20 +54,39 @@ export function alertas() {
   return out;
 }
 
+function proximoConfronto(me) {
+  const estadual = emPreTemporada() && torneioDe(me);
+  if (estadual) {
+    for (let d = S.estaduais.dia; d < S.estaduais.datas; d++) {
+      const jogo = jogosDaData(estadual, d).find(g => g.h === me || g.a === me);
+      if (jogo) return { jogo, etapa: `${estadual.nome} · ${nomeData(estadual, d)}` };
+    }
+  }
+  for (let r = S.round; r < S.fixtures.length; r++) {
+    const jogo = meuJogo(r, me);
+    if (jogo) return { jogo, etapa: `Rodada ${r + 1}` };
+  }
+  return null;
+}
+
 function proximoJogo(uc, T) {
-  const me = uc.id, g = S.round < S.fixtures.length ? meuJogo(S.round, me) : null;
-  if (!g) return `<section class="card destaque"><h2 class="t3">Próximo jogo</h2><p>Temporada encerrada. Use o botão no topo para fechar a temporada e começar a próxima.</p></section>`;
+  const me = uc.id;
+  const proximo = proximoConfronto(me);
+  if (!proximo) return `<section class="card destaque"><h2 class="t3">Próximo jogo</h2><p>${S.round >= S.fixtures.length ? 'Temporada encerrada. Use o botão no topo para fechar a temporada e começar a próxima.' : 'Sem próximos jogos no calendário.'}</p></section>`;
+  const { jogo: g, etapa } = proximo;
   const t = taticaUser(uc), posDe = id => { const i = T.findIndex(x => x.id === id); return S.round && i >= 0 ? ' · ' + ord(i + 1) : '' };
   const lado = c => `<div class="time">${crest(c, 'g')}<b>${esc(c.name)}</b><span class="muted">Força ${c.strength}${posDe(c.id)}</span></div>`;
-  return `<section class="card destaque" aria-label="Próximo jogo">
-    <div class="card-topo"><h2 class="t3">Próximo jogo</h2><span class="pill">${g.h === me ? 'Em casa' : 'Fora de casa'} · Rodada ${S.round + 1}</span></div>
+  const formacoes = [...new Set(['4-4-2', '4-3-3', '3-5-2', uc.formation])];
+  return `<section class="card destaque clube-proximo" aria-label="Próximo jogo">
+    <div class="card-topo"><h2 class="t3">Próximo jogo</h2><span class="pill">${g.h === me ? 'Em casa' : 'Fora de casa'} · ${esc(etapa)}</span></div>
     <div class="confronto">${lado(clubById(g.h))}<span class="x" aria-hidden="true">X</span><span class="sr">contra</span>${lado(clubById(g.a))}</div>
-    <div class="taticas">
+    <div class="chips clube-formacoes" role="group" aria-label="Formação"><span class="muted">Formação</span>
+      ${formacoes.map(f => chip(esc(f), `setFormation|${f}`, uc.formation === f)).join('')}</div>
+    <details class="clube-taticas" id="taticas-clube"${document.getElementById('taticas-clube')?.open === true ? ' open' : ''}><summary>Estilo e modo de jogo</summary><div class="taticas">
       <div class="chips" role="group" aria-label="Estilo de jogo"><span class="muted">Estilo</span>${Object.entries(ESTILOS).map(([k, v]) => chip(v.nome, `tvPainel|estilo|${k}`, t.estilo === k)).join('')}</div>
       <div class="chips" role="group" aria-label="Modo"><span class="muted">Modo</span>${Object.entries(MODOS).map(([k, v]) => chip(v.nome, `tvPainel|modo|${k}`, t.modo === k)).join('')}</div>
-      <div class="chips"><span class="muted">Formação</span><button type="button" class="chip on" data-acao="go|escalacao">${esc(uc.formation)} ${icone('seguir', { tam: 14 })}<span class="sr">mudar na Escalação</span></button></div>
     </div>
-    <p class="muted dica">${dicaTatica(t)} Dá para mudar também durante a partida.</p>
+    <p class="muted dica">${dicaTatica(t)} Dá para mudar também durante a partida.</p></details>
   </section>`;
 }
 
@@ -105,7 +125,7 @@ export function vClube() {
   const uc = userClub(), me = uc.id, t = tec(), T = table(divOf(uc)), row = T.find(x => x.id === me), pos = T.findIndex(x => x.id === me) + 1;
   const c = t.conf, corConf = c >= 55 ? 'var(--verde)' : c >= 30 ? 'var(--ouro)' : 'var(--perigo)';
   const fat = t.confFat && t.confFat.length ? 'Última rodada: ' + t.confFat.map(f => `${esc(f.t)} <b class="${f.v > 0 ? 'ok' : 'bad'}">${f.v > 0 ? '+' : ''}${f.v}</b>`).join(' · ') : 'Muda a cada rodada com resultados e posição.';
-  const indicadores = `<section class="stats" aria-label="Indicadores">
+  const indicadores = `<section class="stats clube-indicadores" aria-label="Indicadores">
     ${stat({ rotulo: 'Posição', valor: S.round ? ord(pos) : '—', unid: S.round ? `${row.Pts} pontos` : '', sub: S.round ? `${row.V}V ${row.E}E ${row.D}D · saldo ${row.GP - row.GC > 0 ? '+' : ''}${row.GP - row.GC}` : 'A temporada ainda não começou.' })}
     ${stat({ rotulo: 'Caixa', valor: money(uc.balance), cor: uc.balance < 0 ? 'var(--perigo)' : '', sub: `Folha: ${money(wageBill(uc))} por rodada · receita esperada: ${money(receitaEsperada(uc))}` })}
     ${stat({ rotulo: 'Diretoria', valor: Math.round(c), unid: `/ 100 · ${faixaConf(c)}`, cor: corConf, pct: c, corBarra: corConf, sub: fat })}

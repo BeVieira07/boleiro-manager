@@ -2,11 +2,12 @@ import { sampleData } from '../core/dados.mjs';
 import { DADOS_PADRAO } from '../core/dados-padrao.mjs';
 import { S, criarJogo } from '../core/estado.mjs';
 import { podeCriarSave, salvarJogo } from './saves.mjs';
-import { render } from './telas.mjs';
+import { go, render } from './telas.mjs';
 import { avisar } from './avisos.mjs';
 
 // estado só da tela (não vai para o save)
 export const ui={view:'clube',lastRound:null,selEsc:null,vDiv:null,jogosRound:null,mf:{grupo:'',q:'',max:'',club:'',liga:'',aba:'todos',ord:'ovr',dir:-1},ef:{grupo:'',q:'',ord:'pos',dir:1},tvAoVivo:null,vivo:null,artComp:{},classifComp:{},artSo:false,novos:[],liga:null}; // liga: jogando uma liga online (#34)
+ui.escolhaClube = { serie: '', busca: '', ordem: 'forca', id: '' };
 export const chaveJogoAtual=()=>ui.liga?`liga:${ui.liga.id}`:`save:${S.saveId}`;
 export function save(){if(S)salvarJogo()} // js/saves.js: grava no save da campanha atual
 export function getData(){return typeof DADOS_PADRAO!=='undefined'?DADOS_PADRAO:sampleData()} // os dados só mudam por scripts/ (npm run dados:padrao); importar pela tela saiu (#187)
@@ -17,7 +18,7 @@ export function newGame(clubId){
     const t=ui.novos.find(x=>!x.clubId);if(!t){avisar('Todos os técnicos já escolheram o clube. Clique em Começar.');return}
     t.clubId=clubId;render();return;
   }
-  if(!podeCriarSave())return;criarJogo(clubId,getData());save();ui.view='clube';render();
+  if(!podeCriarSave())return;criarJogo(clubId,getData());save();go('clube');
 }
 // vários técnicos no mesmo computador (#29)
 export const MAX_TECNICOS=4;
@@ -35,5 +36,5 @@ export function comecarComTecnicos(){
   const sem=ui.novos.find(t=>!t.clubId);if(sem){avisar(`Escolha o clube de ${sem.nome}.`);return}
   if(!podeCriarSave())return;
   criarJogo(ui.novos.map((t,i)=>({id:'t'+(i+1),nome:t.nome,clubId:t.clubId})),getData());
-  ui.novos=[];save();ui.view='clube';render();
+  ui.novos=[];save();go('clube');
 }

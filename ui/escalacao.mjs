@@ -28,8 +28,6 @@ export function clickEsc(pid) {
 export function trocarTitulares(a, b) { const r = trocarNaEscalacao(a, b); if (r.erro) { avisar(r.erro,'erro'); return } ui.selEsc = null; save(); render() }
 export function escalarMelhoresTela() { ui.selEsc = null; autoLineup() }
 
-const sobrenome = n => { const p = n.split(' '); return p.length > 1 && p[p.length - 1].length > 2 ? p.slice(-1)[0] : n };
-
 /** Pares de titulares fora de posição que rendem mais trocando de vaga entre si (ex.: PE e PD trocados). */
 export function sugestoesTroca(lay) {
   const fora = lay.filter(s => s.id && penalidadePosicao(P[s.id], s.d).tipo === 'fora'), out = [];
@@ -48,7 +46,7 @@ function carta(s, o = {}) {
   const est = u ? 'indisp' : pp.tipo === 'fora' ? 'fora' : '', nota = u ? (p.inj > 0 ? `${p.inj} rod.` : `susp. ${p.susp}`) : pp.pen ? `-${Math.round(pp.pen * 100)}%` : '';
   const desc = `${POSD[s.d].nome}: ${p.name}, força ${ovrNaPosicao(p, s.d)}, energia ${Math.round(energiaDe(p))}${u ? ', ' + u : pp.tipo === 'fora' ? ', fora de posição, ' + nota : ''}`;
   return `<button type="button" class="carta ${est}${sel ? ' sel' : ''}" data-acao="${acao}|${p.id}" aria-pressed="${sel}" aria-label="${esc(desc)}" title="${esc(p.name)}"${o.bloqueado ? ' disabled' : ''}>
-    <span class="carta-vaga">${s.d}</span><span class="carta-nome">${esc(sobrenome(p.name))}</span>
+    <span class="carta-vaga">${s.d}</span><span class="carta-nome">${esc(p.name)}</span>
     <span class="carta-pe">${ovrChip(ovrNaPosicao(p, s.d))}${nota ? `<span class="carta-nota">${nota}</span>` : ''}</span>${energiaBarra(p)}</button>`;
 }
 
@@ -60,7 +58,6 @@ export function campoHtml(uc, o = {}) {
   const sz = FORMS[uc.formation] || FORMS['4-4-2'], idx = (de, n) => Array.from({ length: n }, (_, k) => de + k);
   const linhas = [idx(1 + sz[0] + sz[1], sz[2]), idx(1 + sz[0], sz[1]), idx(1, sz[0]).reverse(), [0]];
   return `<section class="campo${o.mini ? ' mini' : ''}" aria-label="Campo: ${esc(uc.formation)}, ${xi.length} de 11 titulares">
-      <svg class="campo-linhas" viewBox="0 0 400 600" preserveAspectRatio="none" aria-hidden="true"><rect x="14" y="14" width="372" height="572"/><path d="M14 300h372"/><circle cx="200" cy="300" r="52"/><rect x="110" y="14" width="180" height="84"/><rect x="110" y="502" width="180" height="84"/></svg>
       ${linhas.map(l => `<div class="linha">${l.map(i => carta(lay[i], o)).join('')}</div>`).join('')}
     </section>`;
 }

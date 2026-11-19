@@ -9,12 +9,13 @@ function montarPelaTela() {
   const a = clubeDaSerie(j, 'A', 1), b = clubeDaSerie(j, 'A', 8);
   j.acao('novoJogo');
   j.campo('nomeTec', 'Ana'); j.acao('adicionarTecnico');
-  j.acao(`newGame|${a}`);
+  j.acao(`selecionarClubeInicio|${a}`);
   j.campo('nomeTec', 'Bia'); j.acao('adicionarTecnico');
-  assert.match(j.html(), /Clube de Bia/);
-  j.acao(`newGame|${a}`);
+  assert.match(j.html(), /Clube de <b>Bia<\/b>/);
+  assert.match(j.html(), new RegExp(`selecionarClubeInicio\\|${a}"[^>]* disabled`));
+  j.acao(`selecionarClubeInicio|${a}`);
   assert.ok(j.alertas.some(x => x.includes('já tem técnico')), 'não deixa dois técnicos no mesmo clube');
-  j.acao(`newGame|${b}`);
+  j.acao(`selecionarClubeInicio|${b}`);
   assert.match(j.html(), /Começar com 2 técnicos/);
   j.acao('comecarComTecnicos');
   return { j, a, b };

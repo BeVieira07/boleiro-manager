@@ -3,8 +3,8 @@ import { vCarreira } from './diretoria.mjs';
 import { vConfig } from './configuracoes.mjs';
 import { wageBill } from '../core/emprestimos.mjs';
 import { escalarMelhores } from '../core/escalacao.mjs';
-import { DIVS, MOVE_N, S, clubById, divOf, divisions, divsOf, hasTwoDivs, table, tec, tvQuota, userClub } from '../core/estado.mjs';
-import { clamp, esc, money } from '../core/utils.mjs';
+import { DIVS, MOVE_N, S, clubById, divOf, divisions, hasTwoDivs, table, tec, tvQuota, userClub } from '../core/estado.mjs';
+import { esc, money } from '../core/utils.mjs';
 import { vClube } from './clube.mjs';
 import { vCompeticoes } from './competicoes.mjs';
 import { jogosContinentais, tabelasContinental, vLibertadores, vSulamericana } from './continental.mjs';
@@ -15,7 +15,8 @@ import { vAoVivo } from './aovivo.mjs';
 import { vArt } from './artilharia.mjs';
 import { vElenco } from './elenco.mjs';
 import { vEscalacao } from './escalacao.mjs';
-import { MAX_TECNICOS, chaveJogoAtual, getData, save, ui } from './estado.mjs';
+import { chaveJogoAtual, save, ui } from './estado.mjs';
+import { vInicio } from './escolha.mjs';
 import { icone } from './icones.mjs';
 import { TITULOS, barraAcoes, lateral } from './layout.mjs';
 import { vLigas, vLobby } from './liga.mjs';
@@ -44,43 +45,21 @@ export function render(){
   const mesma=telaDesenhada===ui.view;
   const rol=mesma?[...document.querySelectorAll(ROLAVEIS)].map(e=>[e.scrollLeft||0,e.scrollTop||0]):[],pag=mesma?[window.scrollX||0,window.scrollY||0]:null;
   // #65: redesenhar a tela não pode jogar o foco do teclado para o começo da página: volta ao mesmo botão/campo
-  const at=document.activeElement,chave=at&&at.dataset&&(at.dataset.acao?['data-acao',at.dataset.acao]:at.dataset.digitar?['data-digitar',at.dataset.digitar]:at.id?['id',at.id]:null);
-  // #58: menu lateral (computador) / barra inferior (celular) e barra de ações no topo de cada tela do jogo
+  const at=document.activeElement,chave=at&&at.dataset&&(at.id?['id',at.id]:at.dataset.acao?['data-acao',at.dataset.acao]:at.dataset.digitar?['data-digitar',at.dataset.digitar]:null);
+  const selecao=typeof at?.selectionStart==='number'?[at.selectionStart,at.selectionEnd]:null;
   document.body.classList.toggle('em-jogo',!!S);
   document.getElementById('lateral').innerHTML=lateral();
   const V={menu:vMenu,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,tabela:vTabela,competicoes:vCompeticoes,copa:vCopa,libertadores:vLibertadores,sulamericana:vSulamericana,estadual:vEstadual,jogos:vJogos,artilharia:vArt,mercado:vMercado,financas:vFin,rodada:vRodada,aovivo:vAoVivo,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
-  const topo=S?barraAcoes(TITULOS[ui.view]):ui.view==='menu'?'':`<div class="topo-simples"><button class="btn fantasma" data-acao="go|menu">${icone('voltar')}Tela inicial</button></div>`;
+  const topo=S?barraAcoes(TITULOS[ui.view]):['menu','inicio'].includes(ui.view)?'':`<div class="topo-simples"><button class="btn fantasma" data-acao="go|menu">${icone('voltar')}Tela inicial</button></div>`;
   document.getElementById('app').innerHTML=topo+V[ui.view]();
   if(pag){const els=[...document.querySelectorAll(ROLAVEIS)];if(els.length===rol.length)els.forEach((e,i)=>{e.scrollLeft=rol[i][0];e.scrollTop=rol[i][1]});window.scrollTo(pag[0],pag[1])}
   telaDesenhada=ui.view;
-  if(chave&&at.isConnected===false){const n=document.querySelector(`[${chave[0]}="${(globalThis.CSS&&CSS.escape?CSS.escape(chave[1]):chave[1])}"]`);if(n&&n.focus)n.focus({preventScroll:true})}
+  if(chave&&at.isConnected===false){
+    const n=document.querySelector(`[${chave[0]}="${(globalThis.CSS&&CSS.escape?CSS.escape(chave[1]):chave[1])}"]`);
+    if(n?.focus){n.focus({preventScroll:true});if(selecao&&typeof n.selectionStart==='number')n.setSelectionRange(...selecao)}
+  }
 }
 export function autoLineup(){escalarMelhores();save();render()}
-
-/* ---------- novo jogo ---------- */
-export function stars(s){const n=clamp(Math.round((s-62)/4),1,5);return `<span class="estrelas" aria-hidden="true">${'★'.repeat(n)}<span class="apagada">${'★'.repeat(5-n)}</span></span><span class="sr">Força ${n} de 5</span>`}
-export function vInicio(){
-  const d=getData(),ds=divsOf(d.clubs);
-  const card=c=>`<button type="button" class="clube-escolha" data-acao="newGame|${c.id}">${crest(c,'m')}<b>${esc(c.name)}</b>${stars(c.strength)}<span class="muted">${c.players.length} jogadores</span></button>`;
-  return `<h2>Novo jogo</h2>
-  <div class="card row"><span class="cresce">Dados: <b>${d.source==='api'?'API-Football (reais)':'Exemplo (jogadores fictícios)'}</b>, temporada ${d.season}: ${ds.map(x=>`${DIVS[x]} (${d.clubs.filter(c=>divOf(c)===x).length} clubes)`).join(', ')}.</span>
-  </div>
-  ${painelTecnicos(d)}
-  <h3>${ui.novos.length?`Clube de ${esc((ui.novos.find(t=>!t.clubId)||{nome:'...'}).nome)}`:'Escolha seu clube'}</h3>
-  ${ds.map(x=>`${ds.length>1?`<h3 class="sub-serie">${DIVS[x]}</h3>`:''}<div class="grade-clubes">${d.clubs.filter(c=>divOf(c)===x).sort((a,b)=>b.strength-a.strength).map(card).join('')}</div>`).join('')}`;
-}
-// novo jogo: painel para jogar com vários técnicos no mesmo computador (#29)
-export function painelTecnicos(d){
-  const nomeClube=id=>{const c=d.clubs.find(x=>x.id===id);return c?esc(c.name):'<span class="muted">escolha o clube abaixo</span>'};
-  if(!ui.novos.length)return `<div class="card row"><span class="cresce">Jogar com amigos no mesmo computador? Adicione os técnicos e escolha o clube de cada um. Eles revezam a vez a cada rodada.</span>
-   <label class="sr" for="nomeTec">Nome do técnico</label><input id="nomeTec" placeholder="Nome do técnico" style="width:180px"><button class="btn sec sm" data-acao="adicionarTecnico">Adicionar técnico</button></div>`;
-  const prontos=ui.novos.length>=2&&ui.novos.every(t=>t.clubId);
-  return `<div class="card"><h3>Técnicos (${ui.novos.length}/${MAX_TECNICOS})</h3>
-   <table><tbody>${ui.novos.map((t,i)=>`<tr><td><b>${esc(t.nome)}</b></td><td>${nomeClube(t.clubId)}</td><td class="n"><button class="btn perigo sm" data-acao="removerTecnico|${i}">Remover</button></td></tr>`).join('')}</tbody></table>
-   <div class="row" style="margin-top:var(--e3)">${ui.novos.length<MAX_TECNICOS?'<label class="sr" for="nomeTec">Nome do técnico</label><input id="nomeTec" placeholder="Nome do técnico" style="width:180px"><button class="btn sec sm" data-acao="adicionarTecnico">Adicionar técnico</button>':''}
-   <button class="btn" data-acao="comecarComTecnicos" ${prontos?'':'disabled'}>Começar com ${ui.novos.length} técnicos</button>
-   <button class="btn fantasma sm" data-acao="cancelarTecnicos">Cancelar</button></div></div>`;
-}
 
 /* ---------- jogos e resultados (#63): cartões, o seu jogo em destaque ---------- */
 export function jogoCard(g,me){

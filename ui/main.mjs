@@ -13,6 +13,7 @@ import * as conta from './conta.mjs';
 import * as diretoria from './diretoria.mjs';
 import * as elenco from './elenco.mjs';
 import * as emprestimos from './emprestimos.mjs';
+import * as escolha from './escolha.mjs';
 import * as escalacao from './escalacao.mjs';
 import * as estado from './estado.mjs';
 import * as forma from './forma.mjs';
@@ -31,7 +32,7 @@ import * as telas from './telas.mjs';
 import * as utils from './utils.mjs';
 
 export const acoes = Object.fromEntries(
-  [aovivo, artilharia, avisos, base, configuracoes, conta, diretoria, elenco, emprestimos, escalacao, estado, fichaJogador, forma, layout, liga, ligajogo, mercado, motor, nuvem, partida, posicoes, saves, taticas, telas, utils]
+  [aovivo, artilharia, avisos, base, configuracoes, conta, diretoria, elenco, emprestimos, escolha, escalacao, estado, fichaJogador, forma, layout, liga, ligajogo, mercado, motor, nuvem, partida, posicoes, saves, taticas, telas, utils]
     .flatMap(m => Object.entries(m)).filter(([, f]) => typeof f === 'function'));
 
 /** Executa a ação descrita em data-acao / data-mudar. */
