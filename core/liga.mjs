@@ -83,7 +83,7 @@ export function jogarRodadaLiga(estado, entradas) {
     virada = { temporada, campeoes: f ? f.champs.map(x => ({ serie: x.d, clube: x.c.name })) : [] };
     iniciarTemporada();
   }
-  return { jogos: r.jogos, temporada, rodada, virada, trocas };
+  return { jogos: [...r.jogos, ...r.copa.map(({ escalacoes, ...jogo }) => jogo)], temporada, rodada, virada, trocas };
 }
 
 /* ---------- mercado da liga (#35): o servidor sorteia a resposta da IA, então recarregar a página não muda nada ---------- */

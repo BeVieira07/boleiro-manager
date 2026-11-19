@@ -59,20 +59,21 @@ export function energiaDaSaidaForcada(clube, antes, depois) {
   }
 }
 
-/** Fim de uma rodada. `jogaram` = Map clube -> {xi: ids dos titulares, jogos}; clube que não está nele descansou. */
+/** Fim de uma rodada. `jogaram` associa cada clube ao número de partidas por titular. */
 export function atualizarEnergia(jogaram) {
   for (const c of S.clubs) {
     const j = jogaram.get(c.id), fad = j ? fadDe(c) : 0;
-    for (const p of c.players) p.energia = energiaDepois(p, j && j.xi.includes(p.id) ? j.jogos : 0, fad);
+    for (const p of c.players) p.energia = energiaDepois(p, j?.get(p.id) || 0, fad);
   }
 }
 /** Anota os titulares de cada clube dos jogos `jogos` ({h, a}) antes de a rodada mexer em lesões e escalações. */
 export function anotarTitulares(jogaram, jogos, getXI, clubById) {
   for (const g of jogos) for (const side of ['h', 'a']) {
     const id = g[side];
-    const j = jogaram.get(id);
     const c = clubById(id); if (!c) continue; // estrangeiro da Libertadores/Sul-Americana: sem energia (#133)
-    if (j) j.jogos++; else jogaram.set(id, { xi: g.escalacoes?.[side].xi.filter(Boolean) || [...getXI(c)], jogos: 1 });
+    if (!jogaram.has(id)) jogaram.set(id, new Map());
+    const j = jogaram.get(id), xi = g.escalacoes?.[side].xi.filter(Boolean) || getXI(c);
+    for (const pid of xi) j.set(pid, (j.get(pid) || 0) + 1);
   }
   return jogaram;
 }

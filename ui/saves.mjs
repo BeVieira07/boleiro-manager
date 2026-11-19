@@ -21,13 +21,24 @@ export function resumoSave(s){
   const c=s.clubs.find(x=>x.id===(t?t.clubId:s.userClubId))||{};
   return {id:s.saveId,clube:c.name||'?',tecnicos:ts.length>1?ts.map(x=>x.nome):null,clubId:c.id,div:c.division||null,season:s.season,round:Math.min(s.round+1,(s.fixtures||[]).length),jogadas:s.round,total:(s.fixtures||[]).length,data:new Date().toISOString()};
 }
+// Na rodada com Copa pendente, o save deve reabrir com a escalação de antes das trocas ao vivo.
+function estadoAoSalvar(){
+  const v=ui.vivo;
+  if(!S.copa?.pendente||v?.S!==S)return S;
+  if(v.g.copa&&!v.fim)S.copa.pendente.minuto=v.min;
+  if(!v.alterou||v.restaurado)return S;
+  const c=v.clube;
+  if(c.lineup.join()!==v.xi1.join()||c.formation!==v.f1)return S;
+  return {...S,clubs:S.clubs.map(x=>x===c?{...c,lineup:v.xi0,formation:v.f0}:x)};
+}
 // grava o jogo atual no seu save (cria um save novo na primeira vez)
 export function salvarJogo(){
   if(ui.liga)return true; // #34: o estado da liga é do servidor; nunca vira save local nem da nuvem
   if(!S)return true;
   const idx=indiceSaves();
   if(!S.saveId)S.saveId=Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36); // id do save não é regra do jogo
-  if(!store.set(SAVE_PREFIX+S.saveId,S)&&!(liberarEspaco()&&store.set(SAVE_PREFIX+S.saveId,S))){
+  const estado=estadoAoSalvar();
+  if(!store.set(SAVE_PREFIX+S.saveId,estado)&&!(liberarEspaco()&&store.set(SAVE_PREFIX+S.saveId,estado))){
     if(!salvarJogo.avisou)avisar('Não há espaço para salvar no navegador. Exclua um jogo salvo na tela inicial (ou exporte e apague algum).');
     salvarJogo.avisou=true;return false;
   }

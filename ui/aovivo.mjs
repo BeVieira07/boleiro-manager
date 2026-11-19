@@ -14,7 +14,7 @@ import { FORMS, esc } from '../core/utils.mjs';
 import { avisar } from './avisos.mjs';
 import { chip, ovrChip } from './componentes.mjs';
 import { campoHtml } from './escalacao.mjs';
-import { VELOCIDADES, prefs } from './configuracoes.mjs';
+import { VELOCIDADES, prefs, verAoVivo } from './configuracoes.mjs';
 import { jogosCopa } from './copa.mjs';
 import { save, ui } from './estado.mjs';
 import { icone } from './icones.mjs';
@@ -28,15 +28,31 @@ const el = id => document.getElementById(id);
 const soma = (v, min) => v.jogos.map(g => { const q = placarNoMinuto(g, min); return q.h + ':' + q.a }).join(',');
 
 /** Há um jogo ao vivo em andamento (não terminado) neste save? */
-export const vivoAtivo = () => !!(ui.vivo && !ui.vivo.fim && ui.vivo.S === S);
+export const vivoAtivo = () => !!(ui.vivo && (!ui.vivo.fim || ui.vivo.proximo) && ui.vivo.S === S);
+
+/** Quando há dois compromissos, cada jogo tem seu próprio relógio e suas próprias trocas. */
+export function iniciarReplaysDaRodada(games, copa, done, opcoes = {}) {
+  const id = userClub().id, meu = g => g.h === id || g.a === id;
+  const liga = games.find(meu), jogoCopa = copa.find(meu);
+  const abrirCopa = jogoCopa && verAoVivo(jogoCopa) && (() => iniciarVivo(copa, jogoCopa, done, opcoes));
+  if (liga && verAoVivo(liga)) {
+    iniciarVivo(games, liga, abrirCopa || done, { ...opcoes, proximo: abrirCopa ? COPA : null });
+  } else if (abrirCopa) abrirCopa();
+  else done();
+}
 
 /** Começa a rodada ao vivo: `jogos` = todos os jogos da rodada `rodada` (índice), `meu` = o seu; `done` roda no "Continuar". */
-export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round - 1, estadual = null } = {}) {
+export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round - 1, estadual = null, proximo = null, aoTerminar = null, minuto = null } = {}) {
   encerrarVivo();
   const uc = userClub();
-  const v = ui.vivo = { g: meu, jogos, rodada, done, replay, min: 0, fim: false, aba: 'meu', div: divOf(uc), comp: 'liga', sel: null, sig: '',
+  const v = ui.vivo = { g: meu, jogos, rodada, done, replay, min: minuto ?? 0, fim: false, aba: 'meu', div: divOf(uc), comp: 'liga', sel: null, sig: '',
     S, clube: uc, xi0: [...(uc.lineup || [])], f0: uc.formation, timer: null, // xi0/f0: trocas e formação valem só neste jogo
-    estadual, uf: meu.uf || null }; // #230: data do estadual e o estado mostrado na lista
+    estadual, uf: meu.uf || null, proximo, aoTerminar };
+  if (minuto != null && meu.ev.some(e => ['troca', 'formacao'].includes(e.t) && e.m <= minuto && meu[e.side] === uc.id)) {
+    const elenco = escalacaoNoMinuto(meu, meu.h === uc.id ? 'h' : 'a', minuto);
+    v.alterou = true; v.xi1 = elenco.xi.filter(Boolean); v.f1 = elenco.form;
+    uc.lineup = [...v.xi1]; uc.formation = v.f1;
+  }
   ui.tvAoVivo = replay ? null : { g: meu, min: () => v.min };
   go('aovivo');
   v.timer = setInterval(() => tick(v), VELOCIDADES[prefs().velocidade] || 55); // #106
@@ -67,6 +83,7 @@ function tick(v) {
 }
 function terminar(v) {
   clearInterval(v.timer); v.fim = true; ui.tvAoVivo = null; restaurar(v);
+  v.aoTerminar?.();
   pintar(v);
   const c = el('av-controles'), b = el('av-botoes');
   if (c) c.innerHTML = '';
@@ -136,6 +153,7 @@ function pintar(v) {
   if (c) c.textContent = relogio(v);
   if (est) est.innerHTML = htmlEst(v);
   if (ult) ult.innerHTML = lanceTxt(v.g, v.min);
+  const agregado = el('av-agregado'); if (agregado) agregado.textContent = textoAgregado(v);
   if (b) b.style.width = Math.min(100, v.min / DURACAO * 100) + '%';
   if (f) f.innerHTML = feed;
   if (m) m.innerHTML = marcas;
@@ -146,7 +164,7 @@ function controles(v) { const c = el('av-controles'); if (c) c.innerHTML = htmlC
 function paineis(v) { const r = el('av-rodada'), c = el('av-classif'); if (r) r.innerHTML = htmlRodada(v); if (c) c.innerHTML = htmlClassif(v) }
 
 const botoes = v => v.fim
-  ? `<button class="btn" id="ldone" data-acao="avContinuar">Continuar</button>`
+  ? `<button class="btn" id="ldone" data-acao="avContinuar">${v.proximo ? `Ir para a ${v.proximo}` : 'Continuar'}</button>`
   : `<button class="btn${v.pausado ? '' : ' sec'}" id="lpausa" data-acao="avPausar" aria-pressed="${!!v.pausado}">${icone(v.pausado ? 'play' : 'pausa', { tam: 16 })}${v.pausado ? 'Continuar' : 'Pausar'}</button>
     <button class="btn sec" id="lskip" data-acao="avPular">${icone('avancar', { tam: 16 })}Pular para o fim</button>`;
 
@@ -171,13 +189,22 @@ function htmlControles(v) {
 }
 
 const torneioDoVivo = v => v.estadual != null && S.estaduais ? S.estaduais.torneios.find(t => t.uf === v.g.uf) : null;
-const competicao = v => { const tor = torneioDoVivo(v); return tor ? `${tor.nome} · ${nomeData(tor, v.estadual)}` : `${DIVS[divOf(userClub())] || 'Campeonato'} · Rodada ${v.rodada + 1}` };
+const faseCopa = c => `${COPA} · ${c.nome} (${c.volta ? 'volta' : 'ida'})`;
+const competicao = v => { const tor = torneioDoVivo(v); return v.g.copa ? faseCopa(v.g.copa) : tor ? `${tor.nome} · ${nomeData(tor, v.estadual)}` : `${DIVS[divOf(userClub())] || 'Campeonato'} · Rodada ${v.rodada + 1}` };
+function textoAgregado(v) {
+  const copa = v.g.copa;
+  if (!copa?.ida) return '';
+  const p = placarNoMinuto(v.g, v.min);
+  const pen = v.fim && copa.pen ? ` · ${clubById(copa.pen).name} venceu nos pênaltis` : '';
+  return `Placar agregado: ${copa.ida.h + p.h} x ${copa.ida.a + p.a}${pen}`;
+}
 // cabeçalho do seu jogo (#170): competição, relógio, placar, último lance, barra de tempo, pausa e estatísticas
 function htmlCab(v) {
   const H = clubById(v.g.h), A = clubById(v.g.a), p = placarNoMinuto(v.g, v.min), { marcas } = lances(v);
   const lado = (c, cls) => `<div class="placar-time ${cls}">${crest(c, 'g')}<b>${esc(c.name)}</b></div>`;
   return `<div class="cab-jogo"><div class="cab-topo"><span class="sobretitulo">${esc(competicao(v))}</span><span class="relogio" id="lclk" aria-live="off">${relogio(v)}</span></div>
     <div class="placar">${lado(H, 'casa')}<div class="placar-centro"><div class="placar-num" id="lsc" aria-live="polite">${p.h} x ${p.a}</div></div>${lado(A, 'fora')}</div>
+    ${v.g.copa?.ida ? `<p class="muted" id="av-agregado">${esc(textoAgregado(v))}</p>` : ''}
     <p class="ult-lance" id="lult">${lanceTxt(v.g, v.min)}</p>
     <div class="tempo" aria-hidden="true"><div class="tempo-trilho"><div class="tempo-feito" id="lbar" style="width:${Math.min(100, v.min / DURACAO * 100)}%"></div></div><div class="tempo-marcas" id="lmarcas">${marcas}</div>
       <div class="tempo-escala"><span>0'</span><span>45'</span><span>90'</span></div></div>
@@ -208,6 +235,7 @@ function htmlRodadaEstadual(v) {
 }
 function htmlRodada(v) {
   if (v.estadual != null) return htmlRodadaEstadual(v);
+  if (v.g.copa) return `<h2 class="t3">Jogos da ${COPA}</h2>${listaJogos([...v.jogos].sort(meusPrimeiro(userClub().id)), v, userClub().id)}`;
   const me = userClub().id, copa = copaNaRodada(v.rodada), comp = copa && v.comp === 'copa' ? 'copa' : 'liga';
   const comps = copa ? `<div class="chips abas" role="group" aria-label="Competição">${chip('Campeonato', 'avComp|liga', comp === 'liga')}${chip(COPA, 'avComp|copa', comp === 'copa')}</div>` : '';
   if (comp === 'copa') {
@@ -221,6 +249,7 @@ function htmlRodada(v) {
   return `<h2 class="t3">Jogos da rodada</h2>${comps}${serieChips(v)}${listaJogos(gs, v, me)}`;
 }
 function htmlClassif(v) {
+  if (v.g.copa) return `<h2 class="t3">${esc(faseCopa(v.g.copa))}</h2><button class="btn sec" data-acao="go|copa">Ver o chaveamento</button>`;
   const tor = torneioDoVivo(v);
   if (tor) { // #230: o grupo do seu clube no estadual, andando com os placares do minuto
     const me = userClub().id, ids = tor.grupos.find(g => g.includes(me)) || tor.grupos[0], vaga = tor.grupos.length === 1 ? 2 : 1;
@@ -247,7 +276,7 @@ export function vAoVivo() {
   v.sig = soma(v, v.min);
   return `<div class="vivo" id="vivo" data-aba="${v.aba}">
     <section class="vivo-cab card" aria-label="Seu jogo">${htmlCab(v)}</section>
-    <div class="chips vivo-abas" role="group" aria-label="Área da tela">${Object.entries(ABAS).map(([k, r]) => chip(r, `avAba|${k}`, v.aba === k)).join('')}</div>
+    <div class="chips vivo-abas" role="group" aria-label="Área da tela">${Object.entries(ABAS).map(([k, r]) => chip(v.g.copa && k === 'classif' ? 'Chaveamento' : r, `avAba|${k}`, v.aba === k)).join('')}</div>
     <section class="vivo-meu" aria-label="Seu time">${htmlMeu(v)}</section>
     <section class="vivo-rodada" id="av-rodada" aria-label="Jogos da rodada">${htmlRodada(v)}</section>
     <section class="vivo-classif" id="av-classif" aria-label="Classificação provisória">${htmlClassif(v)}</section></div>`;

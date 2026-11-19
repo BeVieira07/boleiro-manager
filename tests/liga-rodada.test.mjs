@@ -37,7 +37,7 @@ test('uma temporada inteira, chamada a chamada, fica bem abaixo de 2 s de CPU po
     const r = jogarRodadaLiga(JSON.parse(estado), {}); // como no servidor: lê o JSON, joga e grava o JSON
     estado = JSON.stringify(est.S);
     max = Math.max(max, performance.now() - t0); chamadas++;
-    assert.equal(r.jogos.length, 20, 'dez jogos em cada série');
+    assert.equal(r.jogos.filter(g => !g.copa).length, 20, 'dez jogos em cada série');
     virada = r.virada;
   }
   console.log(`  ${chamadas} chamadas; a mais lenta levou ${max.toFixed(0)} ms`);
