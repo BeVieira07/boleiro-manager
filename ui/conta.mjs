@@ -8,7 +8,7 @@ import { icone } from './icones.mjs';
 
 // supabase-js vem de CDN (o jogo não tem build); versão fixa
 export const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
-const conta = { cliente: null, usuario: null, perfil: null, erro: null, config: { url: SUPABASE_URL, chave: SUPABASE_ANON_KEY }, aoMudar: null };
+const conta = { cliente: null, usuario: null, perfil: null, erro: null, recuperacao: null, config: { url: SUPABASE_URL, chave: SUPABASE_ANON_KEY }, aoMudar: null };
 
 export const onlineConfigurado = () => !!(conta.config.url && conta.config.chave);
 export const usuarioAtual = () => conta.usuario;
@@ -19,7 +19,7 @@ export const clienteLogado = () => (conta.usuario ? conta.cliente : null);
 /** Para testes: usa outra configuração e/ou um cliente falso no lugar do Supabase. */
 export function configurarConta({ url, chave, cliente } = {}) {
   conta.config = { url: url ?? conta.config.url, chave: chave ?? conta.config.chave };
-  conta.cliente = cliente ?? null; conta.usuario = null; conta.perfil = null; conta.erro = null;
+  conta.cliente = cliente ?? null; conta.usuario = null; conta.perfil = null; conta.erro = null; conta.recuperacao = null;
 }
 
 /** Trava da sessão só desta aba. A padrão do supabase-js (navigator.locks) é dividida por todas as abas do mesmo endereço:
@@ -48,22 +48,41 @@ async function carregarPerfil() {
   conta.perfil = data || null;
 }
 
-/** Abre a sessão (inclusive a que volta do link mágico) e avisa a tela quando o login muda. */
+/** Abre a sessão e acompanha os retornos do Google e do link de recuperação. */
 export async function iniciarConta(aoMudar) {
   conta.aoMudar = aoMudar || conta.aoMudar;
   try {
     const c = await cliente(); if (!c) return;
-    const { data } = await c.auth.getSession();
-    conta.usuario = data.session?.user ?? null;
-    await carregarPerfil();
+    // O retorno pelo link pode emitir PASSWORD_RECOVERY já na inicialização do cliente.
     // O supabase-js segura uma trava enquanto roda este aviso; chamar o Supabase aqui dentro (carregarPerfil) trava a página
     // inteira: todo pedido seguinte fica esperando para sempre. Por isso o resto roda depois, fora do aviso.
-    c.auth.onAuthStateChange((_evento, sessao) => {
+    c.auth.onAuthStateChange((evento, sessao) => {
+      if (evento === 'INITIAL_SESSION') return; // lida por getSession abaixo
       conta.usuario = sessao?.user ?? null;
-      setTimeout(async () => { await carregarPerfil(); conta.aoMudar && conta.aoMudar() }, 0);
+      if (evento === 'PASSWORD_RECOVERY') conta.recuperacao = conta.usuario?.id ?? null;
+      if (conta.recuperacao !== conta.usuario?.id) conta.recuperacao = null;
+      setTimeout(async () => {
+        if (conta.recuperacao) {
+          if (evento === 'PASSWORD_RECOVERY') {
+            conta.aoMudar?.();
+            document.getElementById('senhaRecuperacao')?.focus();
+          }
+          return;
+        }
+        await carregarPerfil();
+        conta.aoMudar?.();
+      }, 0);
     });
+    const { data } = await c.auth.getSession();
+    conta.usuario = data.session?.user ?? null;
+    // Um link já usado ou vencido volta sem sessão e sem emitir PASSWORD_RECOVERY.
+    if (typeof location !== 'undefined' && new URLSearchParams(location.hash.slice(1)).get('error_code') === 'otp_expired') {
+      history.replaceState(history.state, '', location.pathname + location.search);
+      avisar('O link de recuperação é inválido ou expirou. Solicite um novo em “Esqueci a senha”.', 'erro');
+    }
+    if (!conta.recuperacao) await carregarPerfil();
   } catch (e) { conta.erro = 'Não foi possível conectar ao servidor. O jogo continua offline.'; console.error(e) }
-  conta.aoMudar && conta.aoMudar();
+  if (!conta.recuperacao) conta.aoMudar?.();
 }
 
 // depois do login, o Supabase volta para esta mesma página (o endereço precisa estar em Redirect URLs)
@@ -114,11 +133,65 @@ export async function criarConta() {
   avisar(`Conta criada! Bem-vindo, ${nome}.`, 'ok');
 }
 
+/* ---------- recuperação de senha (#258) ---------- */
+export async function enviarRecuperacaoSenha() {
+  const email = valor('emailRecuperacao');
+  if (!emailOk(email)) { avisar('Digite um e-mail válido.', 'erro'); return }
+  try {
+    const c = await cliente(); if (!c) return;
+    const { error } = await c.auth.resetPasswordForEmail(email, { redirectTo: volta() });
+    // O intervalo por endereço só é avaliado em contas existentes e usa o mesmo código do limite geral.
+    const intervalo = /for security purposes.*after \d+ seconds/i.test(error?.message ?? '');
+    if (error && error.code !== 'user_not_found' && !intervalo) {
+      if (error.code === 'over_email_send_rate_limit' || /email rate limit/i.test(error.message)) {
+        avisar('O limite de envio de e-mails do jogo foi atingido. Espere até uma hora para tentar de novo.', 'erro');
+        return;
+      }
+      if (error.status === 429) {
+        avisar('Muitas tentativas seguidas. Espere um pouco e tente de novo.', 'erro');
+        return;
+      }
+      throw error;
+    }
+    avisar('Se houver uma conta com esse e-mail, o link de recuperação foi enviado. Confira a caixa de entrada e o spam.', 'ok');
+  } catch {
+    avisar('Não foi possível solicitar a recuperação de senha. Tente de novo em instantes.', 'erro');
+  }
+}
+
+export async function salvarSenhaRecuperada() {
+  if (!conta.recuperacao || conta.recuperacao !== conta.usuario?.id) return;
+  const senha = senhaDe('senhaRecuperacao');
+  if (senha.length < SENHA_MIN) {
+    avisar(`A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`, 'erro');
+    return;
+  }
+  try {
+    const { error } = await conta.cliente.auth.updateUser({ password: senha });
+    if (error) {
+      if (error.code === 'same_password') { avisar('Escolha uma senha diferente da anterior.', 'erro'); return }
+      if (error.code === 'weak_password') { avisar('Escolha uma senha mais forte.', 'erro'); return }
+      if (error.name === 'AuthSessionMissingError' || [401, 403].includes(error.status)) {
+        avisar('A sessão de recuperação expirou. Solicite um novo link em “Esqueci a senha”.', 'erro');
+        await sair();
+        return;
+      }
+      throw error;
+    }
+  } catch {
+    avisar('Não foi possível alterar a senha. Tente de novo em instantes.', 'erro');
+    return;
+  }
+  conta.recuperacao = null;
+  conta.aoMudar?.();
+  avisar('Senha alterada com sucesso.', 'ok');
+}
+
 // scope local (#95): sair neste aparelho não derruba a mesma conta aberta em outro (o padrão do supabase-js encerra todas)
 export async function sair() {
   const c = await cliente(); if (!c) return;
   await c.auth.signOut({ scope: 'local' }).catch(() => {});
-  conta.usuario = null; conta.perfil = null;
+  conta.usuario = null; conta.perfil = null; conta.recuperacao = null;
   conta.aoMudar && conta.aoMudar();
 }
 /** O servidor recusou o login (sessão encerrada em outro lugar): sai só daqui e avisa, em vez de parecer conectado. */
@@ -141,6 +214,14 @@ export async function mudarNomeTecnico() {
 /** Conta no topo da tela inicial (#104): menu com nome e sair, ou os botões de entrar. Vazio quando o online não está configurado. */
 export function painelConta() {
   if (!onlineConfigurado()) return '';
+  if (conta.recuperacao) {
+    return `<div class="conta-form">
+      <h3 class="t3">Redefinir senha</h3>
+      <label for="senhaRecuperacao" class="campo-rotulo">Nova senha (mínimo ${SENHA_MIN} caracteres)</label>
+      <input id="senhaRecuperacao" type="password" autocomplete="new-password" minlength="${SENHA_MIN}">
+      <button type="button" class="btn" data-acao="salvarSenhaRecuperada">Salvar nova senha</button>
+      <button type="button" class="btn fantasma" data-acao="sair">Sair da conta</button></div>`;
+  }
   if (conta.erro) return `<p class="muted conta-erro">${esc(conta.erro)}</p>`;
   const u = conta.usuario;
   if (u) {
@@ -155,7 +236,12 @@ export function painelConta() {
     <div class="conta-form"><p class="conta-divisor">ou com e-mail</p>
       <label for="emailConta" class="campo-rotulo">E-mail</label><input id="emailConta" type="email" autocomplete="email" placeholder="seu@email.com">
       <label for="senhaConta" class="campo-rotulo">Senha</label><input id="senhaConta" type="password" autocomplete="current-password">
-      <button type="button" class="btn" data-acao="entrar">Entrar</button></div>
+      <button type="button" class="btn" data-acao="entrar">Entrar</button>
+      <details class="conta-recuperar"><summary>Esqueci a senha</summary><div class="conta-form">
+        <label for="emailRecuperacao" class="campo-rotulo">E-mail da conta</label>
+        <input id="emailRecuperacao" type="email" autocomplete="email" placeholder="seu@email.com">
+        <button type="button" class="btn sec" data-acao="enviarRecuperacaoSenha">Enviar link de recuperação</button>
+      </div></details></div>
     <details class="conta-cadastro"><summary>Criar conta</summary><div class="conta-form">
       <label for="nomeNovaConta" class="campo-rotulo">Nome do técnico</label><input id="nomeNovaConta" autocomplete="nickname" maxlength="40">
       <label for="emailNovaConta" class="campo-rotulo">E-mail</label><input id="emailNovaConta" type="email" autocomplete="email" placeholder="seu@email.com">

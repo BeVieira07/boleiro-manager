@@ -589,8 +589,9 @@ body.em-jogo .avisos{bottom:24px}
 .google-entrar span{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--bg);color:var(--texto);font-size:11px}
 .inicio-online .conta-divisor{display:flex;align-items:center;gap:8px;margin:0;font-size:12px}
 .conta-divisor::before,.conta-divisor::after{content:"";flex:1;height:1px;background:var(--linha)}
-.conta-cadastro summary{padding:5px 0;cursor:pointer;color:var(--verde-claro)}
-.conta-cadastro .conta-form{margin-top:8px}
+.conta-cadastro summary,.conta-recuperar summary{padding:5px 0;cursor:pointer;color:var(--verde-claro)}
+.conta-recuperar summary{text-decoration:underline}
+.conta-cadastro .conta-form,.conta-recuperar .conta-form{margin-top:8px}
 .campo-rotulo{font-size:12px;font-weight:600;color:var(--muted)}
 .conta-erro{margin:0;max-width:420px}
 .sobretitulo,.secao-titulo{margin:0 0 6px;font:600 13px/1.3 var(--f-texto);letter-spacing:.1em;text-transform:uppercase;color:var(--ouro)}

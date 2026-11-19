@@ -7,6 +7,12 @@ Objetivo: jogar online de duas formas.
 
 Decisões tomadas: **Supabase** (banco Postgres, login, tempo real e funções no servidor) e rodada **quando todos confirmarem**.
 
+## Recuperação de senha (#258)
+
+O Supabase envia o link de recuperação com retorno para o mesmo endereço do jogo. Em **Authentication → URL Configuration → Redirect URLs**, inclua os endereços usados em produção e no desenvolvimento, como `https://bevieira07.github.io/boleiro-manager/` e `http://localhost:3000/`. O modelo de e-mail **Reset Password** deve manter o link de confirmação (`{{ .ConfirmationURL }}`).
+
+O serviço de e-mail padrão do Supabase é limitado a dois envios por hora por projeto e a destinatários da equipe. Para entregar links de recuperação a jogadores externos, use SMTP próprio no Supabase. [Configuração de SMTP](https://supabase.com/docs/guides/auth/auth-smtp)
+
 ---
 
 ## 1. Como o jogo é hoje (ponto de partida)
