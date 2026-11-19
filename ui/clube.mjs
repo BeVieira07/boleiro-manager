@@ -16,6 +16,7 @@ import { icone } from './icones.mjs';
 import { crest } from './partida.mjs';
 import { zonas } from './telas.mjs';
 import { noticiaVisivel } from './configuracoes.mjs';
+import { renderNoticia } from './noticias.mjs';
 
 const ord = n => n + 'º';
 const meuJogo = (r, me) => S.fixtures[r] && S.fixtures[r].find(g => g.h === me || g.a === me);
@@ -124,7 +125,7 @@ export function vClube() {
   <div class="painel">
     <div class="painel-principal">${proximoJogo(uc, T)}${blocoForma(me)}${blocoAlertas()}</div>
     <div class="painel-lateral">${miniTabela(uc)}
-      <section class="card"><h2 class="t3">Notícias</h2><ul class="noticias">${t.news.filter(noticiaVisivel).slice(0, 10).map(n => `<li><span class="muted num">R${(n.r ?? 0) + 1}</span><span>${esc(n.t)}</span></li>`).join('') || '<li class="muted">Sem notícias ainda.</li>'}</ul></section>
+      <section class="card"><h2 class="t3">Notícias</h2><ul class="noticias">${t.news.filter(noticiaVisivel).slice(0, 10).map(n => `<li><span class="muted num">R${(n.r ?? 0) + 1}</span>${renderNoticia(n)}</li>`).join('') || '<li class="muted">Sem notícias ainda.</li>'}</ul></section>
     </div>
   </div>${historico}`;
 }

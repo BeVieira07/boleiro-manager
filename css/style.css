@@ -272,6 +272,7 @@ body.em-jogo .conteudo{max-width:1312px;padding:22px 16px 48px}
 .noticias{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
 .noticias li{display:flex;gap:10px;font-size:13px;line-height:1.4}
 .noticias .num{min-width:32px}
+.noticia{display:flex;align-items:flex-start;gap:6px;min-width:0;overflow-wrap:anywhere}
 
 /* ================= tabela de jogadores: Elenco e Mercado (#60) ================= */
 .filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:var(--e3)}
