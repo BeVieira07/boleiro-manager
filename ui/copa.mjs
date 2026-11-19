@@ -43,7 +43,7 @@ export function vCopa() {
 function proximoJogo(me) {
   const j = confrontoDe(me), copa = S.copa; if (!j || j.v || copa.campeao) return null;
   const i = copa.fases.length - 1, volta = !!j.ida;
-  return { volta, adv: clubById(j.h === me ? j.a : j.h), rodada: copa.datas[2 * i + (volta ? 1 : 0)] + 1 };
+  return { volta, h: volta ? j.a : j.h, a: volta ? j.h : j.a, adv: clubById(j.h === me ? j.a : j.h), rodada: copa.datas[2 * i + (volta ? 1 : 0)] + 1 };
 }
 /** Cartão da Copa do Brasil na aba Competições (#102, #175). */
 export const cartaoCopa = {
@@ -56,7 +56,7 @@ export const cartaoCopa = {
     const p = copa.campeao ? null : proximoJogo(me);
     const [destaque, status] = copa.campeao === me ? ['Campeão', ['Título conquistado', 'ok']] : copa.campeao ? ['Encerrada', ['Eliminado', 'erro']] : [nome, vivo ? ['Na disputa', 'ok'] : ['Eliminado', 'erro']];
     return { sigla: 'CDB', tom: 'aviso', fase: 'Mata-mata', destaque, status, botao: 'Chaveamento',
-      proximo: p && { rot: 'Rod.', n: p.rodada, nomeAdv: p.adv.name, perna: p.volta ? 'volta' : 'ida', ordem: p.rodada },
+      proximo: p && { rot: 'Rod.', n: p.rodada, h: p.h, a: p.a, nomeAdv: p.adv.name, perna: p.volta ? 'volta' : 'ida', ordem: p.rodada },
       semProximo: copa.campeao ? 'Competição encerrada' : 'Seu clube foi eliminado' };
   }
 };

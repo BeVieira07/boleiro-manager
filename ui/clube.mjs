@@ -1,16 +1,17 @@
 /* ================= tela do Clube como painel (#59) =================
    Responde "como estamos e o que preciso fazer agora": indicadores, próximo jogo, forma recente,
    o que pede atenção, mini classificação e notícias. */
+import { clubeCont } from '../core/continental.mjs';
 import { cansados, energiaDe } from '../core/energia.mjs';
 import { faixaConf, receitaEsperada } from '../core/diretoria.mjs';
 import { loanLeft, loanOf, loansIn, wageBill } from '../core/emprestimos.mjs';
 import { slotLayout, unavailable } from '../core/escalacao.mjs';
-import { emPreTemporada, jogosDaData, nomeData, torneioDe } from '../core/estadual.mjs';
 import { DIVS, P, S, clubById, divOf, table, tec, userClub } from '../core/estado.mjs';
 import { penalidadePosicao } from '../core/posicoes.mjs';
 import { ESTILOS, MODOS, taticaUser } from '../core/taticas.mjs';
 import { esc, money } from '../core/utils.mjs';
 import { chip, dicaTatica, stat } from './componentes.mjs';
+import { proximoCompromisso } from './competicoes.mjs';
 import { icone } from './icones.mjs';
 import { crest } from './partida.mjs';
 import { zonas } from './telas.mjs';
@@ -54,32 +55,17 @@ export function alertas() {
   return out;
 }
 
-function proximoConfronto(me) {
-  const estadual = emPreTemporada() && torneioDe(me);
-  if (estadual) {
-    for (let d = S.estaduais.dia; d < S.estaduais.datas; d++) {
-      const jogo = jogosDaData(estadual, d).find(g => g.h === me || g.a === me);
-      if (jogo) return { jogo, etapa: `${estadual.nome} · ${nomeData(estadual, d)}` };
-    }
-  }
-  for (let r = S.round; r < S.fixtures.length; r++) {
-    const jogo = meuJogo(r, me);
-    if (jogo) return { jogo, etapa: `Rodada ${r + 1}` };
-  }
-  return null;
-}
-
 function proximoJogo(uc, T) {
   const me = uc.id;
-  const proximo = proximoConfronto(me);
-  if (!proximo) return `<section class="card destaque"><h2 class="t3">Próximo jogo</h2><p>${S.round >= S.fixtures.length ? 'Temporada encerrada. Use o botão no topo para fechar a temporada e começar a próxima.' : 'Sem próximos jogos no calendário.'}</p></section>`;
-  const { jogo: g, etapa } = proximo;
+  const g = proximoCompromisso();
+  if (!g) return `<section class="card destaque"><h2 class="t3">Próximo jogo</h2><p>${S.round >= S.fixtures.length ? 'Temporada encerrada. Use o botão no topo para fechar a temporada e começar a próxima.' : 'Sem próximos jogos no calendário.'}</p></section>`;
+  const etapa = g.nome === 'Campeonato Brasileiro' ? `Rodada ${g.n}` : `${g.nome} · ${g.perna || g.rot + ' ' + g.n}`;
   const t = taticaUser(uc), posDe = id => { const i = T.findIndex(x => x.id === id); return S.round && i >= 0 ? ' · ' + ord(i + 1) : '' };
   const lado = c => `<div class="time">${crest(c, 'g')}<b>${esc(c.name)}</b><span class="muted">Força ${c.strength}${posDe(c.id)}</span></div>`;
   const formacoes = [...new Set(['4-4-2', '4-3-3', '3-5-2', uc.formation])];
   return `<section class="card destaque clube-proximo" aria-label="Próximo jogo">
     <div class="card-topo"><h2 class="t3">Próximo jogo</h2><span class="pill">${g.h === me ? 'Em casa' : 'Fora de casa'} · ${esc(etapa)}</span></div>
-    <div class="confronto">${lado(clubById(g.h))}<span class="x" aria-hidden="true">X</span><span class="sr">contra</span>${lado(clubById(g.a))}</div>
+    <div class="confronto">${lado(clubeCont(g.h))}<span class="x" aria-hidden="true">X</span><span class="sr">contra</span>${lado(clubeCont(g.a))}</div>
     <div class="chips clube-formacoes" role="group" aria-label="Formação"><span class="muted">Formação</span>
       ${formacoes.map(f => chip(esc(f), `setFormation|${f}`, uc.formation === f)).join('')}</div>
     <details class="clube-taticas" id="taticas-clube"${document.getElementById('taticas-clube')?.open === true ? ' open' : ''}><summary>Estilo e modo de jogo</summary><div class="taticas">
