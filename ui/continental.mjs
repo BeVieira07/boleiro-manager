@@ -68,6 +68,10 @@ function tabelaGrupo(tor, g, i, me) {
       return `<tr class="${t.id === me ? 'me' : ''}"><td class="${z ? 'zona-lib' : ''}"${z ? ' title="Vai às oitavas"' : ''}>${k + 1}${z ? '<span class="sr"> (vai às oitavas)</span>' : ''}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n"><b>${t.Pts}</b></td><td class="n">${t.J}</td><td class="n">${t.GP - t.GC}</td></tr>` }).join('')}</tbody>
   </table></div></section>`;
 }
+export function tabelasContinental(tor, me) {
+  return `<div class="cartoes-acao grupos">${tor.grupos.map((g, i) => tabelaGrupo(tor, g, i, me)).join('')}</div>`;
+}
+
 function mataMata(tor, me) {
   const nomes = ['Oitavas de final', 'Quartas de final', 'Semifinal'], sec = [];
   if (tor.final) {
@@ -87,7 +91,7 @@ function vTorneio(id) {
   return `${voltar}<p class="muted resumo">32 clubes em 8 grupos de 4 (ida e volta); os dois primeiros de cada grupo vão às oitavas. Mata-mata em ida e volta e final em jogo único, junto com as rodadas do Brasileirão.
     Premiação: ${money(p.grupos)} pela fase de grupos, ${money(p.oitavas)} pelas oitavas, ${money(p.quartas)} pelas quartas, ${money(p.semi)} pela semifinal e ${money(p.titulo)} pelo título.
     ${tor.campeao ? `Campeão: <b>${esc(clubeCont(tor.campeao).name)}</b>.` : ''}</p>
-    ${mataMata(tor, me)}<div class="cartoes-acao grupos">${tor.grupos.map((g, i) => tabelaGrupo(tor, g, i, me)).join('')}</div>${artilhariaDoTorneio(tor, id)}`;
+    ${mataMata(tor, me)}${tabelasContinental(tor, me)}${artilhariaDoTorneio(tor, id)}`;
 }
 export const vLibertadores = () => vTorneio('libertadores');
 export const vSulamericana = () => vTorneio('sulamericana');
