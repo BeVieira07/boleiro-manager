@@ -10,6 +10,13 @@ Use o Node.js 22 com npm. Na raiz do repositório, rode `npm start` e abra `http
 
 Rode `npm test` para executar a suíte de testes. O workflow [pages.yml](.github/workflows/pages.yml) roda os testes e publica o site a cada push na `main`.
 
+## Dados e overall
+
+- A base de clubes e elencos em `data/` vem da API-Football e cobre as Séries A a D de 2024 e os clubes estrangeiros da Libertadores e da Sul-Americana.
+- O overall dos jogadores do Brasileirão prioriza `data/overalls-manual.json`. Nos demais casos, combina as notas de `data/notas-2024.json`, quando disponíveis, com uma estimativa que pode usar o valor de mercado do Transfermarkt nas Séries A e B.
+- Após alterar os dados do jogo em `data/`, rode `npm run dados:padrao` para gerar `core/dados-padrao.mjs` e `core/dados-continentais.mjs`. Não edite esses módulos à mão.
+- Veja os detalhes na [skill do Boleiro Manager](.claude/skills/boleiro-manager/SKILL.md).
+
 ## Jogar online
 
 No modo solo, o progresso é salvo no navegador e pode ser sincronizado na nuvem com uma conta. Entre com e-mail e senha ou com Google. Na liga com amigos, cada pessoa comanda um clube na mesma campanha e a função `jogar-rodada` simula as rodadas no Supabase.
