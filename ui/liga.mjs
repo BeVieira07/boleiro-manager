@@ -122,8 +122,8 @@ export function vLigas() {
       <td><button class="btn sm" data-acao="abrirLobby|${esc(l.id)}">Abrir</button>${l.status === 'andamento' ? ` <button class="btn sm" data-acao="entrarNaLiga|${esc(l.id)}">Jogar</button>` : ''}</td></tr>`;
   }).join('');
   return `<div class="menu-ini"><h2>Ligas com amigos</h2>
-  <div class="card tw"><h3>Minhas ligas</h3>
-   ${liga.erro ? `<p class="bad">${esc(liga.erro)}</p>` : !liga.lista ? '<p class="muted">Carregando…</p>' : linhas ? `<table>${linhas}</table>` : '<p class="muted">Você ainda não está em nenhuma liga.</p>'}
+  <div class="card"><h3 id="minhas-ligas">Minhas ligas</h3>
+   ${liga.erro ? `<p class="bad">${esc(liga.erro)}</p>` : !liga.lista ? '<p class="muted">Carregando…</p>' : linhas ? `<div class="tw" tabindex="0" role="region" aria-labelledby="minhas-ligas"><table>${linhas}</table></div>` : '<p class="muted">Você ainda não está em nenhuma liga.</p>'}
   </div>
   <div class="card"><h3>Entrar com código</h3><div class="row">
    <input id="codigoLiga" aria-label="Código de convite" placeholder="Código de convite" maxlength="12" style="width:160px;text-transform:uppercase">
@@ -151,7 +151,7 @@ export function vLobby() {
   return `<div class="menu-ini"><h2>${esc(l.nome)}</h2>
   <div class="card row"><span>Código de convite: <b style="font-size:1.3em;letter-spacing:2px">${esc(l.codigo_convite)}</b></span>
    <span class="muted">Séries ${l.series.join(', ')} · ${STATUS[l.status] || esc(l.status)}</span></div>
-  <div class="card tw"><h3>Técnicos (${l.membros.length})</h3><table>${membros}</table></div>
+  <div class="card"><h3 id="tecnicos-lobby">Técnicos (${l.membros.length})</h3><div class="tw" tabindex="0" role="region" aria-labelledby="tecnicos-lobby"><table>${membros}</table></div></div>
   ${meu && l.status === 'aberta' ? `<div class="card row"><span>Seu clube:</span>
    <select aria-label="Seu clube" data-mudar="escolherClubeLiga|${esc(l.id)}"><option value="">Escolha…</option>${opcoesClubes(l.series, ocupados, meu.club_id)}</select></div>` : ''}
   ${acaoLiga(l, eu)}

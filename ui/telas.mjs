@@ -37,23 +37,32 @@ export function divTabs(){
   return `<div class="chips abas" role="group" aria-label="Série">${divisions().map(d=>chip(DIVS[d],`verDivisao|${d}`,curDiv()===d)).join('')}</div>`;
 }
 // #169: a rolagem da página e das áreas roláveis (tabelas, listas) sobrevive ao redesenho da MESMA tela; mudar de tela começa do topo
-const ROLAVEIS='.tabela-rolavel,.tw,.eventos,.lista-troca';
+const ROLAVEIS='.tabela-rolavel,.tw,.nav-resto';
 let telaDesenhada=null;
 export function render(){
   if(!S&&!['inicio','ligas','lobby','config'].includes(ui.view))ui.view='menu';
   if(S&&!TITULOS[ui.view])ui.view='clube';
   if(S&&tec()&&tec().demitido&&!['carreira','config'].includes(ui.view))ui.view='carreira'; // #37: sem clube, primeiro escolher o novo
   const mesma=telaDesenhada===ui.view;
-  const rol=mesma?[...document.querySelectorAll(ROLAVEIS)].map(e=>[e.scrollLeft||0,e.scrollTop||0]):[],pag=mesma?[window.scrollX||0,window.scrollY||0]:null;
+  const areas=mesma?[...document.querySelectorAll(ROLAVEIS)]:[];
+  const rol=areas.map(e=>[e.scrollLeft||0,e.scrollTop||0]),pag=mesma?[window.scrollX||0,window.scrollY||0]:null;
   // #65: redesenhar a tela não pode jogar o foco do teclado para o começo da página: volta ao mesmo botão/campo
   const at=document.activeElement,chave=at&&at.dataset&&(at.id?['id',at.id]:at.dataset.acao?['data-acao',at.dataset.acao]:at.dataset.digitar?['data-digitar',at.dataset.digitar]:null);
+  const areaFocada=areas.indexOf(at);
   const selecao=typeof at?.selectionStart==='number'?[at.selectionStart,at.selectionEnd]:null;
   document.body.classList.toggle('em-jogo',!!S);
   document.getElementById('lateral').innerHTML=lateral();
   const V={menu:vMenu,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,tabela:vTabela,competicoes:vCompeticoes,copa:vCopa,libertadores:vLibertadores,sulamericana:vSulamericana,estadual:vEstadual,jogos:vJogos,artilharia:vArt,mercado:vMercado,financas:vFin,rodada:vRodada,aovivo:vAoVivo,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
   const topo=S?barraAcoes(TITULOS[ui.view]):['menu','inicio'].includes(ui.view)?'':`<div class="topo-simples"><button class="btn fantasma" data-acao="go|menu">${icone('voltar')}Tela inicial</button></div>`;
   document.getElementById('app').innerHTML=topo+V[ui.view]();
-  if(pag){const els=[...document.querySelectorAll(ROLAVEIS)];if(els.length===rol.length)els.forEach((e,i)=>{e.scrollLeft=rol[i][0];e.scrollTop=rol[i][1]});window.scrollTo(pag[0],pag[1])}
+  if(pag){
+    const els=[...document.querySelectorAll(ROLAVEIS)];
+    if(els.length===rol.length){
+      els.forEach((e,i)=>{e.scrollLeft=rol[i][0];e.scrollTop=rol[i][1]});
+      if(areaFocada>=0)els[areaFocada].focus({preventScroll:true});
+    }
+    window.scrollTo(pag[0],pag[1]);
+  }
   telaDesenhada=ui.view;
   if(chave&&at.isConnected===false){
     const n=document.querySelector(`[${chave[0]}="${(globalThis.CSS&&CSS.escape?CSS.escape(chave[1]):chave[1])}"]`);

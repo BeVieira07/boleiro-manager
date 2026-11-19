@@ -62,7 +62,7 @@ export const cartoesContinentais = TORNEIOS.map(cartaoDe);
 
 function tabelaGrupo(tor, g, i, me) {
   const T = tabelaGrupoCont(tor, g), nome = `Grupo ${'ABCDEFGH'[i]}`;
-  return `<section class="card tabela-card"><h2 class="t3">${nome}</h2><div class="tw"><table><caption class="sr">${nome} da ${esc(tor.nome)}</caption>
+  return `<section class="card tabela-card"><h2 class="t3">${nome}</h2><div class="tw" tabindex="0" role="region" aria-label="${nome} da ${esc(tor.nome)}"><table><caption class="sr">${nome} da ${esc(tor.nome)}</caption>
     <thead><tr><th scope="col">#</th><th scope="col">Clube</th><th scope="col" class="n">Pts</th><th scope="col" class="n">J</th><th scope="col" class="n">SG</th></tr></thead>
     <tbody>${T.map((t, k) => { const c = clubeCont(t.id), z = k < 2;
       return `<tr class="${t.id === me ? 'me' : ''}"><td class="${z ? 'zona-lib' : ''}"${z ? ' title="Vai às oitavas"' : ''}>${k + 1}${z ? '<span class="sr"> (vai às oitavas)</span>' : ''}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n"><b>${t.Pts}</b></td><td class="n">${t.J}</td><td class="n">${t.GP - t.GC}</td></tr>` }).join('')}</tbody>

@@ -59,7 +59,7 @@ function linhasDe(c) {
 export function artilhariaDoTorneio(tor, id, nome = tor.nome) {
   const L = ranquear(artilheirosComId(tor, 10));
   return `<section class="card tabela-card"><div class="card-topo"><h2 class="t3">Artilharia</h2><button class="btn fantasma sm" data-acao="verArtilharia|${id}">Ver ranking</button></div>
-    <div class="tw"><table><caption class="sr">Artilharia · ${esc(nome)}</caption>
+    <div class="tw" tabindex="0" role="region" aria-label="Artilharia de ${esc(nome)}"><table><caption class="sr">Artilharia · ${esc(nome)}</caption>
     <thead><tr><th scope="col">#</th><th scope="col">Jogador</th><th scope="col">Clube</th><th scope="col" class="n">Gols</th></tr></thead>
     <tbody>${L.map(x => { const c = clubeCont(x.clube); return `<tr><td>${x.rank}</td><td>${esc(x.nome)}${fichaArtilheiro(x)}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n"><b>${x.gols}</b></td></tr>` }).join('') || '<tr><td colspan="4" class="muted">Nenhum gol registrado nesta competição.</td></tr>'}</tbody></table></div></section>`;
 }

@@ -100,7 +100,7 @@ function miniTabela(uc) {
   const ini = Math.max(0, Math.min(i - 3, T.length - 7)), linhas = T.slice(ini, ini + 7);
   const zona = k => (k < top ? 'zona-lib' : bottom && k >= T.length - bottom ? 'zona-z4' : '');
   return `<section class="card"><div class="card-topo"><h2 class="t3">Classificação</h2><span class="muted">${DIVS[d]}</span></div>
-    <div class="tw"><table><caption class="sr">Classificação perto do seu clube</caption>
+    <div class="tw" tabindex="0" role="region" aria-label="Classificação perto do seu clube"><table><caption class="sr">Classificação perto do seu clube</caption>
     <thead><tr><th scope="col">#</th><th scope="col">Clube</th><th scope="col" class="n">J</th><th scope="col" class="n">SG</th><th scope="col" class="n">Pts</th></tr></thead>
     <tbody>${linhas.map((t, k) => { const c = clubById(t.id), pos = ini + k; return `<tr class="${t.id === uc.id ? 'me' : ''}"><td class="${zona(pos)}">${pos + 1}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n">${t.J}</td><td class="n">${t.GP - t.GC}</td><td class="n"><b>${t.Pts}</b></td></tr>` }).join('')}</tbody></table></div>
     <div class="legenda"><span><i class="zona-cor lib"></i>${zonas(d).nomeTop}</span>${bottom ? `<span><i class="zona-cor z4"></i>Rebaixamento (Z${bottom})</span>` : ''}</div>
@@ -119,7 +119,7 @@ export function vClube() {
   </section>`;
   const ch = h => h.champs || { A: h.champ, ...(h.champB ? { B: h.champB } : {}) };
   const hd = [...new Set(S.history.flatMap(h => Object.keys(ch(h))))].sort(), many = hd.length > 1;
-  const historico = S.history.length ? `<section class="card tw"><h2 class="t3">Histórico</h2><table><thead><tr><th>Temporada</th>${hd.map(x => `<th>Campeão${many ? ' ' + DIVS[x] : ''}</th>`).join('')}${S.history.some(h => h.copa) ? '<th>Copa do Brasil</th>' : ''}<th>Sua posição</th><th>Artilheiro</th></tr></thead><tbody>${S.history.map(h => `<tr><td>${h.season}</td>${hd.map(x => `<td>${esc(ch(h)[x] || '-')}</td>`).join('')}${S.history.some(x => x.copa) ? `<td>${esc(h.copa || '-')}</td>` : ''}<td>${h.me}º${many && h.div ? ' (' + DIVS[h.div] + ')' : ''}</td><td>${esc(h.scorer)}</td></tr>`).join('')}</tbody></table></section>` : '';
+  const historico = S.history.length ? `<section class="card"><h2 class="t3">Histórico</h2><div class="tw" tabindex="0" role="region" aria-label="Histórico do clube"><table><thead><tr><th>Temporada</th>${hd.map(x => `<th>Campeão${many ? ' ' + DIVS[x] : ''}</th>`).join('')}${S.history.some(h => h.copa) ? '<th>Copa do Brasil</th>' : ''}<th>Sua posição</th><th>Artilheiro</th></tr></thead><tbody>${S.history.map(h => `<tr><td>${h.season}</td>${hd.map(x => `<td>${esc(ch(h)[x] || '-')}</td>`).join('')}${S.history.some(x => x.copa) ? `<td>${esc(h.copa || '-')}</td>` : ''}<td>${h.me}º${many && h.div ? ' (' + DIVS[h.div] + ')' : ''}</td><td>${esc(h.scorer)}</td></tr>`).join('')}</tbody></table></div></section>` : '';
   return `${indicadores}
   <div class="painel">
     <div class="painel-principal">${proximoJogo(uc, T)}${blocoForma(me)}${blocoAlertas()}</div>

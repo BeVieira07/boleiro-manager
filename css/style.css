@@ -24,7 +24,12 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;scrollbar-color:var(--muted) var(--lateral);scrollbar-gutter:stable}
+html.modal-aberto{overflow:hidden}
+@supports not (scrollbar-color:auto){
+  ::-webkit-scrollbar-thumb{background:var(--muted);border-radius:var(--r-pill)}
+  ::-webkit-scrollbar-track{background:var(--lateral)}
+}
 body{margin:0;background:var(--bg);color:var(--texto);font:14px/1.45 var(--f-texto)}
 h1,h2{font-family:var(--f-titulo);font-weight:700;letter-spacing:.02em;line-height:1.05}
 h1{font-size:38px;margin:0}
@@ -95,14 +100,17 @@ a{color:var(--verde)}
 .stat-sub{font-size:13px;color:var(--muted)}
 
 /* ---------- tabela ---------- */
-.tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.tw,.tabela-rolavel{position:relative;min-width:0;overflow-x:auto;overscroll-behavior-inline:contain}
+:is(.tw,.tabela-rolavel,.dialogo-caixa,#mbox):focus-visible{
+  outline:2px solid var(--ouro);outline-offset:-2px;box-shadow:none
+}
 table{width:100%;border-collapse:collapse;font-size:13.5px}
 th,td{padding:9px 8px;border-bottom:1px solid var(--linha2);text-align:left;white-space:nowrap}
 th{color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.07em;background:var(--painel3);position:sticky;top:0;z-index:1}
 td.n,th.n{text-align:right} td.c,th.c{text-align:center}
 tr.me td{background:rgba(47,191,113,.14);font-weight:700}
 tr.tit td{background:rgba(47,191,113,.07)}
-.card.tabela-card{padding:0;overflow:hidden}
+.card.tabela-card{padding:0;overflow:clip}
 .card.tabela-card>h3,.card.tabela-card>.t3,.card.tabela-card>.card-topo{padding:var(--e4) 18px 0}
 
 /* ---------- formulários ---------- */
@@ -130,6 +138,8 @@ img.crest{border-radius:0;background:none} /* #101: o escudo aparece inteiro; o 
 .casca{min-height:100dvh}
 .lateral{display:none}
 body.em-jogo .lateral{display:block;position:sticky;top:0;z-index:10;background:var(--bg)}
+html:has(body.em-jogo){scroll-padding-block-start:75px}
+html:has(.nav-abas){scroll-padding-block-start:121px}
 .hud{position:relative;display:flex;align-items:center;gap:18px;min-height:67px;padding:5px 24px 8px;background:linear-gradient(var(--painel),var(--lateral));border-bottom:3px solid transparent;border-image:linear-gradient(90deg,var(--verde) 82%,var(--ouro) 82%) 1}
 .marca{display:flex;align-items:center;gap:10px;color:var(--verde);flex:none}
 .marca>div{display:flex;flex-direction:column;line-height:1}
@@ -139,7 +149,7 @@ body.em-jogo .lateral{display:block;position:sticky;top:0;z-index:10;background:
 .nav-item{appearance:none;background:transparent;border:0;display:flex;align-items:center;gap:9px;min-height:43px;padding:5px 15px;border-radius:var(--r-sm);color:var(--texto2);font:italic 800 17px/1 var(--f-titulo);letter-spacing:.045em;text-transform:uppercase;cursor:pointer}
 .nav-item:hover{background:var(--painel);color:var(--texto)}
 .nav .nav-item[aria-current]{color:var(--tinta-verde);background:linear-gradient(180deg,#49db89,var(--verde))}
-.nav-resto{position:absolute;z-index:1;right:24px;top:calc(100% + 6px);padding:6px;border:1px solid var(--linha);border-radius:var(--r);background:var(--painel);box-shadow:var(--sombra)}
+.nav-resto{position:absolute;z-index:1;right:24px;top:calc(100% + 6px);padding:6px;border:1px solid var(--linha);border-radius:var(--r);background:var(--painel);box-shadow:var(--sombra);max-height:calc(100dvh - 85px);overflow:auto;overscroll-behavior:contain}
 .nav-resto .nav-item{width:100%;font:600 14px/1.35 var(--f-texto);letter-spacing:0;text-transform:none}
 .clube-cartao{background:var(--painel);border:1px solid var(--linha);border-left:3px solid var(--linha);border-radius:var(--r-sm);padding:5px 10px;display:flex;gap:10px;align-items:center}
 .clube-cartao>div{display:flex;flex-direction:column;line-height:1.3;min-width:0}
@@ -169,6 +179,7 @@ body.em-jogo .conteudo{max-width:1312px;padding:22px 16px 48px}
 .placar-temporada dd{margin:0;font:800 25px/1.15 var(--f-titulo);font-variant-numeric:tabular-nums}
 .barra-botoes{display:flex;flex-wrap:wrap;gap:10px}
 .barra-botoes .btn{min-height:46px}
+.btn[data-acao=confirmarVez]{max-width:100%;white-space:normal;overflow-wrap:anywhere}
 .barra-botoes .botao-jogar{min-height:54px;padding-inline:28px;background:linear-gradient(#49db89,var(--verde));font:italic 800 20px/1.15 var(--f-titulo)}
 @media(min-width:800px){
   .nav>.nav-item[aria-current],.barra-botoes .botao-jogar{isolation:isolate;background:none;position:relative}
@@ -179,9 +190,10 @@ body.em-jogo .conteudo{max-width:1312px;padding:22px 16px 48px}
   .nav>.nav-item{gap:5px;padding-inline:9px}
   .clube-cartao b{max-width:115px;overflow-wrap:anywhere}
 }
-.vez{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--texto2)}
+.vez{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px;color:var(--texto2);overflow-wrap:anywhere}
 .topo-simples{margin-bottom:var(--e3)}
 @media(max-width:799px){
+  html:has(body.em-jogo){scroll-padding-block-end:calc(72px + env(safe-area-inset-bottom))}
   .hud{min-height:59px;padding:4px 12px;gap:10px}
   .hud .marca{margin-right:auto}
   .hud .marca>div,.clube-cartao>div,.nav-secao{display:none}
@@ -190,7 +202,7 @@ body.em-jogo .conteudo{max-width:1312px;padding:22px 16px 48px}
   .nav{position:fixed;inset:auto 0 0;justify-content:space-around;gap:3px;padding:8px 6px calc(8px + env(safe-area-inset-bottom));margin:0;background:var(--lateral);border-top:1px solid var(--linha)}
   .nav>.nav-item{flex:1;justify-content:center;gap:4px;padding:5px 2px;font-size:clamp(12px,3.8vw,16px)}
   .nav>.nav-item .icone{width:15px;height:15px}
-  .nav-resto{right:12px}
+  .nav-resto{right:12px;max-height:calc(100dvh - 140px - env(safe-area-inset-bottom))}
   .nav-abas{padding:0 6px;gap:2px}
   .nav-abas button{flex:1;min-width:0;padding:0 3px;font-size:11px;letter-spacing:0}
   body.em-jogo .conteudo{padding:14px 16px calc(86px + env(safe-area-inset-bottom))}
@@ -265,7 +277,6 @@ body.em-jogo .conteudo{max-width:1312px;padding:22px 16px 48px}
 .filtros{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:var(--e3)}
 .filtros>.chips{flex:1 1 auto}
 .resumo,.nota{font-size:13px}
-.tabela-rolavel{max-height:calc(100vh - 230px);overflow:auto;-webkit-overflow-scrolling:touch}
 .tabela-jogadores{min-width:960px}
 .tabela-jogadores thead th{top:0;z-index:3}
 .tabela-jogadores td,.tabela-jogadores tbody th{padding:10px 6px;vertical-align:middle;font-weight:400}
@@ -294,7 +305,6 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .base-vazia{padding:0 16px 14px;margin:0}
 .rot{display:none}
 @media(max-width:799px){
-  .tabela-rolavel{max-height:none;overflow:visible}
   .tabela-jogadores{min-width:0}
   .tabela-jogadores thead{display:none}
   .tabela-jogadores,.tabela-jogadores tbody{display:block}
@@ -386,7 +396,7 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .marca-ev.vermelho{background:var(--perigo);height:12px;top:4px}
 .marca-ev.lesao{background:var(--info);height:12px;top:4px}
 .tempo-escala{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-top:6px}
-.eventos{list-style:none;margin:0;padding:0;max-height:240px;overflow:auto;border-top:1px solid var(--linha2)}
+.eventos{list-style:none;margin:0;padding:0;border-top:1px solid var(--linha2)}
 .ev{display:flex;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--linha2)}
 .ev-min{min-width:30px;color:var(--ouro);font-weight:700;font-variant-numeric:tabular-nums}
 .ev.gol .ev-ic{color:var(--texto)} .ev.cartao .ev-ic{color:var(--ouro)} .ev.vermelho .ev-ic{color:var(--perigo)} .ev.lesao .ev-ic{color:var(--info)}
@@ -478,6 +488,7 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .estrelas{color:var(--ouro);letter-spacing:2px}
 .estrelas .apagada{color:var(--muted);opacity:1}
 @media(max-width:760px){
+  html:has(.escolha-confirmar){scroll-padding-block-end:calc(116px + env(safe-area-inset-bottom))}
   .escolha-topo{padding:8px 14px;justify-content:space-between}
   .escolha-etapas{display:none}
   .escolha-corpo{padding:20px 14px calc(116px + env(safe-area-inset-bottom))}
@@ -508,7 +519,8 @@ body.em-jogo .avisos{bottom:24px}
 @keyframes entra{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .dialogo{position:fixed;inset:0;z-index:30;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;padding:16px}
 .dialogo[hidden]{display:none}
-.dialogo-caixa{background:var(--painel);border:1px solid var(--linha);border-radius:var(--r-lg);width:min(460px,100%);max-height:90vh;overflow:auto;padding:22px;box-shadow:var(--sombra)}
+.dialogo-caixa,#modal .box{background:var(--painel);border:1px solid var(--linha);border-radius:var(--r-lg);width:100%;max-height:100%;overflow:auto;overscroll-behavior:contain;overflow-wrap:anywhere;padding:20px;box-shadow:var(--sombra)}
+.dialogo-caixa{max-width:460px}
 .dialogo-caixa h2{font-size:26px;display:flex;align-items:center;gap:8px;margin-top:0}
 .dialogo-caixa h2 .icone{color:var(--perigo-claro)}
 .dialogo-acoes{display:flex;gap:var(--e2);justify-content:flex-end;flex-wrap:wrap;margin-top:var(--e4)}
@@ -520,7 +532,7 @@ body.em-jogo .avisos{bottom:24px}
 @media(max-width:799px){body.em-jogo .avisos{bottom:84px}}
 /* modal (o jogo ao vivo, empréstimos e fim de temporada) */
 #modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;align-items:center;justify-content:center;z-index:20;padding:16px}
-#modal .box{background:var(--painel);border:1px solid var(--linha);border-radius:var(--r-lg);max-width:640px;width:100%;max-height:90vh;overflow:auto;padding:20px;box-shadow:var(--sombra)}
+#modal .box{max-width:640px}
 /* tela inicial e ligas */
 .menu-ini{max-width:900px;margin:0 auto}
 .menu-ini h1{font-size:46px;margin:12px 0 18px;color:var(--verde);letter-spacing:.04em;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
@@ -558,9 +570,7 @@ body.em-jogo .avisos{bottom:24px}
 .inicio-online p{margin:0 0 12px;color:var(--texto2);font-size:13px}
 .inicio-noticias{display:flex;align-items:center;min-height:40px;border-top:2px solid var(--linha);background:var(--lateral);color:var(--texto2)}
 .inicio-noticias>b{align-self:stretch;display:grid;place-items:center;padding:0 18px;background:var(--ouro);color:var(--bg);font:italic 800 16px/1 var(--f-titulo);text-transform:uppercase}
-.inicio-noticias ul{display:flex;gap:20px;list-style:none;overflow-x:auto;margin:0;padding:10px 18px}
-.inicio-noticias li{white-space:nowrap}
-.inicio-noticias li+li::before{content:"/";margin-right:20px;color:var(--verde)}
+.inicio-noticias ul{display:flex;flex-wrap:wrap;gap:6px 20px;min-width:0;list-style:none;margin:0;padding:10px 18px;overflow-wrap:anywhere}
 .inicio-noticias p{margin:0;padding:10px 18px;font-size:12px}
 .conta-menu{position:relative}
 .conta-menu>summary{list-style:none;cursor:pointer}
@@ -568,7 +578,7 @@ body.em-jogo .avisos{bottom:24px}
 .conta-menu>summary:not(.btn){display:flex;align-items:center;gap:10px;background:var(--painel);border:1px solid var(--linha);border-radius:var(--r-pill);padding:4px 14px 4px 4px;min-height:44px;font-weight:600}
 .avatar{width:34px;height:34px;border-radius:50%;background:var(--verde);color:var(--tinta-verde);display:flex;align-items:center;justify-content:center;font-weight:800}
 .conta-nome{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.conta-painel{position:absolute;right:0;top:calc(100% + 10px);z-index:20;width:min(320px,calc(100vw - 32px));background:var(--painel);border:1px solid var(--linha);border-radius:14px;padding:var(--e4);display:flex;flex-direction:column;gap:var(--e3);box-shadow:var(--sombra)}
+.conta-painel{margin-top:10px;background:var(--painel);border:1px solid var(--linha);border-radius:14px;padding:var(--e4);display:flex;flex-direction:column;gap:var(--e3);overflow-wrap:anywhere}
 .conta-painel p{margin:0}
 .conta-painel .row input{flex:1;min-width:0}
 .conta-form{display:flex;flex-direction:column;gap:6px}

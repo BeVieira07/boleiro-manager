@@ -161,7 +161,18 @@ function pintar(v) {
   if (sig !== v.sig) { v.sig = sig; paineis(v) }
 }
 function controles(v) { const c = el('av-controles'); if (c) c.innerHTML = htmlControles(v) }
-function paineis(v) { const r = el('av-rodada'), c = el('av-classif'); if (r) r.innerHTML = htmlRodada(v); if (c) c.innerHTML = htmlClassif(v) }
+function paineis(v) {
+  const rodada = el('av-rodada'), classif = el('av-classif');
+  if (rodada) rodada.innerHTML = htmlRodada(v);
+  if (!classif) return;
+  const anterior = classif.querySelector?.('.tw');
+  const deslocamento = anterior?.scrollLeft ?? 0;
+  const focada = anterior && document.activeElement === anterior;
+  classif.innerHTML = htmlClassif(v);
+  const tabela = classif.querySelector?.('.tw');
+  if (tabela) tabela.scrollLeft = deslocamento;
+  if (focada) tabela?.focus({ preventScroll: true });
+}
 
 const botoes = v => v.fim
   ? `<button class="btn" id="ldone" data-acao="avContinuar">${v.proximo ? `Ir para a ${v.proximo}` : 'Continuar'}</button>`
@@ -254,7 +265,7 @@ function htmlClassif(v) {
   if (tor) { // #230: o grupo do seu clube no estadual, andando com os placares do minuto
     const me = userClub().id, ids = tor.grupos.find(g => g.includes(me)) || tor.grupos[0], vaga = tor.grupos.length === 1 ? 2 : 1;
     const T = tabelaGrupoNoMinuto(tor, ids, v.estadual, v.jogos, v.min), titulo = tor.grupos.length > 1 ? `Grupo ${'AB'[tor.grupos.indexOf(ids)]}` : 'Classificação';
-    return `<h2 class="t3">${esc(tor.nome)}: ${titulo}</h2><section class="card tabela-card"><div class="tw"><table><caption class="sr">${esc(tor.nome)}, ${titulo.toLowerCase()} no minuto ${v.min}</caption>
+    return `<h2 class="t3" id="av-titulo-classif">${esc(tor.nome)}: ${titulo}</h2><section class="card tabela-card"><div class="tw" tabindex="0" role="region" aria-labelledby="av-titulo-classif"><table><caption class="sr">${esc(tor.nome)}, ${titulo.toLowerCase()} no minuto ${v.min}</caption>
       <thead><tr><th scope="col">#</th><th scope="col">Clube</th><th scope="col" class="n">J</th><th scope="col" class="n">SG</th><th scope="col" class="n">Pts</th></tr></thead>
       <tbody>${T.map((t, i) => { const c = clubById(t.id), z = i < vaga; return `<tr class="${t.id === me ? 'me' : ''}"><td class="${z ? 'zona-lib' : ''}"${z ? ' title="Vai à final"' : ''}>${i + 1}${z ? '<span class="sr"> (vai à final)</span>' : ''}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n">${t.J}</td><td class="n">${t.GP - t.GC}</td><td class="n"><b>${t.Pts}</b></td></tr>` }).join('')}</tbody>
     </table></div></section>`;
@@ -264,7 +275,7 @@ function htmlClassif(v) {
     const d = antes.indexOf(id) - i;
     return d > 0 ? `<span class="ok">${icone('subir', { tam: 12, rotulo: `subiu ${d}` })}</span>` : d < 0 ? `<span class="bad">${icone('descer', { tam: 12, rotulo: `caiu ${-d}` })}</span>` : '';
   };
-  return `<h2 class="t3">Classificação provisória</h2>${serieChips(v)}<section class="card tabela-card"><div class="tw"><table><caption class="sr">Classificação da ${DIVS[v.div]} no minuto ${v.min}</caption>
+  return `<h2 class="t3" id="av-titulo-classif">Classificação provisória</h2>${serieChips(v)}<section class="card tabela-card"><div class="tw" tabindex="0" role="region" aria-labelledby="av-titulo-classif"><table><caption class="sr">Classificação da ${DIVS[v.div]} no minuto ${v.min}</caption>
     <thead><tr><th scope="col">#</th><th scope="col"><span class="sr">Variação</span></th><th scope="col">Clube</th><th scope="col" class="n">J</th><th scope="col" class="n">SG</th><th scope="col" class="n">Pts</th></tr></thead>
     <tbody>${T.map((t, i) => { const c = clubById(t.id); return `<tr class="${t.id === me ? 'me' : ''}"><td>${i + 1}</td><td>${mov(t.id, i)}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n">${t.J}</td><td class="n">${t.GP - t.GC}</td><td class="n"><b>${t.Pts}</b></td></tr>` }).join('')}</tbody>
   </table></div></section>`;
