@@ -19,6 +19,13 @@ function clienteFalso({ sessao = null } = {}) {
       if (a.email.startsWith('usado@')) return { data: {}, error: { message: 'User already registered' } };
       return { data: { session: f.semSessao ? null : { user: { id: 'u2', email: a.email } } }, error: null } },
     signInWithOAuth: async a => { f.pedidos.push(['oauth', a.provider, a.options.redirectTo]); return { error: null } },
+    resetPasswordForEmail: async (email, opcoes) => { f.pedidos.push(['recuperar', email, opcoes.redirectTo]); return { error: f.erroEnvio } },
+    updateUser: async ({ password }) => {
+      if (f.naTrava) f.travou = true;
+      f.pedidos.push(['nova senha', password]);
+      if (!f.erroSenha) await f.ouvinte('USER_UPDATED', sessao);
+      return { error: f.erroSenha };
+    },
     signOut: async o => { f.pedidos.push(['sair', o && o.scope]); return { error: null } }
   };
   f.from = tabela => { if (f.naTrava) f.travou = true; return {
@@ -155,4 +162,89 @@ test('criar conta com nome, e-mail e senha: valida, manda o nome para o perfil e
   f.semSessao = true; j.campo('emailNovaConta', 'cia@exemplo.com'); // confirmação de e-mail ligada no painel
   await j.acao('criarConta');
   assert.ok(j.alertas.some(a => a.includes('Confirme o e-mail')));
+});
+
+test('Esqueci a senha pede e-mail no formulário e confirma sem indicar se a conta existe (#258)', async t => {
+  const f = clienteFalso();
+  conta.configurarConta({ url: 'https://exemplo.supabase.co', chave: 'chave-publica', cliente: f });
+  const j = carregarJogo({ boot: true });
+  globalThis.location = new URL('https://site.exemplo/boleiro-manager/?origem=teste#jogo');
+  t.after(() => { delete globalThis.location });
+  await conta.iniciarConta(() => j.run('render()'));
+  assert.match(j.html(), /<summary>Esqueci a senha<\/summary>[\s\S]*?for="emailRecuperacao"[\s\S]*?data-acao="enviarRecuperacaoSenha"/);
+  j.campo('emailRecuperacao', 'inválido');
+  await j.acao('enviarRecuperacaoSenha');
+  assert.match(j.alertas.at(-1), /e-mail válido/);
+  assert.deepEqual(f.pedidos, []);
+
+  j.campo('emailRecuperacao', ' ana@exemplo.com ');
+  await j.acao('enviarRecuperacaoSenha');
+  assert.deepEqual(f.pedidos.at(-1), ['recuperar', 'ana@exemplo.com', 'https://site.exemplo/boleiro-manager/']);
+  const mensagem = j.alertas.at(-1);
+  assert.match(mensagem, /Se houver uma conta.*link de recuperação foi enviado/);
+
+  f.erroEnvio = { code: 'user_not_found' };
+  await j.acao('enviarRecuperacaoSenha');
+  assert.equal(j.alertas.at(-1), mensagem);
+  f.erroEnvio = { code: 'over_email_send_rate_limit', message: 'For security purposes, you can only request this after 42 seconds.' };
+  await j.acao('enviarRecuperacaoSenha');
+  assert.equal(j.alertas.at(-1), mensagem);
+  f.erroEnvio = { code: 'over_email_send_rate_limit', status: 429, message: 'email rate limit exceeded' };
+  await j.acao('enviarRecuperacaoSenha');
+  assert.match(j.alertas.at(-1), /limite de envio de e-mails.*até uma hora/);
+  f.erroEnvio = { message: 'Internal server error' };
+  await j.acao('enviarRecuperacaoSenha');
+  assert.match(j.alertas.at(-1), /Não foi possível solicitar a recuperação/);
+});
+
+test('evento de recuperação na abertura pede e salva a nova senha, com erros em português (#258)', async () => {
+  const sessao = { user: { id: 'u1', email: 'ana@exemplo.com' } };
+  const f = clienteFalso({ sessao });
+  f.auth.getSession = async () => {
+    await f.ouvinte('PASSWORD_RECOVERY', sessao);
+    return { data: { session: sessao } };
+  };
+  conta.configurarConta({ url: 'https://exemplo.supabase.co', chave: 'chave-publica', cliente: f });
+  const j = carregarJogo({ boot: true });
+  await conta.iniciarConta(() => j.run('render()'));
+  await espera();
+  assert.match(j.html(), /Redefinir senha/);
+  assert.match(j.html(), new RegExp(`id="senhaRecuperacao".*minlength="${conta.SENHA_MIN}"`));
+  j.campo('senhaRecuperacao', 'a'.repeat(conta.SENHA_MIN - 1));
+  await j.acao('salvarSenhaRecuperada');
+  assert.match(j.alertas.at(-1), new RegExp(`pelo menos ${conta.SENHA_MIN} caracteres`));
+  assert.deepEqual(f.pedidos, []);
+
+  j.campo('senhaRecuperacao', ' novaSenha ');
+  f.erroSenha = { code: 'same_password', message: 'New password should be different' };
+  await j.acao('salvarSenhaRecuperada');
+  assert.match(j.alertas.at(-1), /senha diferente da anterior/);
+  assert.match(j.html(), /Redefinir senha/);
+
+  f.erroSenha = null;
+  await j.acao('salvarSenhaRecuperada');
+  assert.deepEqual(f.pedidos.at(-1), ['nova senha', ' novaSenha ']);
+  assert.equal(f.travou, undefined);
+  assert.match(j.alertas.at(-1), /Senha alterada com sucesso/);
+  assert.doesNotMatch(j.html(), /Redefinir senha/);
+  await espera();
+  assert.match(j.html(), /Conectado como <b>Ana<\/b>/);
+  const n = f.pedidos.length;
+  await j.acao('salvarSenhaRecuperada');
+  assert.equal(f.pedidos.length, n, 'uma sessão normal não pode enviar outra senha por esse formulário');
+});
+
+test('link vencido explica como pedir outro e deixa o login disponível (#258)', async t => {
+  const f = clienteFalso();
+  conta.configurarConta({ url: 'https://exemplo.supabase.co', chave: 'chave-publica', cliente: f });
+  const j = carregarJogo({ boot: true });
+  globalThis.location = new URL('https://site.exemplo/boleiro-manager/#error_code=otp_expired');
+  const rotas = [];
+  globalThis.history = { replaceState: (_estado, _titulo, url) => rotas.push(url) };
+  t.after(() => { delete globalThis.location; delete globalThis.history });
+  await conta.iniciarConta(() => j.run('render()'));
+  assert.match(j.alertas.at(-1), /link de recuperação é inválido ou expirou.*Esqueci a senha/);
+  assert.match(j.html(), /<summary>Esqueci a senha<\/summary>/);
+  assert.doesNotMatch(j.html(), /Redefinir senha/);
+  assert.deepEqual(rotas, ['/boleiro-manager/']);
 });
