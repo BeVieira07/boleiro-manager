@@ -219,8 +219,8 @@ export function vLigaJogo() {
     return `<tr><th scope="row">${esc(t.nome)}${t.id === eu ? ' <span class="pill">você</span>' : ''}</th><td>${crest(c)} ${esc(c.name)}</td><td>${DIVS[divOf(c)]}</td>
       <td class="n">${S.round ? pos + 'º' : '-'}</td><td>${ok ? icone('ok', { tam: 12 }) + ' confirmou' : 'falta confirmar'}</td>
       <td>${L.dono && t.id !== eu ? botaoRemover(L.id, t.id, t.nome) : ''}</td></tr>` }).join('');
-  return `<section class="card tw"><h2 class="t3">${esc(L.nome)}</h2><table><caption class="sr">Técnicos da liga</caption>
-    <thead><tr><th>Técnico</th><th>Clube</th><th>Série</th><th class="n">Posição</th><th>Rodada ${S.round + 1}</th><td></td></tr></thead><tbody>${linhas}</tbody></table></section>
+  return `<section class="card"><h2 class="t3">${esc(L.nome)}</h2><div class="tw" tabindex="0" role="region" aria-label="Técnicos da liga"><table><caption class="sr">Técnicos da liga</caption>
+    <thead><tr><th>Técnico</th><th>Clube</th><th>Série</th><th class="n">Posição</th><th>Rodada ${S.round + 1}</th><td></td></tr></thead><tbody>${linhas}</tbody></table></div></section>
   ${vPropostas()}
   <p class="muted">Negócios com a IA aparecem nas notícias de todos. A rodada é jogada quando todos confirmam${L.dono ? ' ou quando você força' : ' ou quando o dono força'}.</p>
   <div class="row">${L.dono && L.prontos.length < n ? '<button class="btn sec" data-acao="forcarLiga">Forçar rodada</button>' : ''}<button class="btn sec" data-acao="go|tabela">Ver classificação</button>${botaoSairLiga(L.id)}</div>`;
@@ -258,10 +258,10 @@ function vPropostas() {
   const ps = S.propostas || [], rec = ps.filter(x => x.para === S.atual), env = ps.filter(x => x.de === S.atual);
   if (!rec.length && !env.length) return '<p class="muted">Nenhuma proposta entre técnicos. Faça uma pelo Mercado (jogadores de outros técnicos) ou pelo Elenco (Oferecer).</p>';
   const nome = id => esc(S.managers[id] ? S.managers[id].nome : '?');
-  return `<section class="card tw"><h2 class="t3">Propostas entre técnicos</h2><table><caption class="sr">Propostas recebidas e enviadas</caption><tbody>
+  return `<section class="card"><h2 class="t3" id="propostas-tecnicos">Propostas entre técnicos</h2><div class="tw" tabindex="0" role="region" aria-labelledby="propostas-tecnicos"><table><caption class="sr">Propostas recebidas e enviadas</caption><tbody>
    ${rec.map(x => `<tr><td>De ${nome(x.de)}: ${esc(descrever(x))}</td><td><div class="acoes"><button class="btn sm" data-acao="responderProposta|aceitarProposta|${x.id}">Aceitar</button><button class="btn sec sm" data-acao="contrapropor|${x.id}">Contraproposta</button><button class="btn sec sm" data-acao="responderProposta|recusarProposta|${x.id}">Recusar</button></div></td></tr>`).join('')}
    ${env.map(x => `<tr><td>Para ${nome(x.para)}: ${esc(descrever(x))}</td><td><button class="btn sec sm" data-acao="responderProposta|cancelarProposta|${x.id}">Retirar</button></td></tr>`).join('')}
-  </tbody></table></section>`;
+  </tbody></table></div></section>`;
 }
 
 /* ---------- saída de membros (#37): o clube de quem sai volta para a IA; o dono que sai passa a liga ao membro mais antigo ---------- */

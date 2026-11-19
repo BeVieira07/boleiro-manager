@@ -31,6 +31,7 @@ try {
   // LARGURA=390 node scripts/navegador.mjs ...: tamanho da janela (padrão 1366 x 768), para medir telas no celular
   const largura = +process.env.LARGURA || 1366, altura = +process.env.ALTURA || 768;
   await cmd('Emulation.setDeviceMetricsOverride', { width: largura, height: altura, deviceScaleFactor: 1, mobile: largura < 600 });
+  if (largura < 600) await cmd('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 1 });
   await cmd('Page.reload');
   await new Promise(r => setTimeout(r, 2500)); // a página carrega os módulos
   const r = await cmd('Runtime.evaluate', { expression: readFileSync(arquivo, 'utf8'), awaitPromise: true, returnByValue: true });

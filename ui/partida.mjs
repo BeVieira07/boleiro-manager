@@ -32,7 +32,7 @@ export function itemEvento(e,H,A,meu){
 export const marcador=(e,H,A)=>{const team=e.side==='h'?H:A,[,nome]=EVENTO[e.t]||['',e.t];
   return `<span class="marca-ev ${e.t} ${e.side}${e.auto?' auto':''}" style="left:${Math.min(100,e.m/DURACAO*100)}%" title="${e.m}' ${nome}: ${esc(e.name)} (${esc(team.name)})"></span>`};
 // #64: o modal prende o foco; Esc fecha quando `fechavel` (o jogo ao vivo e a demissão não fecham)
-export function openModal(html,{fechavel=true}={}){const m=document.getElementById('modal');const b=document.getElementById('mbox');b.innerHTML=html;const t=b.querySelector&&b.querySelector('h2,.placar-num');if(t&&b.setAttribute){t.id=t.id||'mtitulo';b.setAttribute('aria-labelledby',t.id)}m.style.display='flex';fecharCamada(m);abrirCamada(m,fechavel?closeModal:null)}
+export function openModal(html,{fechavel=true}={}){const m=document.getElementById('modal');const b=document.getElementById('mbox');b.innerHTML=html;const t=b.querySelector&&b.querySelector('h2,.placar-num');if(t&&b.setAttribute){t.id=t.id||'mtitulo';b.setAttribute('aria-labelledby',t.id)}m.style.display='flex';abrirCamada(m,fechavel?closeModal:null)}
 export function closeModal(){const m=document.getElementById('modal');m.style.display='none';fecharCamada(m)}
 
 export function seasonEnd(){

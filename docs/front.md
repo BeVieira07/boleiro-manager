@@ -38,7 +38,7 @@ Os nomes antigos (`--panel`, `--accent`, `--danger`…) apontam para os novos e 
 | `.tend` | seta de tendência do overall (`tendenciaTag(p)`). |
 | `.barra` | progresso (8 px; `.fina` 6 px). JS: `barra(pct, cor)`. |
 | `.stats` + `.stat` | linha de indicadores com rótulo, valor grande (`.stat-valor`), unidade, barra e subtexto. JS: `stat({rotulo, valor, unid, sub, cor, pct})`. |
-| `table` / `.tw` | tabela com cabeçalho fixo; `.tw` rola na horizontal dentro do cartão. `tr.me` destaca o seu clube; `tr.tit` os titulares; `td.n` alinha números à direita, `td.c` centraliza. |
+| `table` / `.tw` / `.tabela-rolavel` | O contêiner da tabela rola na horizontal quando precisa. Use `tabindex="0"`, `role="region"` e um nome acessível para permitir que as setas desloquem a tabela. `tr.me` destaca o seu clube, `tr.tit` os titulares, `td.n` alinha números à direita e `td.c` centraliza. |
 | `.busca` | campo de busca com ícone. |
 | `.crest` | escudo redondo (`.m` 40 px, `.g` 68 px). `crest(c)` em `ui/partida.mjs` troca pela sigla colorida se a imagem falhar. |
 
@@ -71,5 +71,6 @@ Atributos de evento (ligados em `ui/main.mjs`): `data-acao` (clique), `data-muda
 - Foco: anel dourado em `:focus-visible`; `render()` devolve o foco ao mesmo botão ou campo depois de redesenhar; trocar de tela leva o foco ao conteúdo; o primeiro Tab mostra "Pular para o conteúdo". Modais prendem o foco e fecham com Esc.
 - Alvos de toque de 44 px em tela de toque (`@media(pointer:coarse)`). No computador, botões `.sm` continuam compactos.
 - Animações e transições somem com `prefers-reduced-motion`.
-- Larguras conferidas: 360, 768 e 1280 px sem rolagem horizontal da página; tabelas largas rolam dentro do cartão.
+- A página faz a rolagem vertical do conteúdo. Menus e modais que excedem a altura disponível rolam no próprio painel. Um modal pausa a rolagem da página enquanto estiver aberto.
+- Para auditar largura e painéis roláveis no Chrome, execute `npm start` e `node scripts/navegador.mjs http://localhost:3000/ scripts/medir-rolagem.js` com `LARGURA` em 360, 390, 1366 e 1920. Use `ALTURA` para testar janelas baixas.
 - `tests/acessibilidade.test.mjs` percorre todas as telas e confere essas regras; `tests/telas.test.mjs` garante que nenhuma classe do CSS fica sem uso.

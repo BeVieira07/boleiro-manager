@@ -91,8 +91,8 @@ export function vElenco() {
       <button type="button" class="btn fantasma" data-acao="${a}|ord|${f.ord}">${f.dir === -1 ? 'Decrescente' : 'Crescente'}</button></div>
     <button class="btn sec" data-acao="go|escalacao">${icone('escalacao', { tam: 16 })}Mudar escalação</button></div>
   <section class="card tabela-card">
-    <div class="card-topo elenco-cabecalho"><h2 class="t3">Elenco (<span id="totalElenco" aria-live="polite">${lista.length}</span>)</h2><span class="muted">Ordenado por ${COLUNAS.find(([, chave]) => chave === f.ord)?.[0].toLowerCase() || 'posição'}</span></div>
-    <div class="tabela-rolavel"><table class="tabela-jogadores tabela-elenco">
+    <div class="card-topo elenco-cabecalho"><h2 class="t3" id="titulo-elenco">Elenco (<span id="totalElenco" aria-live="polite">${lista.length}</span>)</h2><span class="muted">Ordenado por ${COLUNAS.find(([, chave]) => chave === f.ord)?.[0].toLowerCase() || 'posição'}</span></div>
+    <div class="tabela-rolavel" tabindex="0" role="region" aria-labelledby="titulo-elenco"><table class="tabela-jogadores tabela-elenco">
     <caption class="sr">Elenco do ${esc(uc.name)}</caption>
     <thead><tr>${COLUNAS.map(([rotulo, chave, classe]) => th(rotulo, chave, f, a, classe)).join('')}${th('Mercado', '', f, a)}</tr></thead>
     <tbody id="corpoElenco">${corpoElenco(lista, titulares)}</tbody></table></div></section>

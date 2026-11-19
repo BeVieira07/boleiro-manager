@@ -125,7 +125,7 @@
 .figma-mercado :is(input, select) { min-width: 0; width: 100%; }
 .figma-mercado .mer-resumo { padding: var(--e4) 18px var(--e3); margin: 0; align-items: baseline; }
 .figma-mercado .mer-resumo .t3 { margin: 0; }
-.figma-mercado .tabela-rolavel { position: relative; overflow: auto; max-height: 34rem; }
+.conteudo:has(.figma-mercado) { max-width: 1200px; }
 .figma-mercado .tabela-jogadores.mercado { min-width: 995px; display: table; }
 .figma-mercado .mercado thead { display: table-header-group; }
 .figma-mercado .mercado tbody { display: table-row-group; }
@@ -147,11 +147,6 @@
 .figma-mercado .mercado .rot { display: none; }
 .figma-mercado .mercado .acoes .btn.sm { min-height: 36px; }
 
-:is(.figma-classificacao, .figma-artilharia, .figma-mercado) [role="region"]:focus-visible {
-  outline: 2px solid var(--ouro);
-  outline-offset: -2px;
-}
-
 @media (min-width: 850px) {
   .figma-financas .stats, .figma-mercado .mer-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .figma-financas-corpo { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
@@ -160,9 +155,8 @@
 }
 
 @media (max-width: 799px) {
-  .figma-mercado .mercado tr > th { position: sticky; top: 0; background: var(--painel3); }
-  .figma-mercado .mercado tbody th { top: auto; background: var(--painel); }
-  .figma-mercado .mercado :is(th, td).c-pos { position: sticky; left: 0; background: var(--painel); }
+  .figma-mercado .mercado tr > th,
+  .figma-mercado .mercado :is(th, td).c-pos { position: static; }
   .figma-mercado .mercado :is(th, td).c-nome { min-width: 7rem; }
 }
 

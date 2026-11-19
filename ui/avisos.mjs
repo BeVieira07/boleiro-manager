@@ -34,15 +34,26 @@ const focaveis = c => [...c.querySelectorAll(FOCAVEIS)].filter(x => x.offsetPare
 const pilha = []; // modais abertos: {caixa, origem, aoEsc}
 
 export function abrirCamada(caixa, aoEsc) {
-  pilha.push({ caixa, origem: document.activeElement, aoEsc });
+  const i = pilha.findIndex(p => p.caixa === caixa);
+  const anterior = i >= 0 ? pilha.splice(i, 1)[0] : null;
+  const camada = { caixa, origem: anterior?.origem ?? document.activeElement, aoEsc };
+  pilha.push(camada);
   if (!real(caixa)) return;
-  const alvo = caixa.querySelector('[data-principal]') || caixa.querySelector('input,select') || focaveis(caixa)[0];
-  setTimeout(() => alvo && alvo.focus(), 0);
+  document.documentElement.classList.add('modal-aberto');
+  const painel = caixa.querySelector('[role="dialog"]');
+  painel.tabIndex = -1;
+  painel.scrollTop = 0;
+  const excede = painel.scrollHeight > painel.clientHeight;
+  const alvo = excede ? painel : caixa.querySelector('[data-principal]') || caixa.querySelector('input,select') || focaveis(caixa)[0] || painel;
+  setTimeout(() => {
+    if (pilha.at(-1) === camada) alvo.focus({ preventScroll: true });
+  }, 0);
 }
 export function fecharCamada(caixa) {
   const i = pilha.findIndex(p => p.caixa === caixa); if (i < 0) return;
   const [p] = pilha.splice(i, 1);
-  if (p.origem && p.origem.isConnected && p.origem.focus) p.origem.focus();
+  if (real(caixa)) document.documentElement.classList.toggle('modal-aberto', pilha.length > 0);
+  if (i === pilha.length && p.origem?.isConnected) p.origem.focus({ preventScroll: true });
 }
 /** Esc fecha o modal de cima; Tab e Shift+Tab ficam dentro dele; Enter no campo de valor envia. */
 export function teclaModal(ev) {

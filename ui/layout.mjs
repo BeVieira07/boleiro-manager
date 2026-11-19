@@ -48,7 +48,7 @@ export function lateral() {
     <nav class="nav" aria-label="Seções do jogo">${secoes}</nav>
     <div class="clube-cartao" role="group" aria-label="${esc(uc.name)}, ${DIVS[divOf(uc)] || ''}, temporada ${S.season}">${crest(uc, 'm')}<div><b>${esc(uc.name)}</b><span class="muted">${DIVS[divOf(uc)] || ''} · ${S.season}</span></div></div>
     <button type="button" id="opcoes-jogo" class="btn fantasma icone-so nav-mais" data-acao="alternarMais" aria-label="Opções" aria-expanded="${!!ui.maisAberto}" aria-controls="navResto">${icone('menu')}</button>
-    <div class="nav-resto" id="navResto"${ui.maisAberto ? '' : ' hidden'}>
+    <div class="nav-resto" id="navResto" role="group" aria-labelledby="opcoes-jogo"${ui.maisAberto ? '' : ' hidden'}>
       ${ui.liga ? opcao('go|liga', 'Liga', 'liga') : ''}
       ${opcao('go|config', 'Configurações', 'engrenagem')}
       ${opcao('voltarMenu', ui.liga ? 'Sair da liga' : 'Salvar e sair', 'sair')}
