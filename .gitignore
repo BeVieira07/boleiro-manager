@@ -3,6 +3,7 @@ node_modules/
 data/*-raw.json
 save-*.json
 .DS_Store
+supabase/.temp/
 
 # pastas de trabalho temporárias do Claude Code (uma por issue)
 .claude/worktrees/
