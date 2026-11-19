@@ -1,6 +1,7 @@
+import { COPA, penaltiDaCopa } from '../core/copa.mjs';
 import { esc } from '../core/utils.mjs';
 import { S, tec, tecnicos, usarTecnico, userClub } from '../core/estado.mjs';
-import { autoXI, confirmarRodada, jogarRodada, validateLineup } from '../core/motor.mjs';
+import { autoXI, concluirRodadaCopa, confirmarRodada, jogarRodada, validateLineup } from '../core/motor.mjs';
 import { demissao } from './diretoria.mjs';
 import { save, ui } from './estado.mjs';
 import { seasonEnd } from './partida.mjs';
@@ -9,22 +10,47 @@ import { icone } from './icones.mjs';
 import { render } from './telas.mjs';
 import { avisar, confirmar } from './avisos.mjs';
 import { bloqueadoNaLiga, botaoLiga } from './ligajogo.mjs';
-import { verAoVivo } from './configuracoes.mjs';
+import { prefs, verAoVivo } from './configuracoes.mjs';
 import { rotuloRodada } from './estadual.mjs';
 
 export function playRound(aoVivo=true){
   if(bloqueadoNaLiga())return; // na liga, quem joga a rodada é o servidor (#34)
   encerrarVivo(); // a rodada anterior ao vivo, se ficou aberta, termina aqui
-  const r=jogarRodada();
+  const r=jogarRodada({adiarCopa:aoVivo&&prefs().aoVivo!=='nunca'});
   if(r.demitido){if(r.tecnico)usarTecnico(r.tecnico);demissao();return} // #37: escolher o novo clube antes da rodada
   if(r.fim){seasonEnd();return}
   if(r.erro){if(r.tecnico)usarTecnico(r.tecnico);avisar(r.erro,'erro');ui.view=r.faltam?'clube':'escalacao';render();return}
   const games=r.jogos,mine=r.meu;
   ui.lastRound=r.estadual?{pre:r.estadual.dia,games}:{round:S.round,games}; // #132: data do estadual
   save();
-  const fim=()=>{ui.view='rodada';render();if(S.round>=S.fixtures.length)seasonEnd();if(tec().demitido)demissao()};
-  if(mine&&aoVivo&&verAoVivo(mine))iniciarVivo(games,mine,fim,r.estadual?{estadual:r.estadual.dia}:{rodada:S.round-1}); // #106; o estadual também (#230)
-  else if(aoVivo)fim();
+  if(!aoVivo)return;
+  const temCopa=!!S.copa?.pendente, seguir=temCopa?retomarCopa:mostrarResultados;
+  if(mine&&verAoVivo(mine))iniciarVivo(games,mine,seguir,{estadual:r.estadual?.dia,proximo:temCopa?COPA:null});
+  else seguir();
+}
+function fecharCopaAoVivo(){concluirRodadaCopa();save()}
+function mostrarResultados(){
+  if(S.copa?.pendente)fecharCopaAoVivo();
+  ui.view='rodada';render();if(S.round>=S.fixtures.length)seasonEnd();if(tec().demitido)demissao();
+}
+export function retomarCopa(){
+  if(ui.liga||!S.copa?.pendente)return;
+  const pendente=S.copa.pendente, {rodada,jogos,minuto}=pendente;
+  ui.lastRound={round:rodada+1,games:S.fixtures[rodada]};
+  const vistos=pendente.vistos||[], ativos=tecnicos().filter(t=>!t.demitido);
+  const tecnicoDoJogo=g=>ativos.find(t=>g.h===t.clubId||g.a===t.clubId);
+  const fila=jogos.filter(g=>!vistos.includes(g.h)&&tecnicoDoJogo(g)).sort((a,b)=>ativos.indexOf(tecnicoDoJogo(a))-ativos.indexOf(tecnicoDoJogo(b)));
+  const jogo=fila[0];
+  if(!jogo||!verAoVivo(jogo)){usarTecnico(tecnicos()[0].id);mostrarResultados();return}
+  usarTecnico(tecnicoDoJogo(jogo).id);
+  const mais=fila.length>1;
+  const fim=()=>{usarTecnico(tecnicos()[0].id);mostrarResultados()};
+  iniciarVivo(jogos,jogo,mais?retomarCopa:fim,{rodada,minuto,proximo:mais?'próxima partida da Copa do Brasil':null,aoTerminar:()=>{
+    jogo.copa.pen=penaltiDaCopa(jogo,rodada);
+    pendente.vistos=[...vistos,jogo.h];delete pendente.minuto;
+    if(!mais)fecharCopaAoVivo();
+    else save();
+  }});
 }
 export function simToEnd(){
   if(bloqueadoNaLiga())return;
@@ -48,6 +74,7 @@ export function confirmarVez(){
 // botão da rodada: no solo joga direto; com vários técnicos, cada um confirma a sua vez
 export function botaoRodada(cls,txt){
   if(vivoAtivo())return `<button class="${cls}" data-acao="go|aovivo">${icone('play',{tam:16})}Voltar ao jogo ao vivo</button>`; // #135: o jogo pausa quando se sai da tela
+  if(!ui.liga&&S.copa?.pendente)return `<button class="${cls}" data-acao="retomarCopa">${icone('play',{tam:16})}Jogar Copa do Brasil</button>`;
   if(!ui.liga&&tec().demitido)return `<button class="${cls}" data-acao="go|carreira">Escolher novo clube</button>`
   if(ui.liga)return botaoLiga(cls); // #34: confirmar a rodada da liga (e forçar, para o dono)
   if(tecnicos().length>1)return `<button class="${cls}" data-acao="confirmarVez">${icone('ok',{tam:16})}Confirmar ${rotuloRodada()} — ${esc(tec().nome)}</button>`;

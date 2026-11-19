@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { carregarJogo, clubeDaSerie, jogarRodada, jogarTemporada, virarTemporada, problemasNasTelas } from './jogo.mjs';
 
-const novo = (div = 'A', i = 10) => { const j = carregarJogo({ boot: true }); j.run(`newGame('${clubeDaSerie(j, div, i)}')`); return j };
+const novo = (div = 'A', i = 10) => { const j = carregarJogo({ boot: true }); j.run(`mudarPref('aoVivo','nunca');newGame('${clubeDaSerie(j, div, i)}')`); return j };
 const copa = j => JSON.parse(j.run('JSON.stringify(S.copa)'));
 
 test('jogo novo: 64 clubes, o do técnico sempre entra, e as datas cabem na temporada', () => {

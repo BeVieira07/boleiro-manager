@@ -52,6 +52,7 @@ export function artilhariaCopa(tor, n = 10) {
 }
 
 export function noticiaAutores(g) {
-  const nomes = [...g.autores.h, ...g.autores.a].map(id => P[id].name);
+  const nomes = g.ev ? g.ev.filter(e => e.t === 'gol').map(e => e.name)
+    : [...g.autores.h, ...g.autores.a].map(id => P[id]?.name).filter(Boolean);
   return nomes.length ? ' Gols: ' + nomes.join(', ') + '.' : '';
 }

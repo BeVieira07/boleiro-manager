@@ -93,16 +93,16 @@ export function criarJogo(quem,data){
   return S;
 }
 // notícia: sem clube vai para o técnico da vez; com clube, para o técnico daquele clube (clube da IA: descarta)
-export function addNews(t,clubeId){
+export function addNews(t,clubeId,rodada=S.round){
   const alvo=clubeId?tecnicos().filter(x=>x.clubId===clubeId):[tec()];
-  for(const m of alvo){m.news.unshift({r:S.round,t});m.news=m.news.slice(0,40)}
+  for(const m of alvo){m.news.unshift({r:rodada,t});m.news=m.news.slice(0,40)}
 }
-export function addNewsTodos(t){for(const m of tecnicos()){m.news.unshift({r:S.round,t});m.news=m.news.slice(0,40)}}
+export function addNewsTodos(t,rodada=S.round){for(const m of tecnicos()){m.news.unshift({r:rodada,t});m.news=m.news.slice(0,40)}}
 // movimento de caixa (padrão: clube do técnico da vez)
-export function addFin(desc,amount,clube=userClub()){
+export function addFin(desc,amount,clube=userClub(),rodada=S.round){
   clube.balance=Math.round((clube.balance+amount)*1000)/1000;
   if(!clube.fin)clube.fin=[];
-  clube.fin.unshift({s:S.season,r:S.round,desc,amount});clube.fin=clube.fin.slice(0,80);
+  clube.fin.unshift({s:S.season,r:rodada,desc,amount});clube.fin=clube.fin.slice(0,80);
 }
 
 /* ================= calendário e tabela ================= */

@@ -47,9 +47,9 @@ export function golsSegmento(lh,la,tH,tA,de,ate){
   const mid=(de+ate)/2,n=(ate-de+1)/93,eh=efeitoTatica(tH,tA,mid),ea=efeitoTatica(tA,tH,mid);
   return {h:clamp(lh*eh.att*ea.sof,0.05,6)*n,a:clamp(la*ea.att*eh.sof,0.05,6)*n};
 }
-// #230: gol de jogo de estadual (g.uf) vai para a artilharia do estadual; os da liga, para p.goals (artilharia do Brasileirão)
+// A Copa do Brasil credita os gols ao fechar a partida. Os estaduais atualizam a própria artilharia por lance.
 const torneioDoJogo=g=>g.uf&&S.estaduais?S.estaduais.torneios.find(t=>t.uf===g.uf):null;
-function creditarGol(g,side,p,delta){const tor=torneioDoJogo(g);if(tor)creditarGolCopa(tor,g[side],p,delta);else p.goals=Math.max(0,(p.goals||0)+delta)}
+function creditarGol(g,side,p,delta){if(g.copa)return;const tor=torneioDoJogo(g);if(tor)creditarGolCopa(tor,g[side],p,delta);else p.goals=Math.max(0,(p.goals||0)+delta)}
 export function novosGols(g,ph,pa,nh,na,de,ate){
   const gol=(side,xi)=>{if(!xi.length)return;const p=pickScorer(xi);creditarGol(g,side,p,1);g.ev.push({m:ri(de,ate),t:'gol',side,pid:p.id,name:p.name});if(side==='h')g.hg++;else g.ag++};
   for(let i=0;i<nh;i++)gol('h',ph.xi);for(let i=0;i<na;i++)gol('a',pa.xi);
@@ -131,7 +131,7 @@ export function ressimularDepois(g,min){
     novosGols(g,power(H),power(A),poisson(s.h),poisson(s.a),min+1,93);
     g.ev.sort((x,y)=>x.m-y.m);
   }
-  if(g.uf)return; // estadual não paga bicho (#230)
+  if(g.uf||g.copa)return; // as copas não pagam bicho por vitória
   // bicho por vitória foi lançado antes do jogo acabar: acerta se o resultado virou
   const bicho=g.bicho?.[uid]??Math.round(wageBill(userClub())*0.15*1000)/1000,depois=saldo(); // o valor cobrado em jogarRodada (#43)
   if(antes>0&&depois<=0)addFin('Bicho por vitória (ajuste)',bicho);

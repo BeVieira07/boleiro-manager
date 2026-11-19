@@ -79,7 +79,12 @@ export function jogarTemporada(j, { demissao = false } = {}) {
 export const virarTemporada = j => j.run('seasonEnd();newSeason()');
 
 /** Joga uma rodada, trocando titulares lesionados/suspensos pela escalação automática. */
-export const jogarRodada = (j, n = 1) => j.run(`for(let i=0;i<${n};i++){if(validateLineup())userClub().lineup=autoXI(userClub());playRound()}`);
+export const jogarRodada = (j, n = 1) => j.run(`for(let i=0;i<${n};i++){
+  if(validateLineup())userClub().lineup=autoXI(userClub());playRound();
+  if(S.copa?.pendente&&ui.vivo){
+    do{avPular();avContinuar()}while(S.copa?.pendente&&ui.vivo);
+  }
+}`);
 
 export const TELAS = ['clube', 'elenco', 'escalacao', 'tabela', 'competicoes', 'copa', 'jogos', 'artilharia', 'mercado', 'financas', 'config', 'rodada'];
 const SUSPEITOS = ['undefined', 'NaN', '[object'];

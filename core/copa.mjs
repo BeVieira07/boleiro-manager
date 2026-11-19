@@ -4,13 +4,14 @@
    cada fase, espalhados pela temporada). fases[f].jogos = [{h, a, ida, volta, pen, v}]: ida e volta = {h, a} (gols de cada
    clube naquele jogo; a ida é na casa de h), pen = quem venceu nos pênaltis, v = quem passou. O vencedor do confronto 2i
    pega o do 2i+1 na fase seguinte, então o chaveamento inteiro sai do sorteio da primeira fase.
-   shortcut: o jogo da copa é simulado junto com a rodada da liga, com a escalação e a tática da rodada, sem jogo ao vivo e
-   sem cartões ou lesões; dar à copa uma data própria mexe no fluxo da rodada (solo e liga).
+   Os jogos têm lances e são simulados na rodada da liga. A fase só avança depois de confirmado o placar final.
    Estado de antes da #51 não tem S.copa: a copa começa na temporada seguinte. */
-import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, divOf, ehHumano, tecnicos } from './estado.mjs';
-import { jogarPartidaCopa, noticiaAutores, placarDaPerna } from './gols-copa.mjs';
+import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, divOf, ehHumano, tecDoClube } from './estado.mjs';
+import { atualizarForma } from './forma.mjs';
+import { creditarGolCopa, noticiaAutores, placarDaPerna } from './gols-copa.mjs';
+import { simulate } from './motor.mjs';
 import { premioPorDivisao } from './premiacoes.mjs';
-import { clamp, money, rnd, shuffle } from './utils.mjs';
+import { clamp, money, mulberry32, semente, shuffle } from './utils.mjs';
 
 export const COPA = 'Copa do Brasil', COPA_MAX = 64;
 // pelo número de confrontos da fase: 1 = final, 2 = semifinal...
@@ -40,43 +41,77 @@ export function copaNaRodada(r) {
 /** Total de gols de cada clube no confronto (o que já foi jogado). */
 export const agregado = j => ({ h: (j.ida ? j.ida.h : 0) + (j.volta ? j.volta.h : 0), a: (j.ida ? j.ida.a : 0) + (j.volta ? j.volta.a : 0) });
 
-/** Joga o que a copa tem na rodada r da liga (chamada por jogarRodada, antes de a rodada avançar). Devolve os confrontos jogados. */
-export function jogarCopa(r) {
+/** Decide os pênaltis a partir do placar final, na ordem do mandante da ida. */
+export function penaltiDaCopa(g, rodada) {
+  const ida = g.copa.ida;
+  if (!ida || ida.h + g.hg !== ida.a + g.ag) return null;
+  const H = clubById(g.a), A = clubById(g.h);
+  const sorteio = mulberry32(semente(S.seed, S.season, 'copa', rodada, H.id, A.id));
+  return sorteio() < clamp(0.5 + (H.strength - A.strength) / 100, 0.4, 0.6) ? H.id : A.id;
+}
+
+/** Simula a data da copa e devolve os jogos na ordem do chaveamento. */
+export function jogarCopa(r, adiar = false) {
   const quando = copaNaRodada(r), copa = S.copa; if (!quando || copa.campeao) return [];
   const fase = copa.fases[quando.fase]; if (!fase) return [];
+  const perna = quando.volta ? 'volta' : 'ida';
+  if (fase.jogos.every(j => j[perna])) return [];
+  if (copa.pendente?.rodada === r) return copa.pendente.jogos;
+  const jogos = fase.jogos.map(j => simulate({
+    h: quando.volta ? j.a : j.h, a: quando.volta ? j.h : j.a,
+    copa: { ...quando, ida: quando.volta ? { h: j.ida?.a ?? 0, a: j.ida?.h ?? 0 } : null }
+  }));
+  copa.pendente = { rodada: r, jogos };
+  if (!adiar) concluirCopa();
+  return jogos;
+}
+
+/** Fecha a data uma vez, a partir dos lances que sobraram depois das decisões ao vivo. */
+export function concluirCopa() {
+  const copa = S.copa, pendente = copa?.pendente;
+  if (!pendente) return;
+  delete copa.pendente;
+  const { rodada, jogos } = pendente, quando = jogos[0].copa, fase = copa.fases[quando.fase];
   const nome = nomeFase(fase), n = fase.jogos.length;
-  for (const j of fase.jogos) {
+  for (const [i, j] of fase.jogos.entries()) {
     const H = clubById(j.h), A = clubById(j.a);
-    const casa = quando.volta ? A : H, fora = quando.volta ? H : A;
-    const partida = jogarPartidaCopa(copa, casa, fora), jogo = placarDaPerna(partida, quando.volta);
+    const partida = jogos[i], casa = clubById(partida.h);
+    partida.autores = { h: [], a: [] };
+    for (const e of partida.ev) if (e.t === 'gol') {
+      partida.autores[e.side].push(e.pid);
+      creditarGolCopa(copa, partida[e.side], { id: e.pid, name: e.name });
+    }
+    atualizarForma([partida], id => partida.escalacoes[id === partida.h ? 'h' : 'a'].xi.filter(Boolean));
+    const jogo = placarDaPerna(partida, quando.volta);
     if (!quando.volta) j.ida = jogo;
     else {
       j.volta = jogo;
       const t = agregado(j);
-      if (t.h === t.a) j.pen = rnd() < clamp(0.5 + (H.strength - A.strength) / 100, 0.4, 0.6) ? j.h : j.a;
+      j.pen = penaltiDaCopa(partida, rodada);
       j.v = t.h > t.a ? j.h : t.a > t.h ? j.a : j.pen;
+      partida.copa.pen = j.pen;
     }
-    for (const c of [H, A]) if (ehHumano(c)) { // dinheiro, notícia e diretoria só para clube com técnico
-      const adv = c === H ? A : H, meus = c === H ? jogo.h : jogo.a, dele = c === H ? jogo.a : jogo.h, t = tecnicos().find(x => x.clubId === c.id);
-      if (c === casa) addFin(`Bilheteria ${COPA} vs ${adv.name}`, Math.round(Math.max(0, bilheteriaBase(c)) * 100) / 100, c);
-      addNews(`🏆 ${COPA}, ${nome.toLowerCase()} (${quando.volta ? 'volta' : 'ida'}): ${c.name} ${meus} x ${dele} ${adv.name}.${noticiaAutores(partida)}`, c.id);
+    for (const c of [H, A]) {
+      const t = tecDoClube(c.id); if (!t) continue;
+      const adv = c === H ? A : H, meus = c === H ? jogo.h : jogo.a, dele = c === H ? jogo.a : jogo.h;
+      if (c === casa) addFin(`Bilheteria ${COPA} vs ${adv.name}`, Math.round(Math.max(0, bilheteriaBase(c)) * 100) / 100, c, rodada);
+      addNews(`🏆 ${COPA}, ${nome.toLowerCase()} (${quando.volta ? 'volta' : 'ida'}): ${c.name} ${meus} x ${dele} ${adv.name}.${noticiaAutores(partida)}`, c.id, rodada);
       if (!quando.volta) continue;
       const passou = j.v === c.id, penaltis = j.pen ? ' nos pênaltis' : '';
       if (passou) {
         const premio = premioCopa(n, divOf(c));
-        addFin(`${COPA}: ${n === 1 ? 'título' : 'classificação (' + nome.toLowerCase() + ')'}`, premio, c);
-        addNews(n === 1 ? `🏆 ${c.name} é campeão da ${COPA}${penaltis}! Premiação: ${money(premio,3)}.` : `✅ ${c.name} passou de fase na ${COPA}${penaltis}. Premiação: ${money(premio,3)}.`, c.id);
-      } else addNews(`❌ ${c.name} foi eliminado da ${COPA} pelo ${adv.name}${penaltis}.`, c.id);
+        addFin(`${COPA}: ${n === 1 ? 'título' : 'classificação (' + nome.toLowerCase() + ')'}`, premio, c, rodada);
+        addNews(n === 1 ? `🏆 ${c.name} é campeão da ${COPA}${penaltis}! Premiação: ${money(premio,3)}.` : `✅ ${c.name} passou de fase na ${COPA}${penaltis}. Premiação: ${money(premio,3)}.`, c.id, rodada);
+      } else addNews(`❌ ${c.name} foi eliminado da ${COPA} pelo ${adv.name}${penaltis}.`, c.id, rodada);
       // diretoria (#11): pesa na confiança desta rodada (atualizarConfianca lê e apaga t.copaFat)
-      if (t) t.copaFat = passou ? { t: n === 1 ? `Título da ${COPA}` : `Classificação na ${COPA}`, v: n === 1 ? 5 : adv.strength > c.strength ? 1.5 : 1 }
+      t.copaFat = passou ? { t: n === 1 ? `Título da ${COPA}` : `Classificação na ${COPA}`, v: n === 1 ? 5 : adv.strength > c.strength ? 1.5 : 1 }
         : { t: `Eliminação na ${COPA}`, v: n === 1 ? -0.3 : adv.strength + 3 <= c.strength ? -1.5 : adv.strength <= c.strength ? -0.8 : -0.3 };
     }
   }
   if (quando.volta) {
-    if (n === 1) { copa.campeao = fase.jogos[0].v; addNewsTodos(`🏆 ${clubById(copa.campeao).name} é o campeão da ${COPA} ${S.season}.`) }
+    if (n === 1) { copa.campeao = fase.jogos[0].v; addNewsTodos(`🏆 ${clubById(copa.campeao).name} é o campeão da ${COPA} ${S.season}.`, rodada) }
     else copa.fases.push({ jogos: pares(fase.jogos.map(j => j.v)) });
   }
-  return fase.jogos;
 }
 /** Confronto de um clube na fase mais recente (para a tela), ou null se ele não está mais na copa. */
 export function confrontoDe(clubeId) {

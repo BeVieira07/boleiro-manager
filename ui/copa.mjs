@@ -36,7 +36,7 @@ export function vCopa() {
     return `<section class="fase-copa"><div class="card-topo"><h2 class="t3">${nomeFase(f)}</h2><span class="muted">Ida na rodada ${ida}, volta na rodada ${volta}${premio}</span></div>
       <ul class="jogos">${[...f.jogos].sort((a, b) => (b.h === me || b.a === me) - (a.h === me || a.a === me)).map(j => confronto(j, me)).join('')}</ul></section>`;
   }).reverse().join('');
-  return `<p><button class="btn fantasma sm" data-acao="go|competicoes">← Competições</button></p><p class="muted resumo">Mata-mata em ida e volta, jogado junto com rodadas da liga, com a escalação e a tática da rodada. Empate na soma dos dois jogos vai para os pênaltis. ${situacao}</p>${artilhariaDoTorneio(copa, 'copa', COPA)}${fases}`;
+  return `<p><button class="btn fantasma sm" data-acao="go|competicoes">← Competições</button></p><p class="muted resumo">Mata-mata em ida e volta nas datas do calendário da liga. Empate na soma dos dois jogos vai para os pênaltis. ${situacao}</p>${artilhariaDoTorneio(copa, 'copa', COPA)}${fases}`;
 }
 
 // próximo jogo do clube na copa: {volta, adv, rodada} ou null (a rodada é a de calendário da liga, de 1 em diante)

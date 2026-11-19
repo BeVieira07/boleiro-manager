@@ -7,7 +7,7 @@ import { criarEstaduais } from './estadual.mjs';
 import { fakePlayer, refreshEconomics } from './dados.mjs';
 import { confiancaFimTemporada, confiancaNovaTemporada } from './diretoria.mjs';
 import { DIVS, MOVE_N, P, S, addFin, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, hasTwoDivs, makeAllFixtures, reindex, seasonPrize, table, tecnicos, topScorers, userClub } from './estado.mjs';
-import { autoXI, getXI } from './motor.mjs';
+import { autoXI, concluirRodadaCopa, getXI } from './motor.mjs';
 import { POSD } from './posicoes.mjs';
 import { clamp, ri, rnd } from './utils.mjs';
 import { limparEventosAntigos } from './aovivo.mjs';
@@ -18,6 +18,7 @@ import { processLoans } from './emprestimos.mjs';
 // regra: fecha a temporada (premiação, histórico, diretoria). Devolve o resumo, ou null se já foi fechada.
 export function fecharTemporada(){
   if(S.seasonClosed===S.season)return null;
+  concluirRodadaCopa();
   aplicarFormaPendente(); // a última rodada (#44)
   limparEventosAntigos(S.fixtures.length); // #195
   const two=hasTwoDivs(),mv=MOVE_N(),ds=divisions(),res={};

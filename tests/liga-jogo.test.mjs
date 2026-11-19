@@ -190,6 +190,29 @@ test('dono começa a liga, confirmações chegam em tempo real e a rodada é jog
   j.run('sairDaLiga()');
 });
 
+test('liga mostra o replay da Copa depois do Brasileirão sem simular outra rodada', async () => {
+  const j = carregarJogo({ boot: true });
+  const srv = servidorFalso([clubeDaSerie(j, 'A', 0), clubeDaSerie(j, 'A', 1)]);
+  await como(srv, 'a');
+  await j.acao('comecarLiga|L1'); await esperar();
+  srv.estado.copa.datas[0] = 0;
+  srv.entradas.push({ user_id: 'b', rodada: 0, pronto: true });
+  const relogio = pararRelogio();
+  try {
+    await j.acao('confirmarLiga'); await esperar();
+    j.acao('avPular'); j.acao('avContinuar');
+    assert.match(j.html(), /Copa do Brasil · Oitavas de final \(ida\)/);
+    assert.match(j.html(), /Replay do jogo simulado no servidor/);
+    assert.doesNotMatch(j.html(), /data-acao="(avEntrar|avFormacao|tvLiveChip)\|/);
+    const servidor = srv.resultados[0].jogos.find(g => g.copa && [g.h, g.a].includes(srv.membros[0].club_id));
+    assert.deepEqual(j.run('ui.vivo.g.ev'), servidor.ev);
+    j.acao('avPular'); j.acao('avContinuar');
+    assert.equal(srv.resultados.length, 1);
+    assert.equal(srv.liga.rodada, 1);
+    assert.equal(j.run('ui.lastRound.games.length'), 10, 'só os jogos da série entram na lista do Brasileirão');
+  } finally { j.run('encerrarVivo();sairDaLiga()'); relogio.soltar() }
+});
+
 test('quem não é dono não força a rodada e a confirmação sozinha não joga', async () => {
   const j0 = carregarJogo();
   const srv = servidorFalso([clubeDaSerie(j0, 'A', 0), clubeDaSerie(j0, 'A', 1)]);

@@ -16,7 +16,7 @@ import { clienteLogado, sessaoEncerrada, usuarioAtual } from './conta.mjs';
 import { ui } from './estado.mjs';
 import { icone } from './icones.mjs';
 import { closeModal, crest, openModal } from './partida.mjs';
-import { iniciarVivo } from './aovivo.mjs';
+import { iniciarReplaysDaRodada, iniciarVivo } from './aovivo.mjs';
 import { go, render } from './telas.mjs';
 import { verAoVivo } from './configuracoes.mjs';
 import { abrirLigas, abrirLobby, pararLobby } from './liga.mjs';
@@ -166,9 +166,12 @@ export async function atualizarAposRodada() {
     .order('temporada', { ascending: false }).order('rodada', { ascending: false }).limit(1).maybeSingle();
   if (!r) { render(); return }
   const pre = r.rodada < 0; // #132: data do estadual (RODADA_ESTADUAL = primeira data)
-  const fim = () => { ui.lastRound = pre ? { pre: r.rodada - RODADA_ESTADUAL, games: r.jogos } : { round: r.rodada + 1, games: r.jogos }; ui.view = 'rodada'; render() };
-  const me = userClub().id, meu = r.jogos.find(g => g.h === me || g.a === me);
-  if (!tec().demitido && meu && verAoVivo(meu)) iniciarVivo(r.jogos, meu, fim, pre ? { replay: true, estadual: r.rodada - RODADA_ESTADUAL } : { replay: true, rodada: r.rodada }); else fim(); // #106; estadual também (#230)
+  const games = r.jogos.filter(g => !g.copa), copa = r.jogos.filter(g => g.copa);
+  const fim = () => { ui.lastRound = pre ? { pre: r.rodada - RODADA_ESTADUAL, games } : { round: r.rodada + 1, games }; ui.view = 'rodada'; render() };
+  if (tec().demitido) { fim(); return }
+  if (!pre) { iniciarReplaysDaRodada(games, copa, fim, { replay: true, rodada: r.rodada }); return }
+  const me = userClub().id, meu = games.find(g => g.h === me || g.a === me);
+  if (meu && verAoVivo(meu)) iniciarVivo(games, meu, fim, { replay: true, estadual: r.rodada - RODADA_ESTADUAL }); else fim();
 }
 
 /** Envia a sua escalação, formação e tática da rodada e pede ao servidor para jogar (ele só joga quando todos confirmaram). */
