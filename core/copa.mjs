@@ -6,10 +6,11 @@
    pega o do 2i+1 na fase seguinte, então o chaveamento inteiro sai do sorteio da primeira fase.
    Os jogos têm lances e são simulados na rodada da liga. A fase só avança depois de confirmado o placar final.
    Estado de antes da #51 não tem S.copa: a copa começa na temporada seguinte. */
-import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, ehHumano, tecDoClube } from './estado.mjs';
+import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, divOf, ehHumano, tecDoClube } from './estado.mjs';
 import { atualizarForma } from './forma.mjs';
 import { creditarGolCopa, noticiaAutores, placarDaPerna } from './gols-copa.mjs';
 import { simulate } from './motor.mjs';
+import { premioPorDivisao } from './premiacoes.mjs';
 import { clamp, money, mulberry32, semente, shuffle } from './utils.mjs';
 
 export const COPA = 'Copa do Brasil', COPA_MAX = 64;
@@ -17,8 +18,8 @@ export const COPA = 'Copa do Brasil', COPA_MAX = 64;
 const NOMES = { 1: 'Final', 2: 'Semifinal', 4: 'Quartas de final', 8: 'Oitavas de final', 16: 'Segunda fase', 32: 'Primeira fase' };
 export const nomeFase = f => NOMES[f.jogos.length] || 'Fase preliminar';
 // premiação por passar de fase, pelo número de confrontos dela (em milhões); a da final é a do título
-export const PREMIO_COPA = { 1: 3.5, 2: 1.5, 4: 0.85, 8: 0.55, 16: 0.32, 32: 0.18 };
-export const premioCopa = n => PREMIO_COPA[n] ?? 0.15;
+const PREMIO_COPA = { 1: 1.4, 2: 0.65, 4: 0.38, 8: 0.25, 16: 0.16, 32: 0.11 };
+export const premioCopa = (n, div) => premioPorDivisao(PREMIO_COPA[n] ?? 0.08, div);
 const pares = ids => Array.from({ length: ids.length / 2 }, (_, i) => ({ h: ids[2 * i], a: ids[2 * i + 1], ida: null, volta: null, pen: null, v: null }));
 
 /** Sorteia a copa da temporada (jogo novo e começo de cada temporada). Sem clubes ou rodadas suficientes, não há copa. */
@@ -98,9 +99,9 @@ export function concluirCopa() {
       if (!quando.volta) continue;
       const passou = j.v === c.id, penaltis = j.pen ? ' nos pênaltis' : '';
       if (passou) {
-        const premio = premioCopa(n);
+        const premio = premioCopa(n, divOf(c));
         addFin(`${COPA}: ${n === 1 ? 'título' : 'classificação (' + nome.toLowerCase() + ')'}`, premio, c, rodada);
-        addNews(n === 1 ? `🏆 ${c.name} é campeão da ${COPA}${penaltis}! Premiação: ${money(premio)}.` : `✅ ${c.name} passou de fase na ${COPA}${penaltis}. Premiação: ${money(premio)}.`, c.id, rodada);
+        addNews(n === 1 ? `🏆 ${c.name} é campeão da ${COPA}${penaltis}! Premiação: ${money(premio,3)}.` : `✅ ${c.name} passou de fase na ${COPA}${penaltis}. Premiação: ${money(premio,3)}.`, c.id, rodada);
       } else addNews(`❌ ${c.name} foi eliminado da ${COPA} pelo ${adv.name}${penaltis}.`, c.id, rodada);
       // diretoria (#11): pesa na confiança desta rodada (atualizarConfianca lê e apaga t.copaFat)
       t.copaFat = passou ? { t: n === 1 ? `Título da ${COPA}` : `Classificação na ${COPA}`, v: n === 1 ? 5 : adv.strength > c.strength ? 1.5 : 1 }

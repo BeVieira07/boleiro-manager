@@ -14,6 +14,7 @@ import { aplicarConfianca } from './diretoria.mjs';
 import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, divOf, ehHumano, reindex, table, tecDoClube } from './estado.mjs';
 import { prepararEstrangeiro } from './estrangeiros.mjs';
 import { jogarPartidaCopa, jogoDaPerna, noticiaAutores, placarDaPerna } from './gols-copa.mjs';
+import { premioPorDivisao } from './premiacoes.mjs';
 import { clamp, money, rnd, shuffle } from './utils.mjs';
 
 export { artilhariaCopa as artilhariaCont } from './gols-copa.mjs';
@@ -23,8 +24,8 @@ export const CONTINENTAIS = { ligados: true };
 export const VAGAS = 32, DATAS = 13, GRUPOS = 8;
 // vagas brasileiras e premiação em milhões (por chegar à fase; o título é o prêmio da final)
 export const TORNEIOS = [
-  { id: 'libertadores', nome: 'Libertadores', vagas: 7, premio: { grupos: 1, oitavas: 0.9, quartas: 1.3, semi: 1.7, titulo: 7 } },
-  { id: 'sulamericana', nome: 'Sul-Americana', vagas: 7, premio: { grupos: 0.55, oitavas: 0.5, quartas: 0.7, semi: 1, titulo: 3.5 } }
+  { id: 'libertadores', nome: 'Libertadores', vagas: 7, premio: { grupos: 0.32, oitavas: 0.42, quartas: 0.55, semi: 0.7, titulo: 2.3 } },
+  { id: 'sulamericana', nome: 'Sul-Americana', vagas: 7, premio: { grupos: 0.18, oitavas: 0.25, quartas: 0.32, semi: 0.42, titulo: 1.25 } }
 ];
 const FASES = ['Oitavas de final', 'Quartas de final', 'Semifinal'];
 // 4 clubes, ida e volta: [casa, fora] por posição no grupo em cada data
@@ -33,6 +34,7 @@ const TABELA_GRUPO = [[[0, 1], [2, 3]], [[0, 2], [3, 1]], [[3, 0], [1, 2]], [[1,
 /** Clube do jogo ou estrangeiro das copas (para nome, escudo e força). */
 export const clubeCont = id => clubById(id) || (S.continentais && S.continentais.estrangeiros[id]) || null;
 const torneioCfg = id => TORNEIOS.find(t => t.id === id);
+export const premioContinental = (id, etapa, div) => premioPorDivisao(torneioCfg(id).premio[etapa], div);
 
 /** Brasileiros classificados para a próxima temporada, pela Série A desta (e o campeão da copa na Libertadores).
  *  Chamar antes de mexer nas séries (acesso e rebaixamento). Sem Série A no jogo, ninguém se classifica. */
@@ -107,10 +109,12 @@ function noticiaJogo(tor, d, g) {
   if (ehHumano(H) && d.tipo !== 'final') addFin(`Bilheteria ${tor.nome} vs ${A.name}`, Math.round(Math.max(0, bilheteriaBase(H)) * 100) / 100, H);
   for (const c of [H, A]) if (ehHumano(c)) addNews(`🌎 ${tor.nome}, ${d.nome.toLowerCase()}: ${H.name} ${g.hg} x ${g.ag} ${A.name}.${noticiaAutores(g)}`, c.id);
 }
-function premiar(tor, id, fase, valor, fat) {
+function premiar(tor, id, fase, etapa, fat) {
   const c = clubById(id), t = c && tecDoClube(id); if (!t) return;
+  const valor = premioContinental(tor.id, etapa, divOf(c));
   addFin(`${tor.nome}: ${fase}`, valor, c);
   if (fat) aplicarConfianca(t, [fat], 5);
+  return valor;
 }
 function eliminar(tor, id, adv, fase) {
   const c = clubById(id), t = c && tecDoClube(id); if (!t) return;
@@ -119,8 +123,7 @@ function eliminar(tor, id, adv, fase) {
 }
 
 function jogarGrupo(tor, n, d) {
-  const cfg = torneioCfg(tor.id);
-  if (n === 0) for (const id of tor.grupos.flat()) premiar(tor, id, 'participação na fase de grupos', cfg.premio.grupos);
+  if (n === 0) for (const id of tor.grupos.flat()) premiar(tor, id, 'participação na fase de grupos', 'grupos');
   for (const g of tor.rodadas[n]) {
     Object.assign(g, placarCont(tor, clubeCont(g.h), clubeCont(g.a)));
     noticiaJogo(tor, d, g);
@@ -131,13 +134,13 @@ function jogarGrupo(tor, n, d) {
   const jogos = tabs.map((t, i) => ({ h: tabs[i % 2 ? i - 1 : i + 1][1].id, a: t[0].id, ida: null, volta: null, pen: null, v: null }));
   tor.fases.push({ jogos });
   tabs.forEach(t => {
-    for (const x of t.slice(0, 2)) { premiar(tor, x.id, 'classificação para as oitavas', cfg.premio.oitavas, { t: `Classificação na ${tor.nome}`, v: 1 }); if (clubById(x.id) && tecDoClube(x.id)) addNews(`✅ ${clubById(x.id).name} passou de fase na ${tor.nome}.`, x.id) }
+    for (const x of t.slice(0, 2)) { premiar(tor, x.id, 'classificação para as oitavas', 'oitavas', { t: `Classificação na ${tor.nome}`, v: 1 }); if (clubById(x.id) && tecDoClube(x.id)) addNews(`✅ ${clubById(x.id).name} passou de fase na ${tor.nome}.`, x.id) }
     for (const x of t.slice(2)) if (clubById(x.id) && tecDoClube(x.id)) eliminar(tor, x.id, t[0].id, 'fase de grupos');
   });
 }
 function jogarMata(tor, n, volta, d) {
   const fase = tor.fases[n]; if (!fase) return;
-  const cfg = torneioCfg(tor.id), proxima = ['quartas', 'semi', 'titulo'][n];
+  const proxima = ['quartas', 'semi', 'titulo'][n];
   for (const j of fase.jogos) {
     const H = clubeCont(j.h), A = clubeCont(j.a);
     const g = volta ? placarCont(tor, A, H) : placarCont(tor, H, A);
@@ -147,7 +150,7 @@ function jogarMata(tor, n, volta, d) {
     const t = agregadoCont(j); if (t.h === t.a) j.pen = penaltis(H, A);
     j.v = t.h > t.a ? j.h : t.a > t.h ? j.a : j.pen;
     const perdeu = j.v === j.h ? j.a : j.h;
-    if (proxima !== 'titulo') premiar(tor, j.v, `classificação (${FASES[n + 1].toLowerCase()})`, cfg.premio[proxima], { t: `Classificação na ${tor.nome}`, v: 1.5 });
+    if (proxima !== 'titulo') premiar(tor, j.v, `classificação (${FASES[n + 1].toLowerCase()})`, proxima, { t: `Classificação na ${tor.nome}`, v: 1.5 });
     if (clubById(j.v) && tecDoClube(j.v)) addNews(`✅ ${clubById(j.v).name} ${n === 2 ? 'está na final' : 'passou de fase'} da ${tor.nome}${j.pen ? ' nos pênaltis' : ''}.`, j.v);
     eliminar(tor, perdeu, j.v, FASES[n]);
   }
@@ -157,13 +160,13 @@ function jogarMata(tor, n, volta, d) {
 }
 function jogarFinal(tor, d) {
   const f = tor.final; if (!f) return;
-  const H = clubeCont(f.h), A = clubeCont(f.a), cfg = torneioCfg(tor.id);
+  const H = clubeCont(f.h), A = clubeCont(f.a);
   Object.assign(f, placarCont(tor, H, A, true)); noticiaJogo(tor, d, f);
   if (f.hg === f.ag) f.pen = penaltis(H, A);
   f.v = f.hg > f.ag ? f.h : f.ag > f.hg ? f.a : f.pen; tor.campeao = f.v;
   const campeao = clubeCont(f.v), vice = f.v === f.h ? f.a : f.h;
-  premiar(tor, f.v, 'título', cfg.premio.titulo, { t: `Título da ${tor.nome}`, v: 6 });
-  if (clubById(f.v) && tecDoClube(f.v)) addNews(`🏆 ${campeao.name} é campeão da ${tor.nome}${f.pen ? ' nos pênaltis' : ''}! Premiação: ${money(cfg.premio.titulo)}.`, f.v);
+  const premio = premiar(tor, f.v, 'título', 'titulo', { t: `Título da ${tor.nome}`, v: 6 });
+  if (premio != null) addNews(`🏆 ${campeao.name} é campeão da ${tor.nome}${f.pen ? ' nos pênaltis' : ''}! Premiação: ${money(premio, 3)}.`, f.v);
   eliminar(tor, vice, f.v, 'Final');
   addNewsTodos(`🏆 ${campeao.name} é o campeão da ${tor.nome} ${S.season}.`);
 }

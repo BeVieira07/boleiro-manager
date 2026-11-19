@@ -72,7 +72,8 @@ test('premiação, bilheteria e diretoria reagem à copa', () => {
   const meu = copa(j).fases[0].jogos.find(x => x.h === eu || x.a === eu);
   assert.equal(meu.v, eu, 'passou de fase');
   const fin = j.run('userClub().fin.map(f=>[f.desc,f.amount])');
-  assert.ok(fin.some(([d, v]) => /Copa do Brasil: classificação/.test(d) && v === j.run('premioCopa(32)')), 'premiação da fase');
+  const premio = j.run('premioCopa(32,divOf(userClub()))');
+  assert.ok(fin.some(([d, v]) => /Copa do Brasil: classificação/.test(d) && v === premio), 'premiação da fase');
   assert.equal(fin.filter(([d]) => /Bilheteria Copa do Brasil/.test(d)).length, 1, 'bilheteria no jogo em casa');
   assert.ok(j.run('tec().confFat').some(f => f.t === 'Classificação na Copa do Brasil' && f.v > 0), 'a diretoria gostou');
   assert.match(j.run('tec().news.map(n=>n.t).join("|")'), /passou de fase na Copa do Brasil/);
@@ -94,7 +95,7 @@ test('título: premiação da final e notícia para todos', () => {
   j.run(`(()=>{let n=0;while(S.round<S.fixtures.length&&n++<80){const uc=userClub();for(const p of uc.players)p.ovr=95;if(validateLineup())uc.lineup=autoXI(uc);playRound()}})()`);
   const c = copa(j);
   if (c.campeao === j.run('userClub().id')) {
-    assert.ok(j.run('userClub().fin.some(f=>f.desc==="Copa do Brasil: título"&&f.amount===premioCopa(1))') || j.run('tec().news.some(n=>/é campeão da Copa do Brasil/.test(n.t))'));
+    assert.ok(j.run('userClub().fin.some(f=>f.desc==="Copa do Brasil: título"&&f.amount===premioCopa(1,divOf(userClub())))') || j.run('tec().news.some(n=>/é campeão da Copa do Brasil/.test(n.t))'));
   }
   assert.match(j.run('tec().news.map(n=>n.t).join("|")'), /é o campeão da Copa do Brasil/);
 });
