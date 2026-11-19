@@ -12,13 +12,14 @@
    depende do placar (notícia, forma, final, campeão) só é feito no começo da chamada seguinte (concluirData), porque uma troca
    no ao vivo muda o placar, como a liga faz com a forma (formaPendente). E.pendente = a data jogada e ainda não concluída.
    shortcut: a pré-temporada não paga cota de TV nem salários. Estado de antes da #132 não tem S.estaduais: os estaduais começam na temporada seguinte. */
-import { S, addFin, addNews, bilheteriaBase, clubById, ehHumano, tecDoClube } from './estado.mjs';
+import { S, addFin, addNews, bilheteriaBase, clubById, divOf, ehHumano, tecDoClube } from './estado.mjs';
 import { aplicarConfianca } from './diretoria.mjs';
 import { jogoDaPerna, noticiaAutores, placarDaPerna } from './gols-copa.mjs';
 import { aplicarDisponibilidade } from './escalacao.mjs';
 import { atualizarForma } from './forma.mjs';
 import { anotarTitulares, atualizarEnergia } from './energia.mjs';
 import { getXI, simulate } from './motor.mjs';
+import { premioPorDivisao } from './premiacoes.mjs';
 import { clamp, money, rnd, semente, shuffle } from './utils.mjs';
 
 export const ESTADUAL_MIN = 4, GRUPOS_DESDE = 12;
@@ -27,7 +28,8 @@ export const RODADA_ESTADUAL = -100;
 // os testes de outras funcionalidades desligam (tests/jogo.mjs), para cada "Jogar" continuar sendo uma rodada da liga
 export const ESTADUAIS = { ligados: true };
 // premiação em milhões: bem menor que a do Brasileirão e a da copa
-export const PREMIO_ESTADUAL = { campeao: 0.8, vice: 0.3 };
+const PREMIO_ESTADUAL = { campeao: 0.35, vice: 0.14 };
+export const premioEstadual = (fase, div) => premioPorDivisao(PREMIO_ESTADUAL[fase], div);
 const NOMES = { SP: 'Paulistão', RJ: 'Carioca', RS: 'Gauchão', MG: 'Mineiro', PR: 'Paranaense', SC: 'Catarinense', GO: 'Goiano',
   CE: 'Cearense', BA: 'Baiano', PE: 'Pernambucano', AM: 'Amazonense', PA: 'Paraense' };
 export const nomeEstadual = uf => NOMES[uf] || `Estadual (${uf})`;
@@ -170,12 +172,14 @@ function encerrar(tor) {
   for (const id of tor.grupos.flat()) {
     const t = tecDoClube(id); if (!t) continue;
     if (id === campeao.id) {
-      addFin(`${tor.nome}: título`, PREMIO_ESTADUAL.campeao, campeao);
-      addNews(`🏆 ${campeao.name} é campeão do ${tor.nome}${pen}! Premiação: ${money(PREMIO_ESTADUAL.campeao)}.`, id);
+      const premio = premioEstadual('campeao', divOf(campeao));
+      addFin(`${tor.nome}: título`, premio, campeao);
+      addNews(`🏆 ${campeao.name} é campeão do ${tor.nome}${pen}! Premiação: ${money(premio, 3)}.`, id);
       aplicarConfianca(t, [{ t: `Título do ${tor.nome}`, v: 2 }], 3);
     } else if (id === vice.id) {
-      addFin(`${tor.nome}: vice-campeão`, PREMIO_ESTADUAL.vice, vice);
-      addNews(`🥈 ${vice.name} perdeu a final do ${tor.nome} para o ${campeao.name}${pen}. Premiação: ${money(PREMIO_ESTADUAL.vice)}.`, id);
+      const premio = premioEstadual('vice', divOf(vice));
+      addFin(`${tor.nome}: vice-campeão`, premio, vice);
+      addNews(`🥈 ${vice.name} perdeu a final do ${tor.nome} para o ${campeao.name}${pen}. Premiação: ${money(premio, 3)}.`, id);
       aplicarConfianca(t, [{ t: `Vice do ${tor.nome}`, v: 0.3 }], 3);
     } else {
       addNews(`🏆 ${campeao.name} é o campeão do ${tor.nome}${pen}. Seu clube ficou fora da final.`, id);

@@ -50,7 +50,7 @@ export const tvQuota=div=>({A:1.2,B:0.5,C:0.2,D:0.1})[div];
 export const bilheteriaBase=c=>0.5+(c.strength-60)*0.06;
 // premiação de fim de temporada e caixa inicial, por série
 // Prêmios em milhões de reais. Referências de mercado em docs/premiacoes.md.
-const PREMIO_LIGA = { A: [2, 0.45], B: [0.45, 0.18], C: [0.2, 0.075], D: [0.1, 0.04] };
+const PREMIO_LIGA = { A: [0.55, 0.19], B: [0.23, 0.10], C: [0.12, 0.055], D: [0.06, 0.03] };
 export function seasonPrize(div, pos) {
   const [piso, porPosicao] = PREMIO_LIGA[div];
   return Math.round((piso + (20 - pos) * porPosicao) * 100) / 100;

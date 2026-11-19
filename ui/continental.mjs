@@ -1,6 +1,6 @@
 /* ================= Libertadores e Sul-Americana na tela (#133, #134): cartões, tela de cada copa e jogos da rodada ================= */
-import { TORNEIOS, agregadoCont, clubeCont, dataCont, jogosDaDataCont, tabelaGrupoCont, torneioContDe } from '../core/continental.mjs';
-import { S, tec } from '../core/estado.mjs';
+import { TORNEIOS, agregadoCont, clubeCont, dataCont, jogosDaDataCont, premioContinental, tabelaGrupoCont, torneioContDe } from '../core/continental.mjs';
+import { S, divOf, tec } from '../core/estado.mjs';
 import { esc, money } from '../core/utils.mjs';
 import { artilhariaDoTorneio } from './artilharia.mjs';
 import { crest } from './partida.mjs';
@@ -87,9 +87,11 @@ function mataMata(tor, me) {
 function vTorneio(id) {
   const cfg = TORNEIOS.find(t => t.id === id), tor = doTorneio(id), me = tec().clubId, voltar = '<p><button class="btn fantasma sm" data-acao="go|competicoes">← Competições</button></p>';
   if (!tor) return `${voltar}<section class="card"><h2 class="t3">${esc(cfg.nome)}</h2><p class="muted">${semVaga(cfg)}</p></section>`;
-  const p = cfg.premio;
+  const premio = etapa => money(premioContinental(id, etapa, divOf(clubeCont(me))), 3);
+  const premios = !tor.campeao && torneioContDe(me, id)
+    ? `Prêmios para seu clube por etapa: ${premio('grupos')} pela fase de grupos, ${premio('oitavas')} pelas oitavas, ${premio('quartas')} pelas quartas, ${premio('semi')} pela semifinal e ${premio('titulo')} pelo título.` : '';
   return `${voltar}<p class="muted resumo">32 clubes em 8 grupos de 4 (ida e volta); os dois primeiros de cada grupo vão às oitavas. Mata-mata em ida e volta e final em jogo único, junto com as rodadas do Brasileirão.
-    Premiação: ${money(p.grupos)} pela fase de grupos, ${money(p.oitavas)} pelas oitavas, ${money(p.quartas)} pelas quartas, ${money(p.semi)} pela semifinal e ${money(p.titulo)} pelo título.
+    ${premios}
     ${tor.campeao ? `Campeão: <b>${esc(clubeCont(tor.campeao).name)}</b>.` : ''}</p>
     ${mataMata(tor, me)}${tabelasContinental(tor, me)}${artilhariaDoTorneio(tor, id)}`;
 }
