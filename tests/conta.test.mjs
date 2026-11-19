@@ -13,7 +13,11 @@ function clienteFalso({ sessao = null } = {}) {
     getSession: async () => ({ data: { session: sessao } }),
     // como no supabase-js: o aviso roda com a trava do login presa; chamar o Supabase dentro dele trava tudo (anotado em f.travou)
     onAuthStateChange: cb => { f.ouvinte = async (...a) => { f.naTrava = true; try { await cb(...a) } finally { f.naTrava = false } }; return { data: { subscription: { unsubscribe() {} } } } },
-    signInWithOtp: async a => { f.pedidos.push(['otp', a.email]); return { error: null } },
+    // #238: e-mail e senha; a senha "errada" e o e-mail "usado@" imitam as respostas do Supabase (em inglês)
+    signInWithPassword: async a => { f.pedidos.push(['senha', a.email]); return { error: a.password === 'errada' ? { message: 'Invalid login credentials' } : null } },
+    signUp: async a => { f.pedidos.push(['cadastro', a.email, a.options.data.name]);
+      if (a.email.startsWith('usado@')) return { data: {}, error: { message: 'User already registered' } };
+      return { data: { session: f.semSessao ? null : { user: { id: 'u2', email: a.email } } }, error: null } },
     signInWithOAuth: async a => { f.pedidos.push(['oauth', a.provider, a.options.redirectTo]); return { error: null } },
     signOut: async o => { f.pedidos.push(['sair', o && o.scope]); return { error: null } }
   };
@@ -34,7 +38,7 @@ test('sem configuração: nada de login, o jogo funciona offline', () => {
   assert.match(j.html(), /Novo jogo/);
 });
 
-test('entrar manda o link mágico; a sessão aparece e sair encerra', async () => {
+test('entrar com e-mail e senha; a sessão aparece e sair encerra', async () => {
   const f = clienteFalso();
   conta.configurarConta({ url: 'https://exemplo.supabase.co', chave: 'chave-publica', cliente: f });
   const j = carregarJogo({ boot: true });
@@ -48,11 +52,16 @@ test('entrar manda o link mágico; a sessão aparece e sair encerra', async () =
   j.campo('emailConta', 'nao-e-email');
   await j.acao('entrar');
   assert.ok(j.alertas.some(a => a.includes('e-mail válido')));
-  j.campo('emailConta', 'ana@exemplo.com');
+  j.campo('emailConta', 'ana@exemplo.com'); j.campo('senhaConta', '');
   await j.acao('entrar');
-  assert.deepEqual(f.pedidos.at(-1), ['otp', 'ana@exemplo.com']);
-  assert.ok(j.alertas.some(a => a.includes('Enviamos um link')));
-  // a pessoa clica no link do e-mail: o Supabase avisa que a sessão começou
+  assert.ok(j.alertas.some(a => a.includes('Digite a senha')), 'sem senha não chama o servidor');
+  j.campo('senhaConta', 'errada');
+  await j.acao('entrar');
+  assert.deepEqual(f.pedidos.at(-1), ['senha', 'ana@exemplo.com']);
+  assert.ok(j.alertas.some(a => a.includes('E-mail ou senha errados')), 'erro em português');
+  j.campo('senhaConta', 'certa123');
+  await j.acao('entrar');
+  // senha certa: o Supabase avisa que a sessão começou
   await f.ouvinte('SIGNED_IN', { user: { id: 'u1', email: 'ana@exemplo.com' } });
   assert.ok(!f.travou, 'o aviso de login não chama o Supabase por dentro (travaria a página)');
   await espera();
@@ -119,4 +128,31 @@ test('trava da sessão é só da aba: faz fila em ordem e um erro não prende as
   await assert.rejects(falha, /falhou/);
   assert.equal(await depois, 3);
   assert.deepEqual(ordem, [1, 2, 3]);
+});
+
+test('criar conta com nome, e-mail e senha: valida, manda o nome para o perfil e avisa em português (#238)', async () => {
+  const f = clienteFalso();
+  conta.configurarConta({ url: 'https://exemplo.supabase.co', chave: 'chave-publica', cliente: f });
+  const j = carregarJogo({ boot: true });
+  await conta.iniciarConta(() => {});
+  j.run('render()');
+  assert.match(j.html(), /id="nomeNovaConta"/); assert.match(j.html(), /data-acao="criarConta"/);
+  const n = f.pedidos.length;
+  for (const c of ['nomeNovaConta', 'emailNovaConta', 'senhaNovaConta']) j.campo(c, '');
+  await j.acao('criarConta');
+  assert.ok(j.alertas.some(a => a.includes('nome do técnico')));
+  j.campo('nomeNovaConta', 'Bia'); j.campo('emailNovaConta', 'bia@exemplo.com'); j.campo('senhaNovaConta', '123');
+  await j.acao('criarConta');
+  assert.ok(j.alertas.some(a => a.includes('pelo menos 6')));
+  assert.equal(f.pedidos.length, n, 'nada vai ao servidor antes de validar');
+  j.campo('senhaNovaConta', '123456');
+  await j.acao('criarConta');
+  assert.deepEqual(f.pedidos.at(-1), ['cadastro', 'bia@exemplo.com', 'Bia'], 'o nome vai em "name" (gatilho criar_perfil)');
+  assert.ok(j.alertas.some(a => a.includes('Conta criada! Bem-vindo, Bia')));
+  j.campo('emailNovaConta', 'usado@exemplo.com');
+  await j.acao('criarConta');
+  assert.ok(j.alertas.some(a => a.includes('Já existe uma conta')));
+  f.semSessao = true; j.campo('emailNovaConta', 'cia@exemplo.com'); // confirmação de e-mail ligada no painel
+  await j.acao('criarConta');
+  assert.ok(j.alertas.some(a => a.includes('Confirme o e-mail')));
 });

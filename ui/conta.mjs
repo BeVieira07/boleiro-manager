@@ -1,5 +1,5 @@
 /* ================= conta online (Supabase) (#30) =================
-   Login com Google (#84) ou por link mágico no e-mail. Só aparece quando ui/config.mjs tem a URL e a chave pública.
+   Login com Google (#84) ou com e-mail e senha (#238; sem confirmação de e-mail, desligada no painel do Supabase). Só aparece quando ui/config.mjs tem a URL e a chave pública.
    Sem configuração, ou sem internet, o jogo continua offline como sempre. */
 import { esc } from '../core/utils.mjs';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.mjs';
@@ -76,14 +76,42 @@ export async function entrarComGoogle() {
   if (error) avisar('Não foi possível entrar com o Google: ' + error.message, 'erro');
 }
 
-/** Entra (ou cria a conta) mandando um link mágico para o e-mail. */
+/* ---------- e-mail e senha (#238) ---------- */
+const valor = id => { const c = document.getElementById(id); return (c && c.value || '').trim() };
+const senhaDe = id => { const c = document.getElementById(id); return (c && c.value) || '' };
+const emailOk = e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
+export const SENHA_MIN = 6;
+// as mensagens do Supabase vêm em inglês
+export function erroEmPortugues(error) {
+  const m = String((error && (error.code || error.message)) || '').toLowerCase();
+  if (/invalid.*(credentials|login)/.test(m)) return 'E-mail ou senha errados.';
+  if (/already.*registered|user_already_exists|already exists/.test(m)) return 'Já existe uma conta com esse e-mail. Use "Entrar".';
+  if (/password.*(short|least|weak)|weak_password/.test(m)) return `A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`;
+  if (/not.*confirmed|email_not_confirmed/.test(m)) return 'Confirme o e-mail antes de entrar (veja a caixa de entrada).';
+  if (/rate|too many/.test(m)) return 'Muitas tentativas seguidas. Espere um pouco e tente de novo.';
+  return (error && error.message) || 'Tente de novo.';
+}
+/** Entra com e-mail e senha. */
 export async function entrar() {
-  const campo = document.getElementById('emailConta'), email = (campo && campo.value || '').trim();
-  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { avisar('Digite um e-mail válido.'); return }
+  const email = valor('emailConta'), senha = senhaDe('senhaConta');
+  if (!emailOk(email)) { avisar('Digite um e-mail válido.'); return }
+  if (!senha) { avisar('Digite a senha.'); return }
   const c = await cliente(); if (!c) return;
-  const { error } = await c.auth.signInWithOtp({ email, options: { emailRedirectTo: volta() } });
-  if (error) { avisar('Não foi possível enviar o link: ' + error.message,'erro','erro'); return }
-  avisar(`Enviamos um link de acesso para ${email}. Abra o e-mail neste aparelho para entrar.`);
+  const { error } = await c.auth.signInWithPassword({ email, password: senha });
+  if (error) avisar('Não foi possível entrar: ' + erroEmPortugues(error), 'erro');
+}
+/** Cria a conta com nome do técnico, e-mail e senha; sem confirmação de e-mail, já entra. */
+export async function criarConta() {
+  const nome = valor('nomeNovaConta'), email = valor('emailNovaConta'), senha = senhaDe('senhaNovaConta');
+  if (!nome) { avisar('Digite o nome do técnico.'); return }
+  if (!emailOk(email)) { avisar('Digite um e-mail válido.'); return }
+  if (senha.length < SENHA_MIN) { avisar(`A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`); return }
+  const c = await cliente(); if (!c) return;
+  // o nome vai em "name", que o gatilho criar_perfil usa para o perfil
+  const { data, error } = await c.auth.signUp({ email, password: senha, options: { data: { name: nome.slice(0, 40) } } });
+  if (error) { avisar('Não foi possível criar a conta: ' + erroEmPortugues(error), 'erro'); return }
+  if (!data || !data.session) { avisar(`Conta criada. Confirme o e-mail enviado para ${email} e depois entre.`); return } // confirmação ligada no Supabase
+  avisar(`Conta criada! Bem-vindo, ${nome}.`, 'ok');
 }
 
 // scope local (#95): sair neste aparelho não derruba a mesma conta aberta em outro (o padrão do supabase-js encerra todas)
@@ -124,7 +152,14 @@ export function painelConta() {
     <button class="btn fantasma" data-acao="sair">${icone('sair', { tam: 16 })}Sair da conta</button></div></details>`;
   }
   return `<div class="row conta-entrar"><button class="btn" data-acao="entrarComGoogle">Entrar com Google</button>
-    <details class="conta-menu"><summary class="btn fantasma">Link por e-mail</summary><div class="conta-painel">
-    <label for="emailConta" class="campo-rotulo">Receba um link de acesso no e-mail</label>
-    <div class="row"><input id="emailConta" type="email" autocomplete="email" placeholder="seu@email.com"><button class="btn sec" data-acao="entrar">Enviar link</button></div></div></details></div>`;
+    <details class="conta-menu"><summary class="btn fantasma">Entrar com e-mail</summary><div class="conta-painel">
+    <div class="conta-form"><b>Entrar</b>
+      <label for="emailConta" class="campo-rotulo">E-mail</label><input id="emailConta" type="email" autocomplete="email" placeholder="seu@email.com">
+      <label for="senhaConta" class="campo-rotulo">Senha</label><input id="senhaConta" type="password" autocomplete="current-password">
+      <button type="button" class="btn" data-acao="entrar">Entrar</button></div>
+    <div class="conta-form"><b>Criar conta</b>
+      <label for="nomeNovaConta" class="campo-rotulo">Nome do técnico</label><input id="nomeNovaConta" autocomplete="nickname" maxlength="40">
+      <label for="emailNovaConta" class="campo-rotulo">E-mail</label><input id="emailNovaConta" type="email" autocomplete="email" placeholder="seu@email.com">
+      <label for="senhaNovaConta" class="campo-rotulo">Senha (mínimo ${SENHA_MIN} caracteres)</label><input id="senhaNovaConta" type="password" autocomplete="new-password" minlength="${SENHA_MIN}">
+      <button type="button" class="btn sec" data-acao="criarConta">Criar conta</button></div></div></details></div>`;
 }
