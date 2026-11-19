@@ -39,6 +39,10 @@ function tabela(tor, ids, titulo, me) {
   <tbody>${T.map((t, i) => { const c = clubById(t.id), z = i < vaga; return `<tr class="${t.id === me ? 'me' : ''}"><td class="${z ? 'zona-lib' : ''}"${z ? ' title="Vai à final"' : ''}>${i + 1}${z ? '<span class="sr"> (vai à final)</span>' : ''}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n"><b>${t.Pts}</b></td><td class="n">${t.J}</td><td class="n">${t.V}</td><td class="n">${t.E}</td><td class="n">${t.D}</td><td class="n">${t.GP - t.GC}</td></tr>` }).join('')}</tbody>
   </table></div></section>`;
 }
+export function tabelasEstadual(tor, me) {
+  return tor.grupos.map((ids, i) => tabela(tor, ids, tor.grupos.length === 1 ? 'Classificação' : `Grupo ${'AB'[i]}`, me)).join('');
+}
+
 function final(tor, me) {
   const f = tor.final; if (!f) return `<section class="card"><h2 class="t3">Final</h2><p class="muted">Ida e volta nas duas últimas datas da pré-temporada, entre ${tor.grupos.length === 1 ? 'os dois primeiros' : 'os primeiros de cada grupo'}. O melhor colocado decide em casa.</p></section>`;
   const H = clubById(f.h), A = clubById(f.a), t = agregadoFinal(f), d = S.estaduais.datas;
@@ -56,7 +60,7 @@ export function vEstadual() {
   const situacao = tor.campeao ? `Campeão: <b>${esc(clubById(tor.campeao).name)}</b>.` : 'Em andamento.';
   const formato = tor.grupos.length === 1 ? 'Pontos corridos em turno único' : 'Dois grupos em turno único';
   return `${voltar}<p class="muted resumo">${esc(tor.nome)}, na pré-temporada (antes da rodada 1). ${formato}, e final em ida e volta; empate na soma vai para os pênaltis. ${situacao}</p>
-    ${artilhariaDoTorneio(tor, 'estadual-' + tor.uf)}${final(tor, me)}${tor.grupos.map((g, i) => tabela(tor, g, tor.grupos.length === 1 ? 'Classificação' : `Grupo ${'AB'[i]}`, me)).join('')}`;
+    ${artilhariaDoTorneio(tor, 'estadual-' + tor.uf)}${final(tor, me)}${tabelasEstadual(tor, me)}`;
 }
 function semEstadual() {
   const uc = clubById(tec().clubId);

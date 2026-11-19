@@ -591,6 +591,7 @@ body.em-jogo .avisos{bottom:24px}
 /* ---- Artilharia (#184) ---- */
 .art-selects{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:var(--e4)}
 .art-selects .art-campo,.art-selects select{min-width:0}
+.classif-filtros .art-selects{max-width:24rem}
 .art-campo{display:flex;flex-direction:column;gap:6px;min-width:170px}
 .art-campo label,.art-rotulo{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .art-titulo{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--e3);margin:var(--e5) 0 var(--e3)}

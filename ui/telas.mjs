@@ -7,15 +7,15 @@ import { DIVS, MOVE_N, S, clubById, divOf, divisions, divsOf, hasTwoDivs, table,
 import { clamp, esc, money } from '../core/utils.mjs';
 import { vClube } from './clube.mjs';
 import { vCompeticoes } from './competicoes.mjs';
-import { jogosContinentais, vLibertadores, vSulamericana } from './continental.mjs';
+import { jogosContinentais, tabelasContinental, vLibertadores, vSulamericana } from './continental.mjs';
 import { jogosCopa, vCopa } from './copa.mjs';
-import { jogosEstadual, proximoEstadual, rotuloRodada, vEstadual } from './estadual.mjs';
-import { chip, stat, tag } from './componentes.mjs';
+import { jogosEstadual, proximoEstadual, rotuloRodada, tabelasEstadual, vEstadual } from './estadual.mjs';
+import { chip, seletorCompeticao, stat, tag } from './componentes.mjs';
 import { vAoVivo } from './aovivo.mjs';
 import { vArt } from './artilharia.mjs';
 import { vElenco } from './elenco.mjs';
 import { vEscalacao } from './escalacao.mjs';
-import { MAX_TECNICOS, getData, save, ui } from './estado.mjs';
+import { MAX_TECNICOS, chaveJogoAtual, getData, save, ui } from './estado.mjs';
 import { icone } from './icones.mjs';
 import { TITULOS, barraAcoes, lateral } from './layout.mjs';
 import { vLigas, vLobby } from './liga.mjs';
@@ -113,14 +113,36 @@ export function zonas(d){
   const two=hasTwoDivs(),mv=two?MOVE_N():4,ds=divisions(),di=ds.indexOf(d),last=di===ds.length-1,top=di===0?6:mv,bottom=!two?4:last?0:mv;
   return {top,bottom,nomeTop:di===0?'Libertadores (G6)':`Acesso à ${DIVS[ds[di-1]]} (G${mv})`,nomeBottom:bottom?`Rebaixamento${two?' para a '+DIVS[ds[di+1]]:''} (Z${bottom})`:''};
 }
-export function vTabela(){
-  const d=curDiv(),T=table(d),me=tec().clubId,{top,bottom,nomeTop,nomeBottom}=zonas(d);
+function tabelaLiga(d,me){
+  const T=table(d),{top,bottom,nomeTop,nomeBottom}=zonas(d);
   const zona=i=>i<top?['zona-lib',nomeTop]:bottom&&i>=T.length-bottom?['zona-z4',nomeBottom]:['',''];
-  return `${divTabs()}<div class="legenda"><span><i class="zona-cor lib"></i>${nomeTop}</span>${bottom?`<span><i class="zona-cor z4"></i>${nomeBottom}</span>`:''}</div>
+  return `<div class="legenda"><span><i class="zona-cor lib"></i>${nomeTop}</span>${bottom?`<span><i class="zona-cor z4"></i>${nomeBottom}</span>`:''}</div>
   <section class="card tabela-card"><div class="tw"><table class="classif"><caption class="sr">Classificação da ${DIVS[d]} ${S.season}</caption>
   <thead><tr><th scope="col">#</th><th scope="col">Clube</th><th scope="col" class="n">Pts</th><th scope="col" class="n">J</th><th scope="col" class="n">V</th><th scope="col" class="n">E</th><th scope="col" class="n">D</th><th scope="col" class="n">GP</th><th scope="col" class="n">GC</th><th scope="col" class="n">SG</th></tr></thead>
   <tbody>${T.map((t,i)=>{const c=clubById(t.id),[z,nz]=zona(i);return `<tr class="${t.id===me?'me':''}"><td class="${z}"${nz?` title="${esc(nz)}"`:''}>${i+1}${nz?`<span class="sr"> (${esc(nz)})</span>`:''}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n"><b>${t.Pts}</b></td><td class="n">${t.J}</td><td class="n">${t.V}</td><td class="n">${t.E}</td><td class="n">${t.D}</td><td class="n">${t.GP}</td><td class="n">${t.GC}</td><td class="n">${t.GP-t.GC}</td></tr>`}).join('')}</tbody>
   </table></div></section>`;
+}
+
+export function verClassificacao(id) {
+  ui.classifComp[chaveJogoAtual()] = id;
+  render();
+}
+
+export function vTabela() {
+  const me = tec().clubId;
+  const torneiosDaTemporada = estado => estado?.temporada === S.season ? estado.torneios.filter(t => t.grupos.length) : [];
+  const grupos = [
+    ['Liga', divisions().map(id => ({ id, nome: DIVS[id], tabela: () => tabelaLiga(id, me) }))],
+    ['Estaduais', torneiosDaTemporada(S.estaduais).map(t => ({ id: 'estadual-' + t.uf, nome: t.nome, tabela: () => tabelasEstadual(t, me) }))],
+    ['Continentais', torneiosDaTemporada(S.continentais).map(t => ({ id: t.id, nome: t.nome, tabela: () => tabelasContinental(t, me) }))]
+  ].filter(([, competicoes]) => competicoes.length);
+  const opcoes = grupos.flatMap(([, competicoes]) => competicoes);
+  const atual = opcoes.find(c => c.id === ui.classifComp[chaveJogoAtual()]) || opcoes.find(c => c.id === divOf(userClub()));
+  return `<section class="card classif-filtros"><div class="art-selects">
+    ${seletorCompeticao('classifCompeticao', 'verClassificacao', grupos, atual.id)}
+  </div></section>
+  <div class="art-titulo"><h2>${esc(atual.nome)} ${S.season}</h2></div>
+  ${atual.tabela()}`;
 }
 
 /* ---------- finanças ---------- */

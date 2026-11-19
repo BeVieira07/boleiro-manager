@@ -37,5 +37,11 @@ export function stat({ rotulo, valor, unid = '', sub = '', cor = '', pct = null,
 export const chip = (rotulo, acao, on = false, extra = '') =>
   `<button type="button" class="chip${on ? ' on' : ''}" aria-pressed="${on}" data-acao="${esc(acao)}">${rotulo}${extra}</button>`;
 
+export function seletorCompeticao(id, acao, grupos, selecionada) {
+  const opcoes = grupos.map(([nome, competicoes]) => `<optgroup label="${esc(nome)}">${competicoes.map(c =>
+    `<option value="${esc(c.id)}"${c.id === selecionada ? ' selected' : ''}>${esc(c.nome)}</option>`).join('')}</optgroup>`).join('');
+  return `<div class="art-campo"><label for="${esc(id)}">Competição</label><select id="${esc(id)}" data-mudar="${esc(acao)}">${opcoes}</select></div>`;
+}
+
 /** Etiqueta de status: tipo ok | aviso | erro | info. */
 export const tag = (texto, tipo = 'info') => `<span class="tag ${tipo}">${esc(texto)}</span>`;

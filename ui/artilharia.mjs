@@ -6,8 +6,8 @@ import { artilhariaCopa } from '../core/gols-copa.mjs';
 import { DIVS, P, S, clubById, divOf, divisions, table, tec, topScorers, userClub } from '../core/estado.mjs';
 import { posDNome } from '../core/posicoes.mjs';
 import { esc } from '../core/utils.mjs';
-import { barra, tag } from './componentes.mjs';
-import { ui } from './estado.mjs';
+import { barra, seletorCompeticao, tag } from './componentes.mjs';
+import { chaveJogoAtual, ui } from './estado.mjs';
 import { botaoFicha } from './ficha-jogador.mjs';
 import { crest } from './partida.mjs';
 import { go, render } from './telas.mjs';
@@ -20,14 +20,13 @@ const GRUPOS = () => [
   ['Estaduais', estaduais().map(t => ({ id: 'estadual-' + t.uf, nome: t.nome }))],
   ['Continentais', TORNEIOS.map(t => ({ id: t.id, nome: t.nome }))]
 ].filter(([, torneios]) => torneios.length);
-const jogoAtual = () => ui.liga ? `liga:${ui.liga.id}` : `save:${S.saveId}`;
 /** Competição aberta: a escolhida, ou a série do seu clube. */
 export function competicaoAtual() {
   const todas = GRUPOS().flatMap(([, lista]) => lista);
-  return todas.find(c => c.id === ui.artComp[jogoAtual()]) || todas.find(c => c.id === divOf(userClub()));
+  return todas.find(c => c.id === ui.artComp[chaveJogoAtual()]) || todas.find(c => c.id === divOf(userClub()));
 }
 
-export function verArtilharia(id) { ui.artComp[jogoAtual()] = id; if (ui.view === 'artilharia') render(); else go('artilharia') }
+export function verArtilharia(id) { ui.artComp[chaveJogoAtual()] = id; if (ui.view === 'artilharia') render(); else go('artilharia') }
 export function artSoMeu() { ui.artSo = !ui.artSo; render() }
 
 // posição do ranking com empate: 1º, 2º, 2º, 4º
@@ -69,13 +68,11 @@ const media = x => x.j ? (x.gols / x.j).toFixed(2).replace('.', ',') : '—';
 const posicao = r => `${r}º`;
 
 function filtros(atual) {
-  const grupos = GRUPOS().map(([nome, lista]) => `<optgroup label="${esc(nome)}">${lista.map(c =>
-    `<option value="${esc(c.id)}"${c.id === atual.id ? ' selected' : ''}>${esc(c.nome)}</option>`).join('')}</optgroup>`).join('');
   // temporada e país: só há o que está guardado (o jogo não guarda temporadas anteriores nem outros países)
   return `<section class="card art-filtros"><div class="art-selects">
     <div class="art-campo"><label for="artTemporada">Temporada</label><select id="artTemporada" disabled><option>${S.season} · atual</option></select></div>
     <div class="art-campo"><label for="artPais">País</label><select id="artPais" disabled><option>Brasil</option></select></div>
-    <div class="art-campo"><label for="artCompeticao">Competição</label><select id="artCompeticao" data-mudar="verArtilharia">${grupos}</select></div>
+    ${seletorCompeticao('artCompeticao', 'verArtilharia', GRUPOS(), atual.id)}
     </div></section>`;
 }
 function podio(linhas) {
