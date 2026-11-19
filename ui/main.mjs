@@ -49,6 +49,7 @@ export function ligarEventos(doc = document) {
     if (el) executar(el.dataset.acao);
   });
   doc.addEventListener('keydown', avisos.teclaModal); // #64: Esc fecha o modal, Tab fica dentro dele
+  doc.addEventListener('keydown', layout.teclaOpcoes);
   // data-digitar="nome|arg" -> a cada tecla chama nome('arg', valor, evento) (busca que filtra enquanto digita)
   doc.addEventListener('input', ev => {
     const el = ev.target.closest && ev.target.closest('[data-digitar]');

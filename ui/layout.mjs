@@ -62,6 +62,12 @@ export function alternarMais() {
   render();
 }
 
+export function teclaOpcoes(evento) {
+  if (evento.key !== 'Escape' || !ui.maisAberto || !evento.target?.closest?.('#lateral')) return;
+  alternarMais();
+  document.getElementById('opcoes-jogo')?.focus();
+}
+
 function placarItem(rotulo, valor, classe = '') {
   return `<div><dt>${rotulo}</dt><dd${classe ? ` class="${classe}"` : ''}>${valor}</dd></div>`;
 }

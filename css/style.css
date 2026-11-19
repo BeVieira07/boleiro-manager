@@ -134,7 +134,7 @@ body.em-jogo .lateral{display:block;position:sticky;top:0;z-index:10;background:
 .marca{display:flex;align-items:center;gap:10px;color:var(--verde);flex:none}
 .marca>div{display:flex;flex-direction:column;line-height:1}
 .marca-nome{font:italic 800 26px/1 var(--f-titulo);letter-spacing:.05em;text-transform:uppercase}
-.marca-sub{font-size:10px;letter-spacing:.32em;color:var(--muted);margin-top:3px}
+.marca-sub{font-size:10px;letter-spacing:.32em;color:var(--muted);margin-top:3px;text-transform:uppercase}
 .nav{display:flex;gap:4px;margin-right:auto}
 .nav-item{appearance:none;background:transparent;border:0;display:flex;align-items:center;gap:9px;min-height:43px;padding:5px 15px;border-radius:var(--r-sm);color:var(--texto2);font:italic 800 17px/1 var(--f-titulo);letter-spacing:.045em;text-transform:uppercase;cursor:pointer}
 .nav-item:hover{background:var(--painel);color:var(--texto)}
@@ -212,13 +212,13 @@ body.em-jogo .conteudo{max-width:1312px;padding:22px 16px 48px}
 .painel-principal{flex:1.5 1 440px;min-width:0}
 .painel-lateral{flex:1 1 320px;min-width:0}
 .clube-indicadores{grid-template-columns:repeat(4,minmax(0,1fr))}
-.clube-indicadores .stat{min-height:133px}
+.clube-indicadores .stat{min-height:133px;gap:6px}
 .clube-indicadores .stat-valor{font-style:italic;font-weight:800;overflow-wrap:anywhere}
 .card.destaque.clube-proximo{background:url("../img/figma/circulo-central.svg") center 62px / 128px 128px no-repeat,
   linear-gradient(90deg,transparent calc(50% - 1px),#e9f3ee16 calc(50% - 1px),#e9f3ee16 calc(50% + 1px),transparent calc(50% + 1px)),
   linear-gradient(150deg,#1c3b27,var(--painel))}
 .clube-proximo .confronto{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)}
-.clube-proximo .x{color:var(--ouro);font-style:italic;font-weight:800}
+.clube-proximo .confronto .x{color:var(--ouro);font-style:italic;font-weight:800}
 .clube-formacoes{gap:7px}
 .clube-formacoes>.muted{margin-right:6px;font-size:12px}
 .clube-taticas{margin-top:12px;padding-top:8px;border-top:1px solid #e9f3ee16}
@@ -227,7 +227,9 @@ body.em-jogo .conteudo{max-width:1312px;padding:22px 16px 48px}
 @media(max-width:799px){
   .clube-indicadores{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
   .clube-indicadores .stat{min-height:117px;padding:12px}
+  .clube-indicadores .stat-rotulo{font-size:11px;letter-spacing:.055em}
   .clube-indicadores .stat-valor{font-size:29px}
+  .clube-indicadores .stat-sub,.clube-indicadores .stat-unid{font-size:12px;line-height:1.25}
   .clube-proximo .time{min-width:0}
   .clube-proximo .crest.g{width:52px;height:52px}
   .clube-proximo .chip{padding-inline:8px}
