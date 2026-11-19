@@ -1,6 +1,6 @@
 /* ================= Estaduais na tela (#132): cartão, tela do torneio e jogos da pré-temporada ================= */
-import { PREMIO_ESTADUAL, agregadoFinal, emPreTemporada, estadualPelaFrente, jogosDaData, nomeData, tabelaGrupo, torneioDe } from '../core/estadual.mjs';
-import { S, clubById, tec } from '../core/estado.mjs';
+import { agregadoFinal, emPreTemporada, estadualPelaFrente, jogosDaData, nomeData, premioEstadual, tabelaGrupo, torneioDe } from '../core/estadual.mjs';
+import { S, clubById, divOf, tec } from '../core/estado.mjs';
 import { esc, money } from '../core/utils.mjs';
 import { artilhariaDoTorneio } from './artilharia.mjs';
 import { crest } from './partida.mjs';
@@ -48,7 +48,9 @@ function final(tor, me) {
   const H = clubById(f.h), A = clubById(f.a), t = agregadoFinal(f), d = S.estaduais.datas;
   const pernas = [f.ida ? `Ida: ${esc(H.short || H.name)} ${f.ida.h} x ${f.ida.a} ${esc(A.short || A.name)}` : '', f.volta ? `Volta: ${esc(A.short || A.name)} ${f.volta.a} x ${f.volta.h} ${esc(H.short || H.name)}` : '', f.pen ? `${esc(clubById(f.pen).name)} venceu nos pênaltis` : ''].filter(Boolean).join(' · ');
   const cls = id => f.v ? (f.v === id ? 'venceu' : 'perdeu') : '';
-  return `<section class="fase-copa"><div class="card-topo"><h2 class="t3">Final</h2><span class="muted">Datas ${d - 1} e ${d} da pré-temporada · título: ${money(PREMIO_ESTADUAL.campeao)}, vice: ${money(PREMIO_ESTADUAL.vice)}</span></div>
+  const div = divOf(clubById(me));
+  const premio = f.v || (f.h !== me && f.a !== me) ? '' : ` · prêmio para seu clube — título: ${money(premioEstadual('campeao', div), 3)}, vice: ${money(premioEstadual('vice', div), 3)}`;
+  return `<section class="fase-copa"><div class="card-topo"><h2 class="t3">Final</h2><span class="muted">Datas ${d - 1} e ${d} da pré-temporada${premio}</span></div>
     <ul class="jogos"><li class="jogo${f.h === me || f.a === me ? ' meu' : ''}"><span class="jogo-time casa ${cls(f.h)}">${esc(H.name)} ${crest(H)}</span>
     <span class="jogo-placar">${f.ida ? `${t.h}<span aria-hidden="true"> x </span><span class="sr"> a </span>${t.a}` : '<span class="muted">x</span>'}</span>
     <span class="jogo-time fora ${cls(f.a)}">${crest(A)} ${esc(A.name)}</span><span class="jogo-detalhe">${pernas || 'A jogar'}</span></li></ul></section>`;

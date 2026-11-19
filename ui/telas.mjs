@@ -156,7 +156,7 @@ export function vFin(){
    ${stat({rotulo:'Receitas',valor:money(tvQuota(divOf(uc))),unid:'de TV por rodada',sub:'Mais bilheteria em casa e premiação no fim da temporada'})}
   </div>
   <section class="card"><h2 class="t3">Lançamentos recentes</h2>${uc.fin.length?`<ul class="lancamentos">${uc.fin.map(f=>{const e=f.amount>=0;
-    return `<li class="${e?'entrada':'saida'}">${icone(e?'subir':'descer',{rotulo:e?'Entrada':'Saída'})}<span class="lanc-desc">${esc(f.desc)}<span class="muted">Temporada ${f.s}, rodada ${f.r+1}</span></span><b class="num">${e?'+':''}${money(f.amount)}</b></li>`}).join('')}</ul>`:'<p class="muted">Sem movimentações ainda.</p>'}</section>`;
+    return `<li class="${e?'entrada':'saida'}">${icone(e?'subir':'descer',{rotulo:e?'Entrada':'Saída'})}<span class="lanc-desc">${esc(f.desc)}<span class="muted">Temporada ${f.s}, rodada ${f.r+1}</span></span><b class="num">${e?'+':''}${money(f.amount,3)}</b></li>`}).join('')}</ul>`:'<p class="muted">Sem movimentações ainda.</p>'}</section>`;
 }
 
 export function verRodadaJogos(n){ui.jogosRound=+n;render()}

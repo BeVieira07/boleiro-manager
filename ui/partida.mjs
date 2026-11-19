@@ -43,7 +43,7 @@ export function seasonEnd(){
     :di>0&&pos<=mv?`<p class="ok">${icone('subir')} Acesso! Seu time vai disputar a ${DIVS[ds[di-1]]}.</p>`:'';
   openModal(`<h2>${icone('trofeu',{tam:24})} Fim da temporada ${S.season}</h2>
    ${champs.map(x=>`<p>Campeão${two?' da '+DIVS[x.d]:''}: <b class="gold">${esc(x.c.name)}</b></p>`).join('')}
-   ${pos!=null?`<p>Seu time terminou em <b>${pos}º lugar</b>${two?' na '+DIVS[div]:''} e recebeu ${money(prize)} de premiação.</p>`:''}
+   ${pos!=null?`<p>Seu time terminou em <b>${pos}º lugar</b>${two?' na '+DIVS[div]:''} e recebeu ${money(prize,3)} de premiação.</p>`:''}
    <p>Artilheiro${two?' da '+DIVS[divisions()[0]]:''}: ${top?esc(top.name)+' — '+top.goals+' gols':'-'}</p>
    ${fate}
    <div class="row" style="justify-content:flex-end"><button class="btn sec" data-acao="closeModal">Ver tabela</button><button class="btn" data-acao="fecharEIniciarTemporada">Iniciar temporada ${S.season+1}</button></div>`);
