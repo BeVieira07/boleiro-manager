@@ -118,11 +118,11 @@ test('versão do save: jogo novo nasce na versão atual; save de versão mais no
   assert.equal(j.run('S.versao'), versaoAtual);
 });
 
-test('tela inicial da maquete: continuar, começar algo novo e jogos salvos; sem save não há destaque (#104)', () => {
+test('o menu inicial abre uma campanha nova ou continua a mais recente', () => {
   const vazio = carregarJogo({ boot: true });
   assert.doesNotMatch(vazio.html(), /class="continuar"/, 'sem save, sem o destaque Continuar');
-  assert.match(vazio.html(), /<h1 class="sr">Boleiro Manager<\/h1>/, 'a página continua com um título');
-  assert.match(vazio.html(), /data-acao="novoJogo"[^>]*>[\s\S]*Novo jogo sozinho/);
+  assert.match(vazio.html(), /<h1 aria-label="Boleiro Manager">/, 'a página continua com um título');
+  assert.match(vazio.html(), /data-acao="novoJogo">Novo jogo/);
   assert.match(vazio.html(), /Nenhum jogo salvo ainda/);
   assert.doesNotMatch(vazio.html(), /type="file"|loadSaveFile|go\|dados|Importar/, 'o menu não importa nada (#187)');
   assert.match(vazio.html(), /data-acao="go\|config"/);
@@ -131,9 +131,8 @@ test('tela inicial da maquete: continuar, começar algo novo e jogos salvos; sem
   j.run(`newGame('${clubeDaSerie(j)}')`);
   const clube = j.run('userClub().name'), id = j.run('S.saveId');
   j.run('voltarMenu()');
-  assert.match(j.html(), new RegExp(`<h1 id="hContinuar">${clube} te espera</h1>`));
-  assert.match(j.html(), new RegExp(`data-acao="abrirMaisNovo\|${id}"[^>]*>[\s\S]*?Continuar`));
-  assert.match(j.html(), /Campeonato: 0 de 38 rodadas jogadas/);
+  assert.match(j.html(), new RegExp(`data-acao="abrirMaisNovo\\|${id}">Continuar`));
+  assert.match(j.html(), /assumiu o comando/);
   assert.match(j.html(), /Rodada 1 de 38/);
   assert.match(j.html(), /<li class="save-linha">/);
   assert.match(j.html(), new RegExp(`aria-label="Excluir o jogo salvo do ${clube}"`));

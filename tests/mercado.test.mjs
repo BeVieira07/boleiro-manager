@@ -50,9 +50,24 @@ test('abas com contagem: À venda e Para empréstimo filtram a lista, Por clube 
   assert.match(h, /Escolha um clube para ver os jogadores dele/);
   assert.equal((h.match(/class="card clube-mercado"/g) || []).length, 79);
   assert.doesNotMatch(h, /id="corpoMercado"/);
+  j.acao('filtrarMercado|q', 'zzz-sem-jogador');
+  assert.match(j.html(), /Nenhum clube com jogadores que correspondam aos filtros/);
+  j.acao('filtrarMercado|q', '');
   j.acao(`filtrarMercado|club|${x.club}`);
   assert.equal(j.run('ui.mf.aba'), 'todos', 'escolher o clube volta para a lista');
   assert.equal(j.run('corpoMercado().total'), j.run(`clubById('${x.club}').players.length`));
+});
+
+test('o jogador já negociado na rodada mostra o estado da proposta e mantém acesso à ficha', () => {
+  const j = carregarJogo({ boot: true });
+  const x = preparar(j);
+  j.acao(`filtrarMercado|club|${x.club}`);
+  j.run(`P['${x.emp}'].bidRound=S.round+'_'+S.season;render()`);
+  const h = j.html();
+  assert.match(h, /Proposta enviada nesta rodada/);
+  assert.ok(h.includes(`abrirFicha|${x.emp}|mercado`));
+  assert.ok(!h.includes(`makeBid|${x.emp}"`));
+  assert.ok(!h.includes(`loanForm|${x.emp}|in"`));
 });
 
 test('situação: à venda com preço pedido, para empréstimo com o salário dividido, sob contrato mais caro', () => {

@@ -6,7 +6,7 @@ import { carregarJogo, clubeDaSerie, jogarRodada, problemasNasTelas } from './jo
 
 test('nenhuma classe do CSS fica sem uso nas telas', () => {
   const raiz = new URL('..', import.meta.url);
-  const css = ['style.css', 'escalacao.css'].map(f => readFileSync(new URL('css/' + f, raiz), 'utf8')).join('\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/url\([^)]*\)/g, '');
+  const css = ['style.css', 'escalacao.css', 'temporada-figma.css'].map(f => readFileSync(new URL('css/' + f, raiz), 'utf8')).join('\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/url\([^)]*\)/g, '');
   const codigo = [...readdirSync(new URL('ui', raiz)).map(f => readFileSync(new URL('ui/' + f, raiz), 'utf8')), readFileSync(new URL('index.html', raiz), 'utf8')].join('\n');
   const classes = new Set([...css.matchAll(/\.([a-zA-Z][\w-]*)/g)].map(m => m[1]).filter(c => !/^\d/.test(c)));
   const sobra = [...classes].filter(c => !new RegExp(`(^|[^\\w-])${c}([^\\w-]|$)`).test(codigo));
@@ -44,6 +44,8 @@ test('Jogos em cartões com o seu jogo em destaque e navegação entre rodadas',
   assert.match(j.html(), /Rodada 1 <span/);
   assert.match(j.html(), /class="jogo-placar">\d+<span aria-hidden="true"> x <\/span>/, 'rodada jogada mostra o placar');
   assert.match(j.html(), /Ir para a rodada atual/);
+  assert.match(j.html(), /Próximo jogo do clube/);
+  assert.match(j.html(), /Rodada 3 · Campeonato Brasileiro/);
   assert.match(j.html(), /aria-label="Rodada anterior" disabled/);
 });
 
@@ -55,7 +57,20 @@ test('Classificação com zonas e o seu clube em destaque; Finanças com entrada
   assert.equal((j.html().match(/class="zona-lib"/g) || []).length, 6);
   assert.equal((j.html().match(/class="zona-z4"/g) || []).length, 4);
   assert.equal((j.html().match(/<tr class="me">/g) || []).length, 1);
+  assert.match(j.html(), /Últimos 5/);
+  assert.match(j.html(), /bola-forma [VED]/);
   j.run(`go('financas')`);
   assert.match(j.html(), /class="(entrada|saida)"><svg[^>]*aria-label="(Entrada|Saída)"/);
   assert.deepEqual(problemasNasTelas(j), []);
+});
+
+test('Finanças calcula a distribuição sobre despesas registradas e explicita categorias sem registros', () => {
+  const j = carregarJogo({ boot: true });
+  j.run(`newGame('${clubeDaSerie(j)}');userClub().fin=[];go('financas')`);
+  assert.match(j.html(), /Sem despesas nos lançamentos registrados/);
+  j.run("addFin('Salários do elenco',-6);addFin('Compra de Jogador',-3);addFin('Bicho por vitória',-1);addFin('Cota de TV',5);render()");
+  assert.match(j.html(), /Salários<\/span><b>60%/);
+  assert.match(j.html(), /Contratações<\/span><b>30%/);
+  assert.match(j.html(), /Outras despesas<\/span><b>10%/);
+  assert.match(j.html(), /Base e estrutura<\/span><b>Sem registros/);
 });

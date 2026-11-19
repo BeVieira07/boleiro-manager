@@ -151,15 +151,14 @@ export function painelConta() {
     <div class="row"><input id="nomeConta" placeholder="Nome do técnico" value="${esc(conta.perfil?.nome || '')}"><button class="btn sec" data-acao="mudarNomeTecnico">Salvar</button></div>
     <button class="btn fantasma" data-acao="sair">${icone('sair', { tam: 16 })}Sair da conta</button></div></details>`;
   }
-  return `<div class="row conta-entrar"><button class="btn" data-acao="entrarComGoogle">Entrar com Google</button>
-    <details class="conta-menu"><summary class="btn fantasma">Entrar com e-mail</summary><div class="conta-painel">
-    <div class="conta-form"><b>Entrar</b>
+  return `<div class="conta-entrar"><button type="button" class="btn google-entrar" data-acao="entrarComGoogle"><span aria-hidden="true">G</span> Entrar com Google</button>
+    <div class="conta-form"><p class="conta-divisor">ou com e-mail</p>
       <label for="emailConta" class="campo-rotulo">E-mail</label><input id="emailConta" type="email" autocomplete="email" placeholder="seu@email.com">
       <label for="senhaConta" class="campo-rotulo">Senha</label><input id="senhaConta" type="password" autocomplete="current-password">
       <button type="button" class="btn" data-acao="entrar">Entrar</button></div>
-    <div class="conta-form"><b>Criar conta</b>
+    <details class="conta-cadastro"><summary>Criar conta</summary><div class="conta-form">
       <label for="nomeNovaConta" class="campo-rotulo">Nome do técnico</label><input id="nomeNovaConta" autocomplete="nickname" maxlength="40">
       <label for="emailNovaConta" class="campo-rotulo">E-mail</label><input id="emailNovaConta" type="email" autocomplete="email" placeholder="seu@email.com">
       <label for="senhaNovaConta" class="campo-rotulo">Senha (mínimo ${SENHA_MIN} caracteres)</label><input id="senhaNovaConta" type="password" autocomplete="new-password" minlength="${SENHA_MIN}">
-      <button type="button" class="btn sec" data-acao="criarConta">Criar conta</button></div></div></details></div>`;
+      <button type="button" class="btn sec" data-acao="criarConta">Criar conta</button></div></details></div>`;
 }

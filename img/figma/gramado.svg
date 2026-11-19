@@ -1,0 +1,32 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="1440" height="900" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Gramado (fundo)" clip-path="url(#clip0_0_15)">
+<path id="Vector" d="M110 0H0V900H110V0Z" fill="#10331F"/>
+<path id="Vector_2" d="M220 0H110V900H220V0Z" fill="#123A24"/>
+<path id="Vector_3" d="M330 0H220V900H330V0Z" fill="#10331F"/>
+<path id="Vector_4" d="M440 0H330V900H440V0Z" fill="#123A24"/>
+<path id="Vector_5" d="M550 0H440V900H550V0Z" fill="#10331F"/>
+<path id="Vector_6" d="M660 0H550V900H660V0Z" fill="#123A24"/>
+<path id="Vector_7" d="M770 0H660V900H770V0Z" fill="#10331F"/>
+<path id="Vector_8" d="M880 0H770V900H880V0Z" fill="#123A24"/>
+<path id="Vector_9" d="M990 0H880V900H990V0Z" fill="#10331F"/>
+<path id="Vector_10" d="M1100 0H990V900H1100V0Z" fill="#123A24"/>
+<path id="Vector_11" d="M1210 0H1100V900H1210V0Z" fill="#10331F"/>
+<path id="Vector_12" d="M1320 0H1210V900H1320V0Z" fill="#123A24"/>
+<path id="Vector_13" d="M1430 0H1320V900H1430V0Z" fill="#10331F"/>
+<path id="Vector_14" d="M1540 0H1430V900H1540V0Z" fill="#123A24"/>
+<g id="Group">
+<path id="Vector_15" d="M560 72H1600V828H560V72Z" stroke-width="3" stroke="white" stroke-opacity="0.14"/>
+<path id="Vector_16" d="M1080 72V828" stroke-width="3" stroke="white" stroke-opacity="0.14"/>
+<path id="Vector_17" d="M1224 450C1224 529.529 1159.53 594 1080 594C1000.47 594 936 529.529 936 450C936 370.471 1000.47 306 1080 306C1159.53 306 1224 370.471 1224 450Z" stroke-width="3" stroke="white" stroke-opacity="0.14"/>
+<path id="Vector_18" d="M1410 225H1600V675H1410V225Z" stroke-width="3" stroke="white" stroke-opacity="0.14"/>
+<path id="Vector_19" d="M1530 351H1600V549H1530V351Z" stroke-width="3" stroke="white" stroke-opacity="0.14"/>
+<path id="Vector_20" d="M1410 390C1395.24 406.501 1387.08 427.862 1387.08 450C1387.08 472.138 1395.24 493.499 1410 510" stroke-width="3" stroke="white" stroke-opacity="0.14"/>
+</g>
+<path id="Vector_21" d="M1080 455C1082.76 455 1085 452.761 1085 450C1085 447.239 1082.76 445 1080 445C1077.24 445 1075 447.239 1075 450C1075 452.761 1077.24 455 1080 455Z" fill="white" fill-opacity="0.25"/>
+</g>
+<defs>
+<clipPath id="clip0_0_15">
+<rect width="1440" height="900" fill="white"/>
+</clipPath>
+</defs>
+</svg>

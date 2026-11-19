@@ -1,0 +1,191 @@
+/* Finanças e telas da temporada e do mercado. A base compartilhada fornece cores e fontes. */
+.figma-financas-corpo, .figma-artilharia .art-corpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: var(--e5);
+}
+
+.figma-financas .stats, .figma-mercado .mer-stats {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.figma-financas .stat, .figma-mercado .stat { min-height: 116px; }
+.figma-lancamentos .lancamentos li:last-child { border-bottom: 0; }
+.figma-lancamentos .lanc-desc, .figma-despesas li span { overflow-wrap: anywhere; }
+.figma-lancamentos .num { white-space: nowrap; }
+.figma-despesas ul {
+  display: grid;
+  gap: var(--e3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.figma-despesas li > div:first-child {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--e2);
+  margin-bottom: var(--e1);
+}
+
+.figma-despesas li b { flex: none; color: var(--texto2); font-size: 12px; }
+
+.figma-rodada-controles, .figma-classificacao-controles, .figma-art-controles {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--e3) var(--e5);
+  margin-bottom: var(--e5);
+}
+
+.figma-rodada-controles .navega-rodada, .figma-rodada-controles .abas,
+.figma-classificacao-controles .legenda, .figma-art-controles .art-titulo { margin: 0; }
+.figma-rodada-controles .navega-rodada > b {
+  font: 700 26px/1 var(--f-titulo);
+  text-transform: uppercase;
+}
+
+.figma-rodada-controles .navega-rodada > b .muted {
+  font: 500 13px/1 var(--f-texto);
+  text-transform: none;
+}
+
+.figma-jogos .jogos { gap: 12px 14px; }
+.figma-jogos .jogo {
+  min-height: 62px;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+}
+.figma-jogos .jogo-time span:not(.crest), .figma-confronto .club { overflow-wrap: anywhere; }
+.figma-jogo-seguinte { margin-top: var(--e5); }
+.figma-jogo-seguinte .card-topo { flex-wrap: wrap; }
+.figma-confronto {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--e5);
+}
+.figma-confronto .club:first-child { justify-self: end; }
+.figma-versus { font: 700 30px/1 var(--f-titulo); color: var(--muted); }
+
+.figma-classificacao-controles .art-campo, .figma-art-controles .art-campo {
+  min-width: min(100%, 15rem);
+  max-width: 100%;
+}
+
+.figma-tabela-liga > .card-topo { justify-content: space-between; gap: var(--e2); padding-bottom: var(--e3); }
+.figma-tabela-liga h2 { margin: 0; color: var(--ouro); font-size: 20px; text-transform: uppercase; }
+.figma-tabela-liga :is(th, td):first-child { padding-left: var(--e4); width: 1%; }
+.figma-tabela-liga :is(th, td):last-child { padding-right: var(--e4); }
+.figma-tabela-liga .n { min-width: 3ch; font-variant-numeric: tabular-nums; }
+.figma-tabela-liga tbody th {
+  position: static;
+  background: transparent;
+  color: var(--texto);
+  font-size: inherit;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.figma-tabela-liga tr.me th { background: color-mix(in srgb, var(--verde) 14%, transparent); }
+.figma-forma { display: inline-flex; gap: var(--e1); }
+.figma-forma .bola-forma {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-sm);
+  font-size: 11px;
+}
+.figma-estatisticas { display: none; }
+
+.figma-competicoes .prox-jogos {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  list-style: none;
+  padding: 0;
+}
+.figma-competicoes .comp-linha { min-height: 91px; }
+.figma-competicoes .comp-nome h3 { margin: 0; font-size: 16px; }
+.figma-competicoes .comp-acoes > .btn { min-height: 40px; }
+
+.figma-artilharia .podio-card { min-height: 140px; }
+.figma-tabela-liga .tw, .figma-artilharia .art-ranking .tw { position: relative; }
+.figma-artilharia .art-ranking table { min-width: 520px; }
+.figma-artilharia .art-ranking :is(th, td):first-child { padding-left: 18px; }
+.figma-artilharia .art-ranking :is(th, td):last-child { padding-right: 18px; }
+.figma-artilharia .art-gols b { color: var(--verde-claro); }
+
+.figma-mercado .mer-abas, .figma-mercado .mer-filtros { margin-bottom: var(--e5); }
+.figma-mercado .mer-pos { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--e3); }
+.figma-mercado .mer-pos .chips { margin: 0; }
+.figma-mercado .mer-linha .art-campo { flex: 1 1 10rem; min-width: min(100%, 10rem); }
+.figma-mercado .mer-linha .mer-busca { flex: 5 1 14rem; }
+.figma-mercado :is(input, select) { min-width: 0; width: 100%; }
+.figma-mercado .mer-resumo { padding: var(--e4) 18px var(--e3); margin: 0; align-items: baseline; }
+.figma-mercado .mer-resumo .t3 { margin: 0; }
+.figma-mercado .tabela-rolavel { position: relative; overflow: auto; max-height: 34rem; }
+.figma-mercado .tabela-jogadores.mercado { min-width: 995px; display: table; }
+.figma-mercado .mercado thead { display: table-header-group; }
+.figma-mercado .mercado tbody { display: table-row-group; }
+.figma-mercado .mercado tr { display: table-row; }
+.figma-mercado .mercado thead th { display: table-cell; }
+.figma-mercado .mercado tr > * {
+  display: table-cell;
+  border-bottom: 1px solid var(--linha2);
+  padding: 8px 10px;
+}
+
+.figma-mercado .mercado .c-pos { padding-left: 14px; width: 56px; }
+.figma-mercado .mercado :is(th, td).c-nome { left: 56px; min-width: 9rem; }
+.figma-mercado .mercado tbody th { position: sticky; background: var(--painel); color: var(--texto); }
+.figma-mercado .mercado .c-sit { min-width: 10rem; white-space: normal; }
+.figma-mercado .mercado .acoes { flex-wrap: wrap; min-width: 7rem; }
+.figma-clube-mercado .club > span { display: grid; }
+.figma-clube-mercado .muted { font-size: 11px; }
+.figma-mercado .mercado .rot { display: none; }
+.figma-mercado .mercado .acoes .btn.sm { min-height: 36px; }
+
+:is(.figma-classificacao, .figma-artilharia, .figma-mercado) [role="region"]:focus-visible {
+  outline: 2px solid var(--ouro);
+  outline-offset: -2px;
+}
+
+@media (min-width: 850px) {
+  .figma-financas .stats, .figma-mercado .mer-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .figma-financas-corpo { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
+  .figma-jogos .jogos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .figma-artilharia .art-corpo { grid-template-columns: minmax(0, 5fr) minmax(215px, 2fr); }
+}
+
+@media (max-width: 799px) {
+  .figma-mercado .mercado tr > th { position: sticky; top: 0; background: var(--painel3); }
+  .figma-mercado .mercado tbody th { top: auto; background: var(--painel); }
+  .figma-mercado .mercado :is(th, td).c-pos { position: sticky; left: 0; background: var(--painel); }
+  .figma-mercado .mercado :is(th, td).c-nome { min-width: 7rem; }
+}
+
+@media (max-width: 680px) {
+  .figma-estatisticas {
+    display: flex;
+    align-items: center;
+    gap: var(--e2);
+    color: var(--texto2);
+    padding: 0 var(--e3) var(--e2);
+    min-height: 36px;
+    width: fit-content;
+  }
+  .figma-tabela-liga:not(:has(.figma-estatisticas input:checked)) .figma-estat-extra { display: none; }
+  .figma-tabela-liga:has(.figma-estatisticas input:checked) .figma-estat-extra { display: table-cell; }
+  .figma-tabela-liga:has(.figma-estatisticas input:checked) .classif { min-width: 600px; }
+  .figma-tabela-liga :is(th, td) { padding: 8px 6px; }
+  .figma-tabela-liga .crest { width: 24px; height: 24px; }
+  .figma-tabela-liga .club { overflow-wrap: anywhere; }
+  .figma-jogos .jogo { gap: 6px; padding-inline: 9px; }
+  .figma-jogos .jogo-placar { min-width: 40px; }
+  .figma-jogos .jogo-time { gap: 5px; font-size: 12px; }
+  .figma-jogos .jogo-time .crest { width: 22px; height: 22px; }
+  .figma-confronto { gap: var(--e2); }
+  .figma-financas .stat-valor, .figma-mercado .stat-valor { font-size: 28px; }
+}

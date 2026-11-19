@@ -1,8 +1,8 @@
 import { migrarSave } from '../core/versao.mjs';
-import { DIVS, S, table, usarEstado } from '../core/estado.mjs';
+import { DIVS, S, divOf, table, usarEstado } from '../core/estado.mjs';
 import { esc } from '../core/utils.mjs';
 import { getData, save, ui } from './estado.mjs';
-import { onlineConfigurado, painelConta, perfilAtual, usuarioAtual } from './conta.mjs';
+import { onlineConfigurado, painelConta, usuarioAtual } from './conta.mjs';
 import { agendarEnvio, apagarNaNuvem, liberarEspaco, pendente, savesNuvem } from './nuvem.mjs';
 import { icone } from './icones.mjs';
 import { crest } from './partida.mjs';
@@ -10,6 +10,7 @@ import { go, render } from './telas.mjs';
 import { SAVE_KEY, store } from './utils.mjs';
 import { avisar, confirmar } from './avisos.mjs';
 import { sairDaLiga } from './ligajogo.mjs';
+import { noticiaVisivel } from './configuracoes.mjs';
 
 /* ================= jogos salvos e tela inicial (#21) =================
    Cada campanha fica em localStorage[SAVE_PREFIX+id]; SAVES_KEY guarda o índice {cur, list:[resumo]}.
@@ -19,7 +20,8 @@ export const indiceSaves=()=>{const i=store.get(SAVES_KEY);return i&&Array.isArr
 export function resumoSave(s){
   const ts=s.managers?Object.values(s.managers):[],t=ts.find(x=>x.id===s.atual);
   const c=s.clubs.find(x=>x.id===(t?t.clubId:s.userClubId))||{};
-  return {id:s.saveId,clube:c.name||'?',tecnicos:ts.length>1?ts.map(x=>x.nome):null,clubId:c.id,div:c.division||null,season:s.season,round:Math.min(s.round+1,(s.fixtures||[]).length),jogadas:s.round,total:(s.fixtures||[]).length,data:new Date().toISOString()};
+  const posicao=s===S&&s.round&&c.id?table(divOf(c)).findIndex(x=>x.id===c.id)+1:0;
+  return {id:s.saveId,clube:c.name||'?',tecnicos:ts.length>1?ts.map(x=>x.nome):null,clubId:c.id,div:c.division||null,season:s.season,round:Math.min(s.round+1,(s.fixtures||[]).length),jogadas:s.round,total:(s.fixtures||[]).length,posicao,data:new Date().toISOString()};
 }
 // Na rodada com Copa pendente, o save deve reabrir com a escalação de antes das trocas ao vivo.
 function estadoAoSalvar(){
@@ -75,7 +77,7 @@ export function excluirSave(id){
 }
 export function apagarSave(id){const idx=indiceSaves();store.del(SAVE_PREFIX+id);idx.list=idx.list.filter(x=>x.id!==id);if(idx.cur===id)idx.cur=null;store.set(SAVES_KEY,idx)}
 export function voltarMenu(){if(ui.liga)sairDaLiga();else if(S)salvarJogo();usarEstado(null);go('menu')}
-export function novoJogo(){if(podeCriarSave()){usarEstado(null);go('inicio')}}
+export function novoJogo(){if(podeCriarSave()){usarEstado(null);ui.escolhaClube={serie:'',busca:'',ordem:'forca',id:''};go('inicio')}}
 /* ---------- tela inicial (#104, maquete do front): continuar, começar algo novo e jogos salvos ---------- */
 export function vMenu(){
   const idx=indiceSaves(),eu=usuarioAtual(),online=onlineConfigurado();
@@ -92,28 +94,41 @@ export function vMenu(){
   };
   const serie=x=>x.div&&DIVS[x.div]?` <span class="muted">· ${DIVS[x.div]}</span>`:'';
   const soNuvem=(nv||[]).filter(n=>!idx.list.some(x=>x.id===n.id)).map(n=>({...n.resumo,id:n.id,data:n.atualizado_em,soNaNuvem:true}));
-  const todos=[...idx.list,...soNuvem],cur=idx.list.find(x=>x.id===idx.cur)||idx.list[0]||soNuvem[0];
-  const saudacao=eu?`Olá, ${esc(perfilAtual()?.nome||eu.email)}`:'Bem-vindo de volta';
-  const destaque=cur?(()=>{const c=clube(cur.clubId),jogadas=cur.jogadas??Math.max(0,cur.round-1),pct=cur.total?Math.round(100*jogadas/cur.total):0; // round = a próxima rodada
-    return `<section class="continuar" aria-labelledby="hContinuar"><div class="continuar-info">
-      <div><p class="sobretitulo">${saudacao}</p><h1 id="hContinuar">${esc(cur.clube)} te espera</h1></div>
-      <div class="continuar-clube">${c?crest(c,'g'):''}<div><b>${esc(cur.clube)}</b>${serie(cur)}<br><span class="texto2">Temporada ${cur.season} · Rodada ${cur.round} de ${cur.total}</span><br>${nuvem(cur,cur.soNaNuvem)}</div></div>
-      <div class="continuar-progresso"><div class="barra"><div style="width:${pct}%"></div></div><span class="muted">Campeonato: ${jogadas} de ${cur.total} rodadas jogadas</span></div></div>
-      <button class="btn continuar-btn" data-acao="abrirMaisNovo|${esc(cur.id)}">${icone('play',{tam:18})}Continuar</button></section>`})():'<h1 class="sr">Boleiro Manager</h1>';
+  const dataSave = x => Math.max(t(x.data), t(naNuvem(x.id)?.atualizado_em));
+  const todos = [...idx.list, ...soNuvem].sort((a, b) => dataSave(b) - dataSave(a));
+  const cur = todos[0];
+  const clubeAtual = cur && clube(cur.clubId);
+  const salvo = cur && store.get(SAVE_PREFIX + cur.id);
+  const noticias = (salvo?.managers?.[salvo.atual]?.news || salvo?.news || []).filter(noticiaVisivel).slice(0, 4);
+  const destaque = cur ? `<div class="continuar">
+    <button type="button" class="menu-acao continuar-btn" data-acao="abrirMaisNovo|${esc(cur.id)}">Continuar</button>
+    <div class="continuar-clube">${clubeAtual ? crest(clubeAtual, 'm') : ''}<div><b>${esc(cur.clube)}</b>${serie(cur)}
+    <span class="muted">Rodada ${cur.round} de ${cur.total}${cur.posicao ? ` · ${cur.posicao}º lugar` : ''} · ${quando(dataSave(cur))}</span>${nuvem(cur,cur.soNaNuvem)}</div></div></div>` : '';
   const linha=x=>{const c=clube(x.clubId);
     return `<li class="save-linha">${c?crest(c,'m'):''}<div class="save-clube"><b>${esc(x.clube)}</b>${serie(x)}${x.tecnicos?`<br><span class="muted">${x.tecnicos.map(esc).join(', ')}</span>`:''}<br>${nuvem(x,x.soNaNuvem)}</div>
     <dl class="save-dados"><div><dt>Temporada</dt><dd>${x.season}</dd></div><div><dt>Rodada</dt><dd>${x.round} / ${x.total}</dd></div><div><dt>Último acesso</dt><dd>${quando(x.data)}</dd></div></dl>
     <div class="save-acoes"><button class="btn" data-acao="abrirMaisNovo|${esc(x.id)}">Abrir</button><button class="btn fantasma icone-so perigo-texto" data-acao="excluirSave|${esc(x.id)}" aria-label="Excluir o jogo salvo do ${esc(x.clube)}" title="Excluir">${icone('lixo',{tam:18})}</button></div></li>`};
-  const cartao=(acao,ic,cor,titulo,texto)=>`<button class="cartao-acao" data-acao="${acao}"><span class="cartao-icone ${cor}">${icone(ic,{tam:22})}</span><b>${titulo}</b><span class="muted">${texto}</span></button>`;
   return `<div class="inicio">
-  <header class="inicio-topo"><img class="inicio-marca" src="img/logo/logo-principal.png" alt="Boleiro Manager" width="166" height="48">${painelConta()}</header>
-  ${destaque}
-  <section aria-labelledby="hNovo"><h2 id="hNovo" class="secao-titulo">Começar algo novo</h2><div class="cartoes-acao">
-   ${cartao('novoJogo','adicionar','verde','Novo jogo sozinho','Só você no comando: escolha um clube e comece uma carreira do zero.')}
-   ${online?cartao('abrirLigas','pessoas','azul','Ligas com amigos','Cada um com seu clube: crie ou entre numa liga e dispute o mesmo campeonato com seus amigos.'+(eu?'':' Entre com sua conta para jogar.')):''}
-  </div></section>
-  <section aria-labelledby="hSalvos"><div class="secao-cabeca"><h2 id="hSalvos" class="secao-titulo">Jogos salvos (${eu?todos.length:idx.list.length+'/'+MAX_SAVES})</h2><span class="muted">${eu?'Sincronizados com sua conta':'Neste navegador'}</span></div>
-   ${todos.length?`<ul class="saves">${todos.map(linha).join('')}</ul>`:'<p class="muted">Nenhum jogo salvo ainda. Comece um novo jogo.</p>'}</section>
-  <div class="row inicio-rodape"><button class="btn fantasma" data-acao="go|config">${icone('engrenagem',{tam:16})}Configurações</button></div>
+  <div class="inicio-grade">
+    <div class="inicio-menu">
+      <header class="inicio-topo"><h1 aria-label="Boleiro Manager"><img src="img/figma/marca-inicio.svg" alt="" width="58" height="58"><span><b>Boleiro</b><small>Manager</small></span></h1><p>Brasileirão Séries A a D, com os elencos de verdade.</p></header>
+      <nav class="menu-acoes" aria-label="Menu inicial">
+        ${destaque}
+        <button type="button" class="menu-acao${cur ? '' : ' continuar-btn'}" data-acao="novoJogo">Novo jogo</button>
+        ${online ? '<button type="button" class="menu-acao" data-acao="abrirLigas">Ligas com amigos</button>' : ''}
+        <details class="inicio-salvos" id="jogos-salvos"${document.getElementById('jogos-salvos')?.open === true ? ' open' : ''}><summary class="menu-acao">Jogos salvos (${eu ? todos.length : idx.list.length + '/' + MAX_SAVES})</summary>
+        ${todos.length ? `<ul class="saves">${todos.map(linha).join('')}</ul>` : '<p class="muted">Nenhum jogo salvo ainda. Comece um novo jogo.</p>'}</details>
+        <button type="button" class="menu-acao" data-acao="go|config">Configurações</button>
+      </nav>
+    </div>
+    <section class="inicio-online card" aria-labelledby="jogar-online">
+      <h2 id="jogar-online">Jogar online</h2>
+      ${online ? '<p>Entre para guardar seus jogos na nuvem e disputar ligas com amigos.</p>' : '<p>O jogo online está indisponível. Você pode iniciar e continuar campanhas neste navegador.</p>'}
+      ${painelConta()}
+    </section>
+  </div>
+  <section class="inicio-noticias" aria-label="Últimas notícias"><b>Últimas</b>
+    ${noticias.length ? `<ul>${noticias.map(n => `<li>${esc(n.t)}</li>`).join('')}</ul>` : '<p>Sem notícias de uma campanha salva.</p>'}
+  </section>
   </div>`;
 }

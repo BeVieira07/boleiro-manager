@@ -93,11 +93,11 @@ test('continentais usam os gols guardados no torneio', () => {
   assert.match(h, /class="podio-card meu"/);
 });
 
-test('temporada e país só mostram o que existe, e todas as telas seguem sem texto estranho', () => {
+test('a temporada atual aparece no título e os filtros se limitam às competições', () => {
   const j = carregarJogo({ boot: true });
   j.run(`newGame('${clubeDaSerie(j)}');go('artilharia')`);
   const h = j.html();
-  assert.match(h, /<label for="artTemporada">Temporada<\/label><select id="artTemporada" disabled><option>\d{4} · atual<\/option><\/select>/);
-  assert.match(h, /<label for="artPais">País<\/label><select id="artPais" disabled><option>Brasil<\/option><\/select>/);
+  assert.match(h, /<h2>Série A \d{4}<\/h2>/);
+  assert.doesNotMatch(h, /<select[^>]+disabled/);
   for (const c of ['A', 'copa', 'libertadores', 'sulamericana']) { j.acao(`verArtilharia|${c}`); assert.deepEqual(problemasNasTelas(j, ['artilharia']), []) }
 });
