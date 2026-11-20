@@ -2,16 +2,17 @@
    Mata-mata de ida e volta com os clubes mais fortes do jogo (potência de 2, no máximo 64; clube com técnico sempre entra).
    S.copa = {temporada, datas, fases, campeao}. datas[k] = rodada da liga em que o jogo k da copa é disputado (ida e volta de
    cada fase, espalhados pela temporada). fases[f].jogos = [{h, a, ida, volta, pen, v}]: ida e volta = {h, a} (gols de cada
-   clube naquele jogo; a ida é na casa de h), pen = quem venceu nos pênaltis, v = quem passou. O vencedor do confronto 2i
+   clube naquele jogo; a ida é na casa de h), pen = a disputa de pênaltis (core/penaltis.mjs), v = quem passou. O vencedor do confronto 2i
    pega o do 2i+1 na fase seguinte, então o chaveamento inteiro sai do sorteio da primeira fase.
    Os jogos têm lances e são simulados na rodada da liga. A fase só avança depois de confirmado o placar final.
    Estado de antes da #51 não tem S.copa: a copa começa na temporada seguinte. */
 import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, divOf, ehHumano, tecDoClube } from './estado.mjs';
 import { atualizarForma } from './forma.mjs';
-import { creditarGolCopa, noticiaAutores, placarDaPerna } from './gols-copa.mjs';
+import { creditarGolCopa, noticiaAutores, penaltisDaVolta, placarDaPerna } from './gols-copa.mjs';
 import { simulate } from './motor.mjs';
+import { nosPenaltis } from './penaltis.mjs';
 import { premioPorDivisao } from './premiacoes.mjs';
-import { clamp, money, mulberry32, semente, shuffle } from './utils.mjs';
+import { money, semente, shuffle } from './utils.mjs';
 
 export const COPA = 'Copa do Brasil', COPA_MAX = 64;
 // pelo número de confrontos da fase: 1 = final, 2 = semifinal...
@@ -41,14 +42,8 @@ export function copaNaRodada(r) {
 /** Total de gols de cada clube no confronto (o que já foi jogado). */
 export const agregado = j => ({ h: (j.ida ? j.ida.h : 0) + (j.volta ? j.volta.h : 0), a: (j.ida ? j.ida.a : 0) + (j.volta ? j.volta.a : 0) });
 
-/** Decide os pênaltis a partir do placar final, na ordem do mandante da ida. */
-export function penaltiDaCopa(g, rodada) {
-  const ida = g.copa.ida;
-  if (!ida || ida.h + g.hg !== ida.a + g.ag) return null;
-  const H = clubById(g.a), A = clubById(g.h);
-  const sorteio = mulberry32(semente(S.seed, S.season, 'copa', rodada, H.id, A.id));
-  return sorteio() < clamp(0.5 + (H.strength - A.strength) / 100, 0.4, 0.6) ? H.id : A.id;
-}
+/** Disputa de pênaltis do jogo de volta g, a partir do placar final e de quem terminou em campo (null sem empate). */
+export const penaltiDaCopa = (g, rodada) => penaltisDaVolta(g, g.copa.ida, semente(S.seed, S.season, 'copa', rodada, g.a, g.h));
 
 /** Simula a data da copa e devolve os jogos na ordem do chaveamento. */
 export function jogarCopa(r, adiar = false) {
@@ -88,7 +83,7 @@ export function concluirCopa() {
       j.volta = jogo;
       const t = agregado(j);
       j.pen = penaltiDaCopa(partida, rodada);
-      j.v = t.h > t.a ? j.h : t.a > t.h ? j.a : j.pen;
+      j.v = t.h > t.a ? j.h : t.a > t.h ? j.a : j.pen.v;
       partida.copa.pen = j.pen;
     }
     for (const c of [H, A]) {
@@ -97,7 +92,7 @@ export function concluirCopa() {
       if (c === casa) addFin(`Bilheteria ${COPA} vs ${adv.name}`, Math.round(Math.max(0, bilheteriaBase(c)) * 100) / 100, c, rodada);
       addNews(`🏆 ${COPA}, ${nome.toLowerCase()} (${quando.volta ? 'volta' : 'ida'}): ${c.name} ${meus} x ${dele} ${adv.name}.${noticiaAutores(partida)}`, c.id, rodada);
       if (!quando.volta) continue;
-      const passou = j.v === c.id, penaltis = j.pen ? ' nos pênaltis' : '';
+      const passou = j.v === c.id, penaltis = nosPenaltis(j.pen, j.v, j.v === j.h ? j.a : j.h);
       if (passou) {
         const premio = premioCopa(n, divOf(c));
         addFin(`${COPA}: ${n === 1 ? 'título' : 'classificação (' + nome.toLowerCase() + ')'}`, premio, c, rodada);

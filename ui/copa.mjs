@@ -3,13 +3,13 @@ import { COPA, agregado, confrontoDe, copaNaRodada, nomeFase, premioCopa } from 
 import { S, clubById, divOf, tec } from '../core/estado.mjs';
 import { esc, money } from '../core/utils.mjs';
 import { artilhariaDoTorneio } from './artilharia.mjs';
-import { crest } from './partida.mjs';
+import { crest, detalhePenaltis } from './partida.mjs';
 
 const perna = (j, k, H, A) => j[k] ? `${k === 'ida' ? 'Ida' : 'Volta'}: ${k === 'ida' ? `${esc(H.short || H.name)} ${j.ida.h} x ${j.ida.a} ${esc(A.short || A.name)}` : `${esc(A.short || A.name)} ${j.volta.a} x ${j.volta.h} ${esc(H.short || H.name)}`}` : '';
 function confronto(j, me) {
   const H = clubById(j.h), A = clubById(j.a), t = agregado(j), jogou = !!j.ida, meu = j.h === me || j.a === me;
   const cls = id => (j.v ? (j.v === id ? 'venceu' : 'perdeu') : '');
-  const detalhe = [perna(j, 'ida', H, A), perna(j, 'volta', H, A), j.pen ? `${esc(clubById(j.pen).name)} venceu nos pênaltis` : ''].filter(Boolean).join(' · ');
+  const detalhe = [perna(j, 'ida', H, A), perna(j, 'volta', H, A), detalhePenaltis(j.pen, H, A)].filter(Boolean).join(' · ');
   return `<li class="jogo${meu ? ' meu' : ''}"><span class="jogo-time casa ${cls(j.h)}">${esc(H.name)} ${crest(H)}</span>
     <span class="jogo-placar">${jogou ? `${t.h}<span aria-hidden="true"> x </span><span class="sr"> a </span>${t.a}` : '<span class="muted">x</span>'}</span>
     <span class="jogo-time fora ${cls(j.a)}">${crest(A)} ${esc(A.name)}</span>

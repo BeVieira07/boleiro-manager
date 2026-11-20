@@ -3,10 +3,12 @@
    da rodada e a classificação provisória. A rodada já foi calculada (core/motor.mjs); aqui só se mostra até o minuto
    `v.min`. Sair da tela pausa o jogo; "Voltar ao jogo" retoma. Na liga o jogo é um replay do servidor: trocas e
    formação ficam bloqueadas, o painel do campeonato funciona.
-   #230: também a data do estadual (v.estadual = a data): jogos por estado e a classificação do grupo no lugar dos da série. */
+   #230: também a data do estadual (v.estadual = a data): jogos por estado e a classificação do grupo no lugar dos da série.
+   #267: mata-mata empatado no fim (volta da copa, final do estadual) segue para a disputa de pênaltis, uma cobrança por vez. */
 import { estatisticas, minutoDoTempo, placarNoMinuto, tabelaGrupoNoMinuto, tabelaNoMinuto, ultimoLance } from '../core/aovivo.mjs';
-import { nomeData } from '../core/estadual.mjs';
-import { COPA, copaNaRodada } from '../core/copa.mjs';
+import { nomeData, penaltiDaFinal } from '../core/estadual.mjs';
+import { COPA, copaNaRodada, penaltiDaCopa } from '../core/copa.mjs';
+import { placarAte, placarPenaltis, vencedorPenaltis } from '../core/penaltis.mjs';
 import { DIVS, P, S, clubById, divOf, divisions, hasTwoDivs, userClub } from '../core/estado.mjs';
 import { escalacaoNoMinuto, saidaForcada } from '../core/lances.mjs';
 import { MAX_TROCAS, banco, mudarFormacaoAoVivo, substituir, trocasDe } from '../core/substituicoes.mjs';
@@ -26,6 +28,21 @@ import { go, render } from './telas.mjs';
 const ABAS = { meu: 'Meu jogo', rodada: 'Rodada', classif: 'Classificação' };
 const el = id => document.getElementById(id);
 const soma = (v, min) => v.jogos.map(g => { const q = placarNoMinuto(g, min); return q.h + ':' + q.a }).join(',');
+
+/** #267: a disputa de pênaltis do jogo, ou null. Com a semente (jogo solo) é refeita com quem terminou em campo, depois
+ *  das trocas ao vivo; na liga online a semente fica no servidor e vale a disputa que veio com o jogo. */
+export function penaltisDoJogo(g, rodada) {
+  if (S.seed == null) return (g.copa ? g.copa.pen : g.pen) ?? null;
+  if (g.copa) return penaltiDaCopa(g, rodada);
+  if (g.final === 'volta' && S.estaduais) return penaltiDaFinal(g);
+  return null;
+}
+const PASSO_PEN = 15; // ticks do relógio entre duas cobranças
+// calculada uma vez, quando o tempo normal acaba (as trocas já não mudam nada)
+function prepararPenaltis(v) {
+  if (v.pen === undefined) { v.pen = penaltisDoJogo(v.g, v.rodada); v.cob = 0; v.passo = 0 }
+  return !!v.pen?.cob;
+}
 
 /** Há um jogo ao vivo em andamento (não terminado) neste save? */
 export const vivoAtivo = () => !!(ui.vivo && (!ui.vivo.fim || ui.vivo.proximo) && ui.vivo.S === S);
@@ -73,13 +90,22 @@ function restaurar(v) {
 
 function tick(v) {
   if (ui.vivo !== v || v.S !== S) { clearInterval(v.timer); if (ui.vivo === v) { ui.vivo = null; ui.tvAoVivo = null } return }
-  if (ui.view !== 'aovivo' || v.pausado) return; // pausado: saiu da tela ou apertou Pausar (#170)
-  if (v.min >= DURACAO) return;
+  if (ui.view !== 'aovivo' || v.pausado || v.fim) return; // pausado: saiu da tela ou apertou Pausar (#170)
+  if (v.min >= DURACAO) { // disputa de pênaltis (#267)
+    if (++v.passo % PASSO_PEN) return;
+    v.cob++; pintar(v);
+    if (v.cob >= v.pen.cob.length) terminar(v);
+    return;
+  }
   v.min++; pintar(v);
   if (!v.replay && v.g.ev.some(e => e.m === v.min && v.g[e.side] === v.clube.id && saidaForcada(e))) {
     v.sel = null; controles(v);
   }
-  if (v.min >= DURACAO) terminar(v);
+  if (v.min >= DURACAO) {
+    if (!prepararPenaltis(v)) { terminar(v); return }
+    const c = el('av-controles'); if (c) c.innerHTML = ''; // sem trocas na disputa
+    pintar(v);
+  }
 }
 function terminar(v) {
   clearInterval(v.timer); v.fim = true; ui.tvAoVivo = null; restaurar(v);
@@ -96,13 +122,18 @@ export function avAba(a) { if (ui.vivo && ABAS[a]) { ui.vivo.aba = a; render() }
 export function avDiv(d) { if (ui.vivo) { ui.vivo.div = d; paineis(ui.vivo) } }
 export function avComp(c) { if (ui.vivo) { ui.vivo.comp = c; paineis(ui.vivo) } }
 export function avUf(uf) { if (ui.vivo) { ui.vivo.uf = uf; paineis(ui.vivo) } }
-export function avSair(id) { const v = ui.vivo; if (!v || v.fim || v.replay) return; v.sel = v.sel === id ? null : id; controles(v) }
+export function avSair(id) { const v = ui.vivo; if (!v || v.fim || v.replay || v.min >= DURACAO) return; v.sel = v.sel === id ? null : id; controles(v) }
 export function avEntrar(id) {
-  const v = ui.vivo; if (!v || v.fim || v.replay || !v.sel) return;
+  const v = ui.vivo; if (!v || v.fim || v.replay || !v.sel || v.min >= DURACAO) return;
   aplicar(v, substituir(v.g, v.min, v.sel, id));
 }
-export function avFormacao(f) { const v = ui.vivo; if (!v || v.fim || v.replay) return; aplicar(v, mudarFormacaoAoVivo(v.g, v.min, f)) }
-export function avPular() { const v = ui.vivo; if (v && !v.fim) { v.min = DURACAO; v.pausado = false; terminar(v) } }
+export function avFormacao(f) { const v = ui.vivo; if (!v || v.fim || v.replay || v.min >= DURACAO) return; aplicar(v, mudarFormacaoAoVivo(v.g, v.min, f)) }
+export function avPular() {
+  const v = ui.vivo; if (!v || v.fim) return;
+  v.min = DURACAO; v.pausado = false;
+  if (prepararPenaltis(v)) v.cob = v.pen.cob.length;
+  terminar(v);
+}
 /** Pausa ou continua o relógio (#170). Pausado, as trocas e o esquema continuam disponíveis. */
 export function avPausar() {
   const v = ui.vivo; if (!v || v.fim) return;
@@ -124,7 +155,21 @@ function aplicar(v, r) {
 }
 
 /* ---------- pedaços da página ---------- */
-const relogio = v => { if (v.fim) return 'Fim de jogo'; const t = minutoDoTempo(v.min); return `${t.m}' · ${t.tempo}º tempo${v.pausado ? ' · pausado' : ''}` };
+const relogio = v => {
+  if (v.fim) return 'Fim de jogo';
+  if (v.min >= DURACAO && v.pen) return `Pênaltis${v.pausado ? ' · pausado' : ''}`;
+  const t = minutoDoTempo(v.min); return `${t.m}' · ${t.tempo}º tempo${v.pausado ? ' · pausado' : ''}`;
+};
+// #267: placar da disputa e as cobranças já batidas, na ordem
+function htmlPenaltis(v) {
+  if (v.min < DURACAO || !v.pen?.cob) return '';
+  const H = clubById(v.g.h), A = clubById(v.g.a), n = v.cob, p = placarAte(v.pen, H.id, A.id, n), fim = n >= v.pen.cob.length;
+  const venceu = fim ? ` · ${esc(clubById(v.pen.v).name)} venceu` : '';
+  const itens = v.pen.cob.slice(0, n).map((x, i) => { const c = clubById(x.c) || { name: '' };
+    return `<li class="cob ${x.gol ? 'gol' : 'perdeu'}"><span class="cob-n">${i + 1}</span><span class="cob-nome">${esc(x.nome)} <span class="muted">(${esc(c.short || c.name)})</span></span><b>${x.gol ? 'Gol' : 'Perdeu'}</b></li>` }).join('');
+  return `<h2 class="t3" aria-live="polite">Pênaltis: ${esc(H.short || H.name)} ${p.h} x ${p.a} ${esc(A.short || A.name)}${venceu}</h2>
+    ${itens ? `<ol class="cobrancas">${itens}</ol>` : '<p class="muted">A disputa vai começar.</p>'}`;
+}
 function lanceTxt(g, min) {
   const e = ultimoLance(g, min); if (!e) return '';
   const t = minutoDoTempo(e.m), c = clubById(e.side === 'h' ? g.h : g.a);
@@ -154,6 +199,7 @@ function pintar(v) {
   if (est) est.innerHTML = htmlEst(v);
   if (ult) ult.innerHTML = lanceTxt(v.g, v.min);
   const agregado = el('av-agregado'); if (agregado) agregado.textContent = textoAgregado(v);
+  const pen = el('av-pen'); if (pen) pen.innerHTML = htmlPenaltis(v);
   if (b) b.style.width = Math.min(100, v.min / DURACAO * 100) + '%';
   if (f) f.innerHTML = feed;
   if (m) m.innerHTML = marcas;
@@ -180,7 +226,7 @@ const botoes = v => v.fim
     <button class="btn sec" id="lskip" data-acao="avPular">${icone('avancar', { tam: 16 })}Pular para o fim</button>`;
 
 function htmlControles(v) {
-  if (v.fim) return '';
+  if (v.fim || v.min >= DURACAO) return '';
   if (v.replay) return `<p class="muted dica">${icone('info', { tam: 14 })} Replay do jogo simulado no servidor. Na liga, escalação, formação e tática valem para a rodada inteira: as trocas ficam bloqueadas.</p>`;
   const uc = userClub(), feitas = trocasDe(v.g, uc.id).length, cheio = feitas >= MAX_TROCAS;
   const elenco = escalacaoNoMinuto(v.g, v.g.h === uc.id ? 'h' : 'a', v.min);
@@ -206,7 +252,8 @@ function textoAgregado(v) {
   const copa = v.g.copa;
   if (!copa?.ida) return '';
   const p = placarNoMinuto(v.g, v.min);
-  const pen = v.fim && copa.pen ? ` · ${clubById(copa.pen).name} venceu nos pênaltis` : '';
+  const placar = v.fim && v.pen ? placarPenaltis(v.pen, v.g.h, v.g.a) : '';
+  const pen = !v.fim || !v.pen ? '' : placar ? ` (${placar} nos pênaltis)` : ` · ${clubById(vencedorPenaltis(v.pen)).name} venceu nos pênaltis`;
   return `Placar agregado: ${copa.ida.h + p.h} x ${copa.ida.a + p.a}${pen}`;
 }
 // cabeçalho do seu jogo (#170): competição, relógio, placar, último lance, barra de tempo, pausa e estatísticas
@@ -217,6 +264,7 @@ function htmlCab(v) {
     <div class="placar">${lado(H, 'casa')}<div class="placar-centro"><div class="placar-num" id="lsc" aria-live="polite">${p.h} x ${p.a}</div></div>${lado(A, 'fora')}</div>
     ${v.g.copa?.ida ? `<p class="muted" id="av-agregado">${esc(textoAgregado(v))}</p>` : ''}
     <p class="ult-lance" id="lult">${lanceTxt(v.g, v.min)}</p>
+    <div class="penaltis" id="av-pen">${htmlPenaltis(v)}</div>
     <div class="tempo" aria-hidden="true"><div class="tempo-trilho"><div class="tempo-feito" id="lbar" style="width:${Math.min(100, v.min / DURACAO * 100)}%"></div></div><div class="tempo-marcas" id="lmarcas">${marcas}</div>
       <div class="tempo-escala"><span>0'</span><span>45'</span><span>90'</span></div></div>
     <div class="row fim-acoes" id="av-botoes">${botoes(v)}</div></div>

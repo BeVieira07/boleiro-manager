@@ -56,8 +56,9 @@ test('a volta retomada de um save decide nos pênaltis e encerra a final só uma
   assert.equal(j.run('ui.vivo.min'), 34);
   assert.equal(j.run('userClub().formation'), '3-5-2');
   j.acao('avPular'); j.run('render()');
-  assert.match(j.html(), /venceu nos pênaltis/);
-  assert.equal(j.run('S.copa.campeao'), j.run('S.copa.fases[0].jogos[0].pen'));
+  assert.match(j.html(), /Placar agregado: 0 x 0 \(\d+ x \d+ nos pênaltis\)/);
+  assert.match(j.html(), /Pênaltis: \S+ \d+ x \d+ \S+ · .+ venceu/, 'a disputa inteira aparece ao pular para o fim');
+  assert.equal(j.run('S.copa.campeao'), j.run('S.copa.fases[0].jogos[0].pen.v'));
   assert.equal(j.run('S.round'), rodada);
   assert.equal(j.run('userClub().formation'), '4-4-2');
   assert.equal(j.run('userClub().fin.filter(x=>x.desc==="Copa do Brasil: título").length'), Number(j.run('S.copa.campeao===userClub().id')));

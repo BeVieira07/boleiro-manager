@@ -1,11 +1,11 @@
-import { COPA, penaltiDaCopa } from '../core/copa.mjs';
+import { COPA } from '../core/copa.mjs';
 import { esc } from '../core/utils.mjs';
 import { S, tec, tecnicos, usarTecnico, userClub } from '../core/estado.mjs';
 import { autoXI, concluirRodadaCopa, confirmarRodada, jogarRodada, validateLineup } from '../core/motor.mjs';
 import { demissao } from './diretoria.mjs';
 import { save, ui } from './estado.mjs';
 import { seasonEnd } from './partida.mjs';
-import { encerrarVivo, iniciarVivo, vivoAtivo } from './aovivo.mjs';
+import { encerrarVivo, iniciarVivo, penaltisDoJogo, vivoAtivo } from './aovivo.mjs';
 import { icone } from './icones.mjs';
 import { render } from './telas.mjs';
 import { avisar, confirmar } from './avisos.mjs';
@@ -46,7 +46,7 @@ export function retomarCopa(){
   const mais=fila.length>1;
   const fim=()=>{usarTecnico(tecnicos()[0].id);mostrarResultados()};
   iniciarVivo(jogos,jogo,mais?retomarCopa:fim,{rodada,minuto,proximo:mais?'próxima partida da Copa do Brasil':null,aoTerminar:()=>{
-    jogo.copa.pen=penaltiDaCopa(jogo,rodada);
+    jogo.copa.pen=penaltisDoJogo(jogo,rodada);
     pendente.vistos=[...vistos,jogo.h];delete pendente.minuto;
     if(!mais)fecharCopaAoVivo();
     else save();

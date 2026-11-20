@@ -3,7 +3,7 @@ import { TORNEIOS, agregadoCont, clubeCont, dataCont, jogosDaDataCont, premioCon
 import { S, divOf, tec } from '../core/estado.mjs';
 import { esc, money } from '../core/utils.mjs';
 import { artilhariaDoTorneio } from './artilharia.mjs';
-import { crest } from './partida.mjs';
+import { crest, detalhePenaltis } from './partida.mjs';
 
 const C = () => S.continentais && S.continentais.temporada === S.season ? S.continentais : null;
 const doTorneio = id => { const c = C(); return c ? c.torneios.find(t => t.id === id) || null : null };
@@ -24,7 +24,7 @@ export function jogosContinentais(r) {
   return c.torneios.map(tor => {
     const gs = jogosDaDataCont(tor, k); if (!gs.length) return '';
     return `<section class="fase-copa"><div class="card-topo"><h2 class="t3">${esc(tor.nome)} · ${esc(d.nome)}</h2><button class="btn fantasma sm" data-acao="go|${tor.id}">Ver a ${esc(tor.nome)}</button></div>
-      <ul class="jogos">${meusPrimeiro(gs, me).map(g => jogo(g, me)).join('')}</ul></section>`;
+      <ul class="jogos">${meusPrimeiro(gs, me).map(g => jogo(g, me, detalhePenaltis(g.pen, clubeCont(g.h), clubeCont(g.a)))).join('')}</ul></section>`;
   }).join('');
 }
 
@@ -75,12 +75,12 @@ export function tabelasContinental(tor, me) {
 function mataMata(tor, me) {
   const nomes = ['Oitavas de final', 'Quartas de final', 'Semifinal'], sec = [];
   if (tor.final) {
-    const f = tor.final, det = f.hg == null ? 'Jogo único, em campo neutro' : f.pen ? `${esc(clubeCont(f.pen).name)} venceu nos pênaltis` : 'Jogo único';
+    const f = tor.final, det = f.hg == null ? 'Jogo único, em campo neutro' : f.pen ? detalhePenaltis(f.pen, clubeCont(f.h), clubeCont(f.a)) : 'Jogo único';
     sec.push(`<section class="fase-copa"><div class="card-topo"><h2 class="t3">Final</h2></div><ul class="jogos">${jogo({ h: f.h, a: f.a, hg: f.hg, ag: f.ag }, me, det)}</ul></section>`);
   }
   tor.fases.forEach((f, n) => sec.unshift(`<section class="fase-copa"><div class="card-topo"><h2 class="t3">${nomes[n]}</h2><span class="muted">Ida e volta; empate na soma vai para os pênaltis</span></div>
     <ul class="jogos">${meusPrimeiro(f.jogos, me).map(j => { const t = agregadoCont(j), H = clubeCont(j.h), A = clubeCont(j.a);
-      const det = [j.ida ? `Ida: ${esc(H.short || H.name)} ${j.ida.h} x ${j.ida.a} ${esc(A.short || A.name)}` : '', j.volta ? `Volta: ${esc(A.short || A.name)} ${j.volta.a} x ${j.volta.h} ${esc(H.short || H.name)}` : '', j.pen ? `${esc(clubeCont(j.pen).name)} venceu nos pênaltis` : ''].filter(Boolean).join(' · ') || 'A jogar';
+      const det = [j.ida ? `Ida: ${esc(H.short || H.name)} ${j.ida.h} x ${j.ida.a} ${esc(A.short || A.name)}` : '', j.volta ? `Volta: ${esc(A.short || A.name)} ${j.volta.a} x ${j.volta.h} ${esc(H.short || H.name)}` : '', detalhePenaltis(j.pen, H, A)].filter(Boolean).join(' · ') || 'A jogar';
       return jogo({ h: j.h, a: j.a, hg: j.ida ? t.h : null, ag: j.ida ? t.a : null }, me, det) }).join('')}</ul></section>`));
   return sec.reverse().join('');
 }

@@ -36,7 +36,7 @@ test('a copa é jogada ao longo da temporada: fases, soma dos dois jogos, pênal
   assert.deepEqual(c.fases.map(f => f.jogos.length), [32, 16, 8, 4, 2, 1]);
   for (const f of c.fases) for (const x of f.jogos) {
     const th = x.ida.h + x.volta.h, ta = x.ida.a + x.volta.a;
-    assert.equal(x.v, th > ta ? x.h : ta > th ? x.a : x.pen, 'passa quem fez mais gols na soma; empate, quem venceu nos pênaltis');
+    assert.equal(x.v, th > ta ? x.h : ta > th ? x.a : x.pen.v, 'passa quem fez mais gols na soma; empate, quem venceu nos pênaltis');
     assert.equal(x.pen !== null, th === ta);
   }
   for (let f = 1; f < c.fases.length; f++) c.fases[f].jogos.forEach((x, k) =>
