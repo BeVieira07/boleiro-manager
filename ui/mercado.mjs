@@ -1,7 +1,7 @@
 import { loanOf, wageBill } from '../core/emprestimos.mjs';
 import { DIVS, P, S, clubById, divOf, divisions, ehHumano, tec, userClub } from '../core/estado.mjs';
 import { clubeDe, competicaoDe, ehEstrangeiro, todosEstrangeiros } from '../core/estrangeiros.mjs';
-import { aceitarOferta, alternarEmprestimo, alternarVenda, podeProporCompra, proporCompra, recusarOferta, valorVendaRapida, venderJa } from '../core/mercado.mjs';
+import { aceitarOferta, alternarEmprestimo, alternarVenda, comprarJa as comprarJaCore, podeProporCompra, precoPedido, proporCompra, recusarOferta, valorVendaRapida, venderJa } from '../core/mercado.mjs';
 import { posDNome } from '../core/posicoes.mjs';
 import { propostas } from '../core/propostas.mjs';
 import { esc, money } from '../core/utils.mjs';
@@ -12,7 +12,7 @@ import { botaoFicha } from './ficha-jogador.mjs';
 import { save, ui } from './estado.mjs';
 import { campoBusca, chipsGrupo, filtrar, mudarFiltro, th } from './jogadores.mjs';
 import { icone } from './icones.mjs';
-import { crest } from './partida.mjs';
+import { closeModal, crest } from './partida.mjs';
 import { posTag } from './posicoes.mjs';
 import { render } from './telas.mjs';
 import { botaoProposta, mercadoLiga } from './ligajogo.mjs';
@@ -46,28 +46,32 @@ const clubesDaLista = () => {
   const uc = userClub(), f = ui.mf, todos = f.pais === 'br' ? S.clubs : f.pais === 'ext' ? todosEstrangeiros() : [...S.clubs, ...todosEstrangeiros()];
   return todos.filter(c => c.id !== uc.id && (!f.liga || naLiga(c, f.liga)));
 };
-// o que o clube pede por um jogador (espelha proporCompra, em core/mercado.mjs): craque do time custa mais, à venda custa menos
-const precoPedido = p => p.value * ([...clubeDe(p.clubId).players].sort((a, b) => b.ovr - a.ovr).slice(0, 3).includes(p) ? 1.3 : 1) * (p.listed ? 0.9 : 1);
 function situacao(p, c) {
   if (loanOf(p.id)) return `<span class="sit-tags">${loanTag(p)}</span><span class="sit-txt">O contrato é do clube de origem.</span>`;
   if (ehHumano(c)) return `${tag('Outro técnico', 'info')}<span class="sit-txt">Negocie com o técnico do clube.</span>`;
   const tags = [], txt = [];
   if (p.emprestar) { tags.push(tag('Para empréstimo', 'info')); txt.push('1 temporada · você paga 50% do salário') }
-  if (p.listed) { tags.push(tag('À venda', 'aviso')); txt.push(`Preço pedido: ${money(precoPedido(p))}`) }
+  if (p.listed) { tags.push(tag('À venda', 'aviso')); txt.push(`Preço pedido: ${money(precoPedido(p.id))}`) }
   if (!tags.length) {
-    const craque = precoPedido(p) > p.value;
+    const craque = precoPedido(p.id) > p.value;
     return `${tag('Sob contrato', '')}<span class="sit-txt">${craque ? 'Craque do clube: custa 30% mais caro' : 'Custa mais caro: o clube não quer vender'}</span>`;
   }
   return `<span class="sit-tags">${tags.join(' ')}</span>${txt.map(t => `<span class="sit-txt">${t}</span>`).join('')}`;
 }
-export function negociar(p, c) {
-  if (loanOf(p.id)) return '';
+export function negociar(p, c, { soImediatas = false } = {}) {
+  if (c.id === userClub().id || loanOf(p.id)) return '';
   if (ehHumano(c)) {
+    if (soImediatas) return '';
     const pendente = propostas().some(x => x.de === S.atual && x.pid === p.id);
     return pendente ? tag('Proposta enviada', 'info') : botaoProposta(p);
   }
-  if (p.bidRound === S.round + '_' + S.season) return tag('Proposta enviada nesta rodada', 'info');
-  return `${p.emprestar ? `<button class="btn emp sm" data-acao="loanForm|${p.id}|in">Pedir empréstimo</button>` : ''}<button class="btn${p.emprestar ? ' sec' : ''} sm" data-acao="makeBid|${p.id}">Fazer proposta</button>`;
+  const propostaEnviada = p.bidRound === S.round + '_' + S.season;
+  const compra = p.listed ? `<button class="btn sm" data-acao="comprarJa|${p.id}">Comprar já · ${money(precoPedido(p.id))}</button>` : '';
+  const emprestimo = p.emprestar && !propostaEnviada ? `<button class="btn emp sm" data-acao="emprestimoJa|${p.id}">Pegar emprestado já</button>` : '';
+  if (soImediatas) return compra + emprestimo;
+  if (propostaEnviada) return compra + tag('Proposta enviada nesta rodada', 'info');
+  const pedir = p.emprestar ? `<button class="btn sec sm" data-acao="loanForm|${p.id}|in">Pedir empréstimo</button>` : '';
+  return `${compra}${emprestimo}${pedir}<button class="btn${compra || emprestimo ? ' sec' : ''} sm" data-acao="makeBid|${p.id}">Fazer proposta</button>`;
 }
 export function corpoMercado() {
   const C = clubesPor(), L = filtrar(listaMercado().filter(p => daAba[ui.mf.aba] ? daAba[ui.mf.aba](p, C) : true), ui.mf);
@@ -154,6 +158,14 @@ export function makeBid(pid){
 }
 // tela
 export const feito=(r,msg,tipo='ok')=>{if(r.erro){avisar(r.erro,'erro');return}save();render();if(msg)avisar(msg,tipo)};
+export function comprarJa(pid){
+  const p=P[pid];if(!p?.clubId){avisar('Jogador inválido para esta ação.','erro');return}
+  const preco=money(precoPedido(pid));
+  confirmar({titulo:`Comprar ${p.name} agora?`,texto:`O preço pedido é ${preco} e será descontado do seu caixa.`,ok:`Comprar por ${preco}`},()=>{
+    if(ui.liga){closeModal();return mercadoLiga({tipo:'comprarJa',pid})}
+    const r=comprarJaCore(pid);if(r.ok)closeModal();feito(r,r.msg);
+  });
+}
 export function acceptOffer(oid){
   const o=tec().offers.find(x=>x.id===oid),txt=!o||!P[o.pid]?'':o.emprestimo?`${P[o.pid].name} foi emprestado ao ${clubById(o.from).name} por 1 ano.`:`Negócio fechado: ${P[o.pid].name} vendido ao ${clubById(o.from).name} por ${money(o.amount)}.`;
   if(ui.liga)return mercadoLiga({tipo:'aceitar',oid},txt);

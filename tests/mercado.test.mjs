@@ -13,6 +13,55 @@ const preparar = j => {
 };
 const linha = (h, id) => h.split('<tr>').find(t => t.includes(`makeBid|${id}"`)) || '';
 
+const prepararCompra = j => {
+  preparar(j);
+  return j.run(`(()=>{
+    const ia=S.clubs.filter(c=>!ehHumano(c)&&Object.entries({G:2,D:5,M:5,A:3}).every(([pos,n])=>c.players.filter(p=>p.pos===pos).length>=n));
+    const p=ia.flatMap(c=>[...c.players].sort((a,b)=>b.ovr-a.ovr).slice(0,3).filter(p=>c.players.filter(q=>q.pos===p.pos).length>{G:2,D:5,M:5,A:3}[p.pos]))[0];
+    p.value=7.4;p.listed=true;p.bidRound=S.round+'_'+S.season;userClub().players.splice(26);userClub().balance=8.7;
+    return p.id;
+  })()`);
+};
+
+test('comprar já cobra o preço arredondado de um craque à venda, mesmo após proposta na rodada', () => {
+  const j = carregarJogo({ boot: true });
+  const pid = prepararCompra(j), vendedor = j.run(`clubeDe(P['${pid}'].clubId)`);
+  const caixa = vendedor.balance, rng = j.run('S.rng');
+  assert.equal(j.run(`precoPedido('${pid}')`), 8.7); // 7,4 × 1,3 × 0,9
+  const r = j.run(`comprarJa('${pid}')`);
+  assert.equal(r.ok, true, r.erro);
+  assert.equal(j.run('S.rng'), rng);
+  assert.equal(j.run('userClub().balance'), 0);
+  assert.equal(j.run('userClub().fin[0].amount'), -8.7);
+  assert.equal(vendedor.balance, Math.round((caixa + 8.7) * 1000) / 1000);
+  assert.equal(j.run(`P['${pid}'].clubId`), j.run('userClub().id'));
+  assert.equal(j.run(`P['${pid}'].listed`), false);
+  assert.ok(!vendedor.players.some(p => p.id === pid));
+  assert.match(j.run('tec().news[0].t'), /Contratado: .+ por R\$ 8,7 mi/);
+});
+
+test('comprar já valida caixa, limite do elenco, reposição, empréstimo e anúncio', () => {
+  const j = carregarJogo({ boot: true });
+  const pid = prepararCompra(j), p = `P['${pid}']`, clube = j.run(`${p}.clubId`);
+  const erro = () => j.run(`comprarJa('${pid}').erro`);
+  j.run('userClub().balance=8.699');
+  assert.match(erro(), /Caixa insuficiente.+8,7 mi/);
+  j.run('userClub().balance=8.7;while(userClub().players.length<32)userClub().players.push(userClub().players[0])');
+  assert.match(erro(), /32 jogadores/);
+  j.run(`userClub().players.splice(26);S.loans=[{pid:'${pid}',to:'${clube}'}]`);
+  assert.match(erro(), /está emprestado/);
+  j.run(`S.loans=[];${p}.listed=false`);
+  assert.match(erro(), /não pôs .+ à venda/);
+  j.run(`(()=>{
+    const p=${p},c=clubeDe(p.clubId);p.listed=true;
+    const outros=c.players.filter(q=>q!==p&&q.pos===p.pos).slice(0,p.pos==='G'?1:2);
+    c.players=c.players.filter(q=>q.pos!==p.pos||q===p||outros.includes(q));
+  })()`);
+  assert.match(erro(), /sem reposição na posição/);
+  assert.equal(j.run('userClub().balance'), 8.7);
+  assert.equal(j.run(`${p}.clubId`), clube);
+});
+
 test('indicadores: caixa, folha, elenco e propostas', () => {
   const j = carregarJogo({ boot: true });
   j.run(`newGame('${clubeDaSerie(j)}');userClub().players.splice(30);go('mercado')`);
@@ -68,6 +117,7 @@ test('o jogador já negociado na rodada mostra o estado da proposta e mantém ac
   assert.ok(h.includes(`abrirFicha|${x.emp}|mercado`));
   assert.ok(!h.includes(`makeBid|${x.emp}"`));
   assert.ok(!h.includes(`loanForm|${x.emp}|in"`));
+  assert.ok(!h.includes(`emprestimoJa|${x.emp}"`));
 });
 
 test('situação: à venda com preço pedido, para empréstimo com o salário dividido, sob contrato mais caro', () => {
@@ -79,19 +129,43 @@ test('situação: à venda com preço pedido, para empréstimo com o salário di
   const venda = linha(t, x.venda), emp = linha(t, x.emp), ambos = linha(t, x.ambos), sob = linha(t, x.sob), craque = linha(t, x.craque);
   assert.match(venda, /À venda<\/span>/);
   assert.ok(venda.includes('Preço pedido: ' + j.run(`money(P['${x.venda}'].value*0.9)`)), 'à venda custa 90% do valor');
+  assert.ok(venda.includes(`data-acao="comprarJa|${x.venda}"`));
+  assert.doesNotMatch(venda, /emprestimoJa/);
   assert.match(emp, /Para empréstimo<\/span>/);
   assert.match(emp, /1 temporada · você paga 50% do salário/);
   assert.match(emp, /Pedir empréstimo<\/button>/);
   assert.match(emp, /Fazer proposta<\/button>/);
+  assert.ok(emp.includes(`data-acao="emprestimoJa|${x.emp}"`));
+  assert.doesNotMatch(emp, /comprarJa/);
   assert.match(ambos, /À venda[\s\S]*Para empréstimo|Para empréstimo[\s\S]*À venda/);
+  assert.ok(ambos.includes(`data-acao="comprarJa|${x.ambos}"`) && ambos.includes(`data-acao="emprestimoJa|${x.ambos}"`));
   assert.match(sob, /Sob contrato<\/span>/);
   assert.match(sob, /Custa mais caro: o clube não quer vender/);
-  assert.doesNotMatch(sob, /Pedir empréstimo/);
+  assert.doesNotMatch(sob, /Pedir empréstimo|comprarJa|emprestimoJa/);
   assert.match(craque, /Craque do clube: custa 30% mais caro/);
   assert.match(t, /<th scope="col" class="">Situação<\/th>/);
   assert.match(t, /<th scope="col" class="">Negociar<\/th>/);
   assert.match(t, /Palmeiras|Santos|[A-Z]\w+ · Série A/, 'o clube e a série aparecem sob o nome');
   assert.ok(h.length > 0);
+});
+
+test('Comprar já no Mercado confirma o preço, avisa sem caixa e fecha ao confirmar com saldo', () => {
+  const j = carregarJogo({ boot: true });
+  const pid = prepararCompra(j), clube = j.run(`P['${pid}'].clubId`);
+  j.acao(`filtrarMercado|club|${clube}`);
+  const row = j.html().split('<tr>').find(t => t.includes(`data-acao="comprarJa|${pid}"`));
+  assert.match(row, /Comprar já · R\$ 8,7 mi/);
+  assert.match(row, /Proposta enviada nesta rodada/);
+  assert.doesNotMatch(row, /makeBid/);
+  j.run('userClub().balance=0');
+  j.acao(`comprarJa|${pid}`);
+  assert.match(j.alertas.at(-1), /Caixa insuficiente/);
+  j.run('userClub().balance=8.7');
+  j.acao(`comprarJa|${pid}`);
+  assert.match(j.alertas.at(-2), /O preço pedido é R\$ 8,7 mi/);
+  assert.match(j.alertas.at(-1), /Negócio fechado/);
+  assert.equal(j.run(`P['${pid}'].clubId`), j.run('userClub().id'));
+  assert.ok(!j.html().includes(`comprarJa|${pid}"`));
 });
 
 test('filtros: liga restringe a lista e as contagens, país é só Brasil, resumo e ordenação acompanham', () => {

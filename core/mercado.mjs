@@ -15,30 +15,46 @@ export function movePlayer(p,to,emprestimo=false){
   ensureSquad(from);
 }
 // regra: pode fazer proposta por este jogador agora? (texto do erro ou null)
-export function podeProporCompra(pid){
+export function podeProporCompra(pid,{imediata=false}={}){
   const p=P[pid],seller=clubeDe(p.clubId),uc=userClub();
   if(loanOf(pid))return `${p.name} está emprestado ao ${seller.name}: o contrato é com o clube de origem.`; // #117
-  if(p.bidRound===S.round+'_'+S.season)return `${seller.name} não quer negociar ${p.name} de novo nesta rodada.`;
+  if(!imediata&&p.bidRound===S.round+'_'+S.season)return `${seller.name} não quer negociar ${p.name} de novo nesta rodada.`;
   if(uc.players.length>=32)return 'Seu elenco já tem 32 jogadores. Venda alguém antes.';
   return null;
+}
+export function precoPedido(pid){
+  const p=P[pid],seller=clubeDe(p.clubId);
+  const best=[...seller.players].sort((a,b)=>b.ovr-a.ovr).slice(0,3).includes(p);
+  return Math.round(p.value*(best?1.3:1)*(p.listed?0.9:1)*10)/10;
+}
+const semReposicao=(p,seller)=>seller.players.filter(x=>x.pos===p.pos).length<=(p.pos==='G'?2:3);
+function fecharCompra(p,seller,uc,amt){
+  addFin(`Compra de ${p.name} (${seller.name})`,-amt);caixaIA(seller,amt);movePlayer(p,uc);
+  addNews(`✅ Contratado: ${p.name} por ${money(amt)}.`);return {ok:true,msg:`Negócio fechado! ${p.name} é do ${uc.name}.`};
 }
 // regra: proposta de compra a um clube da IA. Devolve {erro} ou {ok, msg}.
 export function proporCompra(pid,amt){
   const p=P[pid],seller=clubeDe(p.clubId),uc=userClub();
   const e=podeProporCompra(pid);if(e)return {erro:e};
   if(!(amt>0))return {erro:'Valor inválido.'};
-  if(amt>userClub().balance)return {erro:'Caixa insuficiente.'};
+  if(amt>uc.balance)return {erro:'Caixa insuficiente.'};
   p.bidRound=S.round+'_'+S.season;
-  const best=[...seller.players].sort((a,b)=>b.ovr-a.ovr).slice(0,3).includes(p);
-  const need=p.value*(best?1.3:1)*(p.listed?0.9:1); // à venda pela IA (#103): aceita um pouco menos
+  const need=precoPedido(pid);
   const prob=amt>=need*1.25?1:amt>=need?0.65:amt>=need*0.85?0.2:0;
-  const sameP=seller.players.filter(x=>x.pos===p.pos).length;
-  if(sameP<=(p.pos==='G'?2:3))return {ok:false,msg:`${seller.name} recusou: não pode ficar sem reposição na posição.`};
-  if(rnd()<prob){
-    addFin(`Compra de ${p.name} (${seller.name})`,-amt);caixaIA(seller,amt);movePlayer(p,uc);
-    addNews(`✅ Contratado: ${p.name} por ${money(amt)}.`);return {ok:true,msg:`Negócio fechado! ${p.name} é do ${uc.name}.`};
-  }
+  if(semReposicao(p,seller))return {ok:false,msg:`${seller.name} recusou: não pode ficar sem reposição na posição.`};
+  if(rnd()<prob)return fecharCompra(p,seller,uc,amt);
   addNews(`❌ ${seller.name} recusou ${money(amt)} por ${p.name}.`);return {ok:false,msg:`${seller.name} recusou a proposta.`};
+}
+export function comprarJa(pid){
+  const p=P[pid],seller=p&&clubeDe(p.clubId),uc=userClub();
+  if(!seller||seller.id===uc.id)return {erro:'Jogador inválido para esta ação.'};
+  if(ehHumano(seller))return {erro:'O clube é de outro técnico: faça uma proposta a ele.'};
+  const e=podeProporCompra(pid,{imediata:true});if(e)return {erro:e};
+  if(!p.listed)return {erro:`${seller.name} não pôs ${p.name} à venda.`};
+  const amt=precoPedido(pid);
+  if(uc.balance<amt)return {erro:`Caixa insuficiente para pagar ${money(amt)}.`};
+  if(semReposicao(p,seller))return {erro:`${seller.name} não pode ficar sem reposição na posição.`};
+  return fecharCompra(p,seller,uc,amt);
 }
 // #103: o caixa do clube da IA acompanha os negócios com o técnico
 const caixaIA=(c,v)=>{if(!ehHumano(c)&&c.balance!=null)c.balance=Math.round((c.balance+v)*1000)/1000};

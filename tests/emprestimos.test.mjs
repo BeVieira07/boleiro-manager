@@ -32,6 +32,23 @@ test('pedir da lista é aceito quase sempre, em várias sementes', () => {
   assert.ok(ok / n >= 0.85, `aceitas ${ok} de ${n}`);
 });
 
+test('empréstimo imediato usa a lista e fecha sem sorteio, por um ano e com salário dividido', () => {
+  const j = novo();
+  const pid = daLista(j), de = j.run(`P['${pid}'].clubId`), para = j.run('userClub().id');
+  const caixa = j.run('userClub().balance');
+  j.run(`delete P['${pid}'].emprestar;S.rng=36`);
+  assert.match(j.run(`emprestimoJa('${pid}').erro`), /lista de empréstimo/);
+  j.run(`P['${pid}'].emprestar=true`);
+  assert.ok(j.run('mulberry32(S.rng)()>=CHANCE_LISTA'), 'o sorteio da proposta recusaria');
+  const r = j.run(`emprestimoJa('${pid}')`);
+  assert.equal(r.ok, true, r.erro);
+  assert.equal(j.run('S.rng'), 36);
+  assert.deepEqual(j.run(`loanOf('${pid}')`), { pid, from: de, to: para, fim: j.run('UM_ANO()') });
+  assert.equal(j.run(`P['${pid}'].clubId`), para);
+  assert.equal(j.run(`salarioTxt(loanOf('${pid}'))`), 'dividido 50/50');
+  assert.equal(j.run('userClub().balance'), caixa);
+});
+
 test('empréstimo novo: 1 ano, salário 50/50 nas duas folhas, sem opção de compra, e o jogador volta no fim do prazo', () => {
   const j = novo();
   const pid = daLista(j), de = j.run(`P['${pid}'].clubId`), w = j.run(`P['${pid}'].wage`);
@@ -114,4 +131,16 @@ test('pedir emprestado pela tela: confirmação com o prazo e a divisão do sal�
   j.acao(`loanForm|${pid}|in`);
   assert.ok(j.alertas.some(a => /Fica no seu clube por 1 ano .+ dividido: .+ para cada clube\. Sem opção de compra\./.test(a)), j.alertas.join(' / '));
   assert.ok(j.alertas.some(a => /Empréstimo fechado|recusou|não quer negociar/.test(a)));
+});
+
+test('Pegar emprestado já confirma as condições e fecha o negócio pelo Mercado', () => {
+  const j = novo();
+  const pid = daLista(j), clube = j.run(`P['${pid}'].clubId`);
+  j.run(`ui.mf.club='${clube}';go('mercado')`);
+  assert.ok(j.html().includes(`data-acao="emprestimoJa|${pid}">Pegar emprestado já`));
+  j.acao(`emprestimoJa|${pid}`);
+  assert.match(j.alertas.at(-2), /por 1 ano .+ dividido: .+ para cada clube\. Sem opção de compra\./);
+  assert.match(j.alertas.at(-1), /Empréstimo fechado/);
+  assert.equal(j.run(`P['${pid}'].clubId`), j.run('userClub().id'));
+  assert.ok(!j.html().includes(`emprestimoJa|${pid}"`));
 });

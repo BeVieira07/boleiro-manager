@@ -1,7 +1,8 @@
 import { loanOf } from '../core/emprestimos.mjs';
 import { unavailable } from '../core/escalacao.mjs';
-import { DIVS, P, S, divOf } from '../core/estado.mjs';
+import { DIVS, P, S, divOf, ehHumano } from '../core/estado.mjs';
 import { clubeDe, competicaoDe, ehEstrangeiro } from '../core/estrangeiros.mjs';
+import { precoPedido } from '../core/mercado.mjs';
 import { atributosDe, posDNome } from '../core/posicoes.mjs';
 import { esc, money } from '../core/utils.mjs';
 import { avisar } from './avisos.mjs';
@@ -39,7 +40,8 @@ export function abrirFicha(pid, origem) {
   const contrato = p.contrato == null ? '—' : `${p.contrato} ${p.contrato === 1 ? 'temporada' : 'temporadas'}`;
   const situacao = [u && tag(u, 'erro'), loanOf(pid) && loanTag(p), p.listed && tag('À venda', 'aviso'),
     p.emprestar && tag('Para empréstimo', 'info')].filter(Boolean).join(' ');
-  const acoes = origem === 'mercado' ? negociar(p, c) : '';
+  const preco = p.listed && !ehHumano(c) && !loanOf(pid) ? [['Preço pedido', money(precoPedido(pid))]] : [];
+  const acoes = negociar(p, c, { soImediatas: origem !== 'mercado' });
   const forma = Number(p.forma) || 0;
   openModal(`<h2>${esc(p.name)}</h2>
     <p class="ficha-clube">${crest(c)} <b>${esc(c.name)}</b> <span class="muted">${esc(ehEstrangeiro(c) ? competicaoDe(c) : DIVS[divOf(c)])}</span></p>
@@ -49,7 +51,7 @@ export function abrirFicha(pid, origem) {
       ['Força', ovrChip(p.ovr) + ' ' + tendenciaTag(p)], ['Potencial', potTag(p)],
       ['Energia', energiaBarra(p)], ['Forma', forma.toLocaleString('pt-BR', { signDisplay: 'exceptZero', maximumFractionDigits: 2 })],
       ['Gols na temporada', golsTemporada(p)], ['Contrato', contrato],
-      ['Salário por rodada', money(p.wage)], ['Valor de mercado', money(p.value)]
+      ['Salário por rodada', money(p.wage)], ['Valor de mercado', money(p.value)], ...preco
     ])}
     <h3 class="t3">Atributos</h3>
     ${dados(atributosDe(p).map(a => [esc(a.nome), a.v]))}
