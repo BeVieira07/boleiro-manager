@@ -2,9 +2,20 @@
    Quem é demitido ou pede demissão continua no jogo: recebe de 1 a 4 propostas de clubes da IA e escolhe uma.
    Enquanto escolhe, t.demitido = true, t.saida = 'demitido' | 'pediu', t.propostasClube = [clubId, ...] (a melhor primeiro),
    e t.clubId ainda aponta o clube antigo para a tela e o cálculo da reputação. A IA comanda esse clube.
-   t.historico = [{s, div, pos, alvo}] de cada temporada fechada, para a reputação. */
+   t.historico = [{s, div, pos, alvo}] de cada temporada fechada, para a reputação.
+   Teto de nível (#271): só fazem proposta clubes de nível parecido ou abaixo do que o técnico mostrou.
+   - Nível de um clube (menor = melhor): índice da série (A = 0) + (posição - 1) / clubes da série, com a melhor posição
+     entre a da força e a da tabela (a da tabela só depois da 1ª rodada).
+   - Ponto de partida: o nível do clube deixado pela força, menos 2 posições de folga ("nível parecido").
+   - Campanha contra a meta: abaixo dela, o teto desce 1,5 posição por posição de atraso e a série de baixo entra no
+     sorteio; acima dela (ou na meta), sobe 1 posição mais 1 por posição de folga, até 6. Histórico: título +2, meta batida +0,6, meta perdida
+     -1 posição por temporada, de -3 a +2.
+   - Sem acesso nem título, o teto não passa da série atual nem entra no G-4 dela (salvo se o clube deixado já era de lá).
+     Com acesso (zona de subida) ou título, abre a metade de baixo da série de cima (no título da A, qualquer clube).
+   - Pedir demissão com campanha abaixo da meta pesa na reputação como a demissão. Se ninguém couber, sai a proposta
+     do clube mais fraco da série mais baixa. */
 import { CONF_INICIO, definirMeta, metaDe } from './diretoria.mjs';
-import { DIVS, S, addNewsTodos, clubById, clubDo, divOf, divisions, table, tec, tecnicos } from './estado.mjs';
+import { DIVS, MOVE_N, S, addNewsTodos, clubById, clubDo, divOf, divisions, hasTwoDivs, table, tec, tecnicos } from './estado.mjs';
 import { autoXI } from './motor.mjs';
 import { clamp, rnd } from './utils.mjs';
 
@@ -15,10 +26,39 @@ const posNaTabela = c => table(divOf(c)).findIndex(x => x.id === c.id) + 1;
 export function reputacao(t, motivo = t.saida) {
   const uc = clubDo(t);
   let r = BASE_SERIE[divOf(uc)] ?? 30;
-  if (S.round > 0 && t.meta) r += clamp((t.meta.alvo - posNaTabela(uc)) * 3, -25, 25); // campanha contra a meta
+  r += clamp(campanha(t).dif * 3, -25, 25); // campanha contra a meta
   r += clamp((t.historico || []).reduce((s, h) => s + (h.pos === 1 ? 8 : h.pos <= h.alvo ? 3 : -2), 0), -10, 20);
-  if (motivo === 'demitido') r -= 10;
+  if (motivo === 'demitido' || campanha(t).dif < 0) r -= 10; // pedir demissão indo mal pesa como ser demitido (#271)
   return clamp(Math.round(r), 0, 100);
+}
+const clubesDa = d => S.clubs.filter(c => divOf(c) === d);
+const posPelaForca = c => 1 + clubesDa(divOf(c)).filter(o => o.strength > c.strength).length;
+/** Campanha atual no clube do técnico: posição, diferença para a meta (positiva = acima) e se está no acesso ou no título. */
+export function campanha(t) {
+  const c = clubDo(t), d = divOf(c), i = divisions().indexOf(d);
+  if (!(S.round > 0 && t.meta)) return { pos: null, dif: 0, sobe: false };
+  const pos = posNaTabela(c), mv = hasTwoDivs() ? MOVE_N() : 4;
+  return { pos, dif: t.meta.alvo - pos, sobe: pos === 1 || (i > 0 && pos <= mv) };
+}
+// posição de cada clube na tabela da série dele, calculada uma vez por sorteio
+const posicoes = () => new Map(divisions().flatMap(d => table(d).map((x, k) => [x.id, k + 1])));
+/** Nível de um clube (menor = melhor): série + posição na série, pela força ou pela tabela, a melhor das duas.
+ *  soForca: ignora a tabela; pos: posições já calculadas (posicoes()). */
+export function nivelDe(c, soForca = false, pos = null) {
+  const d = divOf(c), n = clubesDa(d).length, esp = posPelaForca(c);
+  if (!soForca && S.round > 0) pos = Math.min(esp, pos ? pos.get(c.id) : posNaTabela(c)); else pos = esp;
+  return divisions().indexOf(d) + (pos - 1) / n;
+}
+/** Teto de nível das propostas (#271): o melhor nível de clube que a campanha e o histórico do técnico justificam. */
+export function tetoDeNivel(t) {
+  const c = clubDo(t), d = divOf(c), i = divisions().indexOf(d), n = clubesDa(d).length;
+  const mv = hasTwoDivs() ? MOVE_N() : 4, base = nivelDe(c, true), camp = campanha(t);
+  let pos = 2; // folga: nível parecido
+  pos += camp.dif < 0 ? camp.dif * 1.5 : camp.pos ? Math.min(6, 1 + camp.dif) : 0;
+  pos += clamp((t.historico || []).reduce((s, h) => s + (h.pos === 1 ? 2 : h.pos <= h.alvo ? 0.6 : -1), 0), -3, 2);
+  let teto = base - pos / n;
+  if (camp.sobe) return Math.min(teto, i - 0.5);
+  return Math.max(teto, Math.min(base, i + mv / n)); // sem acesso nem título: nem a série de cima, nem o G-4 da atual
 }
 // clube em crise: metade de baixo da tabela, ou bem abaixo do que a força dele promete
 function emCrise(c) {
@@ -26,14 +66,14 @@ function emCrise(c) {
   const esperado = 1 + S.clubs.filter(o => divOf(o) === d && o.strength > c.strength).length;
   return pos > T.length / 2 || pos > esperado + 2;
 }
-/** De 1 a 4 propostas, com sorteio (rnd). Reputação alta: mais propostas e CHANCE de clubes melhores; nunca garantido. */
+/** De 1 a 4 propostas, com sorteio (rnd), só de clubes até o teto de nível (#271). Reputação alta: mais propostas. */
 export function gerarPropostas(t, rep = reputacao(t)) {
   const ds = divisions(), atual = ds.indexOf(divOf(clubDo(t))), idx = c => ds.indexOf(divOf(c));
-  const melhor = rep >= 70 && rnd() < (rep - 60) / 60 ? Math.max(0, atual - 1) : atual; // subir de série: só com sorte
-  const pior = Math.min(ds.length - 1, atual + (rep < 60 ? 1 : 0));
+  const teto = tetoDeNivel(t) - 1e-9; // #271: nenhum clube acima do nível que o técnico mostrou
+  const pior = Math.min(ds.length - 1, atual + (rep < 60 || campanha(t).dif < 0 ? 1 : 0));
   // O vínculo do ex-clube fica reservado até o técnico assumir outro, inclusive na lista de membros da liga.
-  const vinculados = new Set(tecnicos().map(o => o.clubId));
-  const candidatos = S.clubs.filter(c => !vinculados.has(c.id) && idx(c) >= melhor && idx(c) <= pior);
+  const vinculados = new Set(tecnicos().map(o => o.clubId)), pos = posicoes();
+  const candidatos = S.clubs.filter(c => !vinculados.has(c.id) && idx(c) <= pior && nivelDe(c, false, pos) >= teto);
   // a maioria das propostas vem de quem está em crise; clube bem colocado só aparece com reputação, e com peso menor
   const peso = c => (emCrise(c) ? 3 : rep >= 60 ? 1 : 0.25) * (idx(c) < atual ? 0.6 : 1);
   const n = clamp(1 + Math.floor(rep / 30) + (rnd() < 0.35 ? 1 : 0) - (rnd() < 0.35 ? 1 : 0), 1, 4), escolhidos = [];
