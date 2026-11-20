@@ -3,7 +3,7 @@ import { agregadoFinal, emPreTemporada, estadualPelaFrente, jogosDaData, nomeDat
 import { S, clubById, divOf, tec } from '../core/estado.mjs';
 import { esc, money } from '../core/utils.mjs';
 import { artilhariaDoTorneio } from './artilharia.mjs';
-import { crest } from './partida.mjs';
+import { crest, detalhePenaltis } from './partida.mjs';
 
 /** O que o botão da rodada joga agora: 'estadual' na pré-temporada com jogo de técnico pela frente, senão 'rodada N'. */
 export const rotuloRodada = () => estadualPelaFrente() ? 'estadual' : `rodada ${S.round + 1}`;
@@ -13,7 +13,7 @@ function jogo(g, me) {
   const v = (gp, gc) => feito ? (gp > gc ? 'venceu' : gp < gc ? 'perdeu' : '') : '';
   return `<li class="jogo${meu ? ' meu' : ''}"><span class="jogo-time casa ${v(g.hg, g.ag)}">${esc(H.name)} ${crest(H)}</span>
     <span class="jogo-placar">${feito ? `${g.hg}<span aria-hidden="true"> x </span><span class="sr"> a </span>${g.ag}` : '<span class="muted">x</span>'}</span>
-    <span class="jogo-time fora ${v(g.ag, g.hg)}">${crest(A)} ${esc(A.name)}</span></li>`;
+    <span class="jogo-time fora ${v(g.ag, g.hg)}">${crest(A)} ${esc(A.name)}</span>${g.pen ? `<span class="jogo-detalhe">${detalhePenaltis(g.pen, H, A)}</span>` : ''}</li>`;
 }
 const ordenar = (gs, me) => [...gs].sort((a, b) => (b.h === me || b.a === me) - (a.h === me || a.a === me));
 
@@ -46,7 +46,7 @@ export function tabelasEstadual(tor, me) {
 function final(tor, me) {
   const f = tor.final; if (!f) return `<section class="card"><h2 class="t3">Final</h2><p class="muted">Ida e volta nas duas últimas datas da pré-temporada, entre ${tor.grupos.length === 1 ? 'os dois primeiros' : 'os primeiros de cada grupo'}. O melhor colocado decide em casa.</p></section>`;
   const H = clubById(f.h), A = clubById(f.a), t = agregadoFinal(f), d = S.estaduais.datas;
-  const pernas = [f.ida ? `Ida: ${esc(H.short || H.name)} ${f.ida.h} x ${f.ida.a} ${esc(A.short || A.name)}` : '', f.volta ? `Volta: ${esc(A.short || A.name)} ${f.volta.a} x ${f.volta.h} ${esc(H.short || H.name)}` : '', f.pen ? `${esc(clubById(f.pen).name)} venceu nos pênaltis` : ''].filter(Boolean).join(' · ');
+  const pernas = [f.ida ? `Ida: ${esc(H.short || H.name)} ${f.ida.h} x ${f.ida.a} ${esc(A.short || A.name)}` : '', f.volta ? `Volta: ${esc(A.short || A.name)} ${f.volta.a} x ${f.volta.h} ${esc(H.short || H.name)}` : '', detalhePenaltis(f.pen, H, A)].filter(Boolean).join(' · ');
   const cls = id => f.v ? (f.v === id ? 'venceu' : 'perdeu') : '';
   const div = divOf(clubById(me));
   const premio = f.v || (f.h !== me && f.a !== me) ? '' : ` · prêmio para seu clube — título: ${money(premioEstadual('campeao', div), 3)}, vice: ${money(premioEstadual('vice', div), 3)}`;

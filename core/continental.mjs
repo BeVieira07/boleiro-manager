@@ -13,9 +13,10 @@ import { DADOS_CONTINENTAIS } from './dados-continentais.mjs';
 import { aplicarConfianca } from './diretoria.mjs';
 import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, divOf, ehHumano, reindex, table, tecDoClube } from './estado.mjs';
 import { prepararEstrangeiro } from './estrangeiros.mjs';
-import { jogarPartidaCopa, jogoDaPerna, noticiaAutores, placarDaPerna } from './gols-copa.mjs';
+import { jogarPartidaCopa, jogoDaPerna, noticiaAutores, penaltisSemLances, placarDaPerna } from './gols-copa.mjs';
+import { nosPenaltis } from './penaltis.mjs';
 import { premioPorDivisao } from './premiacoes.mjs';
-import { clamp, money, rnd, shuffle } from './utils.mjs';
+import { money, semente, shuffle } from './utils.mjs';
 
 export { artilhariaCopa as artilhariaCont } from './gols-copa.mjs';
 
@@ -101,7 +102,8 @@ export function dataCont(k) {
 }
 
 const placarCont = (tor, H, A, neutro = false) => jogarPartidaCopa(tor, H, A, { continental: true, neutro });
-const penaltis = (H, A) => rnd() < clamp(0.5 + (H.strength - A.strength) / 100, 0.4, 0.6) ? H.id : A.id;
+// #267: disputa de pênaltis com os jogadores em campo, pela semente do confronto
+const penaltis = (tor, H, A, fase) => penaltisSemLances(H, A, semente(S.seed, S.season, tor.id, fase, H.id, A.id));
 
 // dinheiro, notícia e diretoria: só para clube com técnico
 function noticiaJogo(tor, d, g) {
@@ -147,11 +149,11 @@ function jogarMata(tor, n, volta, d) {
     noticiaJogo(tor, d, g);
     if (!volta) { j.ida = placarDaPerna(g, false); continue }
     j.volta = placarDaPerna(g, true);
-    const t = agregadoCont(j); if (t.h === t.a) j.pen = penaltis(H, A);
-    j.v = t.h > t.a ? j.h : t.a > t.h ? j.a : j.pen;
+    const t = agregadoCont(j); if (t.h === t.a) j.pen = penaltis(tor, H, A, n);
+    j.v = t.h > t.a ? j.h : t.a > t.h ? j.a : j.pen.v;
     const perdeu = j.v === j.h ? j.a : j.h;
     if (proxima !== 'titulo') premiar(tor, j.v, `classificação (${FASES[n + 1].toLowerCase()})`, proxima, { t: `Classificação na ${tor.nome}`, v: 1.5 });
-    if (clubById(j.v) && tecDoClube(j.v)) addNews(`✅ ${clubById(j.v).name} ${n === 2 ? 'está na final' : 'passou de fase'} da ${tor.nome}${j.pen ? ' nos pênaltis' : ''}.`, j.v);
+    if (clubById(j.v) && tecDoClube(j.v)) addNews(`✅ ${clubById(j.v).name} ${n === 2 ? 'está na final' : 'passou de fase'} da ${tor.nome}${nosPenaltis(j.pen, j.v, perdeu)}.`, j.v);
     eliminar(tor, perdeu, j.v, FASES[n]);
   }
   if (!volta) return;
@@ -162,11 +164,11 @@ function jogarFinal(tor, d) {
   const f = tor.final; if (!f) return;
   const H = clubeCont(f.h), A = clubeCont(f.a);
   Object.assign(f, placarCont(tor, H, A, true)); noticiaJogo(tor, d, f);
-  if (f.hg === f.ag) f.pen = penaltis(H, A);
-  f.v = f.hg > f.ag ? f.h : f.ag > f.hg ? f.a : f.pen; tor.campeao = f.v;
+  if (f.hg === f.ag) f.pen = penaltis(tor, H, A, 'final');
+  f.v = f.hg > f.ag ? f.h : f.ag > f.hg ? f.a : f.pen.v; tor.campeao = f.v;
   const campeao = clubeCont(f.v), vice = f.v === f.h ? f.a : f.h;
   const premio = premiar(tor, f.v, 'título', 'titulo', { t: `Título da ${tor.nome}`, v: 6 });
-  if (premio != null) addNews(`🏆 ${campeao.name} é campeão da ${tor.nome}${f.pen ? ' nos pênaltis' : ''}! Premiação: ${money(premio, 3)}.`, f.v);
+  if (premio != null) addNews(`🏆 ${campeao.name} é campeão da ${tor.nome}${nosPenaltis(f.pen, f.v, vice)}! Premiação: ${money(premio, 3)}.`, f.v);
   eliminar(tor, vice, f.v, 'Final');
   addNewsTodos(`🏆 ${campeao.name} é o campeão da ${tor.nome} ${S.season}.`);
 }

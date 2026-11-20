@@ -677,6 +677,15 @@ body.em-jogo .avisos{bottom:24px}
 .cab-topo{display:flex;justify-content:space-between;align-items:baseline;gap:var(--e2);flex-wrap:wrap}
 .cab-topo .relogio{margin:0}
 .ult-lance{margin:0;min-height:20px;font-size:13px;color:var(--texto2);display:flex;gap:6px;align-items:center;justify-content:center;text-align:center}
+/* disputa de pênaltis ao vivo (#267): placar e as cobranças na ordem, com o resultado escrito */
+.penaltis:empty{display:none}
+.penaltis h2{margin:0 0 var(--e2);text-align:center}
+.cobrancas{list-style:none;margin:0;padding:0;display:grid;gap:2px;border-top:1px solid var(--linha2)}
+.cob{display:flex;align-items:center;gap:var(--e2);padding:4px 2px;font-size:13px;border-bottom:1px solid var(--linha2)}
+.cob-n{min-width:22px;color:var(--muted);font-variant-numeric:tabular-nums}
+.cob-nome{flex:1;min-width:0;overflow-wrap:anywhere}
+.cob.gol b{color:var(--verde)}
+.cob.perdeu b{color:var(--perigo)}
 .ev-cartao{color:var(--ouro)}
 .ev-vermelho{color:var(--perigo)}
 .ev-lesao{color:var(--info)}

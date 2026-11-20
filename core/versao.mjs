@@ -12,6 +12,7 @@ import { migrarDiretoria } from './diretoria.mjs';
 import { migrarTecnicos, reindex, usarEstado } from './estado.mjs';
 import { limparEventosAntigos } from './aovivo.mjs';
 import { prepararEstrangeiro } from './estrangeiros.mjs';
+import { migrarPenaltis } from './penaltis.mjs';
 import { migrarPosicoes, simplificarPosicoes } from './posicoes.mjs';
 import { novaSemente } from './utils.mjs';
 
@@ -32,7 +33,8 @@ const MIGRACOES = [
   s => { // 14: artilharia nacional. Os placares anteriores à #197 ficam sem autoria.
     if (s.copa) s.copa.gols ??= {};
     for (const tor of s.estaduais?.torneios || []) tor.gols ??= {};
-  }
+  },
+  s => migrarPenaltis(s) // 15: disputa de pênaltis com placar e cobranças (#267); os antigos guardam só o vencedor
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 

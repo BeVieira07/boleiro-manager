@@ -4,7 +4,8 @@
    S.estaduais = {temporada, datas, dia, torneios}. datas = quantas datas a pré-temporada tem (a do torneio mais longo);
    dia = a próxima data a jogar. torneios[i] = {uf, nome, grupos, rodadas, final, campeao}: grupos = [[ids]] (um grupo só,
    ou dois quando há GRUPOS_DESDE clubes ou mais); rodadas[d] = jogos da fase de grupos na data d, [{h, a, hg, ag}], em
-   turno único; final = {h, a, ida, volta, pen, v} (como um confronto da copa; h é o melhor colocado e decide em casa),
+   turno único; final = {h, a, ida, volta, pen, v} (como um confronto da copa; h é o melhor colocado e decide em casa;
+   pen = disputa de pênaltis, core/penaltis.mjs),
    montada assim que a fase acaba e jogada nas duas últimas datas da pré-temporada (a mesma para todos os estados).
    jogarRodada joga, a cada clique, as datas até a próxima com jogo de clube com técnico; sem jogo de técnico pela frente,
    joga o resto da pré-temporada e a rodada 1 na mesma chamada.
@@ -14,13 +15,14 @@
    shortcut: a pré-temporada não paga cota de TV nem salários. Estado de antes da #132 não tem S.estaduais: os estaduais começam na temporada seguinte. */
 import { S, addFin, addNews, bilheteriaBase, clubById, divOf, ehHumano, tecDoClube } from './estado.mjs';
 import { aplicarConfianca } from './diretoria.mjs';
-import { jogoDaPerna, noticiaAutores, placarDaPerna } from './gols-copa.mjs';
+import { jogoDaPerna, noticiaAutores, penaltisDaVolta, placarDaPerna } from './gols-copa.mjs';
 import { aplicarDisponibilidade } from './escalacao.mjs';
 import { atualizarForma } from './forma.mjs';
 import { anotarTitulares, atualizarEnergia } from './energia.mjs';
 import { getXI, simulate } from './motor.mjs';
+import { nosPenaltis } from './penaltis.mjs';
 import { premioPorDivisao } from './premiacoes.mjs';
-import { clamp, money, rnd, semente, shuffle } from './utils.mjs';
+import { money, semente, shuffle } from './utils.mjs';
 
 export const ESTADUAL_MIN = 4, GRUPOS_DESDE = 12;
 // na liga, a data d vai para liga_resultados com rodada RODADA_ESTADUAL + d: negativa (não bate com a liga) e em ordem
@@ -103,6 +105,12 @@ export function nomeData(tor, d) {
 export const torneioDe = clubeId => S.estaduais ? S.estaduais.torneios.find(t => t.grupos.some(g => g.includes(clubeId))) || null : null;
 /** A pré-temporada ainda tem datas a jogar (antes da rodada 1). */
 export const emPreTemporada = () => !!(S.estaduais && S.estaduais.temporada === S.season && S.round === 0 && S.estaduais.dia < S.estaduais.datas);
+/** #267: disputa de pênaltis do jogo de volta g da final (null sem empate na soma). Depende de quem terminou em campo. */
+export function penaltiDaFinal(g) {
+  const tor = S.estaduais.torneios.find(t => t.uf === g.uf), f = tor?.final;
+  if (!f?.ida || g.hg == null) return null;
+  return penaltisDaVolta(g, { h: f.ida.a, a: f.ida.h }, semente(S.seed, S.season, 'estadual', tor.uf, 'final'));
+}
 const temHumano = d => S.estaduais.torneios.some(t => jogosDaData(t, d).some(g => ehHumano(g.h) || ehHumano(g.a)));
 /** Ainda há jogo de estadual de clube com técnico pela frente (para o botão da rodada). Final ainda não montada conta como talvez. */
 export function estadualPelaFrente() {
@@ -126,6 +134,7 @@ function jogarData(d) {
   }
   const jogaram = anotarTitulares(new Map(), jogos.map(([, g]) => g), getXI, clubById); // #136: a energia também gasta aqui
   for (const [tor, g] of jogos) { simulate(g); bilheteria(tor, g) } // #230: lances como na liga
+  for (const [, g] of jogos) if (g.final === 'volta') g.pen = penaltiDaFinal(g); // #267: o replay da liga mostra a disputa; trocas ao vivo a refazem
   aplicarDisponibilidade(jogos.map(([, g]) => g)); // lesões e expulsões do jogo (#196) valem também no estadual
   atualizarEnergia(jogaram);
   E.pendente = d;
@@ -143,11 +152,11 @@ function concluirData(d) {
     } else if (tor.final && tor.final.jogo) {
       const f = tor.final, g = f.jogo, volta = g.final === 'volta';
       g.autores = autoresDe(g); f[volta ? 'volta' : 'ida'] = placarDaPerna(g, volta);
+      if (volta) g.pen = f.pen = penaltiDaFinal(g); // com o placar final e quem terminou em campo (#267)
       noticiaDoJogo(tor, g, volta ? 'Final (volta)' : 'Final (ida)'); jogos.push(g); delete f.jogo;
       if (volta) {
-        const H = clubById(f.h), A = clubById(f.a), t = agregadoFinal(f);
-        if (t.h === t.a) f.pen = rnd() < clamp(0.5 + (H.strength - A.strength) / 100, 0.4, 0.6) ? f.h : f.a;
-        f.v = t.h > t.a ? f.h : t.a > t.h ? f.a : f.pen; tor.campeao = f.v;
+        const t = agregadoFinal(f);
+        f.v = t.h > t.a ? f.h : t.a > t.h ? f.a : f.pen.v; tor.campeao = f.v;
         encerrar(tor);
       }
     }
@@ -167,7 +176,7 @@ function noticiaDoJogo(tor, g, fase) {
 }
 // fim do torneio: premiação, notícia e diretoria (peso baixo) dos clubes com técnico
 function encerrar(tor) {
-  const f = tor.final, campeao = clubById(f.v), vice = clubById(f.v === f.h ? f.a : f.h), pen = f.pen ? ' nos pênaltis' : '';
+  const f = tor.final, campeao = clubById(f.v), vice = clubById(f.v === f.h ? f.a : f.h), pen = nosPenaltis(f.pen, campeao.id, vice.id);
   const fortes = tor.grupos.flat().map(clubById).sort((a, b) => b.strength - a.strength).slice(0, 2).map(c => c.id);
   for (const id of tor.grupos.flat()) {
     const t = tecDoClube(id); if (!t) continue;

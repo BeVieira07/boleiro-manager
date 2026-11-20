@@ -1,6 +1,8 @@
 import { P, clubById, ehHumano } from './estado.mjs';
 import { atualizarForma } from './forma.mjs';
+import { escalacaoNoMinuto } from './lances.mjs';
 import { chancesDoJogo, pickScorer, power } from './motor.mjs';
+import { disputarPenaltis, timeNaDisputa } from './penaltis.mjs';
 import { golsSegmento, taticaDe } from './taticas.mjs';
 import { poisson } from './utils.mjs';
 
@@ -44,8 +46,25 @@ export function jogoDaPerna(confronto, volta) {
   const h = volta ? 'a' : 'h', a = volta ? 'h' : 'a';
   const g = { h: confronto[h], a: confronto[a], hg: p?.[h] ?? null, ag: p?.[a] ?? null };
   if (p?.autores) g.autores = { h: p.autores[h], a: p.autores[a] };
+  if (volta && confronto.pen) g.pen = confronto.pen; // #267: a disputa aparece nos resultados da volta
   return g;
 }
+
+/* ---------- pênaltis (#267) ---------- */
+const emCampoNoFim = (g, side) => (escalacaoNoMinuto(g, side, Infinity)?.xi || []).filter(Boolean).map(id => P[id]).filter(Boolean);
+/** Disputa do jogo de volta `g` (com lances), se o confronto empatou. `ida` = placar da ida do ponto de vista de g.h e g.a. */
+export function penaltisDaVolta(g, ida, seed) {
+  if (!ida || ida.h + g.hg !== ida.a + g.ag) return null;
+  return disputarPenaltis(timeNaDisputa(g.a, emCampoNoFim(g, 'a')), timeNaDisputa(g.h, emCampoNoFim(g, 'h')), seed);
+}
+// jogo das sul-americanas (sem lances): os titulares da força; o estrangeiro, o melhor goleiro e os dez melhores da linha
+function emCampoSemLances(c) {
+  if (clubById(c.id)) return power(c).xi;
+  const porOvr = [...c.players].sort((x, y) => y.ovr - x.ovr);
+  return [...porOvr.filter(p => p.pos === 'G').slice(0, 1), ...porOvr.filter(p => p.pos !== 'G').slice(0, 10)];
+}
+/** Disputa entre os clubes H e A de uma partida sem lances (sul-americanas). */
+export const penaltisSemLances = (H, A, seed) => disputarPenaltis(timeNaDisputa(H.id, emCampoSemLances(H)), timeNaDisputa(A.id, emCampoSemLances(A)), seed);
 
 export function artilhariaCopa(tor, n = 10) {
   return Object.values(tor.gols || {}).sort((a, b) => b.gols - a.gols || (a.nome < b.nome ? -1 : a.nome > b.nome ? 1 : 0)).slice(0, n);

@@ -1,6 +1,7 @@
 import { corOk } from '../core/dados.mjs';
 import { DIVS, S, clubById, divisions, userClub } from '../core/estado.mjs';
 import { fecharTemporada, iniciarTemporada } from '../core/partida.mjs';
+import { placarPenaltis, vencedorPenaltis } from '../core/penaltis.mjs';
 import { esc, money } from '../core/utils.mjs';
 import { save, ui } from './estado.mjs';
 import { abrirCamada, fecharCamada } from './avisos.mjs';
@@ -13,6 +14,13 @@ export function crest(c,cls=''){
   // se a imagem não carregar, troca pela sigla colorida em vez de deixar o círculo vazio
   if(c.logo)return `<img class="crest ${cls}" src="${esc(c.logo)}" alt="" data-f="${esc(sigla)}" onerror="this.outerHTML=this.dataset.f">`;
   return sigla;
+}
+/** #267: a disputa de pênaltis de um confronto entre H e A ("Pênaltis: FLA 4 x 3 PAL"); save antigo só sabe quem venceu. */
+export function detalhePenaltis(pen,H,A){
+  if(!pen)return '';
+  const p=placarPenaltis(pen,H.id,A.id);
+  if(p)return `Pênaltis: ${esc(H.short||H.name)} ${p} ${esc(A.short||A.name)}`;
+  return `${esc((vencedorPenaltis(pen)===H.id?H:A).name)} venceu nos pênaltis`;
 }
 /* #62: jogo ao vivo (a tela é ui/aovivo.mjs, #135) com placar grande, linha do tempo com marcadores, eventos com ícones e tática em chips */
 export const DURACAO=93;
