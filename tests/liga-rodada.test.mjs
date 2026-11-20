@@ -118,12 +118,35 @@ test('mercado da liga: negócio fechado vira notícia para todos e o dinheiro sa
   assert.match(est.S.managers['u-bia'].news[0].t, new RegExp(`${ana.name}: .*${p.name}`));
 });
 
+test('mercado da liga: compra imediata cobra o preço do servidor e empréstimo imediato aplica o acordo padrão', () => {
+  const s = comVaga(JSON.parse(novaLiga(['A']))), venda = jogadorDaIA(s, 'A'), emprestimo = jogadorDaIA(s, 'M');
+  const ana = s.clubs.find(c => c.id === s.managers['u-ana'].clubId);
+  venda.listed = true; emprestimo.emprestar = true; ana.balance = 1000;
+  const preco = Math.round(venda.value * 0.9 * 10) / 10;
+  const compra = acaoMercadoLiga(s, 'u-ana', { tipo: 'comprarJa', pid: venda.id, valor: 0.1 });
+  assert.equal(compra.ok, true, compra.erro);
+  assert.equal(est.P[venda.id].clubId, ana.id);
+  assert.equal(est.clubById(ana.id).balance, 1000 - preco);
+  assert.ok(est.S.managers['u-bia'].news[0].t.includes(venda.name));
+
+  const acordo = acaoMercadoLiga(copia(est.S), 'u-ana', { tipo: 'emprestimoJa', pid: emprestimo.id });
+  assert.equal(acordo.ok, true, acordo.erro);
+  assert.equal(est.P[emprestimo.id].clubId, ana.id);
+  assert.deepEqual(est.S.loans.find(l => l.pid === emprestimo.id),
+    { pid: emprestimo.id, from: emprestimo.clubId, to: ana.id, fim: { s: s.season + 1, r: s.round } });
+  assert.equal(est.clubById(ana.id).balance, 1000 - preco);
+  assert.ok(est.S.managers['u-bia'].news[0].t.includes(emprestimo.name));
+});
+
 test('mercado da liga: nada com clube de outro técnico, e o que vem do navegador é conferido', () => {
   const s = comVaga(JSON.parse(novaLiga(['A']))), bia = s.managers['u-bia'].clubId, ana = s.managers['u-ana'].clubId;
   const daBia = s.clubs.find(c => c.id === bia).players[0], daAna = s.clubs.find(c => c.id === ana).players[0], ia = jogadorDaIA(s);
   const r = a => acaoMercadoLiga(copia(s), 'u-ana', a);
   assert.match(r({ tipo: 'compra', pid: daBia.id, valor: 999 }).erro, /outro técnico/);
   assert.match(r({ tipo: 'emprestimo', pid: daBia.id }).erro, /outro técnico/);
+  assert.match(r({ tipo: 'comprarJa', pid: daBia.id }).erro, /outro técnico/);
+  assert.match(r({ tipo: 'emprestimoJa', pid: daBia.id }).erro, /outro técnico/);
+  for (const tipo of ['comprarJa', 'emprestimoJa']) assert.match(r({ tipo, pid: 'constructor' }).erro, /inválido/);
   assert.match(r({ tipo: 'emprestimo', pid: daAna.id }).erro, /inválido/, 'o próprio jogador não se pede emprestado');
   assert.match(r({ tipo: 'emprestimo', pid: ia.id }).erro, /lista de empréstimo/, '#142: só da lista de empréstimo');
   assert.match(r({ tipo: 'alternarEmprestimo', pid: daBia.id }).erro, /inválido/);

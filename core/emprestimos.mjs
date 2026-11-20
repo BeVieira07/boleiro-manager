@@ -36,17 +36,18 @@ export function wageBill(c){
    dele no Elenco, e os clubes da IA mandam propostas por eles (motor.mjs). Como o jogador já está na lista, a IA aceita quase sempre. */
 export const CHANCE_LISTA=0.95;
 // regra: pedir emprestado um jogador de um clube da IA. Devolve {erro} ou {ok, msg} (ok=false: recusou).
-export function proporEmprestimo({pid}){
-  const p=P[pid],uc=userClub();if(!p)return {erro:'Jogador inválido para esta ação.'};
-  const lender=clubeDe(p.clubId);
+export function proporEmprestimo({pid},imediato=false){
+  const p=P[pid],lender=p&&clubeDe(p.clubId),uc=userClub();
+  if(!lender)return {erro:'Jogador inválido para esta ação.'};
   if(lender.id===uc.id)return {erro:'Para emprestar um jogador seu, ponha-o na lista de empréstimo no Elenco.'};
   if(ehHumano(lender))return {erro:'O clube é de outro técnico: faça uma proposta a ele.'};
   if(!p.emprestar)return {erro:`${lender.name} não pôs ${p.name} na lista de empréstimo.`};
   const err=loanCheck(p,lender,uc);if(err)return {erro:err};
-  if(rnd()>=CHANCE_LISTA){addNews(`❌ ${lender.name} recusou o empréstimo de ${p.name}.`);return {ok:false,msg:`${lender.name} recusou a proposta de empréstimo.`}}
+  if(!imediato&&rnd()>=CHANCE_LISTA){addNews(`❌ ${lender.name} recusou o empréstimo de ${p.name}.`);return {ok:false,msg:`${lender.name} recusou a proposta de empréstimo.`}}
   const l={pid,from:lender.id,to:uc.id,fim:UM_ANO()};
   startLoan(l);return {ok:true,msg:`Empréstimo fechado! ${p.name} vem do ${lender.name} ${fimTxt(l)}, com o salário dividido entre os dois clubes.`};
 }
+export const emprestimoJa=pid=>proporEmprestimo({pid},true);
 export function loanCheck(p,lender,borrower){
   if(loanOf(p.id))return `${p.name} já está emprestado.`;
   if(borrower.players.length>=32)return `${borrower.name} já tem 32 jogadores.`;

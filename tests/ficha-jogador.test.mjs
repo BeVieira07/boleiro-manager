@@ -21,17 +21,21 @@ test('ficha abre pelo Elenco e Mercado, usa dados do jogador e fecha com Esc', (
     assert.match(box.innerHTML, /Gols na temporada<\/dt><dd>5<\/dd>/);
     assert.match(box.innerHTML, /Potencial: \d de 5 estrelas/);
     assert.match(box.innerHTML, /Atributos/);
-    assert.doesNotMatch(box.innerHTML, /makeBid/);
+    assert.doesNotMatch(box.innerHTML, /makeBid|comprarJa|emprestimoJa|Preço pedido/);
     j.run("teclaModal({key:'Escape',preventDefault(){}})");
     assert.equal(modal.style.display, 'none');
     assert.ok(!classes.has('modal-aberto'));
 
     j.acao('go|mercado');
     const fora = j.html().match(/data-acao="abrirFicha\|([^|"]+)\|mercado"/)[1];
-    j.run(`P['${fora}'].emprestar=true`);
+    j.run(`P['${fora}'].emprestar=true;P['${fora}'].listed=true;delete P['${fora}'].bidRound`);
+    const preco = j.run(`money(precoPedido('${fora}'))`);
     j.acao(`abrirFicha|${fora}|mercado`);
     assert.ok(box.innerHTML.includes(`data-acao="makeBid|${fora}"`));
     assert.ok(box.innerHTML.includes(`data-acao="loanForm|${fora}|in"`));
+    assert.ok(box.innerHTML.includes(`<dt>Preço pedido</dt><dd>${preco}</dd>`));
+    assert.ok(box.innerHTML.includes(`data-acao="comprarJa|${fora}">Comprar já · ${preco}`));
+    assert.ok(box.innerHTML.includes(`data-acao="emprestimoJa|${fora}">Pegar emprestado já`));
     j.acao('closeModal');
   } finally {
     document.getElementById = original;

@@ -1,5 +1,5 @@
 import { clubeDe } from '../core/estrangeiros.mjs';
-import { UM_ANO, exercerOpcaoCompra, fimTxt, loanLeft, loanOf, loansIn, loansOut, proporEmprestimo, salarioTxt } from '../core/emprestimos.mjs';
+import { UM_ANO, emprestimoJa as emprestimoJaCore, exercerOpcaoCompra, fimTxt, loanLeft, loanOf, loansIn, loansOut, proporEmprestimo, salarioTxt } from '../core/emprestimos.mjs';
 import { P, clubById, ehHumano, userClub } from '../core/estado.mjs';
 import { posDSigla } from '../core/posicoes.mjs';
 import { esc, money } from '../core/utils.mjs';
@@ -7,6 +7,7 @@ import { save, ui } from './estado.mjs';
 import { render } from './telas.mjs';
 import { mercadoLiga } from './ligajogo.mjs';
 import { avisar, confirmar } from './avisos.mjs';
+import { closeModal } from './partida.mjs';
 
 export function loanTag(p){
   const l=loanOf(p.id);if(!l)return '';
@@ -20,14 +21,22 @@ export function loanBtn(p,mode){
   return p.emprestar?`<button class="btn sec sm" data-acao="loanForm|${p.id}|in">Empréstimo</button>`:'';
 }
 /** Pedir emprestado um jogador da lista de um clube da IA (#142): 1 ano, salário dividido, sem opção de compra. */
-export function loanForm(pid){
-  const p=P[pid],c=clubeDe(p.clubId);
+export function loanForm(pid){confirmarEmprestimo(pid,false)}
+export function emprestimoJa(pid){confirmarEmprestimo(pid,true)}
+function confirmarEmprestimo(pid,imediato){
+  const p=P[pid];if(!p?.clubId){avisar('Jogador inválido para esta ação.','erro');return}
+  const c=clubeDe(p.clubId);
   if(!p.emprestar||ehHumano(c)){avisar(`${p.name} não está na lista de empréstimo.`,'erro');return}
-  confirmar({titulo:`Pedir ${p.name} emprestado?`,ok:'Pedir emprestado',
+  const titulo=imediato?`Pegar ${p.name} emprestado agora?`:`Pedir ${p.name} emprestado?`;
+  confirmar({titulo,ok:imediato?'Pegar emprestado já':'Pedir emprestado',
     texto:`${posDSigla(p)}, força ${p.ovr}, do ${c.name}. Fica no seu clube por 1 ano (${fimTxt({fim:UM_ANO()})}). O salário de ${money(p.wage)} por rodada é dividido: ${money(p.wage/2)} para cada clube. Sem opção de compra.`},()=>{
-    if(ui.liga)return mercadoLiga({tipo:'emprestimo',pid}); // #35: na liga, a IA responde no servidor
-    const r=proporEmprestimo({pid});
+    if(ui.liga){
+      if(imediato)closeModal();
+      return mercadoLiga({tipo:imediato?'emprestimoJa':'emprestimo',pid});
+    }
+    const r=imediato?emprestimoJaCore(pid):proporEmprestimo({pid});
     if(r.erro){avisar(r.erro,'erro');return}
+    if(imediato)closeModal();
     save();render();avisar(r.msg,r.ok?'ok':'aviso');
   });
 }
