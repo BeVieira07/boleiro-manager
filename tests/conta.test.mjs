@@ -137,13 +137,38 @@ test('trava da sessão é só da aba: faz fila em ordem e um erro não prende as
   assert.deepEqual(ordem, [1, 2, 3]);
 });
 
-test('criar conta com nome, e-mail e senha: valida, manda o nome para o perfil e avisa em português (#238)', async () => {
+test('Entrar e Criar conta são vistas separadas e preservam o e-mail nas duas direções (#269)', () => {
+  conta.configurarConta({ url: 'https://exemplo.supabase.co', chave: 'chave-publica', cliente: clienteFalso() });
+  const j = carregarJogo({ boot: true });
+  assert.match(j.html(), /data-acao="entrarComGoogle"/);
+  assert.match(j.html(), /id="senhaConta"/);
+  assert.match(j.html(), /data-acao="entrar"/);
+  assert.match(j.html(), /Esqueci a senha/);
+  assert.doesNotMatch(j.html(), /id="nomeNovaConta"|data-acao="criarConta"/);
+
+  j.campo('emailConta', 'ana&bia@exemplo.com');
+  j.acao('trocarVistaConta');
+  assert.match(j.html(), /id="nomeNovaConta"/);
+  assert.match(j.html(), /id="emailNovaConta"[^>]*value="ana&amp;bia@exemplo.com"/);
+  assert.match(j.html(), /id="senhaNovaConta"/);
+  assert.match(j.html(), /id="confirmacaoSenhaNovaConta"/);
+  assert.match(j.html(), /data-acao="criarConta"/);
+  assert.doesNotMatch(j.html(), /id="emailConta"|data-acao="entrar(?:ComGoogle)?"|Esqueci a senha/);
+
+  j.campo('emailNovaConta', 'bia@exemplo.com');
+  j.acao('trocarVistaConta');
+  assert.match(j.html(), /id="emailConta"[^>]*value="bia@exemplo.com"/);
+  assert.match(j.html(), /Esqueci a senha/);
+  assert.doesNotMatch(j.html(), /id="nomeNovaConta"|data-acao="criarConta"/);
+});
+
+test('criar conta com nome, e-mail e senha: valida, manda o nome para o perfil e avisa em português (#238, #269)', async () => {
   const f = clienteFalso();
   conta.configurarConta({ url: 'https://exemplo.supabase.co', chave: 'chave-publica', cliente: f });
   const j = carregarJogo({ boot: true });
   await conta.iniciarConta(() => {});
-  j.run('render()');
-  assert.match(j.html(), /id="nomeNovaConta"/); assert.match(j.html(), /data-acao="criarConta"/);
+  j.campo('emailConta', '');
+  j.acao('trocarVistaConta');
   const n = f.pedidos.length;
   for (const c of ['nomeNovaConta', 'emailNovaConta', 'senhaNovaConta']) j.campo(c, '');
   await j.acao('criarConta');
@@ -153,6 +178,11 @@ test('criar conta com nome, e-mail e senha: valida, manda o nome para o perfil e
   assert.ok(j.alertas.some(a => a.includes('pelo menos 6')));
   assert.equal(f.pedidos.length, n, 'nada vai ao servidor antes de validar');
   j.campo('senhaNovaConta', '123456');
+  j.campo('confirmacaoSenhaNovaConta', '123457');
+  await j.acao('criarConta');
+  assert.match(j.alertas.at(-1), /confirmação da senha deve ser igual à senha/);
+  assert.equal(f.pedidos.length, n, 'senhas diferentes não chamam o servidor');
+  j.campo('confirmacaoSenhaNovaConta', '123456');
   await j.acao('criarConta');
   assert.deepEqual(f.pedidos.at(-1), ['cadastro', 'bia@exemplo.com', 'Bia'], 'o nome vai em "name" (gatilho criar_perfil)');
   assert.ok(j.alertas.some(a => a.includes('Conta criada! Bem-vindo, Bia')));

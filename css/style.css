@@ -580,14 +580,14 @@ body.em-jogo .avisos{bottom:24px}
 .conta-painel .row input{flex:1;min-width:0}
 .conta-form{display:flex;flex-direction:column;gap:6px}
 .conta-form .btn{width:100%;margin-top:4px}
-.conta-entrar{display:grid;gap:12px}
+.conta-acesso{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+.conta-acesso .btn{white-space:normal}
 .btn.google-entrar{background:var(--texto);color:var(--bg);font:700 13px/1.2 var(--f-texto);letter-spacing:0;text-transform:none}
 .google-entrar span{display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--bg);color:var(--texto);font-size:11px}
 .inicio-online .conta-divisor{display:flex;align-items:center;gap:8px;margin:0;font-size:12px}
 .conta-divisor::before,.conta-divisor::after{content:"";flex:1;height:1px;background:var(--linha)}
-.conta-cadastro summary,.conta-recuperar summary{padding:5px 0;cursor:pointer;color:var(--verde-claro)}
-.conta-recuperar summary{text-decoration:underline}
-.conta-cadastro .conta-form,.conta-recuperar .conta-form{margin-top:8px}
+.conta-recuperar summary{padding:5px 0;cursor:pointer;color:var(--verde-claro);text-decoration:underline}
+.conta-recuperar .conta-form{margin-top:8px}
 .campo-rotulo{font-size:12px;font-weight:600;color:var(--muted)}
 .conta-erro{margin:0;max-width:420px}
 .sobretitulo,.secao-titulo{margin:0 0 6px;font:600 13px/1.3 var(--f-texto);letter-spacing:.1em;text-transform:uppercase;color:var(--ouro)}

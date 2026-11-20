@@ -5,10 +5,12 @@ import { esc } from '../core/utils.mjs';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from './config.mjs';
 import { avisar } from './avisos.mjs';
 import { icone } from './icones.mjs';
+import { render } from './telas.mjs';
 
 // supabase-js vem de CDN (o jogo não tem build); versão fixa
 export const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
 const conta = { cliente: null, usuario: null, perfil: null, erro: null, recuperacao: null, config: { url: SUPABASE_URL, chave: SUPABASE_ANON_KEY }, aoMudar: null };
+const acesso = { cadastro: false, email: '' };
 
 export const onlineConfigurado = () => !!(conta.config.url && conta.config.chave);
 export const usuarioAtual = () => conta.usuario;
@@ -20,6 +22,7 @@ export const clienteLogado = () => (conta.usuario ? conta.cliente : null);
 export function configurarConta({ url, chave, cliente } = {}) {
   conta.config = { url: url ?? conta.config.url, chave: chave ?? conta.config.chave };
   conta.cliente = cliente ?? null; conta.usuario = null; conta.perfil = null; conta.erro = null; conta.recuperacao = null;
+  acesso.cadastro = false; acesso.email = '';
 }
 
 /** Trava da sessão só desta aba. A padrão do supabase-js (navigator.locks) é dividida por todas as abas do mesmo endereço:
@@ -100,6 +103,20 @@ const valor = id => { const c = document.getElementById(id); return (c && c.valu
 const senhaDe = id => { const c = document.getElementById(id); return (c && c.value) || '' };
 const emailOk = e => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
 export const SENHA_MIN = 6;
+
+export function guardarEmailConta(email) {
+  acesso.email = email;
+}
+
+export function trocarVistaConta() {
+  const email = document.getElementById(acesso.cadastro ? 'emailNovaConta' : 'emailConta');
+  // Lê também valores preenchidos pelo navegador sem evento de digitação.
+  if (email) guardarEmailConta(email.value);
+  acesso.cadastro = !acesso.cadastro;
+  render();
+  document.getElementById(acesso.cadastro ? 'nomeNovaConta' : 'emailConta')?.focus();
+}
+
 // as mensagens do Supabase vêm em inglês
 export function erroEmPortugues(error) {
   const m = String((error && (error.code || error.message)) || '').toLowerCase();
@@ -125,6 +142,11 @@ export async function criarConta() {
   if (!nome) { avisar('Digite o nome do técnico.'); return }
   if (!emailOk(email)) { avisar('Digite um e-mail válido.'); return }
   if (senha.length < SENHA_MIN) { avisar(`A senha precisa ter pelo menos ${SENHA_MIN} caracteres.`); return }
+  if (senha !== senhaDe('confirmacaoSenhaNovaConta')) {
+    avisar('A confirmação da senha deve ser igual à senha.', 'erro');
+    document.getElementById('confirmacaoSenhaNovaConta')?.focus();
+    return;
+  }
   const c = await cliente(); if (!c) return;
   // o nome vai em "name", que o gatilho criar_perfil usa para o perfil
   const { data, error } = await c.auth.signUp({ email, password: senha, options: { data: { name: nome.slice(0, 40) } } });
@@ -192,6 +214,7 @@ export async function sair() {
   const c = await cliente(); if (!c) return;
   await c.auth.signOut({ scope: 'local' }).catch(() => {});
   conta.usuario = null; conta.perfil = null; conta.recuperacao = null;
+  acesso.cadastro = false; acesso.email = '';
   conta.aoMudar && conta.aoMudar();
 }
 /** O servidor recusou o login (sessão encerrada em outro lugar): sai só daqui e avisa, em vez de parecer conectado. */
@@ -232,9 +255,18 @@ export function painelConta() {
     <div class="row"><input id="nomeConta" placeholder="Nome do técnico" value="${esc(conta.perfil?.nome || '')}"><button class="btn sec" data-acao="mudarNomeTecnico">Salvar</button></div>
     <button class="btn fantasma" data-acao="sair">${icone('sair', { tam: 16 })}Sair da conta</button></div></details>`;
   }
-  return `<div class="conta-entrar"><button type="button" class="btn google-entrar" data-acao="entrarComGoogle"><span aria-hidden="true">G</span> Entrar com Google</button>
+  if (acesso.cadastro) {
+    return `<div class="conta-acesso"><div class="conta-form">
+      <label for="nomeNovaConta" class="campo-rotulo">Nome do técnico</label><input id="nomeNovaConta" autocomplete="nickname" maxlength="40">
+      <label for="emailNovaConta" class="campo-rotulo">E-mail</label><input id="emailNovaConta" type="email" autocomplete="email" placeholder="seu@email.com" value="${esc(acesso.email)}" data-digitar="guardarEmailConta">
+      <label for="senhaNovaConta" class="campo-rotulo">Senha (mínimo ${SENHA_MIN} caracteres)</label><input id="senhaNovaConta" type="password" autocomplete="new-password" minlength="${SENHA_MIN}">
+      <label for="confirmacaoSenhaNovaConta" class="campo-rotulo">Confirme a senha</label><input id="confirmacaoSenhaNovaConta" type="password" autocomplete="new-password" minlength="${SENHA_MIN}">
+      <button type="button" class="btn" data-acao="criarConta">Criar conta</button></div>
+    <button type="button" class="btn fantasma" data-acao="trocarVistaConta">Já tem conta? Entrar</button></div>`;
+  }
+  return `<div class="conta-acesso"><button type="button" class="btn google-entrar" data-acao="entrarComGoogle"><span aria-hidden="true">G</span> Entrar com Google</button>
     <div class="conta-form"><p class="conta-divisor">ou com e-mail</p>
-      <label for="emailConta" class="campo-rotulo">E-mail</label><input id="emailConta" type="email" autocomplete="email" placeholder="seu@email.com">
+      <label for="emailConta" class="campo-rotulo">E-mail</label><input id="emailConta" type="email" autocomplete="email" placeholder="seu@email.com" value="${esc(acesso.email)}" data-digitar="guardarEmailConta">
       <label for="senhaConta" class="campo-rotulo">Senha</label><input id="senhaConta" type="password" autocomplete="current-password">
       <button type="button" class="btn" data-acao="entrar">Entrar</button>
       <details class="conta-recuperar"><summary>Esqueci a senha</summary><div class="conta-form">
@@ -242,9 +274,5 @@ export function painelConta() {
         <input id="emailRecuperacao" type="email" autocomplete="email" placeholder="seu@email.com">
         <button type="button" class="btn sec" data-acao="enviarRecuperacaoSenha">Enviar link de recuperação</button>
       </div></details></div>
-    <details class="conta-cadastro"><summary>Criar conta</summary><div class="conta-form">
-      <label for="nomeNovaConta" class="campo-rotulo">Nome do técnico</label><input id="nomeNovaConta" autocomplete="nickname" maxlength="40">
-      <label for="emailNovaConta" class="campo-rotulo">E-mail</label><input id="emailNovaConta" type="email" autocomplete="email" placeholder="seu@email.com">
-      <label for="senhaNovaConta" class="campo-rotulo">Senha (mínimo ${SENHA_MIN} caracteres)</label><input id="senhaNovaConta" type="password" autocomplete="new-password" minlength="${SENHA_MIN}">
-      <button type="button" class="btn sec" data-acao="criarConta">Criar conta</button></div></details></div>`;
+    <button type="button" class="btn fantasma" data-acao="trocarVistaConta">Ainda não tem conta? Criar conta</button></div>`;
 }
