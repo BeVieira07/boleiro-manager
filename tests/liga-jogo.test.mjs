@@ -3,7 +3,7 @@
 // As regras do banco de verdade (rodada gravada uma vez só, quem pode gravar) estão em supabase/tests/liga_rodada.sql.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { carregarJogo, clubeDaSerie } from './jogo.mjs';
+import { carregarJogo, clubeDaSerie, problemasNasTelas } from './jogo.mjs';
 
 const raiz = new URL('../', import.meta.url);
 const conta = await import(new URL('ui/conta.mjs', raiz));
@@ -232,6 +232,29 @@ test('quem não é dono não força a rodada e a confirmação sozinha não joga
   assert.ok(k.alertas.some(a => a.includes('Só o dono')));
   assert.equal(srv.resultados.length, 0);
   k.run('sairDaLiga()');
+});
+
+test('cada membro vê a própria carreira ao abrir uma liga antiga', async () => {
+  const j = carregarJogo({ boot: true });
+  const srv = servidorFalso([clubeDaSerie(j, 'A', 0), clubeDaSerie(j, 'A', 1)]);
+  await como(srv, 'a');
+  await j.acao('comecarLiga|L1'); await esperar();
+  const { estado } = srv, [ana, bia] = srv.membros.map(m => estado.clubs.find(c => c.id === m.club_id));
+  estado.versao--;
+  for (const t of Object.values(estado.managers)) delete t.carreira;
+  estado.history = [{ season: estado.season - 1, champs: { A: ana.name }, tecnicos: { a: { pos: 1, div: 'A' }, b: { pos: 2, div: 'A' } } }];
+  estado.copa.campeao = bia.id;
+
+  for (const [id, nome, titulo, outroTitulo] of [['a', 'Ana', 'Série A', 'Copa do Brasil'], ['b', 'Bia', 'Copa do Brasil', 'Série A']]) {
+    await como(srv, id);
+    await j.acao('entrarNaLiga|L1');
+    assert.deepEqual(problemasNasTelas(j, ['tecnico']), []);
+    assert.match(j.html(), new RegExp(`<h2 class="t3">${nome}</h2>`));
+    assert.match(j.html(), new RegExp(`<h3>${titulo}</h3>`));
+    assert.doesNotMatch(j.html(), new RegExp(`<h3>${outroTitulo}</h3>`));
+    assert.equal(j.run('S.managers[S.atual === "a" ? "b" : "a"].carreira'), undefined);
+    j.run('sairDaLiga()');
+  }
 });
 
 test('mercado da liga: a venda é feita no servidor, todos recebem o estado novo e a escalação não confirmada fica', async () => {

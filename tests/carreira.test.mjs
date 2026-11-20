@@ -15,12 +15,20 @@ test('demitido no solo: continua no jogo, recebe de 1 a 4 propostas da IA e assu
   assert.equal(j.run(`${JSON.stringify(ids)}.some(id=>ehHumano(id))`), false, 'só clubes da IA');
   j.run('playRound()'); // a rodada espera a escolha
   assert.equal(j.run('S.round'), rodada);
+  const temporada = j.run('S.season');
+  assert.deepEqual(j.run('tec().carreira.passagens[0]'), {
+    clube: antigo, nome: j.run('userClub().name'), de: { s: temporada, r: 0 },
+    ate: { s: temporada, r: rodada }, saida: 'demitido'
+  });
   assert.equal(j.run('ui.view'), 'carreira');
   assert.match(j.html(), /Você foi demitido do/);
   j.run("go('mercado')");
   assert.equal(j.run('ui.view'), 'carreira', 'sem clube, as outras telas levam às propostas');
   j.acao(`escolherClubeNovo|${ids[0]}`);
   assert.equal(j.run('userClub().id'), ids[0]);
+  assert.deepEqual(j.run('tec().carreira.passagens[1]'), {
+    clube: ids[0], nome: j.run('userClub().name'), de: { s: temporada, r: rodada }, ate: null, saida: null
+  });
   assert.deepEqual([j.run('tec().demitido'), j.run('tec().conf'), j.run('!!tec().meta.texto')], [false, 60, true]);
   assert.equal(j.run(`ehHumano('${antigo}')`), false, 'o clube antigo voltou para a IA');
   assert.ok(j.run('tec().news.some(n=>/assumiu o/.test(n.t))'));
@@ -37,6 +45,10 @@ test('pedir demissão: confirma, deixa o clube e mostra as propostas', () => {
   j.acao('pedirDemissaoUI');
   assert.deepEqual([j.run('tec().demitido'), j.run('tec().saida'), j.run('ui.view')], [true, 'pediu', 'carreira']);
   assert.match(j.html(), /Você deixou o/);
+  j.acao('go|tecnico');
+  assert.match(j.html(), /Pediu demissão/);
+  assert.match(j.html(), /data-acao="go\|carreira">Ver propostas de clubes/);
+  assert.deepEqual(j.run('tec().carreira.passagens.map(p=>[p.saida, p.ate])'), [['pediu', { s: j.run('S.season'), r: 0 }]]);
   assert.ok(j.alertas.some(a => a.includes('Não dá para voltar atrás')), 'pediu confirmação');
   assert.match(j.run('pedirDemissao().erro'), /já está sem clube/);
 });

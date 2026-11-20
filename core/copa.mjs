@@ -6,6 +6,7 @@
    pega o do 2i+1 na fase seguinte, então o chaveamento inteiro sai do sorteio da primeira fase.
    Os jogos têm lances e são simulados na rodada da liga. A fase só avança depois de confirmado o placar final.
    Estado de antes da #51 não tem S.copa: a copa começa na temporada seguinte. */
+import { registrarTitulo } from './carreira.mjs';
 import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, divOf, ehHumano, tecDoClube } from './estado.mjs';
 import { atualizarForma } from './forma.mjs';
 import { creditarGolCopa, noticiaAutores, penaltisDaVolta, placarDaPerna } from './gols-copa.mjs';
@@ -104,7 +105,12 @@ export function concluirCopa() {
     }
   }
   if (quando.volta) {
-    if (n === 1) { copa.campeao = fase.jogos[0].v; addNewsTodos(`🏆 ${clubById(copa.campeao).name} é o campeão da ${COPA} ${S.season}.`, rodada) }
+    if (n === 1) {
+      const vencedor = fase.jogos[0].v;
+      if (!copa.campeao) registrarTitulo('copa', COPA, vencedor);
+      copa.campeao = vencedor;
+      addNewsTodos(`🏆 ${clubById(copa.campeao).name} é o campeão da ${COPA} ${S.season}.`, rodada);
+    }
     else copa.fases.push({ jogos: pares(fase.jogos.map(j => j.v)) });
   }
 }

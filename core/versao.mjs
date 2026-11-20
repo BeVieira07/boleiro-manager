@@ -5,16 +5,46 @@
    o estado já em S e deve deixar o save no formato novo; VERSAO_SAVE acompanha sozinho. Saves sem versão rodam todas,
    por isso cada uma confere se o campo já existe (vários saves antigos já tinham parte das mudanças). */
 import { migrarBase } from './base.mjs';
-import { gerarPropostas } from './carreira.mjs';
+import { adicionarTitulo, abrirPassagem, fecharPassagem, garantirCarreira, gerarPropostas } from './carreira.mjs';
 import { migrarContratos } from './contratos.mjs';
+import { COPA } from './copa.mjs';
 import { DADOS_PADRAO } from './dados-padrao.mjs';
 import { migrarDiretoria } from './diretoria.mjs';
-import { migrarTecnicos, reindex, usarEstado } from './estado.mjs';
+import { DIVS, S, clubDo, migrarTecnicos, reindex, tecnicos, usarEstado } from './estado.mjs';
 import { limparEventosAntigos } from './aovivo.mjs';
 import { prepararEstrangeiro } from './estrangeiros.mjs';
 import { migrarPenaltis } from './penaltis.mjs';
 import { migrarPosicoes, simplificarPosicoes } from './posicoes.mjs';
 import { novaSemente } from './utils.mjs';
+
+export function migrarCarreira(t) {
+  if (t.carreira) return;
+  const { temporadas } = garantirCarreira(t), c = clubDo(t);
+  if (!c) return;
+  const historico = t.historico || [], ligas = S.history || [];
+  const desde = Math.min(S.season, ...historico.map(h => h.s), ...ligas.map(h => h.season));
+  abrirPassagem(t, { s: desde, r: 0 });
+  if (t.demitido) fecharPassagem(t, t.saida ?? 'demitido');
+
+  // O save antigo não guardava as trocas de clube nem a data da saída. O último clube é a estimativa para as campanhas.
+  for (const h of historico) temporadas.push({ s: h.s, clube: c.id, nome: c.name, div: h.div, pos: h.pos, alvo: h.alvo });
+  for (const h of ligas) {
+    const resultado = h.tecnicos ? h.tecnicos[t.id] : t.id === 'local' ? { pos: h.me, div: h.div ?? 'A' } : null;
+    if (resultado?.pos !== 1) continue;
+    const d = resultado.div, campeao = h.champs?.[d] ?? ({ A: h.champ, B: h.champB })[d];
+    const clube = S.clubs.find(o => o.name === campeao);
+    if (clube && DIVS[d]) adicionarTitulo(t, { s: h.season, comp: 'serie', nome: DIVS[d], clube: clube.id });
+  }
+
+  // As copas antigas não identificavam quem treinava o campeão na final. Na temporada atual, usamos o vínculo ativo.
+  if (t.demitido) return;
+  const incluir = (comp, nome, campeao) => {
+    if (campeao === c.id) adicionarTitulo(t, { s: S.season, comp, nome, clube: c.id });
+  };
+  if (S.copa?.temporada === S.season) incluir('copa', COPA, S.copa.campeao);
+  if (S.estaduais?.temporada === S.season) for (const tor of S.estaduais.torneios) incluir('estadual', tor.nome, tor.campeao);
+  if (S.continentais?.temporada === S.season) for (const tor of S.continentais.torneios) incluir(tor.id, tor.nome, tor.campeao);
+}
 
 const MIGRACOES = [
   s => migrarPosicoes(s), // 1: posições detalhadas novas (#23; antes marcado só com posv)
@@ -34,7 +64,8 @@ const MIGRACOES = [
     if (s.copa) s.copa.gols ??= {};
     for (const tor of s.estaduais?.torneios || []) tor.gols ??= {};
   },
-  s => migrarPenaltis(s) // 15: disputa de pênaltis com placar e cobranças (#267); os antigos guardam só o vencedor
+  s => migrarPenaltis(s), // 15: disputa de pênaltis com placar e cobranças (#267); os antigos guardam só o vencedor
+  () => tecnicos().forEach(migrarCarreira) // 16: passagens, temporadas e títulos do técnico (#273)
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 
