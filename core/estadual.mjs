@@ -13,6 +13,7 @@
    depende do placar (notícia, forma, final, campeão) só é feito no começo da chamada seguinte (concluirData), porque uma troca
    no ao vivo muda o placar, como a liga faz com a forma (formaPendente). E.pendente = a data jogada e ainda não concluída.
    shortcut: a pré-temporada não paga cota de TV nem salários. Estado de antes da #132 não tem S.estaduais: os estaduais começam na temporada seguinte. */
+import { registrarTitulo } from './carreira.mjs';
 import { S, addFin, addNews, bilheteriaBase, clubById, divOf, ehHumano, tecDoClube } from './estado.mjs';
 import { aplicarConfianca } from './diretoria.mjs';
 import { jogoDaPerna, noticiaAutores, penaltisDaVolta, placarDaPerna } from './gols-copa.mjs';
@@ -156,7 +157,9 @@ function concluirData(d) {
       noticiaDoJogo(tor, g, volta ? 'Final (volta)' : 'Final (ida)'); jogos.push(g); delete f.jogo;
       if (volta) {
         const t = agregadoFinal(f);
-        f.v = t.h > t.a ? f.h : t.a > t.h ? f.a : f.pen.v; tor.campeao = f.v;
+        f.v = t.h > t.a ? f.h : t.a > t.h ? f.a : f.pen.v;
+        if (!tor.campeao) registrarTitulo('estadual', tor.nome, f.v);
+        tor.campeao = f.v;
         encerrar(tor);
       }
     }

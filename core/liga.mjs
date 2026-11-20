@@ -4,7 +4,7 @@
    Atenção: usa o estado global do core (S). Quem chama precisa fazer usarEstado -> regra -> JSON.stringify(S)
    num bloco síncrono, sem await no meio (várias requisições podem dividir o mesmo processo). */
 import { promoverDaBase, venderDaBase } from './base.mjs';
-import { escolherClube, gerarPropostas, pedirDemissao, recusarClubes } from './carreira.mjs';
+import { escolherClube, fecharPassagem, gerarPropostas, pedirDemissao, recusarClubes } from './carreira.mjs';
 import { renovarContrato } from './contratos.mjs';
 import { emprestimoJa, exercerOpcaoCompra, proporEmprestimo } from './emprestimos.mjs';
 import { unavailable } from './escalacao.mjs';
@@ -142,6 +142,7 @@ export function removerTecnicoLiga(estado, userId) {
   const m = migrarSave(estado); if (m.erro) return m;
   const t = S.managers[userId]; if (!t) return { erro: 'Esse técnico não está na liga.' };
   const c = clubDo(t);
+  fecharPassagem(t);
   delete S.managers[userId]; delete c.base;
   S.propostas = (S.propostas || []).filter(p => p.de !== userId && p.para !== userId);
   if (S.atual === userId) S.atual = Object.keys(S.managers)[0] ?? null;

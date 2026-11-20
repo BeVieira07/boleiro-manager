@@ -56,6 +56,26 @@ test('mesmo estado e mesmas escolhas dão o mesmo resultado', () => {
   assert.equal(r1, r2); assert.equal(s1, s2);
 });
 
+test('virada da liga migra a carreira antiga e grava o título da série antes de iniciar a próxima temporada', () => {
+  const estado = JSON.parse(novaLiga(['A']));
+  const { season: s, managers, fixtures } = estado, clube = managers['u-ana'].clubId;
+  estado.versao--;
+  for (const t of Object.values(managers)) delete t.carreira;
+  estado.round = fixtures.length - 1;
+  for (const g of fixtures.slice(0, -1).flat()) {
+    g.hg = g.h === clube ? 1 : 0;
+    g.ag = g.a === clube ? 1 : 0;
+  }
+  const r = jogarRodadaLiga(estado, {});
+  assert.ok(r.virada);
+  assert.equal(est.S.season, s + 1);
+  const { passagens, temporadas, titulos } = est.S.managers['u-ana'].carreira;
+  assert.equal(passagens[0].ate, null);
+  assert.deepEqual(temporadas.map(t => [t.s, t.clube, t.pos]), [[s, clube, 1]]);
+  assert.deepEqual(titulos, [{ s, comp: 'serie', nome: 'Série A', clube }]);
+  assert.deepEqual(est.S.managers['u-bia'].carreira.titulos, []);
+});
+
 test('escolha inválida vinda do navegador vira escalação automática e tática padrão', () => {
   usarEstado(JSON.parse(novaLiga(['A'])));
   const uc = clubDo(est.S.managers['u-ana']), outro = est.S.clubs.find(c => c.id !== uc.id);
@@ -251,19 +271,32 @@ test('liga: pedir demissão, mercado bloqueado sem clube, escolher clube; quem n
   let s = comVaga(JSON.parse(novaLiga(['A'])));
   let x = passo(s, 'u-ana', { tipo: 'pedirDemissao' }); assert.ok(x.r.ok, x.r.erro); s = x.s;
   const ids = s.managers['u-ana'].propostasClube, antigo = clube(s, 'u-ana').id;
+  const quando = { s: s.season, r: s.round };
+  assert.deepEqual(s.managers['u-ana'].carreira.passagens.map(p => [p.clube, p.de, p.ate, p.saida]), [[antigo, quando, quando, 'pediu']]);
   assert.ok(ids.length >= 1 && ids.length <= 4);
   assert.match(s.managers['u-bia'].news[0].t, /pediu demissão/, 'a Bia fica sabendo');
   assert.match(passo(s, 'u-ana', { tipo: 'alternarVenda', pid: clube(s, 'u-ana').players[0].id }).r.erro, /sem clube/);
   x = passo(s, 'u-ana', { tipo: 'escolherClube', clubeId: ids[0] }); assert.ok(x.r.ok, x.r.erro);
   assert.equal(x.r.clube, ids[0]);
   assert.equal(x.s.managers['u-ana'].clubId, ids[0]);
+  assert.deepEqual(x.s.managers['u-ana'].carreira.passagens.map(p => [p.clube, p.de, p.ate]), [[antigo, quando, quando], [ids[0], quando, null]]);
   // a Bia pede demissão e não escolhe: a rodada seguinte dá a ela a melhor proposta
   let y = passo(x.s, 'u-bia', { tipo: 'pedirDemissao' }); const melhor = y.s.managers['u-bia'].propostasClube[0];
   const r = jogarRodadaLiga(y.s, {});
   assert.deepEqual(r.trocas, [{ user_id: 'u-bia', club_id: melhor }]);
   assert.equal(est.S.managers['u-bia'].demitido, false);
+  assert.deepEqual(est.S.managers['u-bia'].carreira.passagens.map(p => [p.ate, p.saida]), [[quando, 'pediu'], [null, null]]);
   assert.equal(r.jogos.length, 10);
   assert.notEqual(antigo, ids[0]);
+});
+
+test('remover técnico da liga encerra a passagem antes de devolver o clube à IA', () => {
+  const estado = JSON.parse(novaLiga(['A'])), tecnico = estado.managers['u-bia'];
+  estado.round = 5;
+  assert.ok(removerTecnicoLiga(estado, tecnico.id).ok);
+  assert.equal(est.S.managers[tecnico.id], undefined);
+  assert.equal(est.ehHumano(tecnico.clubId), false);
+  assert.deepEqual(tecnico.carreira.passagens.map(p => [p.ate, p.saida]), [[{ s: estado.season, r: 5 }, null]]);
 });
 
 test('liga: recusar as propostas conserva o técnico sem clube e atualiza a lista após jogar', () => {

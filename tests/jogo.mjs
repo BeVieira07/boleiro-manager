@@ -86,7 +86,7 @@ export const jogarRodada = (j, n = 1) => j.run(`for(let i=0;i<${n};i++){
   }
 }`);
 
-export const TELAS = ['clube', 'elenco', 'escalacao', 'base', 'tabela', 'competicoes', 'copa', 'jogos', 'artilharia', 'mercado', 'financas', 'config', 'rodada'];
+export const TELAS = ['clube', 'elenco', 'escalacao', 'base', 'tabela', 'competicoes', 'copa', 'jogos', 'artilharia', 'mercado', 'financas', 'tecnico', 'config', 'rodada'];
 const SUSPEITOS = ['undefined', 'NaN', '[object'];
 /** Renderiza cada tela e devolve a lista de problemas (texto suspeito ou erro). */
 export function problemasNasTelas(j, telas = TELAS) {

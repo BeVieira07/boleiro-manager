@@ -9,6 +9,7 @@
    final: {h, a, hg, ag, pen, v}, campeao, gols: {pid: {nome, clube, gols}}}.
    shortcut: como na Copa do Brasil, os jogos são simulados junto com a rodada, sem ao vivo, cartões ou lesões.
    Estado de antes da #133 não tem S.continentais: as copas começam na temporada seguinte. */
+import { registrarTitulo } from './carreira.mjs';
 import { DADOS_CONTINENTAIS } from './dados-continentais.mjs';
 import { aplicarConfianca } from './diretoria.mjs';
 import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, divOf, ehHumano, reindex, table, tecDoClube } from './estado.mjs';
@@ -165,7 +166,9 @@ function jogarFinal(tor, d) {
   const H = clubeCont(f.h), A = clubeCont(f.a);
   Object.assign(f, placarCont(tor, H, A, true)); noticiaJogo(tor, d, f);
   if (f.hg === f.ag) f.pen = penaltis(tor, H, A, 'final');
-  f.v = f.hg > f.ag ? f.h : f.ag > f.hg ? f.a : f.pen.v; tor.campeao = f.v;
+  f.v = f.hg > f.ag ? f.h : f.ag > f.hg ? f.a : f.pen.v;
+  if (!tor.campeao) registrarTitulo(tor.id, tor.nome, f.v);
+  tor.campeao = f.v;
   const campeao = clubeCont(f.v), vice = f.v === f.h ? f.a : f.h;
   const premio = premiar(tor, f.v, 'título', 'titulo', { t: `Título da ${tor.nome}`, v: 6 });
   if (premio != null) addNews(`🏆 ${campeao.name} é campeão da ${tor.nome}${nosPenaltis(f.pen, f.v, vice)}! Premiação: ${money(premio, 3)}.`, f.v);

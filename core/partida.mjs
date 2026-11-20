@@ -1,4 +1,5 @@
 import { potInicial, tetoOvr, virarBase } from './base.mjs';
+import { registrarTitulo } from './carreira.mjs';
 import { CONTRATO_NOVO, vencerContratos } from './contratos.mjs';
 import { criarContinentais, vagasBrasileiras } from './continental.mjs';
 import { criarCopa } from './copa.mjs';
@@ -31,6 +32,7 @@ export function fecharTemporada(){
   const champs=divisions().map(d=>({d,c:clubById(table(d)[0].id)}));
   const top=topScorers(1,divisions()[0])[0];
   S.history.unshift({season:S.season,champ:champs[0].c.name,champs:Object.fromEntries(champs.map(x=>[x.d,x.c.name])),me:pos,div,tecnicos:Object.fromEntries(Object.entries(res).map(([k,v])=>[k,{pos:v.pos,div:v.div}])),scorer:top?`${top.name} (${top.goals})`:'-',...(S.copa&&S.copa.campeao?{copa:clubById(S.copa.campeao).name}:{})});
+  for(const {d,c} of champs)registrarTitulo('serie',DIVS[d],c.id);
   for(const t of ativos)confiancaFimTemporada(t,res[t.id].pos);S.seasonClosed=S.season;
   return {div,T,pos,two,mv,prize,ds,di,champs,top};
 }

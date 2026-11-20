@@ -15,12 +15,41 @@
    - Pedir demissão com campanha abaixo da meta pesa na reputação como a demissão. Se ninguém couber, sai a proposta
      do clube mais fraco da série mais baixa. */
 import { CONF_INICIO, definirMeta, metaDe } from './diretoria.mjs';
-import { DIVS, MOVE_N, S, addNewsTodos, clubById, clubDo, divOf, divisions, hasTwoDivs, table, tec, tecnicos } from './estado.mjs';
+import { DIVS, MOVE_N, S, addNewsTodos, clubById, clubDo, divOf, divisions, hasTwoDivs, table, tec, tecDoClube, tecnicos } from './estado.mjs';
 import { autoXI } from './motor.mjs';
 import { clamp, rnd } from './utils.mjs';
 
 const BASE_SERIE = { A: 60, B: 45, C: 32, D: 20 };
+const FAIXAS_REPUTACAO = [[90, 'Lenda'], [70, 'Consagrado'], [50, 'Respeitado'], [30, 'Promissor'], [0, 'Iniciante']];
 const posNaTabela = c => table(divOf(c)).findIndex(x => x.id === c.id) + 1;
+
+export function garantirCarreira(t) {
+  return t.carreira ??= { passagens: [], temporadas: [], titulos: [] };
+}
+
+export function abrirPassagem(t, de = { s: S.season, r: S.round }) {
+  const { passagens } = garantirCarreira(t), c = clubDo(t);
+  if (passagens.at(-1)?.ate === null) return;
+  passagens.push({ clube: c.id, nome: c.name, de, ate: null, saida: null });
+}
+
+export function fecharPassagem(t, saida = null) {
+  const passagem = garantirCarreira(t).passagens.at(-1);
+  if (passagem?.ate !== null) return;
+  passagem.ate = { s: S.season, r: S.round };
+  passagem.saida = saida;
+}
+
+export function adicionarTitulo(t, titulo) {
+  const { titulos } = garantirCarreira(t);
+  if (titulos.some(x => x.s === titulo.s && x.comp === titulo.comp && x.nome === titulo.nome)) return;
+  titulos.push(titulo);
+}
+
+export function registrarTitulo(comp, nome, clube) {
+  const t = tecDoClube(clube);
+  if (t) adicionarTitulo(t, { s: S.season, comp, nome, clube });
+}
 
 /** Reputação de 0 a 100: série do clube, campanha contra a meta, temporadas anteriores e o motivo da saída. */
 export function reputacao(t, motivo = t.saida) {
@@ -30,6 +59,11 @@ export function reputacao(t, motivo = t.saida) {
   r += clamp((t.historico || []).reduce((s, h) => s + (h.pos === 1 ? 8 : h.pos <= h.alvo ? 3 : -2), 0), -10, 20);
   if (motivo === 'demitido' || campanha(t).dif < 0) r -= 10; // pedir demissão indo mal pesa como ser demitido (#271)
   return clamp(Math.round(r), 0, 100);
+}
+
+export function faixaReputacao(t) {
+  const rep = reputacao(t), i = FAIXAS_REPUTACAO.findIndex(([min]) => rep >= min);
+  return { rotulo: FAIXAS_REPUTACAO[i][1], nivel: FAIXAS_REPUTACAO.length - i };
 }
 const clubesDa = d => S.clubs.filter(c => divOf(c) === d);
 const posPelaForca = c => 1 + clubesDa(divOf(c)).filter(o => o.strength > c.strength).length;
@@ -92,6 +126,7 @@ export function gerarPropostas(t, rep = reputacao(t)) {
 /** O técnico deixa o clube (demitido pela diretoria ou a pedido) e recebe as propostas. */
 export function sairDoClube(t, motivo) {
   if (t.demitido) return;
+  fecharPassagem(t, motivo);
   t.saida = motivo; t.demitido = true; t.propostasClube = gerarPropostas(t, reputacao(t, motivo));
   t.pronto = false;
   S.propostas = (S.propostas || []).filter(p => p.de !== t.id && p.para !== t.id); // propostas entre técnicos (#36) deixam de valer
@@ -127,6 +162,7 @@ export function escolherClube(clubeId, t = tec()) {
   if (tecnicos().some(o => o.clubId === c.id)) return { erro: `${c.name} já tem vínculo com um técnico. Escolha outra proposta.` };
   const antigo = clubDo(t);
   t.clubId = c.id; t.demitido = false; delete t.saida; delete t.propostasClube; delete t.recusouClubes;
+  abrirPassagem(t);
   t.conf = CONF_INICIO; t.confBaixa = 0; t.confFat = []; t.offers = []; t.pronto = false;
   definirMeta(t);
   c.lineup = autoXI(c);
@@ -135,7 +171,9 @@ export function escolherClube(clubeId, t = tec()) {
 }
 /** O que a tela mostra de cada proposta. */
 export const detalheProposta = id => { const c = clubById(id); return { c, pos: posNaTabela(c), meta: metaDe(c) } };
-/** Fim de temporada: guarda a campanha no histórico do técnico (reputação). */
+/** Fim de temporada: guarda a campanha na carreira e nas últimas dez temporadas para a reputação. */
 export function registrarTemporada(t, pos) {
-  t.historico = (t.historico || []).concat({ s: S.season, div: divOf(clubDo(t)), pos, alvo: t.meta ? t.meta.alvo : pos }).slice(-10);
+  const c = clubDo(t), temporada = { s: S.season, div: divOf(c), pos, alvo: t.meta ? t.meta.alvo : pos };
+  t.historico = (t.historico || []).concat(temporada).slice(-10);
+  garantirCarreira(t).temporadas.push({ ...temporada, clube: c.id, nome: c.name });
 }
