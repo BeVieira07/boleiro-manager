@@ -34,6 +34,6 @@ No modo solo, o progresso é salvo no navegador e pode ser sincronizado na nuvem
    npx supabase functions deploy jogar-rodada --project-ref REF_DO_PROJETO --use-api
    ```
 
-Neste repositório, o workflow [funcao.yml](.github/workflows/funcao.yml) testa e publica `jogar-rodada` quando `core/`, `supabase/functions/` ou o próprio workflow mudam na `main`, com o segredo `SUPABASE_ACCESS_TOKEN` configurado no GitHub Actions. Ao alterar `core/`, use `npm run fixar-core` para atualizar a referência da função ao commit do motor já enviado ao GitHub.
+Neste repositório, o workflow [funcao.yml](.github/workflows/funcao.yml) testa e publica `jogar-rodada` quando `core/`, `supabase/functions/` ou o próprio workflow mudam na `main`, com o segredo `SUPABASE_ACCESS_TOKEN` configurado no GitHub Actions. A função importa o `core/` do próprio repositório, então não há passo manual ao alterar o motor.
 
 Veja o [projeto da arquitetura online](docs/online.md) e a [skill de operação da liga](.claude/skills/liga-online/SKILL.md).

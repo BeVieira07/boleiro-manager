@@ -22,14 +22,15 @@ Chamada pelo navegador com `{ liga, acao }`, sempre com o login (o `verify_jwt` 
 As funções do banco só podem ser chamadas com a chave de serviço, que a função recebe do Supabase
 (`SUPABASE_SERVICE_ROLE_KEY`); ela nunca entra no repositório.
 
-## O `core/` fixado num commit
-A função importa `core/` do GitHub pelo jsDelivr, **fixado num commit**, para o servidor rodar o mesmo motor do site.
-Sempre que `core/` mudar:
-1. Depois do merge na `main`, troque o commit nos três imports de `jogar-rodada/index.ts`.
-2. Publique de novo: `npx supabase functions deploy jogar-rodada --project-ref nfctxdzapspnxwttrwym`
-   (ou pelo MCP do Supabase, `deploy_edge_function`).
+## O `core/` vai junto no deploy (#154)
+A função importa o `core/` do próprio repositório por caminho relativo (`../../../core/liga.mjs` etc.), e o deploy empacota
+esses arquivos: o servidor roda sempre o mesmo motor do site. Não há commit fixado.
+Quem publica é o workflow `.github/workflows/funcao.yml`, a cada push na `main` que muda `core/` ou `supabase/functions/`.
+À mão (só se o workflow falhar), da raiz do repositório:
+`npx supabase functions deploy jogar-rodada --project-ref nfctxdzapspnxwttrwym --use-api`.
 
 ## Testes
+- Imports do `core/`: `tests/funcao-core.test.mjs`.
 - Regras: `tests/liga-rodada.test.mjs` (Node, incluindo o tempo de uma temporada inteira).
 - Tela da liga com um Supabase falso: `tests/liga-jogo.test.mjs`.
 - Banco real: `supabase/tests/liga_rodada.sql` (rodar com `execute_sql` ou no SQL Editor; termina em rollback).

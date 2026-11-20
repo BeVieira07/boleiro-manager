@@ -1,12 +1,11 @@
 // Função do servidor da liga com amigos (#34): começa a liga, joga a rodada quando todos confirmam (ou o dono força)
-// e faz as ações de mercado com a IA (#35). Uma função só: um deploy e um commit do core/ para manter igual ao site.
-// O motor é o mesmo do site: o core/ é importado do GitHub (jsDelivr) FIXADO num commit.
-// Sempre que core/ mudar, troque o commit nos três imports abaixo e publique a função de novo, senão site e servidor
-// rodam motores diferentes. Veja supabase/functions/README.md.
+// e faz as ações de mercado com a IA (#35). Uma função só: um deploy só para manter igual ao site.
+// O motor é o mesmo do site: o core/ é importado do próprio repositório por caminho relativo (#154), e o deploy leva
+// esses arquivos junto. Quem publica é o workflow funcao.yml, sempre que core/ ou esta função mudam na main.
 import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
-import { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga, removerTecnicoLiga } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@0f477a1f7adb15d6eb0d444cee75964176cb88c6/core/liga.mjs';
-import { S } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@0f477a1f7adb15d6eb0d444cee75964176cb88c6/core/estado.mjs';
-import { DADOS_PADRAO } from 'https://cdn.jsdelivr.net/gh/BeVieira07/boleiro-manager@0f477a1f7adb15d6eb0d444cee75964176cb88c6/core/dados-padrao.mjs';
+import { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga, removerTecnicoLiga } from '../../../core/liga.mjs';
+import { S } from '../../../core/estado.mjs';
+import { DADOS_PADRAO } from '../../../core/dados-padrao.mjs';
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
