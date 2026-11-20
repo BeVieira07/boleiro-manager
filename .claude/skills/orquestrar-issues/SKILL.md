@@ -9,7 +9,7 @@ Papéis:
 - **Claude (esta sessão)**: escolhe as issues, escreve a tarefa de cada uma, revisa, corrige, abre o PR, faz o merge e fecha a issue.
 - **Codex (worker do Orca)**: implementa uma issue numa worktree própria, roda os testes, commita e dá push na branch. **Não** abre PR nem faz merge.
 
-Responder ao usuário em PT-BR. As regras do projeto continuam valendo (skill `boleiro-manager`; conta GitHub **BeVieira07**; commits sem `Co-Authored-By`; merge sem pedir confirmação). Mudou `core/`: seguir a skill `liga-online` (fixar o core).
+Responder ao usuário em PT-BR. As regras do projeto continuam valendo (skill `boleiro-manager`; conta GitHub **BeVieira07**; commits sem `Co-Authored-By`; merge sem pedir confirmação). Desde a #154 a função da liga usa o `core/` do repositório: não há core para fixar; o merge na `main` publica a função (`funcao.yml`).
 
 ## 0. Antes de começar (uma vez por sessão)
 
@@ -44,9 +44,9 @@ Responder ao usuário em PT-BR. As regras do projeto continuam valendo (skill `b
 - Textos do jogo em português do Brasil.
 - Nunca coloque chaves ou segredos no repositório.
 - Teste novo para a regra nova (em `tests/`, no estilo dos que já existem).
-- Rode `npm test` antes de commitar. Se só falhar `core/ é o mesmo do commit fixado na função da liga`, é esperado quando `core/` muda: não tente corrigir, só avise.
+- Rode `npm test` antes de commitar; tudo deve passar.
 - Commit em português com a tag do tipo: `feat: ... (#N)`, `fix: ... (#N)`, `test: ...`. Sem `Co-Authored-By`.
-- `git push -u origin HEAD`. **Não** abra PR, **não** faça merge, **não** mexa na `main`, **não** rode `npm run fixar-core`.
+- `git push -u origin HEAD`. **Não** abra PR, **não** faça merge, **não** mexa na `main`.
 
 ## Ao terminar (worker_done)
 Informe: nome da branch, hash do último commit, arquivos alterados, resumo do que fez, saída final do `npm test` (linhas `# pass`/`# fail` e nomes dos que falharam), e o que ficou de fora ou com dúvida.
@@ -82,7 +82,7 @@ Para cada branch entregue:
    - [ ] Teste novo que falharia sem a mudança.
    - [ ] Tela nova ou mudada: conferir no Chrome (`scripts/navegador.mjs`, computador 1366 px e celular 390 px, sem rolagem horizontal).
    - [ ] Mexeu na liga online/servidor: seguir a skill `liga-online`.
-3. `npm test` na worktree de revisão (único falho aceitável: o do core fixado, se `core/` mudou).
+3. `npm test` na worktree de revisão (tudo verde).
 4. Decidir:
    - **Tudo certo**: seguir para o passo 4.
    - **Ajuste pequeno** (poucas linhas, claro): o Claude corrige na worktree de revisão, roda `npm test`, commita (`fix: ... (#N)`) e dá push na mesma branch.
@@ -90,7 +90,7 @@ Para cada branch entregue:
 
 ## 4. Publicar
 
-1. Mudou `core/`: na worktree de revisão, `npm run fixar-core`, commit `chore: função jogar-rodada fixada no core (#N)`, push, `npm test` de novo (tudo verde).
+1. A branch fica aberta na pasta do Codex, então a revisão trabalha com HEAD solto: para enviar correções, `git push origin HEAD:issue-N-<resumo>`.
 2. PR: `gh pr create --repo BeVieira07/Boleiro-Manager --head issue-N-<resumo> --title "<tag>: <título> (#N)" --body "Closes #N ..."`. No corpo: o que mudou, testes, "Feito pelo Codex, revisado pelo Claude" e o que o Claude corrigiu na revisão.
 3. Merge sem perguntar: `gh pr merge <branch> --repo BeVieira07/Boleiro-Manager --merge`.
 4. Conferir os workflows (`pages.yml`; `funcao.yml` quando `core/` mudou) e, para a função, 401 sem login (skill `liga-online`).
