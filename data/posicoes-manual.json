@@ -1,0 +1,19 @@
+{
+  "_ajuda": "Posição escolhida à mão (GOL, ZAG, LD, LE, MEI, ATA). Vale mais que o Transfermarkt e a inferência. Formato: \"Clube\": { \"Nome\": \"ZAG\" }. Depois de editar: npm run dados:padrao",
+  "Botafogo": {
+    "Kaio Pantaleão": "ZAG",
+    "Danilo Pereira": "ATA"
+  },
+  "Mirassol": {
+    "Neto Moura": "MEI"
+  },
+  "Vitória": {
+    "Nathan": "LD",
+    "Camutanga": "ZAG",
+    "Mateus Silva": "LD"
+  },
+  "Coritiba": {
+    "Pedro Morisco": "GOL",
+    "JP Chermont": "LD"
+  }
+}
