@@ -16,12 +16,10 @@ Responder em **PT-BR**. As regras gerais (issues, branches, commits, testes) est
 - A chave service_role/secret **nunca** entra no repositório (`tests/conta.test.mjs` confere).
 
 ## Publicar a função depois de mudar `core/`
-A função importa o `core/` do GitHub pelo jsDelivr, **fixado num commit**. Mudou `core/` (merge de PR que mexe em `core/`): sem republicar, site e servidor rodam regras diferentes, e ações novas respondem "Ação de mercado desconhecida".
-1. Com a `main` atualizada e no GitHub: `npm run fixar-core` (troca o commit nos 3 imports e confere se o jsDelivr já serve os arquivos; se não, espere uns segundos e rode de novo).
-2. Publicar: MCP do Supabase `deploy_edge_function` (`name: jogar-rodada`, `verify_jwt: true`, o conteúdo do `index.ts`) ou `npx supabase functions deploy jogar-rodada --project-ref nfctxdzapspnxwttrwym`.
-3. Conferir que sobe: um POST sem login deve responder **401 "Entre na sua conta."** (500 = os imports falharam).
-4. Commit da fixação na `main`: `chore: função jogar-rodada fixada no core … (#N)`.
-- `npm test` avisa (#122): `tests/fixar-core.test.mjs` falha enquanto `core/` for diferente do commit fixado, e diz o que mudou. Enquanto se mexe em `core/` numa branch, essa falha é esperada; ela some com o commit da fixação.
+A função importa o `core/` do próprio repositório por caminho relativo (`../../../core/liga.mjs` etc., #154), e o deploy leva esses arquivos junto: função, site e testes sempre veem o mesmo `core/`. Não há commit fixado nem passo manual.
+- Quem publica é o workflow `funcao.yml` (#152), a cada push na `main` que muda `core/`, `supabase/functions/` ou o próprio workflow (precisa do segredo `SUPABASE_ACCESS_TOKEN`). Ele roda o `npm test`, publica e confere o 401 sem login.
+- Sem o segredo, ou para republicar à mão (só se o workflow falhar): `npx supabase functions deploy jogar-rodada --project-ref nfctxdzapspnxwttrwym --use-api`, **da raiz do repositório** (o `--use-api` empacota os imports relativos fora da pasta da função). Conferir: um POST sem login deve responder **401 "Entre na sua conta."** (500 = os imports falharam).
+- `tests/funcao-core.test.mjs` confere que a função importa o `core/` por caminho relativo e que o `core/` só importa arquivos dele mesmo (senão o deploy não empacota).
 - Mudou só `ui/`: não precisa republicar.
 - Ação nova do mercado: entra no mapa `MERCADO` de `core/liga.mjs`; a função não muda.
 
@@ -57,7 +55,7 @@ order by timestamp desc limit 40
 | Clique sem nenhum pedido no `edge_logs` | Página travada na trava de login do supabase-js. Corrigido em #93 (não chamar o Supabase dentro de `onAuthStateChange`) e #94 (trava por aba, `lock: travaDaAba`). Abas antigas abertas ainda travam: fechar todas. |
 | Login do Google volta para outro endereço (`referer` do `/callback` diferente do `redirect_to`) | O endereço não está em **Redirect URLs** (Authentication → URL Configuration); o Supabase usou a Site URL. |
 | `over_email_send_rate_limit` | Link mágico: o e-mail grátis manda ~2 por hora no projeto inteiro. Usar "Entrar com Google". |
-| Função 500 | Ver `function_logs`; geralmente import do jsDelivr (commit não publicado) ou erro no `core/`. |
+| Função 500 | Ver `function_logs`; geralmente erro no `core/` ou import fora do `core/` que o deploy não empacotou. |
 
 ## Login com Google
 - Credencial OAuth no Google Cloud (redirect: `https://nfctxdzapspnxwttrwym.supabase.co/auth/v1/callback`); provedor Google ligado em Authentication → Sign In / Providers.
