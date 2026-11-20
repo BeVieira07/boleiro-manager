@@ -64,7 +64,8 @@ orca orchestration worker-start --spec-file <scratchpad>/tarefa-N.md --worktree 
 
 - Issues independentes podem ir juntas, até 4 por vez (forma paralela em `orca skills get orchestration --reference references/parallel-start.md`). Issues que mexem nos mesmos arquivos: uma depois da outra.
 - Se `worker-start` falhar, **não** repetir: ler `failedStage` e o guia `references/recovery-and-cleanup.md`.
-- Depois de disparar, **encerrar o turno** e avisar o usuário quais issues estão com o Codex. O Orca acorda o Claude quando chegar mensagem. Nada de ficar consultando em loop.
+- **Tarefa que não entrou no Codex (acontece no Windows):** se o recibo disser `turn_start_unobserved`, ler o terminal (`orca terminal read --terminal <terminal do recibo>`). Se o Codex estiver parado com o campo vazio (sem `Working`), mandar a tarefa pelo correio do Orca, sem digitar no terminal: `orca orchestration send --to dispatch:<dispatchId> --subject "Tarefa #N" --body-file <scratchpad>/tarefa-N.md`. Ler o terminal de novo e confirmar `Working`. É automático: o usuário autorizou e não precisa ser consultado. Se nem assim começar: `orca orchestration worker-stop --dispatch <dispatchId>`, um único `worker-start --task <taskId> --retry-of <dispatchId> --run <runId> --worktree path:<pasta do worker> --agent codex` e a mesma checagem; falhando de novo, avisar o usuário.
+- Depois de disparar e confirmar que o Codex começou, **encerrar o turno** e avisar o usuário quais issues estão com o Codex. O Orca acorda o Claude quando chegar mensagem. Nada de ficar consultando em loop.
 - Pergunta do Codex (`question`): responder com `orca orchestration reply --id <id> --body "..."` quando a resposta sai da issue ou das regras; senão, perguntar ao usuário.
 
 ## 3. Revisar (quando chegar o `worker_done`)
