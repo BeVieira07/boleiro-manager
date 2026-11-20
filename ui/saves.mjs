@@ -10,8 +10,6 @@ import { go, render } from './telas.mjs';
 import { SAVE_KEY, store } from './utils.mjs';
 import { avisar, confirmar } from './avisos.mjs';
 import { sairDaLiga } from './ligajogo.mjs';
-import { noticiaVisivel } from './configuracoes.mjs';
-import { renderNoticia } from './noticias.mjs';
 
 /* ================= jogos salvos e tela inicial (#21) =================
    Cada campanha fica em localStorage[SAVE_PREFIX+id]; SAVES_KEY guarda o índice {cur, list:[resumo]}.
@@ -99,8 +97,6 @@ export function vMenu(){
   const todos = [...idx.list, ...soNuvem].sort((a, b) => dataSave(b) - dataSave(a));
   const cur = todos[0];
   const clubeAtual = cur && clube(cur.clubId);
-  const salvo = cur && store.get(SAVE_PREFIX + cur.id);
-  const noticias = (salvo?.managers?.[salvo.atual]?.news || salvo?.news || []).filter(noticiaVisivel).slice(0, 4);
   const destaque = cur ? `<div class="continuar">
     <button type="button" class="menu-acao continuar-btn" data-acao="abrirMaisNovo|${esc(cur.id)}">Continuar</button>
     <div class="continuar-clube">${clubeAtual ? crest(clubeAtual, 'm') : ''}<div><b>${esc(cur.clube)}</b>${serie(cur)}
@@ -128,8 +124,5 @@ export function vMenu(){
       ${painelConta()}
     </section>
   </div>
-  <section class="inicio-noticias" aria-label="Últimas notícias"><b>Últimas</b>
-    ${noticias.length ? `<ul>${noticias.map(n => `<li>${renderNoticia(n)}</li>`).join('')}</ul>` : '<p>Sem notícias de uma campanha salva.</p>'}
-  </section>
   </div>`;
 }

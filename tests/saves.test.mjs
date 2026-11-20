@@ -132,7 +132,6 @@ test('o menu inicial abre uma campanha nova ou continua a mais recente', () => {
   const clube = j.run('userClub().name'), id = j.run('S.saveId');
   j.run('voltarMenu()');
   assert.match(j.html(), new RegExp(`data-acao="abrirMaisNovo\\|${id}">Continuar`));
-  assert.match(j.html(), /assumiu o comando/);
   assert.match(j.html(), /Rodada 1 de 38/);
   assert.match(j.html(), /<li class="save-linha">/);
   assert.match(j.html(), new RegExp(`aria-label="Excluir o jogo salvo do ${clube}"`));
