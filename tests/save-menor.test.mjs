@@ -1,7 +1,7 @@
 // #195: o save não guarda os lances das rodadas antigas
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { carregarJogo, clubeDaSerie, jogarRodada } from './jogo.mjs';
+import { carregarJogo, clubeDaSerie, jogarRodada, jogarTemporada } from './jogo.mjs';
 
 const novo = () => { const j = carregarJogo({ boot: true }); j.run(`newGame('${clubeDaSerie(j)}')`); j.run('S.estaduais=null'); return j };
 const temEv = (j, r) => j.run(`S.fixtures[${r}].some(g=>g.ev&&g.ev.length)`);
@@ -20,7 +20,7 @@ test('depois de jogar a rodada seguinte, os lances da anterior saem do save e o 
 
 test('o save de uma temporada inteira fica bem menor (era 1,37 MB)', () => {
   const j = novo();
-  jogarRodada(j, 38);
+  jogarTemporada(j); // sem demissão no meio: a temporada vai até o fim
   const kb = Math.round(j.run('JSON.stringify(S).length') / 1024);
   assert.ok(kb < 950, `${kb} KB`);
   const n = j.run('S.fixtures.flat().filter(g=>g.ev).length');

@@ -34,5 +34,8 @@ export function reduzirElenco(clube, notas) {
     if (usados.size >= alvo) break;
     usados.add(p);
   }
+  // overall escolhido à mão (data/overalls-manual.json) = jogador escolhido para o elenco: tem preferência nas vagas e,
+  // se não couber, entra além do alvo (o limite do jogo continua sendo 32)
+  for (const p of clube.players) if (p.ovrM != null) usados.add(p);
   return clube.players.filter(p => usados.has(p));
 }

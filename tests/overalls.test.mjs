@@ -36,8 +36,9 @@ test('a força do clube é a do elenco, e as séries ficam em ordem', () => {
   assert.ok(Math.max(...A) <= 85 && Math.min(...A) >= 58, `Série A de ${Math.min(...A)} a ${Math.max(...A)}`);
 });
 
-test('na Série A, quem vale mais no Transfermarkt tem overall maior (correlação de posto)', () => {
-  const s = novo(), ps = s.clubs.filter(c => est.divOf(c) === 'A').flatMap(c => c.players).filter(p => p.ovrM == null && p.vm != null && p.age >= 22);
+// Séries A e B: a A tem quase todos os overalls escolhidos à mão (data/overalls-manual.json), que ficam de fora
+test('nas Séries A e B, quem vale mais no Transfermarkt tem overall maior (correlação de posto)', () => {
+  const s = novo(), ps = s.clubs.filter(c => ['A', 'B'].includes(est.divOf(c))).flatMap(c => c.players).filter(p => p.ovrM == null && p.vm != null && p.age >= 22);
   const posto = v => { const o = [...v].sort((a, b) => a - b); return v.map(x => (o.indexOf(x) + o.lastIndexOf(x)) / 2) };
   const a = posto(ps.map(p => p.vm)), b = posto(ps.map(p => p.ovr)), ma = media(a), mb = media(b);
   const r = a.reduce((t, x, i) => t + (x - ma) * (b[i] - mb), 0) / Math.sqrt(a.reduce((t, x) => t + (x - ma) ** 2, 0) * b.reduce((t, x) => t + (x - mb) ** 2, 0));

@@ -27,9 +27,17 @@ test('sem notas, mantém elencos menores e reduz os grandes', () => {
   assert.equal(reduzirElenco(grande).length, 24);
 });
 
+test('todo jogador com overall manual fica no elenco, mesmo acima do alvo', () => {
+  const grande = montar(34);
+  for (const p of grande.players.slice(0, 27)) p.ovrM = 70; // mais manuais que o alvo de 24
+  const com = reduzirElenco(grande);
+  assert.equal(com.length, 27);
+  assert.ok(com.every(p => p.ovrM != null), 'as vagas vão para os manuais');
+});
+
 test('os dados padrão têm elencos menores e a campanha cobre os grupos em todos os clubes', () => {
   const j = carregarJogo({ boot: true });
-  assert.ok(j.run('getData().clubs.every(c => c.players.length <= 26)'));
+  assert.ok(j.run('getData().clubs.every(c => c.players.length <= 32)'));
   j.run(`newGame('${clubeDaSerie(j)}')`);
   const abaixoDoPiso = j.run('S.clubs.filter(c => Object.entries(SQUAD_MIN).some(([pos, n]) => c.players.filter(p => p.pos === pos).length < n)).map(c => c.name)');
   assert.deepEqual(abaixoDoPiso, []);
