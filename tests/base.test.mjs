@@ -78,6 +78,8 @@ test('virada: a base envelhece e evolui até o potencial, dispensa quem passou d
   assert.ok(por(livre).ovr > antes[2][0] && por(livre).ovr <= antes[2][1] && por(livre).age === antes[2][2] + 1);
   assert.equal(base.length, 3 + 4, 'os três que ficaram e quatro novos');
   assert.match(j.run('tec().news.map(n=>n.t).join("|")'), /passou da idade da base/);
+  j.acao('go|clube');
+  assert.match(j.html(), /Novos jovens chegaram à base\. Veja na aba Base\./);
   assert.equal(j.run('S.clubs.filter(c=>c.base).length'), 1);
   for (let t = 0; t < 4; t++) { jogarTemporada(j); virarTemporada(j) }
   assert.ok(j.run('userClub().base.length') <= 12, 'a base tem limite');
@@ -99,14 +101,28 @@ test('save antigo: recebe potencial pela idade e pelo overall, e a base do clube
   assert.deepEqual(problemasNasTelas(j), []);
 });
 
-test('telas: potencial em estrelas (sem o número) no Elenco e no Mercado, e a base com Promover e Vender', () => {
+test('telas: base em aba própria com resumo, atributos, promoção e venda no modo solo', () => {
   const j = novo();
   j.run('userClub().players.splice(28);userClub().players[0].pot=94;userClub().players[0].ovr=60;userClub().base[0].pot=93');
-  j.run(`go('elenco')`);
-  let h = j.html();
-  assert.match(h, /filtrarElenco\|ord\|pot/);
+  j.acao('go|elenco');
+  assert.match(j.html(), /filtrarElenco\|ord\|pot/);
+  assert.match(j.html(), /Potencial: 5 de 5 estrelas/);
+  assert.doesNotMatch(j.html(), /Jovens da base|promoverBase|venderBase/);
+  assert.match(j.run('lateral()'), /aria-label="Time"[\s\S]*data-acao="go\|base">Base/);
+
+  j.acao('go|base');
+  const h = j.html();
+  assert.match(j.run('lateral()'), /data-acao="go\|base" aria-current="page">Base/);
+  assert.match(h, /<h1>Base<\/h1>/);
+  assert.match(h, /Jovens na base[\s\S]*stat-valor">4<\/span><span class="stat-unid">de 12/);
+  assert.match(h, /Vagas na base[\s\S]*stat-valor">8<\/span>/);
+  assert.match(h, new RegExp(`Chegada de jovens[\\s\\S]*stat-valor">${j.run('S.season+1')}<\\/span>[\\s\\S]*No início da temporada`));
+  assert.match(h, /class="pos [GDMA]"/);
+  assert.match(h, /<dt>Idade<\/dt><dd>\d+ anos<\/dd>/);
+  assert.match(h, /<dt>Overall<\/dt><dd><span class="ovr /);
   assert.match(h, /Potencial: 5 de 5 estrelas/);
-  assert.match(h, /Categorias de base/);
+  assert.ok(h.includes(`<dt>Valor de mercado</dt><dd>${j.run('money(userClub().base[0].value)')}</dd>`));
+  assert.ok(h.includes(`aria-label="Promover ${j.run('esc(userClub().base[0].name)')} ao elenco"`));
   assert.equal((h.match(/data-acao="promoverBase\|/g) || []).length, 4);
   assert.equal((h.match(/data-acao="venderBase\|/g) || []).length, 4);
   assert.doesNotMatch(h, />9[34]</, 'o número do potencial não aparece');
@@ -116,6 +132,11 @@ test('telas: potencial em estrelas (sem o número) no Elenco e no Mercado, e a b
   j.acao(`venderBase|${j.run('userClub().base[0].id')}`);
   assert.equal(j.run('userClub().base.length'), 2);
   assert.ok(j.alertas.some(a => /metade do valor de mercado/.test(a)));
+  assert.match(j.html(), /Vagas na base[\s\S]*stat-valor">10<\/span>/);
+  j.run('userClub().base=[];render()');
+  assert.ok(j.html().includes(`Nenhum jovem na base agora. Novos jovens chegam no início da temporada ${j.run('S.season+1')}.`));
+  assert.doesNotMatch(j.html(), /data-acao="(?:promover|vender)Base\|/);
+
   j.run(`go('mercado')`);
   assert.match(j.html(), /filtrarMercado\|ord\|pot/);
   assert.match(j.html(), /Potencial: \d de 5 estrelas/);

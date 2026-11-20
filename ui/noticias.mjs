@@ -18,6 +18,6 @@ export function renderNoticia({ t }) {
   const texto = t.replace(EMOJIS, emoji => {
     nomeIcone ||= ICONES_NOTICIA[emoji.replace(/[\uFE0E\uFE0F]/g, '')];
     return '';
-  }).trim().replace(/ {2,}/g, ' ');
+  }).trim().replace(/ {2,}/g, ' ').replace(/^Novos jovens chegaram à base\. Veja em Elenco\.$/, 'Novos jovens chegaram à base. Veja na aba Base.');
   return `<span class="noticia">${nomeIcone ? icone(nomeIcone) : ''}<span>${esc(texto)}</span></span>`;
 }

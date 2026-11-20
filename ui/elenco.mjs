@@ -11,7 +11,7 @@ import { esc, money } from '../core/utils.mjs';
 import { energiaBarra, ovrChip } from './componentes.mjs';
 import { loanBtn, loanTag, vLoans } from './emprestimos.mjs';
 import { avisar, confirmar } from './avisos.mjs';
-import { potTag, vBase } from './base.mjs';
+import { potTag } from './base.mjs';
 import { save, ui } from './estado.mjs';
 import { botaoProposta, mercadoLiga } from './ligajogo.mjs';
 import { tendenciaTag } from './forma.mjs';
@@ -97,6 +97,5 @@ export function vElenco() {
     <thead><tr>${COLUNAS.map(([rotulo, chave, classe]) => th(rotulo, chave, f, a, classe)).join('')}${th('Mercado', '', f, a)}</tr></thead>
     <tbody id="corpoElenco">${corpoElenco(lista, titulares)}</tbody></table></div></section>
   <p class="muted nota">As setas mostram a variação do overall desde o início da temporada, e as estrelas, até onde o jogador pode chegar. A barra de forma sobe com bons jogos e cai no banco. A energia cai a cada jogo como titular e volta no descanso; abaixo de 70 o jogador rende menos e abaixo de 30 também se lesiona mais. Quem chega ao fim do contrato sem renovar sai de graça na virada da temporada.</p>
-  ${vBase()}
   ${vLoans()}`;
 }

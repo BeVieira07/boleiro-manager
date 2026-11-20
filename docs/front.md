@@ -53,6 +53,7 @@ Os nomes antigos (`--panel`, `--accent`, `--danger`…) apontam para os novos e 
 | `ui/layout.mjs` | menu lateral (barra inferior no celular) e barra de ações do topo (#58) |
 | `ui/clube.mjs` | painel do clube (#59) |
 | `ui/elenco.mjs`, `ui/jogadores.mjs` | tabela do Elenco; filtros, busca e ordenação reaproveitados pelo Mercado (#60) |
+| `ui/base.mjs`, `css/temporada-figma.css` | aba Base do grupo Time, com resumo de vagas e chegada de jovens, lista e ações de promoção e venda (#270) |
 | `ui/escalacao.mjs`, `css/escalacao.css` | campo com cartas (#61) |
 | `ui/partida.mjs` | linha do tempo, escudo e modal; `ui/aovivo.mjs` é a tela da rodada ao vivo (#62, #135) |
 | `ui/competicoes.mjs` | painel de Competições: próximos jogos, uma linha por competição e as que ficaram de fora; cada competição devolve o cartão dela (#175, maquete em `docs/maquetes/competicoes.png`) |

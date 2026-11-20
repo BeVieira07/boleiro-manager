@@ -268,6 +268,29 @@ test('mercado da liga: a venda é feita no servidor, todos recebem o estado novo
   j.run('sairDaLiga()');
 });
 
+test('aba Base da liga: promoção e venda atualizam o servidor e mantêm a tela aberta', async () => {
+  const j = carregarJogo({ boot: true });
+  const srv = servidorFalso([clubeDaSerie(j, 'A', 0), clubeDaSerie(j, 'A', 1)]);
+  await como(srv, 'a');
+  await j.acao('comecarLiga|L1'); await esperar();
+  const clube = srv.estado.clubs.find(c => c.id === srv.membros[0].club_id);
+  clube.players.splice(28);
+  const [promovido, vendido] = clube.base;
+
+  j.acao('go|elenco');
+  j.acao('go|base');
+  await j.acao(`promoverBase|${promovido.id}`); await esperar();
+  assert.ok(srv.estado.clubs.find(c => c.id === clube.id).players.some(p => p.id === promovido.id));
+  assert.doesNotMatch(j.html(), new RegExp(`promoverBase\\|${promovido.id}`));
+
+  j.acao(`venderBase|${vendido.id}`); await esperar();
+  assert.equal(srv.estado.clubs.find(c => c.id === clube.id).base.length, 2);
+  assert.equal(j.run('userClub().base.length'), 2);
+  assert.match(j.html(), /<h1>Base<\/h1>/);
+  assert.doesNotMatch(j.html(), new RegExp(`venderBase\\|${vendido.id}`));
+  j.run('sairDaLiga()');
+});
+
 test('propostas entre técnicos: pelo Mercado, o outro aceita, e quem recebe uma proposta é avisado (#36)', async () => {
   const j0 = carregarJogo();
   const srv = servidorFalso([clubeDaSerie(j0, 'A', 0), clubeDaSerie(j0, 'A', 1)]);
