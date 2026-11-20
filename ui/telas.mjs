@@ -14,6 +14,7 @@ import { jogosEstadual, proximoEstadual, rotuloRodada, tabelasEstadual, vEstadua
 import { barra, chip, seletorCompeticao, stat, tag } from './componentes.mjs';
 import { vAoVivo } from './aovivo.mjs';
 import { vArt } from './artilharia.mjs';
+import { vBase } from './base.mjs';
 import { vElenco } from './elenco.mjs';
 import { vEscalacao } from './escalacao.mjs';
 import { chaveJogoAtual, save, ui } from './estado.mjs';
@@ -52,7 +53,7 @@ export function render(){
   const selecao=typeof at?.selectionStart==='number'?[at.selectionStart,at.selectionEnd]:null;
   document.body.classList.toggle('em-jogo',!!S);
   document.getElementById('lateral').innerHTML=lateral();
-  const V={menu:vMenu,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,tabela:vTabela,competicoes:vCompeticoes,copa:vCopa,libertadores:vLibertadores,sulamericana:vSulamericana,estadual:vEstadual,jogos:vJogos,artilharia:vArt,mercado:vMercado,financas:vFin,rodada:vRodada,aovivo:vAoVivo,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
+  const V={menu:vMenu,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,base:vBase,tabela:vTabela,competicoes:vCompeticoes,copa:vCopa,libertadores:vLibertadores,sulamericana:vSulamericana,estadual:vEstadual,jogos:vJogos,artilharia:vArt,mercado:vMercado,financas:vFin,rodada:vRodada,aovivo:vAoVivo,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
   const topo=S?barraAcoes(TITULOS[ui.view]):['menu','inicio'].includes(ui.view)?'':`<div class="topo-simples"><button class="btn fantasma" data-acao="go|menu">${icone('voltar')}Tela inicial</button></div>`;
   document.getElementById('app').innerHTML=topo+V[ui.view]();
   if(pag){
@@ -67,6 +68,7 @@ export function render(){
   if(chave&&at.isConnected===false){
     const n=document.querySelector(`[${chave[0]}="${(globalThis.CSS&&CSS.escape?CSS.escape(chave[1]):chave[1])}"]`);
     if(n?.focus){n.focus({preventScroll:true});if(selecao&&typeof n.selectionStart==='number')n.setSelectionRange(...selecao)}
+    else if(mesma&&ui.view==='base'&&at.closest?.('.base-lista'))document.getElementById('titulo-base').focus();
   }
 }
 export function autoLineup(){escalarMelhores();save();render()}

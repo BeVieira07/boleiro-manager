@@ -11,6 +11,45 @@
 }
 
 .figma-financas .stat, .figma-mercado .stat { min-height: 116px; }
+.figma-base .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.base-lista { list-style: none; margin: 0; padding: 0; }
+.base-jovem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) auto;
+  align-items: center;
+  gap: var(--e4);
+  padding: var(--e4) 0;
+  border-top: 1px solid var(--linha2);
+}
+.base-jovem:last-child { padding-bottom: 0; }
+.base-jogador {
+  display: flex;
+  align-items: center;
+  gap: var(--e2);
+  overflow-wrap: anywhere;
+}
+.base-dados {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  align-items: start;
+  gap: var(--e3);
+  margin: 0;
+}
+.base-dados dt { color: var(--muted); font-size: 12px; margin-bottom: var(--e1); }
+.base-dados dd { margin: 0; }
+.base-dados .estrelas { white-space: nowrap; }
+
+@media (max-width: 960px) {
+  .base-jovem { grid-template-columns: minmax(0, 1fr); }
+  .base-jovem .acoes { justify-content: start; flex-wrap: wrap; }
+}
+
+@media (max-width: 520px) {
+  .figma-base .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .figma-base .stat:last-child { grid-column: 1 / -1; }
+  .base-dados { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 .figma-lancamentos .lancamentos li:last-child { border-bottom: 0; }
 .figma-lancamentos .lanc-desc, .figma-despesas li span { overflow-wrap: anywhere; }
 .figma-lancamentos .num { white-space: nowrap; }

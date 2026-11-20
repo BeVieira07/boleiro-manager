@@ -302,8 +302,6 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .energia-n{font-size:11px;font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;min-width:2ch;text-align:right}
 .acoes{display:flex;gap:6px;justify-content:flex-end;flex-wrap:nowrap}
 .c-pot .estrelas{font-size:12px;letter-spacing:1px;white-space:nowrap}
-.base-topo{padding:16px 16px 0}
-.base-vazia{padding:0 16px 14px;margin:0}
 .rot{display:none}
 @media(max-width:799px){
   .tabela-jogadores{min-width:0}
@@ -665,10 +663,6 @@ body.em-jogo .avisos{bottom:24px}
 .club{white-space:normal}
 @media(max-width:520px){
   .classif th:nth-child(n+5):nth-child(-n+9),.classif td:nth-child(n+5):nth-child(-n+9){display:none}
-  .tabela-base .c-idade{display:none}
-  .tabela-base .acoes{flex-direction:column;align-items:stretch}
-  .tabela-base th,.tabela-base td{padding:8px 4px;letter-spacing:0}
-  .tabela-base tbody th{white-space:normal}
 }
 .grupos{grid-template-columns:repeat(auto-fit,minmax(min(330px,100%),1fr))}
 /* #170: cabeçalho do seu jogo (placar, último lance, relógio, pausa) com as estatísticas ao lado, e a rodada em linhas */
