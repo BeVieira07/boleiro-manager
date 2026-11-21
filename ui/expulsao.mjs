@@ -13,6 +13,7 @@ import { posTag } from './posicoes.mjs';
 
 const el = id => document.getElementById(id);
 const OPCOES = { estilo: ESTILOS, modo: MODOS, form: FORMS };
+const telaCompacta = globalThis.matchMedia?.('(max-width: 600px)');
 const emCampo = elenco => elenco.xi.filter(Boolean).length;
 const limite = () => `Você já fez as ${MAX_TROCAS} substituições do jogo.`;
 
@@ -67,16 +68,20 @@ function htmlBanco(v, a) {
   const trocas = [...a.trocas, ...a.rascunho];
   const reservas = banco(v.g, a.min, a.elenco, trocas)
     .sort((x, y) => Number(!!x.motivo) - Number(!!y.motivo) || y.p.ovr - x.p.ovr);
-  return `<div class="exp-secao-topo"><h3>Substituições</h3><span><b>${trocas.length}</b> de ${MAX_TROCAS} feitas</span></div>
+  const sai = v.clube.players.find(p => p.id === a.sel);
+  const feitas = sai ? '<span class="exp-banco-padrao"> feitas</span>' : ' feitas';
+  return `<div class="exp-secao-topo${sai ? ' exp-escolhendo' : ''}">
+    <h3><span class="exp-banco-padrao">Substituições</span>${sai ? `<span class="exp-banco-escolha">Quem entra no lugar de ${esc(sai.name)}?</span>` : ''}</h3>
+    <span><b>${trocas.length}</b> de ${MAX_TROCAS}${feitas}</span></div>
     <ol class="exp-passos">
       <li${a.sel ? '' : ' aria-current="step"'}><b>1</b> Toque em quem sai, no campo</li>
       <li${a.sel ? ' aria-current="step"' : ''}><b>2</b> Escolha quem entra</li>
     </ol>
     <ul class="exp-reservas" aria-label="Banco de reservas">${reservas.map(({ p, motivo }) => {
-      const nota = p.pos === 'G' && !a.elenco.goleiroExpulso ? ' · só por goleiro' : '';
+      const nota = p.pos === 'G' && !a.elenco.goleiroExpulso ? 'só por goleiro' : '';
       const energia = `Energia ${Math.round(energiaDe(p))}`;
       return `<li><button type="button" data-acao="avExpEntrar|${esc(p.id)}" class="exp-reserva">${posTag(p)}
-        <span class="exp-nome">${esc(p.name)}<small>${energia}${nota}</small></span>
+        <span class="exp-nome">${esc(p.name)}<small><span class="exp-energia">${energia}${nota ? ' · ' : ''}</span>${nota}</small></span>
         ${motivo ? `<small class="exp-indisponivel">${esc(motivo)}</small>` : ''}${ovrChip(p.ovr)}</button></li>`;
     }).join('')}</ul>`;
 }
@@ -101,7 +106,10 @@ function htmlJanela(v, a) {
       ${a.leitura ? '' : `<span class="exp-selo">${icone('pausa', { tam: 14 })} Jogo pausado</span>`}
     </header>
     <div class="exp-conteudo">
-      <section class="exp-tatica" id="exp-tatica" aria-label="Tática">${htmlTaticas(a)}</section>
+      <details class="exp-ajustes">
+        <summary>Tática</summary>
+        <section class="exp-tatica" id="exp-tatica" aria-label="Tática">${htmlTaticas(a)}</section>
+      </details>
       <div class="exp-grade">
         <section id="exp-campo" aria-label="Em campo">${htmlCampo(v, a)}</section>
         <section aria-label="Substituições">
@@ -119,12 +127,29 @@ function htmlJanela(v, a) {
   </section>`;
 }
 
+function ajustarJanelaExpulsao(caixa) {
+  if (!caixa || caixa.hidden) return;
+  const compacta = telaCompacta?.matches;
+  caixa.querySelector('.exp-ajustes').open = !compacta;
+  const principal = caixa.querySelector('[data-acao="avExpConfirmar"]');
+  if (!principal) return;
+  // Mantém a ordem do Tab igual à ordem visual nas duas larguras.
+  const voltar = principal.parentElement.querySelector('[data-acao="avExpFechar"]');
+  const focado = document.activeElement === voltar;
+  if (compacta) principal.after(voltar);
+  else principal.before(voltar);
+  if (focado) voltar.focus({ preventScroll: true });
+}
+
+telaCompacta?.addEventListener('change', () => ajustarJanelaExpulsao(el('av-expulsao')));
+
 export function mostrarJanelaExpulsao(v, aoFechar) {
   const caixa = el('av-expulsao');
   if (!caixa) return;
   caixa.innerHTML = htmlJanela(v, v.expulsao);
   caixa.hidden = false;
   if (caixa.isConnected !== true) return;
+  ajustarJanelaExpulsao(caixa);
   abrirCamada(caixa, aoFechar);
   document.querySelectorAll('.casca, .pular').forEach(n => { n.inert = true });
 }
@@ -147,12 +172,13 @@ function atualizar(v, a, regioes, foco) {
     return;
   }
   const ativo = document.activeElement, acao = foco ?? ativo?.dataset?.acao;
+  const rolarAoFocar = telaCompacta?.matches && ativo?.matches(':focus-visible');
   const lista = caixa.querySelector('.exp-reservas'), scroll = lista?.scrollTop ?? 0;
   for (const [id, html] of regioes) el(id).innerHTML = html;
   if (lista && !lista.isConnected) caixa.querySelector('.exp-reservas').scrollTop = scroll;
   if (ativo && !ativo.isConnected) {
     const destino = [...caixa.querySelectorAll('[data-acao]')].find(n => n.dataset.acao === acao) ?? el('exp-titulo');
-    destino.focus({ preventScroll: true });
+    destino.focus({ preventScroll: !rolarAoFocar });
   }
   const mensagem = el('exp-mensagem');
   mensagem.classList.toggle('exp-erro', a.erro);

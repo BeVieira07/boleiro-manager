@@ -79,6 +79,27 @@ test('expulsões do mesmo minuto abrem uma janela e só o fechamento libera o re
   assert.doesNotMatch(j.html(), /Ver o aviso de novo/);
 });
 
+test('folha de expulsão tem tática recolhível e identifica quem sai no título do banco', t => {
+  const j = novo(), r = jogoComExpulsao(j), caixa = capturarJanela(t);
+  r.passo();
+  assert.match(caixa.innerHTML, /<details class="exp-ajustes">\s*<summary>Tática<\/summary>/);
+  assert.match(caixa.innerHTML, /Toque em quem sai, no campo/);
+  const rodape = caixa.innerHTML.split('<footer class="exp-rodape">')[1];
+  assert.match(rodape, /data-acao="avExpFechar">Voltar sem mexer/);
+  assert.match(rodape, /data-acao="avExpConfirmar">.*Voltar ao jogo/);
+  assert.doesNotMatch(caixa.innerHTML, /Quem entra no lugar de/);
+
+  const [id, nome] = j.run('ui.vivo.expulsao.elenco.xi.filter(Boolean).map(id => [id, esc(P[id].name)])[1]');
+  j.acao(`avExpSair|${id}`);
+  assert.ok(caixa.innerHTML.includes(`<span class="exp-banco-escolha">Quem entra no lugar de ${nome}?</span>`));
+  assert.match(caixa.innerHTML, /<b>0<\/b> de 5/);
+  assert.doesNotMatch(caixa.innerHTML, /undefined|NaN|style="/);
+
+  j.acao(`avExpSair|${id}`);
+  assert.doesNotMatch(caixa.innerHTML, /Quem entra no lugar de/);
+  j.acao('avExpFechar');
+});
+
 test('expulsão adversária, replay e lesão não abrem janela', () => {
   for (const opcoes of [{ lado: 'a' }, { replay: true }, { t: 'lesao' }]) {
     const j = novo(), r = jogoComExpulsao(j, opcoes);

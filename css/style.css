@@ -551,6 +551,7 @@ body.em-jogo .avisos{bottom:24px}
   white-space:nowrap;text-transform:uppercase;font-size:12px;font-weight:700
 }
 .exp-conteudo{min-height:0;overflow:auto;overscroll-behavior:contain}
+.exp-ajustes>summary,.exp-banco-escolha{display:none}
 .exp-tatica{padding:var(--e3) var(--e6);background:var(--painel3);border-bottom:1px solid var(--linha)}
 .exp-grupos,.exp-opcoes{display:flex;flex-wrap:wrap}
 .exp-grupos{gap:var(--e2) var(--e5)}
@@ -613,6 +614,86 @@ body.em-jogo .avisos{bottom:24px}
   .exp-grade{grid-template-columns:minmax(0,1fr)}
   .exp-cab,.exp-tatica,.exp-grade,.exp-rodape{padding-inline:var(--e3)}
 }
+/* #311: folha de expulsão no celular */
+@media(max-width:600px){
+  :root{--exp-recuo:min(96px,20dvh)}
+  .exp-camada{align-items:flex-end;padding:var(--exp-recuo) 0 0;background:rgb(5 10 8 / .72)}
+  .exp-janela{
+    width:100%;height:100%;border-width:1px 0 0;border-radius:14px 14px 0 0;
+    box-shadow:0 -12px 36px rgb(0 0 0 / .5)
+  }
+  /* O placar ao vivo fica atrás do fundo escurecido, na faixa acima da folha. */
+  body:has(.exp-camada:not([hidden])) .vivo-cab .placar{
+    position:fixed;inset:calc(var(--exp-recuo) - 44px) var(--e4) auto;z-index:11;height:40px;
+    grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:var(--e2);padding-inline:var(--e2);
+    border:1px solid var(--linha);border-radius:var(--r);background:var(--painel)
+  }
+  body:has(.exp-camada:not([hidden])) .vivo-cab .placar-time{flex-direction:row;font-size:11px}
+  body:has(.exp-camada:not([hidden])) .vivo-cab .placar-time.fora{flex-direction:row-reverse}
+  body:has(.exp-camada:not([hidden])) .vivo-cab .placar-time b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  body:has(.exp-camada:not([hidden])) .vivo-cab .placar .crest{flex:none;width:24px;height:24px;font-size:11px}
+  body:has(.exp-camada:not([hidden])) .vivo-cab .placar-num{font-size:28px}
+  .exp-cab{
+    position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--e1) var(--e3);
+    padding:var(--e5) var(--e4) var(--e3)
+  }
+  .exp-cab::before{
+    content:"";position:absolute;top:7px;left:50%;transform:translateX(-50%);
+    width:40px;height:4px;border-radius:var(--r-pill);background:var(--perigo-borda)
+  }
+  .exp-cartao{grid-row:span 2;align-self:start;margin-top:var(--e1);width:30px;height:42px}
+  .exp-titulo{gap:var(--e2)}
+  .exp-titulo h2{font-size:38px}
+  .exp-titulo span{font-size:21px}
+  .exp-cab p{font-size:13px;line-height:1.35}
+  .exp-selo{margin:0;justify-self:start;padding:2px var(--e2);font-size:11px}
+  .exp-selo .icone{width:12px;height:12px}
+  .exp-conteudo{flex:1;overflow-x:hidden;scrollbar-width:thin}
+  .exp-ajustes{background:var(--painel3);border-bottom:1px solid var(--linha)}
+  .exp-ajustes>summary{
+    display:list-item;min-height:44px;padding:10px var(--e4);list-style-position:inside;
+    color:var(--texto2);font-weight:700;line-height:24px;cursor:pointer
+  }
+  .exp-ajustes>summary:focus-visible{outline:2px solid var(--ouro);outline-offset:-3px;box-shadow:none}
+  .exp-tatica{padding:0 var(--e4) var(--e3);border:0}
+  .exp-grupos,.exp-grupo{max-width:100%}
+  .exp-opcoes .chip{max-width:100%;white-space:normal;text-align:left;overflow-wrap:anywhere}
+  .exp-grade{gap:var(--e3);padding:var(--e3) var(--e4)}
+  .exp-contagem{font-size:16px}
+  .exp-janela .campo.mini{min-height:236px;gap:var(--e2);border-radius:var(--r-lg)}
+  .exp-janela .campo.mini .carta{min-width:44px;min-height:44px;font-size:11px}
+  .exp-janela .campo.mini .carta-nome{font-size:11px}
+  .exp-janela .campo .carta-vaga{
+    position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap
+  }
+  .exp-janela .campo .carta-pe,.exp-carta-vermelha>[aria-hidden]{display:none}
+  .exp-janela .campo .carta.exp-carta-vermelha{border-width:2px}
+  .exp-janela .campo .carta.sel{border:2px solid var(--ouro);background:var(--ouro-esc)}
+  .exp-janela .campo .carta:focus-visible{outline:2px solid var(--ouro);outline-offset:-3px}
+  .exp-escolhendo .exp-banco-padrao,.exp-escolhendo+.exp-passos,.exp-energia{display:none}
+  .exp-banco-escolha{display:inline;overflow-wrap:anywhere}
+  .exp-escolhendo>span{white-space:nowrap}
+  .exp-passos li{padding:var(--e1) var(--e2)}
+  .exp-reservas{max-height:none;overflow:visible}
+  .exp-janela .exp-reserva{min-height:46px}
+  .exp-reservas li+li{border-top:0}
+  .exp-reservas li+li .exp-reserva{border-top:1px solid var(--linha2)}
+  .exp-indisponivel{overflow-wrap:anywhere}
+  .exp-mensagem{position:sticky;bottom:0;min-height:0;margin:0;background:var(--painel3)}
+  .exp-mensagem:not(:empty){padding:var(--e2);border-top:1px solid var(--linha)}
+  .exp-rodape{
+    flex-direction:column;flex-wrap:nowrap;align-items:stretch;gap:var(--e1);
+    padding:var(--e2) var(--e4) calc(var(--e2) + env(safe-area-inset-bottom))
+  }
+  .exp-rodape p{margin:0 0 var(--e1);font-size:11px}
+  .exp-rodape .fantasma{border-color:transparent;font:700 15px/1 var(--f-titulo);letter-spacing:.06em}
+  .exp-retomada{display:grid;grid-template-columns:auto minmax(0,1fr);overflow-wrap:anywhere}
+  .exp-retomada button{grid-column:2;justify-self:start;max-width:100%;white-space:normal;text-align:left}
+}
+@media(max-width:600px) and (prefers-reduced-motion:no-preference){
+  .exp-janela{animation-name:exp-folha-entrada}
+}
+@keyframes exp-folha-entrada{from{transform:translateY(100%)}to{transform:translateY(0)}}
 .pre{white-space:pre-line}
 .campo-valor{display:flex;flex-direction:column;gap:6px;font-weight:600}
 .campo-valor input{width:160px;font-size:18px;font-variant-numeric:tabular-nums}

@@ -247,7 +247,7 @@ export function avPausar() {
 // barra de espaço pausa e continua (fora de campos e botões, que já usam o espaço)
 if (globalThis.document && document.addEventListener) document.addEventListener('keydown', ev => {
   if (ev.key !== ' ' || ui.view !== 'aovivo' || !ui.vivo || ui.vivo.fim || pausaExpulsao(ui.vivo)) return;
-  const t = ev.target && ev.target.tagName; if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(t)) return;
+  const t = ev.target && ev.target.tagName; if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'SUMMARY'].includes(t)) return;
   ev.preventDefault(); avPausar();
 });
 export function avContinuar() { const v = ui.vivo; if (!v) return; const { done } = v; encerrarVivo(); done() }

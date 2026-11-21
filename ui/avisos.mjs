@@ -29,7 +29,7 @@ export function avisar(msg, tipo = 'info') {
 }
 
 /* ---------- foco dentro do modal ---------- */
-const FOCAVEIS = 'button:not([disabled]),[href],input:not([disabled]):not([type=hidden]),select,textarea,[tabindex]:not([tabindex="-1"])';
+const FOCAVEIS = 'button:not([disabled]),[href],input:not([disabled]):not([type=hidden]),select,textarea,details>summary:first-of-type,[tabindex]:not([tabindex="-1"])';
 const focaveis = c => [...c.querySelectorAll(FOCAVEIS)].filter(x => x.offsetParent !== null || x === document.activeElement);
 const pilha = []; // modais abertos: {caixa, origem, aoEsc}
 
