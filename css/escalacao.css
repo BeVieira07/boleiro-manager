@@ -58,3 +58,11 @@
 .campo.mini .carta-vaga{font-size:11px;letter-spacing:.02em;padding:0 4px}
 .campo.mini .ovr{font-size:12px;min-width:28px}
 .carta:disabled{opacity:.55;cursor:not-allowed}
+
+/* #288: ordem dos batedores de pênalti */
+.cobradores{list-style:none;margin:var(--e3) 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.cobradores li{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--linha);border-radius:var(--r)}
+.cobradores li.titular-pen{border-color:var(--verde)}
+.cobradores .num{min-width:18px;text-align:right;color:var(--muted);font-weight:700}
+.cobradores .barra{width:48px}
+@media(max-width:520px){.cobradores li{gap:6px;padding:6px}.cobradores .barra{width:28px}}

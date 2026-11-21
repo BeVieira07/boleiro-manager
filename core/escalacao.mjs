@@ -65,6 +65,13 @@ export function autoSlotXI(club,f){
   return out;
 }
 // regras da escalação do usuário
+/** #288: ordem de cobrança de pênaltis do clube (ids do elenco, sem repetir); lista vazia volta à ordem automática. */
+export function definirCobradores(ids, uc = userClub()) {
+  const doClube = new Set(uc.players.map(p => p.id));
+  const ok = [...new Set(Array.isArray(ids) ? ids : [])].filter(id => doClube.has(id)).slice(0, 32);
+  if (ok.length) uc.cobradores = ok; else delete uc.cobradores;
+  return { ok: true };
+}
 export function definirFormacao(f){const uc=userClub();uc.formation=f;uc.lineup=autoSlotXI(uc,f)} // nova formação: remonta o melhor time para as vagas novas
 export function escalarMelhores(){const uc=userClub();uc.lineup=autoXI(uc)}
 // troca dois jogadores (titular x titular ou titular x reserva). Devolve {erro} ou {ok}.

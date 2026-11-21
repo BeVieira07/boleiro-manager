@@ -51,11 +51,13 @@ export function jogoDaPerna(confronto, volta) {
 }
 
 /* ---------- pênaltis (#267) ---------- */
+// #288: ordem de cobrança escolhida pelo técnico (clube estrangeiro não tem)
+const escolhidos = id => clubById(id)?.cobradores || [];
 const emCampoNoFim = (g, side) => (escalacaoNoMinuto(g, side, Infinity)?.xi || []).filter(Boolean).map(id => P[id]).filter(Boolean);
 /** Disputa do jogo de volta `g` (com lances), se o confronto empatou. `ida` = placar da ida do ponto de vista de g.h e g.a. */
 export function penaltisDaVolta(g, ida, seed) {
   if (!ida || ida.h + g.hg !== ida.a + g.ag) return null;
-  return disputarPenaltis(timeNaDisputa(g.a, emCampoNoFim(g, 'a')), timeNaDisputa(g.h, emCampoNoFim(g, 'h')), seed);
+  return disputarPenaltis(timeNaDisputa(g.a, emCampoNoFim(g, 'a'), escolhidos(g.a)), timeNaDisputa(g.h, emCampoNoFim(g, 'h'), escolhidos(g.h)), seed);
 }
 // jogo das sul-americanas (sem lances): os titulares da força; o estrangeiro, o melhor goleiro e os dez melhores da linha
 function emCampoSemLances(c) {
@@ -64,7 +66,7 @@ function emCampoSemLances(c) {
   return [...porOvr.filter(p => p.pos === 'G').slice(0, 1), ...porOvr.filter(p => p.pos !== 'G').slice(0, 10)];
 }
 /** Disputa entre os clubes H e A de uma partida sem lances (sul-americanas). */
-export const penaltisSemLances = (H, A, seed) => disputarPenaltis(timeNaDisputa(H.id, emCampoSemLances(H)), timeNaDisputa(A.id, emCampoSemLances(A)), seed);
+export const penaltisSemLances = (H, A, seed) => disputarPenaltis(timeNaDisputa(H.id, emCampoSemLances(H), escolhidos(H.id)), timeNaDisputa(A.id, emCampoSemLances(A), escolhidos(A.id)), seed);
 
 export function artilhariaCopa(tor, n = 10) {
   return Object.values(tor.gols || {}).sort((a, b) => b.gols - a.gols || (a.nome < b.nome ? -1 : a.nome > b.nome ? 1 : 0)).slice(0, n);
