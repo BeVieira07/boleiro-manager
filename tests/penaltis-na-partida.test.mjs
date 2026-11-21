@@ -221,3 +221,13 @@ test('liga online grava os pênaltis com o placar e o replay funciona sem a seme
   assert.doesNotMatch(j.html(), /undefined|NaN/);
   j.run('encerrarVivo()');
 });
+
+test('chute no meio converte parecido com o canto, para o meio não ser a escolha óbvia (#306)', () => {
+  const goleiro = { pos: 'G', ovr: 72 };
+  for (const ovr of [68, 76, 84]) {
+    const batedor = { pos: 'A', ovr, energia: 100 }, r = sorteioFixo(306 + ovr);
+    const conversao = alvo => { let gol = 0; for (let i = 0; i < 30000; i++) gol += cobrarPenalti(batedor, goleiro, r, { alvo }).res === 'gol'; return gol / 30000 };
+    const canto = (conversao('esq-baixo') + conversao('dir-alto')) / 2, meio = (conversao('meio-baixo') + conversao('meio-alto')) / 2;
+    assert.ok(Math.abs(meio - canto) <= 0.03, `batedor ${ovr}: meio ${(100 * meio).toFixed(1)}% x canto ${(100 * canto).toFixed(1)}%`);
+  }
+});

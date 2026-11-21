@@ -47,7 +47,8 @@ const ALVOS = [
   ['esq-alto', 0.83, 'Esquerda, no alto'], ['dir-alto', 0.96, 'Direita, no alto'], ['meio-alto', 1, 'Meio, no alto']
 ];
 export const NOMES_ALVOS_PENALTI = Object.freeze(Object.fromEntries(ALVOS.map(([alvo, , nome]) => [alvo, nome])));
-const PULOS = [['esq', 0.40], ['meio', 0.60], ['dir', 1]];
+// #306: o goleiro fica parado em 30% (35% para cada lado), para o meio não ser a escolha óbvia
+const PULOS = [['esq', 0.35], ['meio', 0.65], ['dir', 1]];
 function escolher(opcoes, r) {
   const sorteio = r();
   return opcoes.find(([, limite]) => sorteio < limite)[0];
@@ -63,7 +64,8 @@ export function cobrarPenalti(batedor, goleiro, r, { alvo = escolher(ALVOS, r), 
   if (chute < erro) return { alvo, pulo, res: chute < erro * 0.4 ? 'trave' : 'fora' };
 
   const diferenca = 0.76 - chance(batedor, goleiro);
-  const defesa = lado === pulo ? 0.48 + diferenca * 0.8 : 0.023 + diferenca * 0.08;
+  // com o goleiro parado, o chute no meio vai em cima dele: defesa mais fácil que a do canto com o lado certo (#306)
+  const defesa = lado === pulo ? (meio ? 0.65 : 0.48) + diferenca * 0.8 : 0.023 + diferenca * 0.08;
   return { alvo, pulo, res: r() < defesa ? 'defesa' : 'gol' };
 }
 
