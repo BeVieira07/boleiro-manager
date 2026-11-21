@@ -64,8 +64,8 @@ export function novosGols(g,ph,pa,nh,na,de,ate){
   for(let i=0;i<nh;i++)gol('h',ph.xi);for(let i=0;i<na;i++)gol('a',pa.xi);
 }
 
-// Cerca de 0,3 cobranças por partida na amostra de 2,5 gols esperados por jogo.
-const PENALTIS_POR_GOL_ESPERADO = 0.12;
+// Cerca de 0,2 cobrança por partida na amostra de 2,5 gols esperados por jogo (#304; era 0,12 → ~0,3).
+const PENALTIS_POR_GOL_ESPERADO = 0.08;
 const CONVERSAO_MEDIA = 0.75;
 function taxaDePenaltis(golsEsperados, xi) {
   return xi.some(p => p.pos !== 'G') ? golsEsperados * PENALTIS_POR_GOL_ESPERADO : 0;
