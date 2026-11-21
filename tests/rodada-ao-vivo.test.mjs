@@ -279,21 +279,32 @@ test('pular para o fim ignora cobranças pendentes e fecha a que estiver aparece
   }
 });
 
-test('o componente desenha seis alvos e o quadro final de cada desfecho', () => {
+test('o componente desenha a cena em perspectiva e o quadro final de cada desfecho', () => {
   const quadros = [
-    ['gol', 'esq-baixo', 'dir', '101px,89px', '108px,95px', 'Vitor Roque converte'],
-    ['defesa', 'dir-alto', 'dir', '259px,47px', '259px,47px', 'o goleiro Everson defende'],
-    ['trave', 'esq-baixo', 'esq', '78px,89px', '137px,127px', 'Vitor Roque acerta a trave'],
-    ['fora', 'meio-alto', 'meio', '180px,10px', '180px,10px', 'Vitor Roque manda para fora']
+    ['gol', 'esq-baixo', 'dir', 'Vitor Roque converte'],
+    ['defesa', 'dir-alto', 'dir', 'o goleiro Everson defende'],
+    ['trave', 'esq-baixo', 'esq', 'Vitor Roque acerta a trave'],
+    ['fora', 'meio-alto', 'meio', 'Vitor Roque manda para fora']
   ];
-  for (const [res, alvo, pulo, impacto, fim, texto] of quadros) {
+  for (const [res, alvo, pulo, texto] of quadros) {
     const html = htmlCobranca({ res, alvo, pulo }, { batedor: 'Vitor Roque', goleiro: 'Everson', clube: 'Palmeiras' });
     assert.ok(html.includes(`data-res="${res}" data-alvo="${alvo}" data-pulo="${pulo}"`));
-    assert.ok(html.includes(`--bola-impacto:${impacto};--bola-fim:${fim};`));
+    // oito quadros da bola e da sombra, sete do goleiro, três do batedor
+    for (let i = 0; i < 8; i++) assert.match(html, new RegExp(`--b${i}:-?[\\d.]+px,-?[\\d.]+px;--bs${i}:[\\d.]+;--h${i}:`));
+    for (let i = 0; i < 7; i++) assert.match(html, new RegExp(`--g${i}:-?[\\d.]+px,-?[\\d.]+px;--gr${i}:-?[\\d.]+deg;--gs${i}:[\\d.]+`));
+    for (let i = 0; i < 3; i++) assert.match(html, new RegExp(`--k${i}:-?[\\d.]+px,-?[\\d.]+px;--ks${i}:[\\d.]+`));
     assert.ok(html.includes(`<span class="cobranca-resultado">Pênalti para o Palmeiras: ${texto}</span>`));
     assert.ok(html.includes('<span class="cobranca-antes" aria-hidden="true">Vitor Roque na bola</span>'));
-    assert.equal((html.match(/class="cobranca-alvo/g) || []).length, 6);
+    assert.ok(html.includes('class="cobranca-goleiro"') && html.includes('class="cobranca-batedor"'));
     assert.equal(html.includes('class="cobranca-impacto"'), res === 'trave');
-    assert.doesNotMatch(html, /undefined|NaN/);
+    assert.doesNotMatch(html, /undefined|NaN|Infinity/);
+  }
+});
+
+test('na defesa a luva do goleiro chega no ponto da bola', () => {
+  for (const alvo of ['esq-alto', 'dir-baixo', 'esq-baixo', 'dir-alto']) {
+    const html = htmlCobranca({ res: 'defesa', alvo, pulo: alvo.startsWith('esq') ? 'dir' : 'esq' }, { batedor: 'A', goleiro: 'B' });
+    const giro = Number(html.match(/--gr4:(-?[\d.]+)deg/)[1]);
+    assert.equal(Math.sign(giro), alvo.startsWith('esq') ? -1 : 1, `${alvo}: o goleiro vai para o lado da bola`);
   }
 });

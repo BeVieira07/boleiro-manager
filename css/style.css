@@ -685,44 +685,69 @@ body.em-jogo .avisos{bottom:24px}
 .cob-nome{flex:1;min-width:0;overflow-wrap:anywhere}
 .cob.gol b{color:var(--verde)}
 .cob.perdeu b{color:var(--perigo)}
-/* #291: cobrança vista de trás do batedor. O estado base é o quadro final. */
+/* #291: cobrança vista de trás do batedor, em perspectiva (cena em metros projetada em penalti-animacao.mjs).
+   O estado base é o quadro final; as variáveis --b/--g/--k trazem os quadros da bola, do goleiro e do batedor. */
 .vivo-cobranca:empty{position:absolute}
 .vivo-cobranca:not(:empty)+.ult-lance{display:none}
 .cobranca-animacao{
-  width:100%;max-width:440px;margin:0 auto;overflow:hidden;border:1px solid var(--linha);
+  width:100%;max-width:460px;margin:0 auto;overflow:hidden;border:1px solid var(--linha);
   border-radius:var(--r);background:var(--painel);color:var(--texto);text-align:center
 }
 .cobranca-animacao figcaption{padding:var(--e2) var(--e3);font-size:13px;font-weight:600;overflow-wrap:anywhere}
 /* a legenda só mostra o resultado quando a bola chega; sem animação, mostra direto */
 .cobranca-antes{display:none}
-.cobranca-campo{display:block;width:100%;height:auto;background:linear-gradient(var(--painel3),var(--verde-esc))}
-.cobranca-linhas{fill:none;stroke:var(--verde-claro);stroke-opacity:.24}
-.cobranca-rede{fill:none;stroke:var(--texto2);stroke-opacity:.34;transform-box:fill-box;transform-origin:center}
-.cobranca-rede path:first-child{fill:var(--painel3);fill-opacity:.5}
-.cobranca-gol{fill:none;stroke:var(--texto);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
-.cobranca-alvo{fill:var(--painel3);fill-opacity:.7;stroke:var(--texto2);stroke-opacity:.58;stroke-dasharray:2 2}
-.cobranca-alvo.selecionado{stroke:var(--ouro);stroke-opacity:1;stroke-dasharray:none}
-.cobranca-marca{fill:var(--verde-claro)}
-.cobranca-bola{
-  fill:var(--texto);stroke:var(--lateral);stroke-width:.8;
-  transform:translate(var(--bola-fim)) scale(var(--bola-escala))
-}
-.cobranca-bola path{fill:var(--lateral)}
-.cobranca-goleiro{
-  fill:var(--ouro);stroke:var(--ouro);stroke-width:3;
-  transform:translate(var(--goleiro-fim)) rotate(var(--goleiro-giro))
-}
-.cobranca-luvas{fill:var(--texto);stroke:none}
-.cobranca-impacto{fill:none;stroke:var(--ouro);stroke-width:1.5;stroke-dasharray:3 2;opacity:.75}
-.cobranca-animacao[data-res="gol"] .cobranca-rede{stroke:var(--verde-claro);stroke-opacity:.55}
+.cobranca-campo{display:block;width:100%;height:auto;background:#10181d}
+.cob-arquibancada{fill:#121a20}
+.cobranca-campo .t1{fill:#3d4b59}.cobranca-campo .t2{fill:#5b463f}.cobranca-campo .t3{fill:#cfc6b2}
+.cob-placas{fill:#0d2f52}
+.cob-placas-txt{fill:#e9f3ee;font:700 4.6px var(--f-titulo);letter-spacing:.5px}
+.cob-gramado{fill:#2a7440}
+.cob-faixas{fill:#31834a}
+.cob-linhas{fill:none;stroke:#f1f7f2;stroke-opacity:.85;stroke-width:1.1;stroke-linejoin:round}
+.cob-linhas-marca{fill:#f1f7f2}
+.cobranca-rede{transform-box:fill-box;transform-origin:50% 100%}
+.cob-rede-fundo{fill:#e9f3ee;fill-opacity:.05;stroke:#e9f3ee;stroke-opacity:.55;stroke-width:.6;stroke-linejoin:round}
+.cob-rede-malha{fill:none;stroke:#e9f3ee;stroke-opacity:.28;stroke-width:.45}
+.cob-sombra-gol{stroke:#000;stroke-opacity:.22;transform:translateY(1px)}
+.cobranca-gol{fill:none;stroke:#fff;stroke-linejoin:miter}
+/* figuras (desenhadas em cm, escaladas pela profundidade) */
+.cob-meiao,.cob-chuteira,.cob-braco,.cob-bt-meiao,.cob-bt-braco{fill:none;stroke-linecap:round;stroke-linejoin:round}
+.cob-meiao{stroke:var(--ouro);stroke-width:13}
+.cob-braco{stroke:var(--ouro);stroke-width:11}
+.cob-camisa{fill:var(--ouro)}
+.cob-calcao,.cob-bt-calcao{fill:#16191d}
+.cob-chuteira{stroke:#0b0c0d;stroke-width:9}
+.cob-luva{fill:#fff}
+.cob-pele{fill:#b47c55}
+.cob-cabelo,.cob-bt-cabelo{fill:#17110d}
+.cob-bt-meiao{stroke:#eef1f3;stroke-width:14}
+.cob-bt-braco{stroke:#b47c55;stroke-width:10}
+.cob-bt-camisa{fill:#eef1f3}
+.cob-bt-num{fill:#16191d;font:700 28px var(--f-titulo)}
+.cobranca-bola circle{fill:#fff;stroke:#1c1f22;stroke-width:1.2}
+.cobranca-bola path{fill:#1c1f22;stroke:#1c1f22;stroke-width:1.3;stroke-linejoin:round}
+.cobranca-sombra{fill:#000;opacity:.35}
+.cobranca-impacto path{fill:none;stroke:#fff;stroke-width:1.6;stroke-linecap:round}
+/* quadro final */
+.cobranca-bola{transform:translate(var(--b7)) scale(var(--bs7))}
+.cobranca-sombra{transform:translate(var(--h7)) scale(var(--hs7))}
+.cobranca-goleiro{transform:translate(var(--g6)) rotate(var(--gr6)) scale(var(--gs6))}
+.cobranca-batedor{transform:translate(var(--k2)) scale(var(--ks2))}
+.cob-antes{visibility:hidden}
+.cobranca-impacto{opacity:.8}
 @media(prefers-reduced-motion:no-preference){
-  .cobranca-bola,.cobranca-goleiro,.cobranca-impacto,.cobranca-animacao[data-res="gol"] .cobranca-rede{
+  .cobranca-bola,.cobranca-sombra,.cobranca-goleiro,.cobranca-batedor,.cobranca-impacto,.cob-antes,.cob-depois,
+  .cobranca-animacao[data-res="gol"] .cobranca-rede{
     animation-duration:var(--cobranca-duracao);animation-delay:var(--cobranca-atraso);animation-fill-mode:both
   }
-  .cobranca-bola{animation-name:cobranca-chute}
-  .cobranca-goleiro{animation-name:cobranca-mergulho}
-  .cobranca-impacto{animation-name:cobranca-batida}
-  .cobranca-animacao[data-res="gol"] .cobranca-rede{animation-name:cobranca-balanco}
+  .cobranca-bola{animation-name:cob-bola;animation-timing-function:linear}
+  .cobranca-sombra{animation-name:cob-sombra;animation-timing-function:linear}
+  .cobranca-goleiro{animation-name:cob-goleiro;animation-timing-function:ease-out}
+  .cobranca-batedor{animation-name:cob-batedor;animation-timing-function:ease-in-out}
+  .cob-antes{animation-name:cob-antes;animation-timing-function:steps(1,end)}
+  .cob-depois{animation-name:cob-depois;animation-timing-function:steps(1,end)}
+  .cobranca-impacto{animation-name:cob-faisca}
+  .cobranca-animacao[data-res="gol"] .cobranca-rede{animation-name:cob-rede}
   .cobranca-antes{display:inline}
   .cobranca-antes,.cobranca-resultado{animation-duration:var(--cobranca-duracao);animation-delay:var(--cobranca-atraso);animation-fill-mode:both;animation-timing-function:steps(1,end)}
   .cobranca-antes{animation-name:cobranca-some}
@@ -730,27 +755,51 @@ body.em-jogo .avisos{bottom:24px}
 }
 @keyframes cobranca-some{0%{visibility:visible;position:static}55%,100%{visibility:hidden;position:absolute}}
 @keyframes cobranca-aparece{0%{visibility:hidden;position:absolute}55%,100%{visibility:visible;position:static}}
-@keyframes cobranca-chute{
-  0%,15%{transform:translate(180px,140px);animation-timing-function:cubic-bezier(.24,.57,.42,1)}
-  39%{transform:translate(var(--bola-impacto)) scale(.72);animation-timing-function:ease-out}
-  62%,100%{transform:translate(var(--bola-fim)) scale(var(--bola-escala))}
+/* troca de pose (corrida → chute, base → mergulho) logo antes do contato */
+@keyframes cob-antes{0%{visibility:visible}17%,100%{visibility:hidden}}
+@keyframes cob-depois{0%{visibility:hidden}17%,100%{visibility:visible}}
+@keyframes cob-bola{
+  0%,18%{transform:translate(var(--b0)) scale(var(--bs0))}
+  21.75%{transform:translate(var(--b1)) scale(var(--bs1))}
+  25.5%{transform:translate(var(--b2)) scale(var(--bs2))}
+  29.25%{transform:translate(var(--b3)) scale(var(--bs3))}
+  33%{transform:translate(var(--b4)) scale(var(--bs4));animation-timing-function:ease-out}
+  40%{transform:translate(var(--b5)) scale(var(--bs5));animation-timing-function:ease-in-out}
+  47%{transform:translate(var(--b6)) scale(var(--bs6));animation-timing-function:ease-out}
+  55%,100%{transform:translate(var(--b7)) scale(var(--bs7))}
 }
-@keyframes cobranca-mergulho{
-  0%,13%{transform:translate(0);animation-timing-function:ease-out}
-  25%{transform:translate(var(--goleiro-impulso),-6px) rotate(var(--goleiro-giro-inicial));animation-timing-function:ease-out}
-  39%,100%{transform:translate(var(--goleiro-fim)) rotate(var(--goleiro-giro))}
+@keyframes cob-sombra{
+  0%,18%{transform:translate(var(--h0)) scale(var(--hs0))}
+  21.75%{transform:translate(var(--h1)) scale(var(--hs1))}
+  25.5%{transform:translate(var(--h2)) scale(var(--hs2))}
+  29.25%{transform:translate(var(--h3)) scale(var(--hs3))}
+  33%{transform:translate(var(--h4)) scale(var(--hs4));animation-timing-function:ease-out}
+  40%{transform:translate(var(--h5)) scale(var(--hs5));animation-timing-function:ease-in-out}
+  47%{transform:translate(var(--h6)) scale(var(--hs6));animation-timing-function:ease-out}
+  55%,100%{transform:translate(var(--h7)) scale(var(--hs7))}
 }
-@keyframes cobranca-balanco{
-  0%,39%{transform:none;stroke-opacity:.34}
-  44%{transform:translateY(-3px) scale(1.025,.96);stroke-opacity:.82}
-  51%{transform:translateY(1px) scale(.994,1.015)}
-  61%,100%{transform:none;stroke-opacity:.55}
+@keyframes cob-goleiro{
+  0%,12%{transform:translate(var(--g0)) rotate(var(--gr0)) scale(var(--gs0))}
+  17%{transform:translate(var(--g1)) rotate(var(--gr1)) scale(var(--gs1))}
+  22%{transform:translate(var(--g2)) rotate(var(--gr2)) scale(var(--gs2));animation-timing-function:linear}
+  28%{transform:translate(var(--g3)) rotate(var(--gr3)) scale(var(--gs3))}
+  33%{transform:translate(var(--g4)) rotate(var(--gr4)) scale(var(--gs4));animation-timing-function:ease-in}
+  42%{transform:translate(var(--g5)) rotate(var(--gr5)) scale(var(--gs5))}
+  55%,100%{transform:translate(var(--g6)) rotate(var(--gr6)) scale(var(--gs6))}
 }
-@keyframes cobranca-batida{
-  0%,38%{opacity:0}
-  40%{opacity:1}
-  60%,100%{opacity:.75}
+@keyframes cob-batedor{
+  0%{transform:translate(var(--k0)) scale(var(--ks0))}
+  18%{transform:translate(var(--k1)) scale(var(--ks1));animation-timing-function:ease-out}
+  26%,100%{transform:translate(var(--k2)) scale(var(--ks2))}
 }
+@keyframes cob-faisca{0%,32.5%{opacity:0}33%{opacity:1}46%,100%{opacity:0}}
+@keyframes cob-rede{
+  0%,33%{transform:none}
+  38%{transform:scale(1.015,1.04)}
+  45%{transform:scale(.995,.99)}
+  52%,100%{transform:none}
+}
+
 .ev-cartao{color:var(--ouro)}
 .ev-vermelho{color:var(--perigo)}
 .ev-lesao{color:var(--info)}
