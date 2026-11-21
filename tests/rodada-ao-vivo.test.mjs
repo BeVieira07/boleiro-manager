@@ -1,14 +1,20 @@
 // #135: tela da rodada ao vivo (substituições, formação, outros jogos e classificação no mesmo relógio)
-import { test } from 'node:test';
+import { mock, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { DURACAO_COBRANCA, htmlCobranca } from '../ui/penalti-animacao.mjs';
 import { carregarJogo, clubeDaSerie } from './jogo.mjs';
 
-/** Joga a rodada com o relógio parado: devolve o `passo()` que anda um minuto, como o setInterval faria. */
-function comRelogioManual(j) {
-  const setI = globalThis.setInterval; let fn = null;
+/** `tick(ms)` dispara o intervalo após ms. `passo()` usa o tempo de uma cobrança a cada disparo. */
+function comRelogioManual(j, iniciar = 'playRound()') {
+  const setI = globalThis.setInterval; let fn = null, agora = 0;
   globalThis.setInterval = f => { fn = f; return { unref() {} } };
-  try { j.run('playRound()') } finally { globalThis.setInterval = setI }
-  return { passo: (n = 1) => { for (let i = 0; i < n; i++) fn() } };
+  try { j.run(iniciar) } finally { globalThis.setInterval = setI }
+  const tick = ms => {
+    agora += ms;
+    const tempo = mock.method(performance, 'now', () => agora);
+    try { fn() } finally { tempo.mock.restore() }
+  };
+  return { tick, passo: (n = 1) => { for (let i = 0; i < n; i++) tick(DURACAO_COBRANCA) } };
 }
 const novo = () => { const j = carregarJogo({ boot: true }); j.run(`newGame('${clubeDaSerie(j)}')`); return j };
 
@@ -192,4 +198,92 @@ test('cabeçalho com tempo de jogo, último lance e estatísticas que batem com 
   assert.equal(e.e.posse.h + e.e.posse.a, 100);
   // último lance: o mais recente, mesmo com os lances fora de ordem
   assert.equal(j.run(`ultimoLance({ev:[{m:80,t:'gol',name:'Z'},{m:60,t:'cartao',name:'W'}]},93).name`), 'Z');
+});
+
+function rodadaComPenaltis(j, { replay = false, minuto = 8 } = {}) {
+  return comRelogioManual(j, `(() => {
+    const h = userClub(), [a, b, c] = S.clubs.filter(c => c.id !== h.id && divOf(c) === divOf(h));
+    const pen = (m, side, res) => ({ m, t: 'penalti', side, res, name: side === 'h' ? 'Batedor da casa' : 'Batedor visitante',
+      gk: (side === 'h' ? a : h).players.find(p => p.pos === 'G').id, alvo: 'esq-baixo', pulo: 'esq' });
+    const jogo = { h: h.id, a: a.id, hg: 1, ag: 0,
+      ev: [pen(10, 'h', 'gol'), { m: 10, t: 'gol', side: 'h', pen: true }, pen(10, 'a', 'defesa'), pen(93, 'a', 'trave')] };
+    const outro = { h: b.id, a: c.id, hg: 0, ag: 0, ev: [pen(9, 'h', 'fora')] };
+    if (${replay}) delete S.seed;
+    iniciarVivo([jogo, outro], jogo, () => {}, { minuto: ${minuto}, replay: ${replay} });
+  })()`);
+}
+
+test('cobra os pênaltis do jogo em destaque em ordem, com o relógio parado, e respeita a pausa', t => {
+  const j = novo(), r = rodadaComPenaltis(j);
+  const aviso = { innerHTML: '' }, elemento = document.getElementById;
+  t.mock.method(document, 'getElementById', id => id === 'av-cobranca' ? aviso : elemento(id));
+  r.tick(55);
+  assert.equal(j.run('ui.vivo.min'), 9);
+  assert.equal(aviso.innerHTML, '', 'pênalti de outro jogo só aparece no painel da rodada');
+  r.tick(55);
+  assert.match(aviso.innerHTML, /data-res="gol"/);
+  j.run('render()');
+  assert.match(j.html(), /role="status" aria-live="polite"[^>]*><figure[^>]*data-res="gol"/);
+  assert.match(j.html(), /<span class="cobranca-antes" aria-hidden="true">Batedor da casa na bola<\/span><span class="cobranca-resultado">Pênalti para o [^<]+: Batedor da casa converte<\/span>/);
+  assert.match(j.html(), /id="lsc"[^>]*>0 x 0</, 'o placar só muda depois da cobrança');
+  assert.doesNotMatch(j.html(), /undefined|NaN/);
+  r.tick(DURACAO_COBRANCA - 1);
+  assert.equal(j.run('ui.vivo.min'), 10);
+  assert.match(aviso.innerHTML, /data-res="gol"/);
+  r.tick(1);
+  assert.equal(j.run('ui.vivo.min'), 10);
+  assert.match(aviso.innerHTML, /data-res="defesa"/);
+  assert.ok(aviso.innerHTML.includes(j.run('clubById(ui.vivo.g.a).name')));
+  j.acao('avPausar');
+  r.tick(DURACAO_COBRANCA);
+  assert.equal(aviso.innerHTML, '', 'a animação termina mesmo com o jogo pausado');
+  assert.equal(j.run('ui.vivo.min'), 10);
+  j.acao('avPausar');
+  r.tick(55);
+  assert.equal(j.run('ui.vivo.min'), 11);
+});
+
+test('o replay anima o pênalti do último minuto antes de terminar', () => {
+  const j = novo(), r = rodadaComPenaltis(j, { replay: true, minuto: 92 });
+  r.tick(55);
+  j.run('render()');
+  assert.match(j.html(), /id="av-cobranca"[^>]*><figure[^>]*data-res="trave"/);
+  assert.equal(j.run('ui.vivo.fim'), false);
+  r.tick(DURACAO_COBRANCA);
+  assert.equal(j.run('ui.vivo.fim'), true);
+  j.run('render()');
+  assert.doesNotMatch(j.html(), /class="cobranca-animacao"|undefined|NaN/);
+});
+
+test('pular para o fim ignora cobranças pendentes e fecha a que estiver aparecendo', () => {
+  for (const emCobranca of [false, true]) {
+    const j = novo(), r = rodadaComPenaltis(j, { replay: true, minuto: 9 });
+    if (emCobranca) r.tick(55);
+    j.acao('avPular');
+    r.tick(DURACAO_COBRANCA);
+    j.run('render()');
+    assert.doesNotMatch(j.html(), /class="cobranca-animacao"/);
+    assert.equal(j.run('ui.vivo.fim'), true);
+    assert.equal(j.run('ui.vivo.min'), 93);
+    assert.match(j.html(), /1 x 0/);
+  }
+});
+
+test('o componente desenha seis alvos e o quadro final de cada desfecho', () => {
+  const quadros = [
+    ['gol', 'esq-baixo', 'dir', '101px,89px', '108px,95px', 'Vitor Roque converte'],
+    ['defesa', 'dir-alto', 'dir', '259px,47px', '259px,47px', 'o goleiro Everson defende'],
+    ['trave', 'esq-baixo', 'esq', '78px,89px', '137px,127px', 'Vitor Roque acerta a trave'],
+    ['fora', 'meio-alto', 'meio', '180px,10px', '180px,10px', 'Vitor Roque manda para fora']
+  ];
+  for (const [res, alvo, pulo, impacto, fim, texto] of quadros) {
+    const html = htmlCobranca({ res, alvo, pulo }, { batedor: 'Vitor Roque', goleiro: 'Everson', clube: 'Palmeiras' });
+    assert.ok(html.includes(`data-res="${res}" data-alvo="${alvo}" data-pulo="${pulo}"`));
+    assert.ok(html.includes(`--bola-impacto:${impacto};--bola-fim:${fim};`));
+    assert.ok(html.includes(`<span class="cobranca-resultado">Pênalti para o Palmeiras: ${texto}</span>`));
+    assert.ok(html.includes('<span class="cobranca-antes" aria-hidden="true">Vitor Roque na bola</span>'));
+    assert.equal((html.match(/class="cobranca-alvo/g) || []).length, 6);
+    assert.equal(html.includes('class="cobranca-impacto"'), res === 'trave');
+    assert.doesNotMatch(html, /undefined|NaN/);
+  }
 });

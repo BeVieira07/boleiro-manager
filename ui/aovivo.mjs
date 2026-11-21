@@ -21,6 +21,7 @@ import { jogosCopa } from './copa.mjs';
 import { save, ui } from './estado.mjs';
 import { icone } from './icones.mjs';
 import { DURACAO, EVENTO, crest, itemEvento, marcador, textoEvento } from './partida.mjs';
+import { DURACAO_COBRANCA, htmlCobranca } from './penalti-animacao.mjs';
 import { posTag } from './posicoes.mjs';
 import { chipsTaticaAoVivo } from './taticas.mjs';
 import { go, render } from './telas.mjs';
@@ -64,7 +65,7 @@ export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round
   const uc = userClub();
   const v = ui.vivo = { g: meu, jogos, rodada, done, replay, min: minuto ?? 0, fim: false, aba: 'meu', div: divOf(uc), comp: 'liga', sel: null, sig: '',
     S, clube: uc, xi0: [...(uc.lineup || [])], f0: uc.formation, timer: null, // xi0/f0: trocas e formação valem só neste jogo
-    estadual, uf: meu.uf || null, proximo, aoTerminar };
+    estadual, uf: meu.uf || null, proximo, aoTerminar, cobranca: null, filaCobrancas: [] };
   if (minuto != null && meu.ev.some(e => ['troca', 'formacao'].includes(e.t) && e.m <= minuto && meu[e.side] === uc.id)) {
     const elenco = escalacaoNoMinuto(meu, meu.h === uc.id ? 'h' : 'a', minuto);
     v.alterou = true; v.xi1 = elenco.xi.filter(Boolean); v.f1 = elenco.form;
@@ -88,24 +89,41 @@ function restaurar(v) {
   uc.lineup = v.xi0; uc.formation = v.f0; save();
 }
 
+// enquanto a cobrança é animada, a tela fica no minuto anterior: placar, lances e tabela só mudam depois do chute
+const minTela = v => v.cobranca ? v.cobranca.lance.m - 1 : v.min;
 function tick(v) {
   if (ui.vivo !== v || v.S !== S) { clearInterval(v.timer); if (ui.vivo === v) { ui.vivo = null; ui.tvAoVivo = null } return }
+  if (v.cobranca) {
+    if (performance.now() - v.cobranca.inicio < DURACAO_COBRANCA) return;
+    v.cobranca = null;
+    if (ui.view === 'aovivo') { pintarCobranca(v); pintar(v) }
+  }
   if (ui.view !== 'aovivo' || v.pausado || v.fim) return; // pausado: saiu da tela ou apertou Pausar (#170)
+  if (v.filaCobrancas.length) { mostrarCobranca(v); return }
   if (v.min >= DURACAO) { // disputa de pênaltis (#267)
+    if (v.pen === undefined) { fecharTempoNormal(v); return }
     if (++v.passo % PASSO_PEN) return;
     v.cob++; pintar(v);
     if (v.cob >= v.pen.cob.length) terminar(v);
     return;
   }
-  v.min++; pintar(v);
+  v.min++;
+  v.filaCobrancas = v.g.ev.filter(e => e.m === v.min && e.t === 'penalti');
+  if (v.filaCobrancas.length) mostrarCobranca(v);
+  pintar(v);
   if (!v.replay && v.g.ev.some(e => e.m === v.min && v.g[e.side] === v.clube.id && saidaForcada(e))) {
     v.sel = null; controles(v);
   }
-  if (v.min >= DURACAO) {
-    if (!prepararPenaltis(v)) { terminar(v); return }
-    const c = el('av-controles'); if (c) c.innerHTML = ''; // sem trocas na disputa
-    pintar(v);
-  }
+  if (v.min >= DURACAO && !v.cobranca) fecharTempoNormal(v);
+}
+function mostrarCobranca(v) {
+  v.cobranca = { lance: v.filaCobrancas.shift(), inicio: performance.now() };
+  pintarCobranca(v);
+}
+function fecharTempoNormal(v) {
+  if (!prepararPenaltis(v)) { terminar(v); return }
+  controles(v); // sem trocas na disputa
+  pintar(v);
 }
 function terminar(v) {
   clearInterval(v.timer); v.fim = true; ui.tvAoVivo = null; restaurar(v);
@@ -131,6 +149,8 @@ export function avFormacao(f) { const v = ui.vivo; if (!v || v.fim || v.replay |
 export function avPular() {
   const v = ui.vivo; if (!v || v.fim) return;
   v.min = DURACAO; v.pausado = false;
+  v.cobranca = null; v.filaCobrancas = [];
+  pintarCobranca(v);
   if (prepararPenaltis(v)) v.cob = v.pen.cob.length;
   terminar(v);
 }
@@ -160,6 +180,19 @@ const relogio = v => {
   if (v.min >= DURACAO && v.pen) return `Pênaltis${v.pausado ? ' · pausado' : ''}`;
   const t = minutoDoTempo(v.min); return `${t.m}' · ${t.tempo}º tempo${v.pausado ? ' · pausado' : ''}`;
 };
+function htmlCobrancaAtual(v) {
+  if (!v.cobranca) return '';
+  const { lance, inicio } = v.cobranca;
+  return htmlCobranca(lance, {
+    clube: clubById(v.g[lance.side])?.name,
+    goleiro: P[lance.gk]?.name,
+    decorrido: performance.now() - inicio
+  });
+}
+function pintarCobranca(v) {
+  const c = el('av-cobranca');
+  if (c) c.innerHTML = htmlCobrancaAtual(v);
+}
 // #267: placar da disputa e as cobranças já batidas, na ordem
 function htmlPenaltis(v) {
   if (v.min < DURACAO || !v.pen?.cob) return '';
@@ -179,18 +212,18 @@ function lanceTxt(g, min) {
 }
 const ESTAT = [['posse', 'Posse de bola'], ['fin', 'Finalizações'], ['noGol', 'No gol'], ['fora', 'Para fora'], ['desarmes', 'Desarmes'], ['erros', 'Erros de passe']];
 function htmlEst(v) {
-  const e = estatisticas(v.g, v.min), H = clubById(v.g.h), A = clubById(v.g.a), x = (k, l) => k === 'posse' ? `${e[k][l]}%` : e[k][l];
+  const e = estatisticas(v.g, minTela(v)), H = clubById(v.g.h), A = clubById(v.g.a), x = (k, l) => k === 'posse' ? `${e[k][l]}%` : e[k][l];
   return `<caption class="sr">Estatísticas: ${esc(H.name)} contra ${esc(A.name)}</caption>
     <thead><tr><th scope="col">${esc(H.short || H.name)}</th><th scope="col"><span class="sr">Estatística</span></th><th scope="col">${esc(A.short || A.name)}</th></tr></thead>
     <tbody>${ESTAT.map(([k, r]) => `<tr><td>${x(k, 'h')}</td><th scope="row">${r}</th><td>${x(k, 'a')}</td></tr>`).join('')}</tbody>`;
 }
 function lances(v) {
-  const H = clubById(v.g.h), A = clubById(v.g.a), meu = userClub().id, ate = v.g.ev.filter(e => e.m <= v.min && !e.pen);
+  const H = clubById(v.g.h), A = clubById(v.g.a), meu = userClub().id, ate = v.g.ev.filter(e => e.m <= minTela(v) && !e.pen);
   return { feed: [...ate].reverse().map(e => itemEvento(e, H, A, meu)).join('') + '<li class="ev muted">Bola rolando!</li>', marcas: ate.map(e => marcador(e, H, A)).join('') };
 }
 /** Atualiza o que anda com o relógio: placar, relógio, barra e lances; e os painéis do campeonato se algum placar mudou. */
 function pintar(v) {
-  const p = placarNoMinuto(v.g, v.min), n = el('lsc'), { feed, marcas } = lances(v);
+  const p = placarNoMinuto(v.g, minTela(v)), n = el('lsc'), { feed, marcas } = lances(v);
   if (n) {
     const txt = `${p.h} x ${p.a}`;
     if (n.textContent !== txt) { n.textContent = txt; if (n.classList) { n.classList.remove('pulsa'); void n.offsetWidth; n.classList.add('pulsa') } }
@@ -198,13 +231,13 @@ function pintar(v) {
   const c = el('lclk'), b = el('lbar'), f = el('lfeed'), m = el('lmarcas'), est = el('lest'), ult = el('lult');
   if (c) c.textContent = relogio(v);
   if (est) est.innerHTML = htmlEst(v);
-  if (ult) ult.innerHTML = lanceTxt(v.g, v.min);
+  if (ult) ult.innerHTML = lanceTxt(v.g, minTela(v));
   const agregado = el('av-agregado'); if (agregado) agregado.textContent = textoAgregado(v);
   const pen = el('av-pen'); if (pen) pen.innerHTML = htmlPenaltis(v);
   if (b) b.style.width = Math.min(100, v.min / DURACAO * 100) + '%';
   if (f) f.innerHTML = feed;
   if (m) m.innerHTML = marcas;
-  const sig = soma(v, v.min);
+  const sig = soma(v, minTela(v));
   if (sig !== v.sig) { v.sig = sig; paineis(v) }
 }
 function controles(v) { const c = el('av-controles'); if (c) c.innerHTML = htmlControles(v) }
@@ -252,19 +285,20 @@ const competicao = v => { const tor = torneioDoVivo(v); return v.g.copa ? faseCo
 function textoAgregado(v) {
   const copa = v.g.copa;
   if (!copa?.ida) return '';
-  const p = placarNoMinuto(v.g, v.min);
+  const p = placarNoMinuto(v.g, minTela(v));
   const placar = v.fim && v.pen ? placarPenaltis(v.pen, v.g.h, v.g.a) : '';
   const pen = !v.fim || !v.pen ? '' : placar ? ` (${placar} nos pênaltis)` : ` · ${clubById(vencedorPenaltis(v.pen)).name} venceu nos pênaltis`;
   return `Placar agregado: ${copa.ida.h + p.h} x ${copa.ida.a + p.a}${pen}`;
 }
 // cabeçalho do seu jogo (#170): competição, relógio, placar, último lance, barra de tempo, pausa e estatísticas
 function htmlCab(v) {
-  const H = clubById(v.g.h), A = clubById(v.g.a), p = placarNoMinuto(v.g, v.min), { marcas } = lances(v);
+  const H = clubById(v.g.h), A = clubById(v.g.a), p = placarNoMinuto(v.g, minTela(v)), { marcas } = lances(v);
   const lado = (c, cls) => `<div class="placar-time ${cls}">${crest(c, 'g')}<b>${esc(c.name)}</b></div>`;
   return `<div class="cab-jogo"><div class="cab-topo"><span class="sobretitulo">${esc(competicao(v))}</span><span class="relogio" id="lclk" aria-live="off">${relogio(v)}</span></div>
     <div class="placar">${lado(H, 'casa')}<div class="placar-centro"><div class="placar-num" id="lsc" aria-live="polite">${p.h} x ${p.a}</div></div>${lado(A, 'fora')}</div>
     ${v.g.copa?.ida ? `<p class="muted" id="av-agregado">${esc(textoAgregado(v))}</p>` : ''}
-    <p class="ult-lance" id="lult">${lanceTxt(v.g, v.min)}</p>
+    <div class="vivo-cobranca" id="av-cobranca" role="status" aria-live="polite" aria-atomic="true">${htmlCobrancaAtual(v)}</div>
+    <p class="ult-lance" id="lult">${lanceTxt(v.g, minTela(v))}</p>
     <div class="penaltis" id="av-pen">${htmlPenaltis(v)}</div>
     <div class="tempo" aria-hidden="true"><div class="tempo-trilho"><div class="tempo-feito" id="lbar" style="width:${Math.min(100, v.min / DURACAO * 100)}%"></div></div><div class="tempo-marcas" id="lmarcas">${marcas}</div>
       <div class="tempo-escala"><span>0'</span><span>45'</span><span>90'</span></div></div>
@@ -283,7 +317,7 @@ function serieChips(v) {
 const meusPrimeiro = me => (a, b) => (b.h === me || b.a === me) - (a.h === me || a.a === me);
 // #170: uma linha por jogo, com o último lance embaixo
 const listaJogos = (gs, v, me) => `<ul class="rodada-lista">${gs.map(g => {
-  const p = placarNoMinuto(g, v.min), H = clubById(g.h), A = clubById(g.a), lance = lanceTxt(g, v.min);
+  const p = placarNoMinuto(g, minTela(v)), H = clubById(g.h), A = clubById(g.a), lance = lanceTxt(g, minTela(v));
   return `<li class="linha-jogo${g.h === me || g.a === me ? ' meu' : ''}"><span class="jogo-time casa">${esc(H.name)} ${crest(H)}</span><span class="linha-placar">${p.h}<span aria-hidden="true"> x </span><span class="sr"> a </span>${p.a}</span><span class="jogo-time fora">${crest(A)} ${esc(A.name)}</span>${lance ? `<span class="linha-lance">${lance}</span>` : ''}</li>`;
 }).join('')}</ul>`;
 // #230: jogos da data do estadual, com abas por estado (o seu primeiro)
@@ -313,13 +347,13 @@ function htmlClassif(v) {
   const tor = torneioDoVivo(v);
   if (tor) { // #230: o grupo do seu clube no estadual, andando com os placares do minuto
     const me = userClub().id, ids = tor.grupos.find(g => g.includes(me)) || tor.grupos[0], vaga = tor.grupos.length === 1 ? 2 : 1;
-    const T = tabelaGrupoNoMinuto(tor, ids, v.estadual, v.jogos, v.min), titulo = tor.grupos.length > 1 ? `Grupo ${'AB'[tor.grupos.indexOf(ids)]}` : 'Classificação';
+    const T = tabelaGrupoNoMinuto(tor, ids, v.estadual, v.jogos, minTela(v)), titulo = tor.grupos.length > 1 ? `Grupo ${'AB'[tor.grupos.indexOf(ids)]}` : 'Classificação';
     return `<h2 class="t3" id="av-titulo-classif">${esc(tor.nome)}: ${titulo}</h2><section class="card tabela-card"><div class="tw" tabindex="0" role="region" aria-labelledby="av-titulo-classif"><table><caption class="sr">${esc(tor.nome)}, ${titulo.toLowerCase()} no minuto ${v.min}</caption>
       <thead><tr><th scope="col">#</th><th scope="col">Clube</th><th scope="col" class="n">J</th><th scope="col" class="n">SG</th><th scope="col" class="n">Pts</th></tr></thead>
       <tbody>${T.map((t, i) => { const c = clubById(t.id), z = i < vaga; return `<tr class="${t.id === me ? 'me' : ''}"><td class="${z ? 'zona-lib' : ''}"${z ? ' title="Vai à final"' : ''}>${i + 1}${z ? '<span class="sr"> (vai à final)</span>' : ''}</td><td><span class="club">${crest(c)} ${esc(c.name)}</span></td><td class="n">${t.J}</td><td class="n">${t.GP - t.GC}</td><td class="n"><b>${t.Pts}</b></td></tr>` }).join('')}</tbody>
     </table></div></section>`;
   }
-  const me = userClub().id, T = tabelaNoMinuto(v.div, v.rodada, v.jogos, v.min), antes = tabelaNoMinuto(v.div, v.rodada, [], 0).map(t => t.id);
+  const me = userClub().id, T = tabelaNoMinuto(v.div, v.rodada, v.jogos, minTela(v)), antes = tabelaNoMinuto(v.div, v.rodada, [], 0).map(t => t.id);
   const mov = (id, i) => {
     const d = antes.indexOf(id) - i;
     return d > 0 ? `<span class="ok">${icone('subir', { tam: 12, rotulo: `subiu ${d}` })}</span>` : d < 0 ? `<span class="bad">${icone('descer', { tam: 12, rotulo: `caiu ${-d}` })}</span>` : '';
@@ -333,7 +367,7 @@ function htmlClassif(v) {
 export function vAoVivo() {
   const v = ui.vivo;
   if (!v || v.S !== S) return `<p class="muted">Nenhum jogo em andamento.</p><button class="btn sec" data-acao="go|clube">Painel do clube</button>`;
-  v.sig = soma(v, v.min);
+  v.sig = soma(v, minTela(v));
   return `<div class="vivo" id="vivo" data-aba="${v.aba}">
     <section class="vivo-cab card" aria-label="Seu jogo">${htmlCab(v)}</section>
     <div class="chips vivo-abas" role="group" aria-label="Área da tela">${Object.entries(ABAS).map(([k, r]) => chip(v.g.copa && k === 'classif' ? 'Chaveamento' : r, `avAba|${k}`, v.aba === k)).join('')}</div>
