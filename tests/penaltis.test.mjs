@@ -101,6 +101,7 @@ test('liga online: sem a semente, o replay mostra a disputa que veio do servidor
 
 test('rodada ao vivo: depois do tempo normal as cobranças aparecem uma a uma, sem trocas, e o fim mostra o placar', () => {
   const j = voltaEmpatada();
+  j.acao('mudarPref|penaltisInterativos', 'on', { target: { type: 'checkbox', checked: false } }); // disputa automática (a interativa tem teste próprio, #293)
   j.run(`(()=>{const p=S.copa.pendente,g=p.jogos[0];iniciarVivo(p.jogos,g,()=>{},{rodada:p.rodada,minuto:92})})()`);
   // retomado no minuto 92: um tique leva ao 93 e abre a disputa; depois, uma cobrança a cada 15 tiques
   const tique = () => j.run('ui.vivo.timer && ui.vivo.timer._onTimeout ? ui.vivo.timer._onTimeout() : null');
