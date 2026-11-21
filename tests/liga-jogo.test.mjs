@@ -162,6 +162,14 @@ test('dono começa a liga, confirmações chegam em tempo real e a rodada é jog
   assert.equal(j.run('S.round'), 0);
   assert.ok(j.alertas.some(a => a.includes('jogadas no servidor')));
 
+  const batedor = j.run("userClub().lineup.find(id => P[id].pos !== 'G')");
+  const cantos = { [batedor]: 'dir-alto' };
+  j.acao(`penCanto|${batedor}`, cantos[batedor]);
+  srv.liga.versao++; srv.emitir('ligas', srv.liga);
+  await esperar(10);
+  assert.equal(j.run('ui.liga.versao'), srv.liga.versao);
+  assert.deepEqual(j.run('userClub().cantos'), cantos, 'a recarga preserva o canto antes de confirmar');
+
   // a Bia confirma no computador dela: chega pelo tempo real
   srv.entradas.push({ liga_id: 'L1', user_id: 'b', rodada: 0, pronto: true });
   srv.membros[1].pronto_rodada = 0; srv.emitir('liga_membros', srv.membros[1]);
@@ -174,6 +182,8 @@ test('dono começa a liga, confirmações chegam em tempo real e a rodada é jog
   } finally { relogio.soltar() }
   const minha = srv.entradas.find(e => e.user_id === 'a');
   assert.equal(minha.escalacao.lineup.length, 11, 'a escalação foi enviada');
+  assert.deepEqual(minha.escalacao.cantos, cantos);
+  assert.deepEqual(srv.estado.clubs.find(c => c.id === srv.membros[0].club_id).cantos, cantos);
   assert.equal(srv.resultados.length, 1, 'a rodada foi jogada uma vez');
   assert.equal(srv.liga.rodada, 1);
   assert.equal(j.run('S.round'), 1, 'o navegador baixou o estado novo');

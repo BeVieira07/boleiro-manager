@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { carregarJogo, clubeDaSerie, problemasNasTelas } from './jogo.mjs';
 
 const { disputarPenaltis, forcaPenalti, timeNaDisputa } = await import(new URL('../core/penaltis.mjs', import.meta.url));
+const { definirCantos } = await import(new URL('../core/escalacao.mjs', import.meta.url));
 const { aplicarEntrada } = await import(new URL('../core/liga.mjs', import.meta.url));
 
 const jog = (id, pos, ovr, energia = 100) => ({ id, name: id, pos, ovr, energia });
@@ -35,6 +36,25 @@ test('liga: a ordem enviada com a escalação é aplicada só com jogadores do p
   assert.equal(uc.cobradores, undefined, 'sem ordem enviada, volta à automática');
 });
 
+test('só guarda cantos válidos de jogadores do elenco e apaga o mapa vazio', () => {
+  const uc = { players: time };
+  definirCantos({ a1: 'esq-baixo', a2: 'fora', m1: 'toString', m2: ['dir-alto'], z1: '', visitante: 'meio-alto' }, uc);
+  assert.deepEqual(uc.cantos, { a1: 'esq-baixo' });
+  definirCantos({}, uc);
+  assert.equal(uc.cantos, undefined);
+});
+
+test('liga: aplica os cantos enviados e volta a variar quando não recebe o mapa', () => {
+  const j = carregarJogo(); j.run(`newGame('${clubeDaSerie(j)}')`);
+  const uc = j.run('userClub()'), [primeiro, segundo] = uc.lineup;
+  const fora = j.run('S.clubs.find(c => c.id !== userClub().id).players[0].id');
+  const cantos = { [primeiro]: 'meio-alto', [segundo]: 'fora', [fora]: 'dir-baixo' };
+  aplicarEntrada(uc, { escalacao: { lineup: uc.lineup, cantos }, formacao: uc.formation });
+  assert.deepEqual(uc.cantos, { [primeiro]: 'meio-alto' });
+  aplicarEntrada(uc, { escalacao: { lineup: uc.lineup }, formacao: uc.formation });
+  assert.equal(uc.cantos, undefined);
+});
+
 test('tela: o quadro Pênaltis ordena por força e por energia, sobe e desce, e volta ao automático', () => {
   const j = carregarJogo({ boot: true }); j.run(`newGame('${clubeDaSerie(j)}')`); j.run("go('escalacao')");
   assert.match(j.html(), /Pênaltis/); assert.match(j.html(), /Ordem automática/); assert.match(j.html(), /Pênalti \d+/);
@@ -49,5 +69,25 @@ test('tela: o quadro Pênaltis ordena por força e por energia, sobe e desce, e 
   j.run('P[userClub().lineup[3]].energia=10'); j.acao('penOrdenar|energia');
   assert.equal(j.run('userClub().cobradores.at(-1)'), j.run('userClub().lineup[3]'), 'o mais cansado vai para o fim');
   j.acao('penOrdenar|auto'); assert.equal(j.run('userClub().cobradores'), undefined);
+  assert.deepEqual(problemasNasTelas(j, ['escalacao']), []);
+});
+
+test('tela: cada batedor tem um seletor com rótulo que mostra e altera seu canto', () => {
+  const j = carregarJogo({ boot: true }); j.run(`newGame('${clubeDaSerie(j)}')`);
+  const [pid, outro] = j.run('userClub().lineup');
+  j.run(`definirCantos({ '${pid}': 'meio-alto' }); go('escalacao')`);
+  const campos = () => [...j.html().matchAll(/<select[^>]+data-mudar="penCanto\|([^"]+)"[^>]*>([\s\S]*?)<\/select>/g)];
+  const opcoes = id => campos().find(campo => campo[1] === id)[2];
+  assert.equal(campos().length, 11);
+  assert.ok(j.html().includes(`<label class="sr" for="pen-canto-${pid}">Canto preferido de `));
+  assert.match(opcoes(pid), /<option value="meio-alto" selected>Meio, no alto<\/option>/);
+  assert.equal([...opcoes(pid).matchAll(/<option\b/g)].length, 7);
+  assert.match(opcoes(outro), /<option value="" selected>Variar<\/option>/);
+  j.acao(`penCanto|${outro}`, 'esq-baixo');
+  assert.match(opcoes(outro), /<option value="esq-baixo" selected>Esquerda, embaixo<\/option>/);
+  assert.deepEqual(j.run('userClub().cantos'), { [pid]: 'meio-alto', [outro]: 'esq-baixo' });
+  j.acao(`penCanto|${pid}`, '');
+  assert.match(opcoes(pid), /<option value="" selected>Variar<\/option>/);
+  assert.deepEqual(j.run('userClub().cantos'), { [outro]: 'esq-baixo' });
   assert.deepEqual(problemasNasTelas(j, ['escalacao']), []);
 });
