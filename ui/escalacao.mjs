@@ -2,8 +2,8 @@
    Campo com uma carta por vaga, força do time por setor, aviso de quem joga fora de posição (com sugestão de troca)
    e os reservas ao lado. Toque num titular e depois num reserva (ou noutro titular) para trocar. */
 import { energiaDe } from '../core/energia.mjs';
-import { definirCobradores, definirFormacao, slotLayout, trocarNaEscalacao, unavailable } from '../core/escalacao.mjs';
-import { forcaPenalti, timeNaDisputa } from '../core/penaltis.mjs';
+import { definirCantos, definirCobradores, definirFormacao, slotLayout, trocarNaEscalacao, unavailable } from '../core/escalacao.mjs';
+import { forcaPenalti, NOMES_ALVOS_PENALTI, timeNaDisputa } from '../core/penaltis.mjs';
 import { P, userClub } from '../core/estado.mjs';
 import { power } from '../core/motor.mjs';
 import { POSD, ovrNaPosicao, penalidadePosicao, posDSigla } from '../core/posicoes.mjs';
@@ -15,7 +15,7 @@ import { botaoFicha } from './ficha-jogador.mjs';
 import { autoLineup, render } from './telas.mjs';
 import { avisar } from './avisos.mjs';
 
-/* ---------- #288: ordem dos batedores de pênalti ---------- */
+/* ---------- Pênaltis: ordem dos batedores e cantos preferidos ---------- */
 const titulares = uc => (uc.lineup || []).filter(Boolean).map(id => P[id]).filter(Boolean);
 const ordemPenaltis = uc => timeNaDisputa(uc.id, titulares(uc), uc.cobradores).cobradores.filter(p => p.id);
 export function penMover(pid, dir) {
@@ -29,13 +29,28 @@ export function penOrdenar(modo) {
   definirCobradores(modo === 'auto' ? [] : [...titulares(uc)].sort((a, b) => chave(b) - chave(a)).map(p => p.id), uc);
   save(); render();
 }
+export function penCanto(pid, alvo) {
+  const uc = userClub();
+  definirCantos({ ...uc.cantos, [pid]: alvo }, uc);
+  save(); render();
+}
+function seletorCanto(p, canto) {
+  const id = esc(p.id);
+  return `<label class="sr" for="pen-canto-${id}">Canto preferido de ${esc(p.name)}</label>
+    <select id="pen-canto-${id}" data-mudar="penCanto|${id}">
+      <option value=""${canto ? '' : ' selected'}>Variar</option>${Object.entries(NOMES_ALVOS_PENALTI).map(([alvo, nome]) =>
+        `<option value="${alvo}"${canto === alvo ? ' selected' : ''}>${nome}</option>`).join('')}
+    </select>`;
+}
 function quadroPenaltis(uc) {
   const lista = ordemPenaltis(uc), escolhida = !!uc.cobradores;
   const seta = (p, i, dir, nome, ic) => `<button type="button" class="btn fantasma icone-so sm" data-acao="penMover|${p.id}|${dir}" aria-label="${nome} ${esc(p.name)}"${(dir < 0 ? i === 0 : i === lista.length - 1) ? ' disabled' : ''}>${icone(ic, { tam: 16 })}</button>`;
   return `<section class="card" aria-labelledby="titulo-penaltis"><div class="card-topo"><h2 class="t3" id="titulo-penaltis">Pênaltis</h2><span class="muted">${escolhida ? 'Ordem escolhida' : 'Ordem automática'}</span></div>
     <div class="chips" role="group" aria-label="Ordenar os batedores">${chip('Por força', 'penOrdenar|forca')}${chip('Por energia', 'penOrdenar|energia')}${chip('Automática', 'penOrdenar|auto', !escolhida)}</div>
-    <ol class="cobradores">${lista.map((p, i) => `<li${i < 5 ? ' class="titular-pen"' : ''}><span class="num">${i + 1}</span><span class="pos ${p.pos}">${posDSigla(p)}</span>
-      <span class="reserva-nome"><b>${esc(p.name)}</b><span class="st">Pênalti ${forcaPenalti(p)}</span></span>${energiaBarra(p)}${seta(p, i, -1, 'Subir', 'subir')}${seta(p, i, 1, 'Descer', 'descer')}</li>`).join('')}</ol>
+    <p class="muted nota">Escolha o canto das cobranças automáticas. Os lados seguem o ponto de vista do batedor.</p>
+    <ol class="cobradores">${lista.map((p, i) => `<li${i < 5 ? ' class="titular-pen"' : ''}><div class="cobrador-info"><span class="num">${i + 1}</span><span class="pos ${p.pos}">${posDSigla(p)}</span>
+      <span class="reserva-nome"><b>${esc(p.name)}</b><span class="st">Pênalti ${forcaPenalti(p)}</span></span>${energiaBarra(p)}${seta(p, i, -1, 'Subir', 'subir')}${seta(p, i, 1, 'Descer', 'descer')}</div>
+      ${seletorCanto(p, uc.cantos?.[p.id])}</li>`).join('')}</ol>
     <p class="muted nota">Batem os 5 primeiros que estiverem em campo no fim do jogo; na morte súbita, seguem os próximos. A força é a chance de converter (em %) contra um goleiro médio, já contando a energia.</p></section>`;
 }
 export function setFormation(f) { definirFormacao(f); ui.selEsc = null; save(); render() }

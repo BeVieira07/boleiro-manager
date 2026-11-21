@@ -2,6 +2,7 @@ import { P, S, addNews, tecnicos, userClub } from './estado.mjs';
 import { autoXI, getXI } from './motor.mjs';
 import { POSD, ovrNaPosicao, penalidadePosicao } from './posicoes.mjs';
 import { fatorEnergia } from './energia.mjs';
+import { NOMES_ALVOS_PENALTI } from './penaltis.mjs';
 
 /* ================= escalação: tela, disponibilidade e trocas ================= */
 // Disponibilidade: p.inj = rodadas de lesão restantes, p.susp = rodadas de suspensão restantes (ausentes em saves antigos = disponível)
@@ -71,6 +72,13 @@ export function definirCobradores(ids, uc = userClub()) {
   const ok = [...new Set(Array.isArray(ids) ? ids : [])].filter(id => doClube.has(id)).slice(0, 32);
   if (ok.length) uc.cobradores = ok; else delete uc.cobradores;
   return { ok: true };
+}
+/** #294: cantos preferidos nas cobranças automáticas. Sem escolha, o canto é sorteado. */
+export function definirCantos(mapa, uc = userClub()) {
+  const doClube = new Set(uc.players.map(p => p.id));
+  const entradas = mapa && typeof mapa === 'object' && !Array.isArray(mapa) ? Object.entries(mapa) : [];
+  const ok = entradas.filter(([id, alvo]) => doClube.has(id) && typeof alvo === 'string' && Object.hasOwn(NOMES_ALVOS_PENALTI, alvo));
+  if (ok.length) uc.cantos = Object.fromEntries(ok); else delete uc.cantos;
 }
 export function definirFormacao(f){const uc=userClub();uc.formation=f;uc.lineup=autoSlotXI(uc,f)} // nova formação: remonta o melhor time para as vagas novas
 export function escalarMelhores(){const uc=userClub();uc.lineup=autoXI(uc)}

@@ -42,8 +42,11 @@ export function timeNaDisputa(id, emCampo, escolhidos = []) {
 }
 
 // Limites acumulados. Os cantos baixos recebem 30% cada, os altos 13% cada.
-const ALVOS = [['esq-baixo', 0.30], ['dir-baixo', 0.60], ['meio-baixo', 0.70],
-  ['esq-alto', 0.83], ['dir-alto', 0.96], ['meio-alto', 1]];
+const ALVOS = [
+  ['esq-baixo', 0.30, 'Esquerda, embaixo'], ['dir-baixo', 0.60, 'Direita, embaixo'], ['meio-baixo', 0.70, 'Meio, embaixo'],
+  ['esq-alto', 0.83, 'Esquerda, no alto'], ['dir-alto', 0.96, 'Direita, no alto'], ['meio-alto', 1, 'Meio, no alto']
+];
+export const NOMES_ALVOS_PENALTI = Object.freeze(Object.fromEntries(ALVOS.map(([alvo, , nome]) => [alvo, nome])));
 const PULOS = [['esq', 0.40], ['meio', 0.60], ['dir', 1]];
 function escolher(opcoes, r) {
   const sorteio = r();
