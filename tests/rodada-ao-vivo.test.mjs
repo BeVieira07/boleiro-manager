@@ -14,7 +14,9 @@ function comRelogioManual(j, iniciar = 'playRound()') {
     const tempo = mock.method(performance, 'now', () => agora);
     try { fn() } finally { tempo.mock.restore() }
   };
-  return { tick, passo: (n = 1) => { for (let i = 0; i < n; i++) tick(DURACAO_COBRANCA) } };
+  // agora(f): roda f (ex.: um clique) com o mesmo relógio falso
+  const agora_ = f => { const tempo = mock.method(performance, 'now', () => agora); try { return f() } finally { tempo.mock.restore() } };
+  return { tick, agora: agora_, passo: (n = 1) => { for (let i = 0; i < n; i++) tick(DURACAO_COBRANCA) } };
 }
 const novo = () => { const j = carregarJogo({ boot: true }); j.run(`newGame('${clubeDaSerie(j)}')`); return j };
 
@@ -221,6 +223,14 @@ test('cobra os pênaltis do jogo em destaque em ordem, com o relógio parado, e 
   assert.equal(j.run('ui.vivo.min'), 9);
   assert.equal(aviso.innerHTML, '', 'pênalti de outro jogo só aparece no painel da rodada');
   r.tick(55);
+  // #292: pênalti do seu time: o relógio espera a escolha do batedor e do canto
+  assert.match(aviso.innerHTML, /Escolha quem bate e o canto/);
+  assert.equal((aviso.innerHTML.match(/data-acao="avPenChutar\|(esq|meio|dir)-(alto|baixo)"/g) || []).length, 6);
+  r.tick(DURACAO_COBRANCA * 3);
+  assert.match(aviso.innerHTML, /Escolha quem bate/, 'sem escolher, o jogo não anda');
+  assert.equal(j.run('ui.vivo.min'), 10, 'o relógio não anda');
+  j.run('render()'); assert.match(j.html(), /id="lsc"[^>]*>0 x 0</, 'nem o placar');
+  r.agora(() => j.acao('avPenChutar|auto'));
   assert.match(aviso.innerHTML, /data-res="gol"/);
   j.run('render()');
   assert.match(j.html(), /role="status" aria-live="polite"[^>]*><figure[^>]*data-res="gol"/);
