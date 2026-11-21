@@ -91,6 +91,7 @@ export function vEscalacao() {
   const bench = uc.players.filter(p => !xi.includes(p.id)).sort((a, b) => !!unavailable(a) - !!unavailable(b) || PORD[a.pos] - PORD[b.pos] || b.ovr - a.ovr);
   const avisos = [];
   if (xi.length < 11) avisos.push(`Há vaga sem jogador: escale 11 titulares.`);
+  if (xi.length === 11 && !xi.some(id => P[id].pos === 'G') && !uc.players.some(p => p.pos === 'G' && !unavailable(p))) avisos.push(`Nenhum goleiro disponível: ${P[lay[0].id]?.name ?? 'um jogador de linha'} joga improvisado no gol. Contrate um goleiro no Mercado.`); // #295
   for (const s of lay) if (s.id) { const p = P[s.id], u = unavailable(p); if (u) avisos.push(`${p.name} está ${u} e não pode jogar: troque por um reserva.`); else { const pp = penalidadePosicao(p, s.d); if (pp.aviso) avisos.push(pp.aviso) } }
   const sug = sugestoesTroca(lay);
   // vagas com problema: a carta do reserva mostra quem é natural dela
