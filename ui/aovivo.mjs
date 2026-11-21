@@ -8,7 +8,8 @@
 import { estatisticas, minutoDoTempo, placarNoMinuto, tabelaGrupoNoMinuto, tabelaNoMinuto, ultimoLance } from '../core/aovivo.mjs';
 import { nomeData, penaltiDaFinal } from '../core/estadual.mjs';
 import { COPA, copaNaRodada, penaltiDaCopa } from '../core/copa.mjs';
-import { placarAte, placarPenaltis, vencedorPenaltis } from '../core/penaltis.mjs';
+import { NOMES_ALVOS_PENALTI, forcaPenalti, placarAte, placarPenaltis, vencedorPenaltis } from '../core/penaltis.mjs';
+import { recobrarPenalti } from '../core/taticas.mjs';
 import { DIVS, P, S, clubById, divOf, divisions, hasTwoDivs, userClub } from '../core/estado.mjs';
 import { escalacaoNoMinuto, saidaForcada } from '../core/lances.mjs';
 import { MAX_TROCAS, banco, mudarFormacaoAoVivo, substituir, trocasDe } from '../core/substituicoes.mjs';
@@ -90,9 +91,10 @@ function restaurar(v) {
 }
 
 // enquanto a cobrança é animada, a tela fica no minuto anterior: placar, lances e tabela só mudam depois do chute
-const minTela = v => v.cobranca ? v.cobranca.lance.m - 1 : v.min;
+const minTela = v => v.cobranca ? v.cobranca.lance.m - 1 : v.escolhaPen ? v.escolhaPen.lance.m - 1 : v.min;
 function tick(v) {
   if (ui.vivo !== v || v.S !== S) { clearInterval(v.timer); if (ui.vivo === v) { ui.vivo = null; ui.tvAoVivo = null } return }
+  if (v.escolhaPen) return; // #292: esperando o técnico escolher batedor e canto
   if (v.cobranca) {
     if (performance.now() - v.cobranca.inicio < DURACAO_COBRANCA) return;
     v.cobranca = null;
@@ -117,8 +119,32 @@ function tick(v) {
   if (v.min >= DURACAO && !v.cobranca) fecharTempoNormal(v);
 }
 function mostrarCobranca(v) {
-  v.cobranca = { lance: v.filaCobrancas.shift(), inicio: performance.now() };
+  const lance = v.filaCobrancas.shift();
+  // #292: pênalti do seu time no ao vivo (fora do replay da liga): o relógio para e você escolhe; o do adversário, só assiste
+  if (!v.replay && v.g[lance.side] === v.clube.id) {
+    const emCampo = (escalacaoNoMinuto(v.g, lance.side, lance.m)?.xi || []).filter(Boolean);
+    v.escolhaPen = { lance, pid: emCampo.includes(lance.pid) ? lance.pid : emCampo[0] };
+    pintarCobranca(v); pintar(v);
+    const b = document.querySelector && document.querySelector('#av-cobranca [data-acao^="avPenChutar"]'); if (b && b.focus) b.focus();
+    return;
+  }
+  animarCobranca(v, lance);
+}
+function animarCobranca(v, lance) {
+  v.cobranca = { lance, inicio: performance.now() };
   pintarCobranca(v);
+}
+/** #292: troca o batedor escolhido (select). */
+export function avPenBatedor(pid) { const v = ui.vivo; if (!v?.escolhaPen) return; v.escolhaPen.pid = pid; pintarCobranca(v) }
+/** #292: chuta no canto escolhido; "auto" deixa o batedor decidir (fica a cobrança já sorteada, com o canto preferido). */
+export function avPenChutar(alvo) {
+  const v = ui.vivo, e = v?.escolhaPen; if (!e) return;
+  if (alvo !== 'auto') {
+    const r = recobrarPenalti(v.g, e.lance, { pid: e.pid, alvo });
+    if (r.erro) { avisar(r.erro, 'erro'); return }
+  }
+  v.escolhaPen = null;
+  animarCobranca(v, e.lance);
 }
 function fecharTempoNormal(v) {
   if (!prepararPenaltis(v)) { terminar(v); return }
@@ -149,7 +175,7 @@ export function avFormacao(f) { const v = ui.vivo; if (!v || v.fim || v.replay |
 export function avPular() {
   const v = ui.vivo; if (!v || v.fim) return;
   v.min = DURACAO; v.pausado = false;
-  v.cobranca = null; v.filaCobrancas = [];
+  v.cobranca = null; v.filaCobrancas = []; v.escolhaPen = null;
   pintarCobranca(v);
   if (prepararPenaltis(v)) v.cob = v.pen.cob.length;
   terminar(v);
@@ -180,7 +206,19 @@ const relogio = v => {
   if (v.min >= DURACAO && v.pen) return `Pênaltis${v.pausado ? ' · pausado' : ''}`;
   const t = minutoDoTempo(v.min); return `${t.m}' · ${t.tempo}º tempo${v.pausado ? ' · pausado' : ''}`;
 };
+function htmlEscolhaPenalti(v) {
+  const { lance, pid } = v.escolhaPen, clube = clubById(v.g[lance.side]);
+  const emCampo = (escalacaoNoMinuto(v.g, lance.side, lance.m)?.xi || []).filter(Boolean).map(id => P[id]).filter(Boolean)
+    .sort((a, b) => forcaPenalti(b) - forcaPenalti(a));
+  const cantos = ['esq-alto', 'meio-alto', 'dir-alto', 'esq-baixo', 'meio-baixo', 'dir-baixo'];
+  return `<div class="pen-escolha"><p class="pen-escolha-t"><b>Pênalti para o ${esc(clube.name)}!</b> Escolha quem bate e o canto.</p>
+    <label for="pen-batedor" class="campo-rotulo">Batedor</label>
+    <select id="pen-batedor" data-mudar="avPenBatedor">${emCampo.map(p => `<option value="${esc(p.id)}"${p.id === pid ? ' selected' : ''}>${esc(p.name)} · pênalti ${forcaPenalti(p)}</option>`).join('')}</select>
+    <div class="pen-gol" role="group" aria-label="Canto do chute (do ponto de vista do batedor)">${cantos.map(a => `<button type="button" class="pen-canto" data-acao="avPenChutar|${a}" aria-label="Chutar: ${NOMES_ALVOS_PENALTI[a]}">${icone('bola', { tam: 18 })}</button>`).join('')}</div>
+    <button type="button" class="btn fantasma sm" data-acao="avPenChutar|auto">Deixar o batedor decidir</button></div>`;
+}
 function htmlCobrancaAtual(v) {
+  if (v.escolhaPen) return htmlEscolhaPenalti(v);
   if (!v.cobranca) return '';
   const { lance, inicio } = v.cobranca;
   return htmlCobranca(lance, {

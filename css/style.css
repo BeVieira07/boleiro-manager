@@ -846,3 +846,10 @@ body.em-jogo .avisos{bottom:24px}
 .ficha-dados dt{font-size:12px;color:var(--muted)}
 .ficha-dados dd{margin:var(--e1) 0 0;overflow-wrap:anywhere}
 .ficha-acoes{justify-content:flex-end;margin-top:var(--e3)}
+
+/* #292: escolha do batedor e do canto no pênalti do seu time */
+.pen-escolha{max-width:440px;margin:0 auto;display:flex;flex-direction:column;gap:var(--e2);padding:var(--e3);border:1px solid var(--verde);border-radius:var(--r);background:var(--painel);text-align:left}
+.pen-escolha-t{margin:0}
+.pen-gol{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px;border:3px solid var(--texto);border-bottom:none;border-radius:6px 6px 0 0;background:var(--painel3)}
+.pen-canto{min-height:48px;border:1px dashed var(--linha);border-radius:var(--r-sm);background:transparent;color:var(--texto);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.pen-canto:hover,.pen-canto:focus-visible{border-style:solid;border-color:var(--ouro);background:var(--painel2)}

@@ -3,10 +3,10 @@ import { creditarGolCopa } from './gols-copa.mjs';
 import { wageBill } from './emprestimos.mjs';
 import { energiaDaSaidaForcada } from './energia.mjs';
 import { cancelarDesfalque } from './escalacao.mjs';
-import { aplicarLanceAoElenco, escalacaoInicial, melhorReserva, saidaForcada } from './lances.mjs';
+import { aplicarLanceAoElenco, escalacaoInicial, escalacaoNoMinuto, melhorReserva, saidaForcada } from './lances.mjs';
 import { chancesDoJogo, noticiarPenaltisDaLiga, pickScorer, power } from './motor.mjs';
-import { cobrarPenalti, timeNaDisputa } from './penaltis.mjs';
-import { clamp, hashStr, poisson, ri, rnd } from './utils.mjs';
+import { NOMES_ALVOS_PENALTI, cobrarPenalti, timeNaDisputa } from './penaltis.mjs';
+import { clamp, hashStr, mulberry32, poisson, ri, rnd } from './utils.mjs';
 
 /* ================= estilos de jogo e modo (ataque/defesa) ================= */
 // att = multiplica os gols que o time cria; sof = multiplica os gols que o adversário cria;
@@ -149,9 +149,35 @@ export function mudarTatica(campo,valor){
   const uc=userClub();uc.tatica=Object.assign(taticaUser(uc),{[campo]:valor});
 }
 // jogo ao vivo: refaz os gols e pênaltis dos minutos seguintes com a tática nova
+const saldoDe=g=>{const uid=tec().clubId;return g.h===uid?g.hg-g.ag:g.ag-g.hg};
+// depois de o placar mudar ao vivo: notícia dos pênaltis da rodada e o bicho por vitória (lançado antes do jogo acabar)
+function acertarDepois(g,antes){
+  if(g.uf||g.copa)return; // as copas não pagam bicho por vitória
+  if(S.fixtures[S.round-1]?.includes(g))noticiarPenaltisDaLiga(g,S.round-1);
+  const bicho=g.bicho?.[tec().clubId]??Math.round(wageBill(userClub())*0.15*1000)/1000,depois=saldoDe(g); // o valor cobrado em jogarRodada (#43)
+  if(antes>0&&depois<=0)addFin('Bicho por vitória (ajuste)',bicho);
+  if(antes<=0&&depois>0)addFin('Bicho por vitória (ajuste)',-bicho);
+}
+/** #292: no ao vivo, o técnico escolhe quem bate (em campo no minuto) e o canto de um pênalti do seu time.
+ *  O pulo do goleiro é o que já estava sorteado (ele não sabe a escolha); o chute sai de um sorteio fixo pela escolha.
+ *  Devolve {erro} ou {ok, res}; placar, artilharia, notícia e bicho acompanham. */
+export function recobrarPenalti(g,lance,{pid,alvo}){
+  if(!g.ev.includes(lance)||lance.t!=='penalti')return {erro:'Pênalti inválido.'};
+  if(!Object.hasOwn(NOMES_ALVOS_PENALTI,alvo))return {erro:'Escolha um canto.'};
+  if(!(escalacaoNoMinuto(g,lance.side,lance.m)?.xi||[]).includes(pid)||!P[pid])return {erro:'Esse jogador não está em campo.'};
+  const antes=saldoDe(g),batedor=P[pid];
+  const i=g.ev.findIndex(e=>e.t==='gol'&&e.pen&&e.m===lance.m&&e.side===lance.side&&e.pid===lance.pid);
+  if(i>=0){const [e]=g.ev.splice(i,1);if(P[e.pid])creditarGol(g,e.side,P[e.pid],-1);e.side==='h'?g.hg--:g.ag--}
+  const r=mulberry32(hashStr(`${g.h}|${g.a}|${lance.m}|${pid}|${alvo}|pen`));
+  const {res}=cobrarPenalti(batedor,P[lance.gk]??null,r,{alvo,pulo:lance.pulo});
+  Object.assign(lance,{pid,name:batedor.name,alvo,res,escolhido:true});
+  if(res==='gol')registrarGol(g,lance.side,batedor,lance.m,true);
+  g.ev.sort((x,y)=>x.m-y.m);
+  acertarDepois(g,antes);
+  return {ok:true,res};
+}
 export function ressimularDepois(g,min){
-  const H=clubById(g.h),A=clubById(g.a),uid=tec().clubId;
-  const saldo=()=>g.h===uid?g.hg-g.ag:g.ag-g.hg,antes=saldo();
+  const H=clubById(g.h),A=clubById(g.a),antes=saldoDe(g);
   g.ev=g.ev.filter(e=>{
     if(e.m<=min)return true;
     if(e.t==='penalti')return false;
@@ -165,10 +191,5 @@ export function ressimularDepois(g,min){
     novosGols(g,power(H),power(A),poisson(s.h),poisson(s.a),min+1,93);
     g.ev.sort((x,y)=>x.m-y.m);
   }
-  if(g.uf||g.copa)return; // as copas não pagam bicho por vitória
-  if(S.fixtures[S.round-1]?.includes(g))noticiarPenaltisDaLiga(g,S.round-1);
-  // bicho por vitória foi lançado antes do jogo acabar: acerta se o resultado virou
-  const bicho=g.bicho?.[uid]??Math.round(wageBill(userClub())*0.15*1000)/1000,depois=saldo(); // o valor cobrado em jogarRodada (#43)
-  if(antes>0&&depois<=0)addFin('Bicho por vitória (ajuste)',bicho);
-  if(antes<=0&&depois>0)addFin('Bicho por vitória (ajuste)',-bicho);
+  acertarDepois(g,antes);
 }
