@@ -7,7 +7,7 @@ const ICONES_NOTICIA = {
   '🔁': 'mercado', '💼': 'mercado', '🤝': 'trocar', '💰': 'financas',
   '✍': 'etiqueta', '📄': 'etiqueta', '📨': 'mercado', '↩': 'voltar', '🔙': 'voltar',
   '✅': 'ok', '❌': 'fechar', '🚫': 'fechar', '🩹': 'lesao', '🟥': 'cartao',
-  '⚠': 'alerta', '🎯': 'escudo', '📅': 'jogos', '🏟': 'bola', '🌎': 'tabela'
+  '⚠': 'alerta', '🎯': 'escudo', '📅': 'jogos', '⚽': 'bola', '🏟': 'bola', '🌎': 'tabela'
 };
 // As notícias repassadas na liga podem trazer o nome do clube antes do emoji.
 // As alternativas ao conjunto RGI cobrem marcadores gravados sem o seletor de emoji.

@@ -1,4 +1,12 @@
-/* ================= disputa de pênaltis dos mata-matas (#267) =================
+/* ================= pênalti durante a partida (#290) =================
+   Lance: { m, t: 'penalti', side, pid, name, gk, alvo, pulo, res }.
+   `m` é o minuto da partida (1–93), `side` vale h (casa) ou a (fora) e `name` guarda o nome do batedor.
+   `pid` identifica o batedor e `gk` o goleiro adversário (inclui quem assume o gol na falta de goleiro, ou null).
+   `alvo` combina esq/meio/dir com baixo/alto. `pulo` é esq/meio/dir. Os lados seguem o ponto de vista do batedor.
+   `res` vale gol, defesa, trave ou fora. Uma conversão também gera { m, t: 'gol', side, pid, name, pen: true }
+   no mesmo minuto, para alimentar o placar e a artilharia.
+
+   ================= disputa de pênaltis dos mata-matas (#267) =================
    Uma função só para Copa do Brasil, final dos estaduais e copas sul-americanas. Cinco cobranças alternadas para cada
    lado (para antes se um não alcança mais o outro) e, empatada, uma de cada até um converter e o outro errar.
    Cobram os jogadores em campo no fim do jogo, do mais provável ao goleiro, e cada cobrança depende do cobrador e do
@@ -11,14 +19,15 @@ import { fatorEnergia } from './energia.mjs';
 import { clamp, mulberry32 } from './utils.mjs';
 
 const PESO_POS = { A: 0.03, M: 0.01, D: -0.02, G: -0.15 };
+const GOLEIRO_MEDIO = { pos: 'G', ovr: 70 };
 const chance = (p, goleiro) => clamp((0.76 + ((p.ovr ?? 60) - forcaGoleiro(goleiro)) * 0.006 + (PESO_POS[p.pos] ?? 0)) * fatorEnergia(p), 0.5, 0.92);
 // sem goleiro em campo (expulso sem troca), quem vai para o gol rende bem menos
 const forcaGoleiro = g => !g ? 30 : g.pos === 'G' ? g.ovr ?? 60 : (g.ovr ?? 60) * 0.5;
 
 /** Força no pênalti (0 a 100): a chance de converter contra um goleiro médio, já com a energia. */
-export const forcaPenalti = p => Math.round(chance(p, { pos: 'G', ovr: 70 }) * 100);
+export const forcaPenalti = p => Math.round(chance(p, GOLEIRO_MEDIO) * 100);
 // ordem automática: a força no pênalti (já com energia e posição), o goleiro por último
-const ordem = p => (p.pos === 'G' ? -100 : 0) + chance(p, { pos: 'G', ovr: 70 }) * 100;
+const ordem = p => (p.pos === 'G' ? -100 : 0) + chance(p, GOLEIRO_MEDIO) * 100;
 /** Ordem automática: do mais provável ao goleiro. */
 export const ordemAutomatica = jogadores => [...jogadores].sort((x, y) => ordem(y) - ordem(x) || (x.id < y.id ? -1 : 1));
 
@@ -30,6 +39,39 @@ export function timeNaDisputa(id, emCampo, escolhidos = []) {
   const cobradores = [...primeiro, ...ordemAutomatica(jogadores.filter(p => !primeiro.includes(p)))];
   const goleiro = jogadores.find(p => p.pos === 'G') || [...jogadores].sort((x, y) => x.ovr - y.ovr)[0] || null;
   return { id, cobradores: cobradores.length ? cobradores : [{ id: null, name: 'Cobrador', pos: 'M', ovr: 50 }], goleiro };
+}
+
+// Limites acumulados. Os cantos baixos recebem 30% cada, os altos 13% cada.
+const ALVOS = [['esq-baixo', 0.30], ['dir-baixo', 0.60], ['meio-baixo', 0.70],
+  ['esq-alto', 0.83], ['dir-alto', 0.96], ['meio-alto', 1]];
+const PULOS = [['esq', 0.40], ['meio', 0.60], ['dir', 1]];
+function escolher(opcoes, r) {
+  const sorteio = r();
+  return opcoes.find(([, limite]) => sorteio < limite)[0];
+}
+
+/** Cobra um pênalti com o gerador `r`. `alvo` e `pulo` podem ser escolhidos antes da cobrança. */
+export function cobrarPenalti(batedor, goleiro, r, { alvo = escolher(ALVOS, r), pulo = escolher(PULOS, r) } = {}) {
+  const [lado, altura] = alvo.split('-');
+  const alto = altura === 'alto', meio = lado === 'meio';
+  const erroBase = alto ? (meio ? 0.08 : 0.175) : (meio ? 0.04 : 0.06);
+  const erro = clamp(erroBase + (0.76 - chance(batedor, GOLEIRO_MEDIO)) * 0.25, 0.015, 0.27);
+  const chute = r();
+  if (chute < erro) return { alvo, pulo, res: chute < erro * 0.4 ? 'trave' : 'fora' };
+
+  const diferenca = 0.76 - chance(batedor, goleiro);
+  const defesa = lado === pulo ? (alto ? 0.36 : 0.53) + diferenca * 0.8 : 0.023 + diferenca * 0.08;
+  return { alvo, pulo, res: r() < defesa ? 'defesa' : 'gol' };
+}
+
+export function textoPenalti(e, clube, goleiro) {
+  const efeitos = {
+    gol: `${e.name} converte`,
+    defesa: goleiro ? `o goleiro ${goleiro} defende` : 'o goleiro defende',
+    trave: `${e.name} acerta a trave`,
+    fora: `${e.name} manda para fora`
+  };
+  return `Pênalti para o ${clube}: ${efeitos[e.res]}`;
 }
 
 /** Disputa entre `casa` e `fora` ({id, cobradores, goleiro}, de timeNaDisputa), com o sorteio da `semente`. */

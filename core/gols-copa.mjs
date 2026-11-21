@@ -2,7 +2,7 @@ import { P, clubById, ehHumano } from './estado.mjs';
 import { atualizarForma } from './forma.mjs';
 import { escalacaoNoMinuto } from './lances.mjs';
 import { chancesDoJogo, pickScorer, power } from './motor.mjs';
-import { disputarPenaltis, timeNaDisputa } from './penaltis.mjs';
+import { disputarPenaltis, textoPenalti, timeNaDisputa } from './penaltis.mjs';
 import { golsSegmento, taticaDe } from './taticas.mjs';
 import { poisson } from './utils.mjs';
 
@@ -73,7 +73,14 @@ export function artilhariaCopa(tor, n = 10) {
 }
 
 export function noticiaAutores(g) {
-  const nomes = g.ev ? g.ev.filter(e => e.t === 'gol').map(e => e.name)
+  const nomes = g.ev ? g.ev.filter(e => e.t === 'gol' && !e.pen).map(e => e.name)
     : [...g.autores.h, ...g.autores.a].map(id => P[id]?.name).filter(Boolean);
-  return nomes.length ? ' Gols: ' + nomes.join(', ') + '.' : '';
+  const gols = nomes.length ? ' Gols: ' + nomes.join(', ') + '.' : '';
+  const penaltis = noticiaPenaltis(g);
+  return gols + (penaltis ? ' ' + penaltis : '');
+}
+
+export function noticiaPenaltis(g) {
+  return (g.ev || []).filter(e => e.t === 'penalti')
+    .map(e => textoPenalti(e, clubById(g[e.side]).name, P[e.gk]?.name) + '.').join(' ');
 }

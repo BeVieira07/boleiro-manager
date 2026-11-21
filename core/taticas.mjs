@@ -4,8 +4,9 @@ import { wageBill } from './emprestimos.mjs';
 import { energiaDaSaidaForcada } from './energia.mjs';
 import { cancelarDesfalque } from './escalacao.mjs';
 import { aplicarLanceAoElenco, escalacaoInicial, melhorReserva, saidaForcada } from './lances.mjs';
-import { chancesDoJogo, pickScorer, power } from './motor.mjs';
-import { clamp, hashStr, poisson, ri } from './utils.mjs';
+import { chancesDoJogo, noticiarPenaltisDaLiga, pickScorer, power } from './motor.mjs';
+import { cobrarPenalti, timeNaDisputa } from './penaltis.mjs';
+import { clamp, hashStr, poisson, ri, rnd } from './utils.mjs';
 
 /* ================= estilos de jogo e modo (ataque/defesa) ================= */
 // att = multiplica os gols que o time cria; sof = multiplica os gols que o adversário cria;
@@ -50,9 +51,35 @@ export function golsSegmento(lh,la,tH,tA,de,ate){
 // A Copa do Brasil credita os gols ao fechar a partida. Os estaduais atualizam a própria artilharia por lance.
 const torneioDoJogo=g=>g.uf&&S.estaduais?S.estaduais.torneios.find(t=>t.uf===g.uf):null;
 function creditarGol(g,side,p,delta){if(g.copa)return;const tor=torneioDoJogo(g);if(tor)creditarGolCopa(tor,g[side],p,delta);else p.goals=Math.max(0,(p.goals||0)+delta)}
+function registrarGol(g, side, p, m, pen = false) {
+  creditarGol(g, side, p, 1);
+  const lance = { m, t: 'gol', side, pid: p.id, name: p.name };
+  if (pen) lance.pen = true;
+  g.ev.push(lance);
+  if (side === 'h') g.hg++;
+  else g.ag++;
+}
 export function novosGols(g,ph,pa,nh,na,de,ate){
-  const gol=(side,xi)=>{if(!xi.length)return;const p=pickScorer(xi);creditarGol(g,side,p,1);g.ev.push({m:ri(de,ate),t:'gol',side,pid:p.id,name:p.name});if(side==='h')g.hg++;else g.ag++};
+  const gol=(side,xi)=>{if(xi.length)registrarGol(g,side,pickScorer(xi),ri(de,ate))};
   for(let i=0;i<nh;i++)gol('h',ph.xi);for(let i=0;i<na;i++)gol('a',pa.xi);
+}
+
+// Cerca de 0,3 cobranças por partida na amostra de 2,5 gols esperados por jogo.
+const PENALTIS_POR_GOL_ESPERADO = 0.12;
+const CONVERSAO_MEDIA = 0.75;
+function taxaDePenaltis(golsEsperados, xi) {
+  return xi.some(p => p.pos !== 'G') ? golsEsperados * PENALTIS_POR_GOL_ESPERADO : 0;
+}
+function novosPenaltis(g, clube, side, xi, adversarios, n, de, ate) {
+  if (!n) return;
+  const { cobradores } = timeNaDisputa(clube.id, xi, clube.cobradores);
+  const batedor = cobradores.find(p => p.pos !== 'G');
+  const { goleiro } = timeNaDisputa(g[side === 'h' ? 'a' : 'h'], adversarios);
+  for (let i = 0; i < n; i++) {
+    const m = ri(de, ate), cobranca = cobrarPenalti(batedor, goleiro, rnd);
+    g.ev.push({ m, t: 'penalti', side, pid: batedor.id, name: batedor.name, gk: goleiro?.id ?? null, ...cobranca });
+    if (cobranca.res === 'gol') registrarGol(g, side, batedor, m, true);
+  }
 }
 
 // A força da escalação muda nos lances. Um time que perdeu jogadores tem
@@ -74,16 +101,20 @@ export function simularLances(g,min,revisao=false){
   const base=chancesDoJogo(inicial.h,inicial.a);
   const th=taticaDe(h,a,inicial.h,inicial.a),ta=taticaDe(a,h,inicial.a,inicial.h);
   const amarelos=new Set();
-  const pendentes=g.ev.filter(e=>e.t!=='gol'&&!e.auto&&!e.segundo).sort((x,y)=>x.m-y.m);
+  const lanceDeAtaque=e=>e.t==='gol'||e.t==='penalti';
+  const pendentes=g.ev.filter(e=>!lanceDeAtaque(e)&&!e.auto&&!e.segundo).sort((x,y)=>x.m-y.m);
   const desfalques=g.ev.filter(saidaForcada);
-  g.ev=g.ev.filter(e=>e.t==='gol');
+  g.ev=g.ev.filter(lanceDeAtaque);
   let de=min+1;
-  const sortearGols=ate=>{
+  const sortearAtaques=ate=>{
     if(de>ate)return;
     const ph=power(h,elencos.h),pa=power(a,elencos.a);
     const chances=chancesComDesfalques(ph,pa,base,inicial);
     const s=golsSegmento(chances.h,chances.a,th,ta,de,ate);
-    novosGols(g,ph,pa,poisson(s.h),poisson(s.a),de,ate);
+    const taxaH=taxaDePenaltis(s.h,ph.xi),taxaA=taxaDePenaltis(s.a,pa.xi);
+    novosGols(g,ph,pa,poisson(s.h-taxaH*CONVERSAO_MEDIA),poisson(s.a-taxaA*CONVERSAO_MEDIA),de,ate);
+    novosPenaltis(g,h,'h',ph.xi,pa.xi,poisson(taxaH),de,ate);
+    novosPenaltis(g,a,'a',pa.xi,ph.xi,poisson(taxaA),de,ate);
     de=ate+1;
   };
   for(const lance of pendentes){
@@ -95,7 +126,7 @@ export function simularLances(g,min,revisao=false){
       if(!amarelos.has(e.pid)){amarelos.add(e.pid);continue}
       e={...e,t:'vermelho',segundo:true};
     }
-    sortearGols(e.m);
+    sortearAtaques(e.m);
     if(e.t==='lesao'){
       let entra=e.entra;
       if(e.m>min)entra=ehHumano(clubes[e.side])?melhorReserva(elenco,e.pid):null;
@@ -105,7 +136,7 @@ export function simularLances(g,min,revisao=false){
     }else g.ev.push(e);
     aplicarLanceAoElenco(elenco,e);
   }
-  sortearGols(93);
+  sortearAtaques(93);
   g.ev.sort((x,y)=>x.m-y.m);
   if(revisao)for(const e of desfalques){
     const atual=g.ev.find(n=>n.t===e.t&&n.pid===e.pid&&n.m===e.m);
@@ -116,12 +147,14 @@ export function simularLances(g,min,revisao=false){
 export function mudarTatica(campo,valor){
   const uc=userClub();uc.tatica=Object.assign(taticaUser(uc),{[campo]:valor});
 }
-// jogo ao vivo: refaz os gols dos minutos seguintes com a tática nova
+// jogo ao vivo: refaz os gols e pênaltis dos minutos seguintes com a tática nova
 export function ressimularDepois(g,min){
   const H=clubById(g.h),A=clubById(g.a),uid=tec().clubId;
   const saldo=()=>g.h===uid?g.hg-g.ag:g.ag-g.hg,antes=saldo();
   g.ev=g.ev.filter(e=>{
-    if(e.t!=='gol'||e.m<=min)return true;
+    if(e.m<=min)return true;
+    if(e.t==='penalti')return false;
+    if(e.t!=='gol')return true;
     if(P[e.pid])creditarGol(g,e.side,P[e.pid],-1);
     e.side==='h'?g.hg--:g.ag--;return false;
   });
@@ -132,6 +165,7 @@ export function ressimularDepois(g,min){
     g.ev.sort((x,y)=>x.m-y.m);
   }
   if(g.uf||g.copa)return; // as copas não pagam bicho por vitória
+  if(S.fixtures[S.round-1]?.includes(g))noticiarPenaltisDaLiga(g,S.round-1);
   // bicho por vitória foi lançado antes do jogo acabar: acerta se o resultado virou
   const bicho=g.bicho?.[uid]??Math.round(wageBill(userClub())*0.15*1000)/1000,depois=saldo(); // o valor cobrado em jogarRodada (#43)
   if(antes>0&&depois<=0)addFin('Bicho por vitória (ajuste)',bicho);

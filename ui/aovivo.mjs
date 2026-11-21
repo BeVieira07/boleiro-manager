@@ -174,7 +174,8 @@ function lanceTxt(g, min) {
   const e = ultimoLance(g, min); if (!e) return '';
   const t = minutoDoTempo(e.m), c = clubById(e.side === 'h' ? g.h : g.a);
   const [ic, rotulo] = EVENTO[e.t];
-  return `${icone(ic, { tam: 14, rotulo, classe: e.t === 'cartao' ? 'ev-cartao' : e.t === 'vermelho' ? 'ev-vermelho' : e.t === 'lesao' ? 'ev-lesao' : '' })}<span>${esc(textoEvento(e))} <span class="muted">(${esc(c.short || c.name)}) ${t.m}' · ${t.tempo}º</span></span>`;
+  const sigla = e.t === 'penalti' ? '' : `(${esc(c.short || c.name)}) `;
+  return `${icone(ic, { tam: 14, rotulo, classe: e.t === 'cartao' ? 'ev-cartao' : e.t === 'vermelho' ? 'ev-vermelho' : e.t === 'lesao' ? 'ev-lesao' : '' })}<span>${esc(textoEvento(e, c))} <span class="muted">${sigla}${t.m}' · ${t.tempo}º</span></span>`;
 }
 const ESTAT = [['posse', 'Posse de bola'], ['fin', 'Finalizações'], ['noGol', 'No gol'], ['fora', 'Para fora'], ['desarmes', 'Desarmes'], ['erros', 'Erros de passe']];
 function htmlEst(v) {
@@ -184,7 +185,7 @@ function htmlEst(v) {
     <tbody>${ESTAT.map(([k, r]) => `<tr><td>${x(k, 'h')}</td><th scope="row">${r}</th><td>${x(k, 'a')}</td></tr>`).join('')}</tbody>`;
 }
 function lances(v) {
-  const H = clubById(v.g.h), A = clubById(v.g.a), meu = userClub().id, ate = v.g.ev.filter(e => e.m <= v.min);
+  const H = clubById(v.g.h), A = clubById(v.g.a), meu = userClub().id, ate = v.g.ev.filter(e => e.m <= v.min && !e.pen);
   return { feed: [...ate].reverse().map(e => itemEvento(e, H, A, meu)).join('') + '<li class="ev muted">Bola rolando!</li>', marcas: ate.map(e => marcador(e, H, A)).join('') };
 }
 /** Atualiza o que anda com o relógio: placar, relógio, barra e lances; e os painéis do campeonato se algum placar mudou. */

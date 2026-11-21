@@ -1,7 +1,7 @@
 import { corOk } from '../core/dados.mjs';
-import { DIVS, S, clubById, divisions, userClub } from '../core/estado.mjs';
+import { DIVS, P, S, clubById, divisions, userClub } from '../core/estado.mjs';
 import { fecharTemporada, iniciarTemporada } from '../core/partida.mjs';
-import { placarPenaltis, vencedorPenaltis } from '../core/penaltis.mjs';
+import { placarPenaltis, textoPenalti, vencedorPenaltis } from '../core/penaltis.mjs';
 import { esc, money } from '../core/utils.mjs';
 import { save, ui } from './estado.mjs';
 import { abrirCamada, fecharCamada } from './avisos.mjs';
@@ -24,21 +24,25 @@ export function detalhePenaltis(pen,H,A){
 }
 /* #62: jogo ao vivo (a tela é ui/aovivo.mjs, #135) com placar grande, linha do tempo com marcadores, eventos com ícones e tática em chips */
 export const DURACAO=93;
-export const EVENTO={gol:['bola','Gol'],cartao:['cartao','Cartão amarelo'],vermelho:['cartao','Cartão vermelho'],lesao:['lesao','Lesão'],troca:['trocar','Substituição'],formacao:['trocar','Mudança de formação']};
-export function textoEvento(e){
+export const EVENTO={gol:['bola','Gol'],penalti:['bola','Pênalti'],cartao:['cartao','Cartão amarelo'],vermelho:['cartao','Cartão vermelho'],lesao:['lesao','Lesão'],troca:['trocar','Substituição'],formacao:['trocar','Mudança de formação']};
+export function textoEvento(e,team){
+  if(e.t==='penalti')return textoPenalti(e,team.name,P[e.gk]?.name);
   if(e.t==='lesao')return `${e.name} se lesionou`;
   if(e.t==='vermelho')return `${e.name} foi expulso${e.segundo?' pelo segundo amarelo':''}`;
   return e.name;
 }
 /** Linha do evento na lista; o gol do seu time ganha destaque. */
 export function itemEvento(e,H,A,meu){
-  const team=e.side==='h'?H:A,[ic,nome]=EVENTO[e.t]||['info',e.t],nosso=team.id===meu;
-  return `<li class="ev ${e.t}${e.t==='gol'&&nosso?' nosso':''}"><span class="ev-min">${e.m}'</span>${icone(ic,{rotulo:nome,classe:'ev-ic'})}
-    <span>${e.t==='gol'?`<b>GOL do ${esc(team.name)}!</b> ${esc(e.name)}`:`${esc(textoEvento(e))} <span class="muted">(${esc(team.short||team.name)})</span>`}</span></li>`;
+  const team=e.side==='h'?H:A,[ic,nome]=EVENTO[e.t]||['info',e.t],gol=e.t==='gol'||e.res==='gol';
+  const texto=e.t==='gol'?`<b>GOL do ${esc(team.name)}!</b> ${esc(e.name)}`:esc(textoEvento(e,team));
+  const sigla=e.t==='gol'||e.t==='penalti'?'':` <span class="muted">(${esc(team.short||team.name)})</span>`;
+  return `<li class="ev ${e.t}${gol&&team.id===meu?' nosso':''}"><span class="ev-min">${e.m}'</span>${icone(ic,{rotulo:nome,classe:'ev-ic'})}
+    <span>${texto}${sigla}</span></li>`;
 }
 /** Marcador na barra de tempo, na posição do minuto do evento. */
 export const marcador=(e,H,A)=>{const team=e.side==='h'?H:A,[,nome]=EVENTO[e.t]||['',e.t];
-  return `<span class="marca-ev ${e.t} ${e.side}${e.auto?' auto':''}" style="left:${Math.min(100,e.m/DURACAO*100)}%" title="${e.m}' ${nome}: ${esc(e.name)} (${esc(team.name)})"></span>`};
+  const texto=e.t==='penalti'?textoEvento(e,team):`${nome}: ${e.name} (${team.name})`;
+  return `<span class="marca-ev ${e.t} ${e.side}${e.res==='gol'?' gol':''}${e.auto?' auto':''}" style="left:${Math.min(100,e.m/DURACAO*100)}%" title="${e.m}' ${esc(texto)}"></span>`};
 // #64: o modal prende o foco; Esc fecha quando `fechavel` (o jogo ao vivo e a demissão não fecham)
 export function openModal(html,{fechavel=true}={}){const m=document.getElementById('modal');const b=document.getElementById('mbox');b.innerHTML=html;const t=b.querySelector&&b.querySelector('h2,.placar-num');if(t&&b.setAttribute){t.id=t.id||'mtitulo';b.setAttribute('aria-labelledby',t.id)}m.style.display='flex';abrirCamada(m,fechavel?closeModal:null)}
 export function closeModal(){const m=document.getElementById('modal');m.style.display='none';fecharCamada(m)}
