@@ -55,15 +55,15 @@ function escolher(opcoes, r) {
 
 /** Cobra um pênalti com o gerador `r`. `alvo` e `pulo` podem ser escolhidos antes da cobrança. */
 export function cobrarPenalti(batedor, goleiro, r, { alvo = escolher(ALVOS, r), pulo = escolher(PULOS, r) } = {}) {
-  const [lado, altura] = alvo.split('-');
-  const alto = altura === 'alto', meio = lado === 'meio';
-  const erroBase = alto ? (meio ? 0.08 : 0.175) : (meio ? 0.04 : 0.06);
+  // #304: a altura (alto ou baixo) não muda a chance; só o lado (canto ou meio). Valores = média ponderada dos de antes.
+  const [lado] = alvo.split('-'), meio = lado === 'meio';
+  const erroBase = meio ? 0.05 : 0.095;
   const erro = clamp(erroBase + (0.76 - chance(batedor, GOLEIRO_MEDIO)) * 0.25, 0.015, 0.27);
   const chute = r();
   if (chute < erro) return { alvo, pulo, res: chute < erro * 0.4 ? 'trave' : 'fora' };
 
   const diferenca = 0.76 - chance(batedor, goleiro);
-  const defesa = lado === pulo ? (alto ? 0.36 : 0.53) + diferenca * 0.8 : 0.023 + diferenca * 0.08;
+  const defesa = lado === pulo ? 0.48 + diferenca * 0.8 : 0.023 + diferenca * 0.08;
   return { alvo, pulo, res: r() < defesa ? 'defesa' : 'gol' };
 }
 

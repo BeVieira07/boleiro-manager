@@ -26,11 +26,13 @@ test('cobrança aceita escolhas independentes e usa o gerador recebido', () => {
     const sorteio = [chute, 0.4];
     return cobrarPenalti(batedor, goleiro, () => sorteio.shift(), { alvo, pulo }).res;
   };
-  assert.equal(resultado('dir-baixo', 'dir'), 'defesa');
-  assert.equal(resultado('dir-alto', 'dir'), 'gol');
-  assert.equal(resultado('dir-baixo', 'esq'), 'gol');
-  assert.equal(resultado('dir-alto', 'dir', 0.05), 'trave');
-  assert.equal(resultado('dir-alto', 'dir', 0.08), 'fora');
+  // #304: alto e baixo dão o mesmo resultado; só o lado e o pulo do goleiro contam
+  for (const altura of ['baixo', 'alto']) {
+    assert.equal(resultado(`dir-${altura}`, 'dir'), 'defesa');
+    assert.equal(resultado(`dir-${altura}`, 'esq'), 'gol');
+    assert.equal(resultado(`dir-${altura}`, 'dir', 0.02), 'trave');
+    assert.equal(resultado(`dir-${altura}`, 'dir', 0.06), 'fora');
+  }
 });
 
 test('simulação usa o canto do batedor quando salvo e sorteia pela semente em Variar', () => {
@@ -55,7 +57,7 @@ test('simulação usa o canto do batedor quando salvo e sorteia pela semente em 
   assert.deepEqual(variados, repetidos);
 });
 
-test('calibração em 20.000 jogos: cerca de 0,3 pênalti por jogo e média de gols estável', t => {
+test('calibração em 20.000 jogos: cerca de 0,2 pênalti por jogo e média de gols estável (#304)', t => {
   const j = novoJogo(), total = 20000;
   const { gols, resultados } = j.run(`(() => {
     const jogos = S.fixtures.flat(), resultados = { gol: 0, defesa: 0, trave: 0, fora: 0 };
@@ -74,7 +76,7 @@ test('calibração em 20.000 jogos: cerca de 0,3 pênalti por jogo e média de g
   const antes = 51460 / total, depois = gols / total;
   t.diagnostic(`${(n / total).toFixed(4)} pênalti/jogo. ${Object.entries(proporcoes).map(([res, p]) =>
     `${res} ${(100 * p).toFixed(2)}%`).join(', ')}. Gols/jogo antes ${antes.toFixed(4)}, depois ${depois.toFixed(4)}.`);
-  assert.ok(n / total >= 0.27 && n / total <= 0.33);
+  assert.ok(n / total >= 0.18 && n / total <= 0.22);
   assert.ok(proporcoes.gol >= 0.70 && proporcoes.gol <= 0.80);
   assert.ok(Object.values(resultados).every(n => n > 0));
   assert.ok(Math.abs(depois - antes) <= 0.05);
@@ -129,8 +131,12 @@ test('mudar a tática aos 45 mantém cobranças já feitas e refaz lances, artil
   const j = novoJogo();
   const r = j.run(`(() => {
     const g = S.fixtures[0].find(x => [x.h, x.a].includes(userClub().id));
-    S.rng = semente('revisao #290', 142);
-    simulate(g);
+    // a primeira semente com pênalti antes do intervalo e gol de pênalti depois (não depende da taxa de pênaltis, #304)
+    for (let i = 0; i < 5000; i++) {
+      S.rng = semente('revisao #290', i);
+      simulate(g);
+      if (g.ev.some(e => e.t === 'penalti' && e.m <= 45) && g.ev.some(e => e.t === 'gol' && e.pen && e.m > 45)) break;
+    }
     noticiarPenaltisDaLiga(g, 0);
     S.round = 1;
     const jogadores = [clubById(g.h), clubById(g.a)].flatMap(c => c.players);
@@ -152,7 +158,8 @@ test('mudar a tática aos 45 mantém cobranças já feitas e refaz lances, artil
   const substituido = r.eventosAntes.find(e => e.m > 45 && e.t === 'gol' && e.pen);
   assert.ok(anterior && substituido, 'a partida original tem pênalti antes do intervalo e gol de pênalti depois');
   assert.deepEqual(r.eventosDepois.filter(e => e.m <= 45), r.eventosAntes.filter(e => e.m <= 45));
-  assert.ok(r.eventosDepois.some(e => e.m > 45 && e.t === 'penalti'));
+  // o segundo tempo foi refeito: todo gol de pênalti tem a cobrança convertida no mesmo minuto (#304: sem exigir que haja um)
+  assert.ok(r.eventosDepois.filter(e => e.t === 'gol' && e.pen).every(g => r.eventosDepois.some(e => e.t === 'penalti' && e.res === 'gol' && e.m === g.m && e.pid === g.pid)));
   assert.ok(!r.eventosDepois.some(e => e.m === substituido.m && e.pid === substituido.pid && e.pen));
   assert.deepEqual(r.placar, r.placarDosLances);
   assert.ok(r.artilharia);
