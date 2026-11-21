@@ -67,7 +67,9 @@ export function simulate(g){
 export function validateLineup(uc=userClub()){
   const xi=getXI(uc);
   if(xi.length!==11)return `Sua escalação tem ${xi.length} jogadores. Escolha exatamente 11 titulares.`;
-  if(xi.filter(id=>P[id].pos==='G').length!==1)return 'Escale exatamente 1 goleiro.';
+  // #295: com todos os goleiros lesionados ou suspensos, um jogador de linha vai para o gol (senão a rodada travava)
+  const gols=xi.filter(id=>P[id].pos==='G').length,temGoleiro=uc.players.some(p=>p.pos==='G'&&!unavailable(p));
+  if(gols>1||(gols===0&&temGoleiro))return 'Escale exatamente 1 goleiro.';
   const ind=xi.map(id=>P[id]).filter(unavailable);
   if(ind.length)return `Jogador(es) indisponível(is) na escalação: ${ind.map(p=>p.name+' ('+unavailable(p)+')').join(', ')}.`;
   return null;

@@ -64,3 +64,16 @@ test('indisponíveis marcados, fora da escalação automática; trocas mantêm a
   assert.equal(j.run('userClub().lineup[2]'), entra);
   assert.deepEqual(j.run('slotLayout(userClub()).map(s=>s.d)'), antes);
 });
+
+test('sem goleiro disponível, um jogador de linha vai para o gol e a rodada é jogada (#295)', () => {
+  const j = carregarJogo({ boot: true }); j.run(`newGame('${clubeDaSerie(j)}')`); j.run('S.estaduais=null');
+  j.run("for(const p of userClub().players)if(p.pos==='G')p.inj=3");
+  j.run('userClub().lineup=autoXI(userClub())');
+  assert.equal(j.run('validateLineup()'), null, 'escalação aceita com goleiro improvisado');
+  assert.equal(j.run("getXI(userClub()).some(id=>P[id].pos==='G')"), false);
+  j.run("go('escalacao')"); assert.match(j.html(), /Nenhum goleiro disponível: .+ joga improvisado no gol/);
+  j.run('playRound(false)'); assert.equal(j.run('S.round'), 1, 'a rodada foi jogada');
+  // com goleiro disponível, continua exigindo um
+  j.run("for(const p of userClub().players)if(p.pos==='G')p.inj=0");
+  assert.equal(j.run('validateLineup()'), 'Escale exatamente 1 goleiro.');
+});
