@@ -9,6 +9,7 @@ import { processLoans, wageBill } from './emprestimos.mjs';
 import { aplicarDisponibilidade, autoSlotXI, slotsDe, unavailable } from './escalacao.mjs';
 import { P, S, addFin, addNews, bilheteriaBase, clubById, clubDo, divOf, ehHumano, table, tec, tecnicos, tvQuota, userClub } from './estado.mjs';
 import { adiarForma, aplicarFormaPendente } from './forma.mjs';
+import { noticiaPenaltis } from './gols-copa.mjs';
 import { elencoDoJogo, saidaForcada, sortearLances } from './lances.mjs';
 import { ehJanela, janelaIA } from './mercadoIA.mjs';
 import { ovrNaPosicao } from './posicoes.mjs';
@@ -99,6 +100,7 @@ export function jogarRodada({ adiarCopa = false } = {}){
   S.rng=semente(S.seed,S.season,S.round); // a rodada depende só do estado e das escolhas, não do que foi sorteado antes
   if(ehJanela(S.round))janelaIA(); // #103: começo e metade da temporada
   const games=S.fixtures[S.round].map(simulate);
+  for(const g of games)noticiarPenaltisDaLiga(g,S.round);
   const jogaram=anotarTitulares(new Map(),games,getXI,clubById); // #136: titulares do jogo, antes de lesões e energia mudarem
   aplicarDisponibilidade(games);
   adiarForma(games);
@@ -148,6 +150,22 @@ export function jogarRodada({ adiarCopa = false } = {}){
   S.round++;
   if(!pendente)concluirRodada(games);
   return {jogos:games,meu:ativos.some(t=>t.id===S.atual)?jogoDe(userClub()):null,copa};
+}
+
+// A rodada já está no save quando o jogo ao vivo começa. Uma revisão substitui ou remove a notícia da mesma partida.
+export function noticiarPenaltisDaLiga(g, rodada) {
+  const chave = `${S.season}|${rodada}|${g.h}|${g.a}`;
+  const texto = noticiaPenaltis(g);
+  for (const t of tecnicos().filter(t => t.clubId === g.h || t.clubId === g.a)) {
+    const i = t.news.findIndex(n => n.penaltis === chave);
+    if (i >= 0) {
+      if (texto) t.news[i].t = '⚽ ' + texto;
+      else t.news.splice(i, 1);
+    } else if (texto) {
+      t.news.unshift({ r: rodada, t: '⚽ ' + texto, penaltis: chave });
+      t.news = t.news.slice(0, 40);
+    }
+  }
 }
 
 function concluirRodada(games){

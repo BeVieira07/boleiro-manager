@@ -140,6 +140,7 @@ test('uma temporada inteira: estaduais e sul-americanas decididos nos pênaltis 
   const j = carregarJogo({ boot: true, estaduais: true, continentais: true });
   j.run(`newGame('c121')`);
   jogarTemporada(j);
+  assert.equal(j.run('S.round'), j.run('S.fixtures.length'), j.alertas.at(-1));
   const pens = JSON.parse(j.run(`JSON.stringify([
     ...S.estaduais.torneios.map(t=>t.final),
     ...S.continentais.torneios.flatMap(t=>[...t.fases.flatMap(f=>f.jogos),t.final])

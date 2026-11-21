@@ -390,6 +390,7 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .tempo-feito{height:100%;width:0;background:var(--verde)}
 .tempo-marcas{position:absolute;left:0;right:0;top:4px;height:20px;pointer-events:none}
 .marca-ev{position:absolute;top:0;width:4px;height:20px;transform:translateX(-50%);border-radius:2px}
+.marca-ev.penalti{background:var(--texto)}
 .marca-ev.gol{background:var(--texto);width:6px}
 .marca-ev.cartao{background:var(--ouro);height:12px;top:4px}
 .marca-ev.vermelho{background:var(--perigo);height:12px;top:4px}

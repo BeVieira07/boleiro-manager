@@ -6,6 +6,7 @@ test('os autores batem com cada placar e com os totais de todas as copas na temp
   const j = carregarJogo({ estaduais: true, continentais: true, boot: true });
   j.run("newGame('c121')");
   jogarTemporada(j);
+  assert.equal(j.run('S.round'), j.run('S.fixtures.length'), j.alertas.at(-1));
   const torneios = j.run(`(()=>{
     const pernas=tor=>tor.fases.flatMap(f=>f.jogos.flatMap(g=>[jogoDaPerna(g,false),jogoDaPerna(g,true)]));
     return [

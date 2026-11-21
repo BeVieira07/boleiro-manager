@@ -83,7 +83,10 @@ test('energia baixa aumenta as lesões na rodada', () => {
 test('uma temporada com a escalação automática: o time roda sozinho e a força quase não cai', () => {
   const j = novo(0);
   const forca = () => j.run('(()=>{const p=power(userClub());return p.att+p.def+p.mid})()');
-  while (j.run('S.round') < 30) j.run('userClub().lineup=autoXI(userClub());playRound(false)');
+  for (let r = 1; r <= 30; r++) {
+    j.run('userClub().lineup=autoXI(userClub());playRound(false)');
+    assert.equal(j.run('S.round'), r, j.alertas.at(-1));
+  }
   j.run('userClub().lineup=autoXI(userClub())');
   const tit = j.run('getXI(userClub()).map(id=>energiaDe(P[id]))');
   assert.ok(Math.min(...tit) > 25, `ninguém no chão: ${tit}`); // veterano titular fixo se acomoda perto de 35 (#174: o banco ficou realista e rodar compensa menos)
