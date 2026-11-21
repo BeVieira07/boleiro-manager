@@ -11,22 +11,19 @@ import { COPA, copaNaRodada, penaltiDaCopa } from '../core/copa.mjs';
 import { NOMES_ALVOS_PENALTI, baterNaDisputa, batedoresDaVez, forcaPenalti, ladoDaVez, novaDisputa, placarAte, placarPenaltis, resultadoDisputa, vencedorPenaltis } from '../core/penaltis.mjs';
 import { timesDaVolta } from '../core/gols-copa.mjs';
 import { ESTILOS, MODOS, mudarTatica, recobrarPenalti, ressimularDepois, taticaUser } from '../core/taticas.mjs';
-import { DIVS, P, S, clubById, divOf, divisions, hasTwoDivs, tecnicos, userClub } from '../core/estado.mjs';
+import { DIVS, P, S, clubById, divOf, divisions, hasTwoDivs, userClub } from '../core/estado.mjs';
 import { escalacaoNoMinuto, saidaForcada } from '../core/lances.mjs';
-import { MAX_TROCAS, banco, elencoParaTrocas, mudarFormacaoAoVivo, substituir, trocasDe } from '../core/substituicoes.mjs';
-import { FORMS, esc, hashStr } from '../core/utils.mjs';
+import { elencoParaTrocas, mudarFormacaoAoVivo, substituir, trocasDe } from '../core/substituicoes.mjs';
+import { esc, hashStr } from '../core/utils.mjs';
 import { avisar } from './avisos.mjs';
-import { chip, ovrChip } from './componentes.mjs';
-import { campoHtml } from './escalacao.mjs';
+import { chip } from './componentes.mjs';
 import { VELOCIDADES, prefs, verAoVivo } from './configuracoes.mjs';
 import { jogosCopa } from './copa.mjs';
 import { save, ui } from './estado.mjs';
-import { mostrarJanelaExpulsao, novoAvisoExpulsao, ocultarJanelaExpulsao, resumoExpulsao, validarRascunhoExpulsao } from './expulsao.mjs';
+import { mostrarJanelaExpulsao, novaPausa, novoAvisoExpulsao, ocultarJanelaExpulsao, resumoExpulsao, validarRascunhoExpulsao } from './expulsao.mjs';
 import { icone } from './icones.mjs';
 import { DURACAO, EVENTO, crest, itemEvento, marcador, textoEvento } from './partida.mjs';
 import { DURACAO_COBRANCA, htmlCobranca } from './penalti-animacao.mjs';
-import { posTag } from './posicoes.mjs';
-import { chipsTaticaAoVivo } from './taticas.mjs';
 import { go, render } from './telas.mjs';
 
 const ABAS = { meu: 'Meu jogo', rodada: 'Rodada', classif: 'Classificação' };
@@ -162,7 +159,8 @@ function tick(v) {
   const saidas = v.replay ? [] : v.g.ev.filter(e => e.m === v.min && v.g[e.side] === v.clube.id && saidaForcada(e));
   if (saidas.length) v.sel = null;
   const vermelhos = saidas.filter(e => e.t === 'vermelho');
-  if (vermelhos.length && !ui.liga && tecnicos().length === 1) v.vermelhosPendentes = vermelhos;
+  // #314: no revezamento, abre para o técnico da vez, que é o dono do clube mostrado no ao vivo
+  if (vermelhos.length && !ui.liga) v.vermelhosPendentes = vermelhos;
   if (v.filaCobrancas.length) mostrarCobranca(v);
   else if (v.vermelhosPendentes) { abrirExpulsaoPendente(v); return }
   pintar(v);
@@ -236,9 +234,18 @@ export function avPular() {
   if (prepararPenaltis(v)) v.cob = v.pen.cob.length;
   terminar(v);
 }
-/** Pausa ou continua o relógio (#170). Pausado, as trocas e o esquema continuam disponíveis. */
+/** Pausa ou continua o relógio (#170). #314: no seu jogo, pausar abre a janela de escalação; continuar a fecha.
+ *  No replay, na cobrança de pênalti e na disputa, só para o relógio. */
 export function avPausar() {
-  const v = ui.vivo; if (!v || v.fim || pausaExpulsao(v)) return;
+  const v = ui.vivo; if (!v || v.fim) return;
+  if (v.expulsao?.tipo === 'pausa' && !v.expulsao.leitura) { avExpConfirmar(); return }
+  if (pausaExpulsao(v) || v.expulsao?.leitura) return; // com o aviso da expulsão aberto, primeiro feche o aviso
+  if (!v.pausado && podeMexer(v)) {
+    v.expulsao = novaPausa(v); v.sel = null;
+    pintar(v); pintarBotoes(v);
+    mostrarJanelaExpulsao(v, avExpConfirmar);
+    return;
+  }
   v.pausado = !v.pausado;
   const b = el('av-botoes'); if (b) b.innerHTML = botoes(v);
   const c = el('lclk'); if (c) c.textContent = relogio(v);
@@ -246,8 +253,8 @@ export function avPausar() {
 }
 // barra de espaço pausa e continua (fora de campos e botões, que já usam o espaço)
 if (globalThis.document && document.addEventListener) document.addEventListener('keydown', ev => {
-  if (ev.key !== ' ' || ui.view !== 'aovivo' || !ui.vivo || ui.vivo.fim || pausaExpulsao(ui.vivo)) return;
-  const t = ev.target && ev.target.tagName; if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'SUMMARY'].includes(t)) return;
+  if (ev.key !== ' ' || ui.view !== 'aovivo' || !ui.vivo || ui.vivo.fim || (pausaExpulsao(ui.vivo) && ui.vivo.expulsao.tipo !== 'pausa')) return;
+  const t = ev.target && ev.target.tagName; if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'SUMMARY'].includes(t) || ev.target?.closest?.('.exp-opcoes')) return;
   ev.preventDefault(); avPausar();
 });
 export function avContinuar() { const v = ui.vivo; if (!v) return; const { done } = v; encerrarVivo(); done() }
@@ -260,7 +267,21 @@ function pintarAvisoExpulsao(v) {
   const aviso = el('av-exp-resumo'); if (aviso) aviso.innerHTML = resumoExpulsao(v);
 }
 
+function pintarBotoes(v) {
+  const b = el('av-botoes'); if (b) b.innerHTML = botoes(v);
+  const c = el('lclk'); if (c) c.textContent = relogio(v);
+}
+
 function retomarDepoisDaExpulsao(v, aplicadas = [], mudou = false) {
+  if (v.expulsao.tipo === 'pausa') {
+    const { min } = v.expulsao, t = taticaUser(v.clube);
+    v.expulsao = null;
+    if (mudou) avisar(`Mudou para ${elencoParaTrocas(v.g, min).form}, ${ESTILOS[t.estilo].nome.toLowerCase()}, ${MODOS[t.modo].nome.toLowerCase()}: vale a partir do minuto ${min + 1}.`);
+    ocultarJanelaExpulsao();
+    pintar(v); pintarBotoes(v);
+    el('lpausa')?.focus?.({ preventScroll: true });
+    return;
+  }
   const a = v.expulsao, elenco = elencoParaTrocas(v.g, a.min), tatica = taticaUser(v.clube);
   const resumo = mudou ? `Jogo retomado: ${elenco.form}, ${ESTILOS[tatica.estilo].nome.toLowerCase()}, ${MODOS[tatica.modo].nome.toLowerCase()}.`
     : `Jogo retomado com ${elenco.xi.filter(Boolean).length} em campo.`;
@@ -275,6 +296,7 @@ function retomarDepoisDaExpulsao(v, aplicadas = [], mudou = false) {
 export function avExpFechar() {
   const v = ui.vivo;
   if (!v?.expulsao) return;
+  if (v.expulsao.tipo === 'pausa') { avExpConfirmar(); return } // na pausa, fechar é continuar
   if (v.expulsao.leitura) {
     v.expulsao = null;
     ocultarJanelaExpulsao();
@@ -300,6 +322,13 @@ export function avExpConfirmar() {
     save();
   }
   retomarDepoisDaExpulsao(v, rascunho, mudou);
+}
+
+/** #314: "Pular para o fim" da janela de pausa: aplica o rascunho antes de pular. */
+export function avExpPular() {
+  const v = ui.vivo; if (v?.expulsao?.tipo !== 'pausa') return;
+  avExpConfirmar();
+  if (!v.expulsao) avPular();
 }
 
 export function avExpReabrir() {
@@ -412,27 +441,16 @@ function paineis(v) {
 
 const botoes = v => v.fim
   ? `<button class="btn" id="ldone" data-acao="avContinuar">${v.proximo ? `Ir para a ${v.proximo}` : 'Continuar'}</button>`
-  : `<button class="btn${v.pausado ? '' : ' sec'}" id="lpausa" data-acao="avPausar" aria-pressed="${!!v.pausado}">${icone(v.pausado ? 'play' : 'pausa', { tam: 16 })}${v.pausado ? 'Continuar' : 'Pausar'}</button>
-    <button class="btn sec" id="lskip" data-acao="avPular">${icone('avancar', { tam: 16 })}Pular para o fim</button>`;
+  : `<button class="btn${v.pausado ? '' : ' sec'}${podeMexer(v) ? ' av-mexer' : ''}" id="lpausa" data-acao="avPausar" aria-pressed="${!!v.pausado}">${icone(v.pausado ? 'play' : 'pausa', { tam: 16 })}${v.pausado ? 'Continuar'
+    : podeMexer(v) ? '<span class="av-rot-largo">Pausar</span><span class="av-rot-celular">Pausar e mexer no time</span>' : 'Pausar'}</button>
+    <button class="btn sec av-pular" id="lskip" data-acao="avPular" aria-label="Pular para o fim">${icone('avancar', { tam: 16 })}<span class="av-pular-texto">Pular para o fim</span></button>`;
+// #314: pausar abre a janela de escalação (fora do replay, da cobrança de pênalti e da disputa)
+const podeMexer = v => !v.replay && !v.cobranca && !v.escolhaPen && v.min < DURACAO;
 
+// #314: tática, formação e trocas ficam na janela da pausa; na página só resta a dica do replay
 function htmlControles(v) {
-  if (v.fim || v.min >= DURACAO) return '';
-  if (v.replay) return `<p class="muted dica">${icone('info', { tam: 14 })} Replay do jogo simulado no servidor. Na liga, escalação, formação e tática valem para a rodada inteira: as trocas ficam bloqueadas.</p>`;
-  const uc = userClub(), feitas = trocasDe(v.g, uc.id, v.min).length, cheio = feitas >= MAX_TROCAS;
-  const elenco = elencoParaTrocas(v.g, v.min);
-  const sel = v.sel && P[v.sel], form = elenco.form;
-  const jog = p => `${posTag(p)}<span class="troca-nome">${esc(p.name)}</span>${ovrChip(p.ovr)}`;
-  const dica = cheio ? `As ${MAX_TROCAS} substituições já foram feitas.` : sel ? `Escolha no banco quem entra no lugar de ${esc(sel.name)}.` : 'Escolha em campo quem sai.';
-  const reservas = banco(v.g, v.min).sort((a, b) => !a.motivo - !b.motivo || b.p.ovr - a.p.ovr);
-  return `<div class="tatica-vivo" id="ltat">${chipsTaticaAoVivo()}</div>
-    <div class="chips" role="group" aria-label="Formação"><span class="muted">Formação</span>${Object.keys(FORMS).map(f => chip(f, `avFormacao|${f}`, f === form)).join('')}</div>
-    <section class="trocas" aria-label="Substituições"><div class="card-topo"><h2 class="t3">Substituições</h2><span class="muted">${feitas} de ${MAX_TROCAS}</span></div>
-      <p class="muted dica" aria-live="polite">${dica}</p>
-      <div class="trocas-listas">
-        ${campoHtml({ ...uc, formation: form }, { acao: 'avSair', sel: v.sel, bloqueado: cheio, mini: true, emCampo: elenco.xi })}
-        <ul class="lista-troca" aria-label="Banco">${reservas.map(({ p, motivo }) =>
-          `<li><button type="button" class="troca-item" data-acao="avEntrar|${p.id}"${!sel || cheio || motivo ? ' disabled' : ''}>${jog(p)}${motivo ? `<span class="muted">${esc(motivo)}</span>` : ''}</button></li>`).join('')}</ul>
-      </div></section>`;
+  if (v.fim || v.min >= DURACAO || !v.replay) return '';
+  return `<p class="muted dica">${icone('info', { tam: 14 })} Replay do jogo simulado no servidor. Na liga, escalação, formação e tática valem para a rodada inteira: as trocas ficam bloqueadas.</p>`;
 }
 
 const torneioDoVivo = v => v.estadual != null && S.estaduais ? S.estaduais.torneios.find(t => t.uf === v.g.uf) : null;

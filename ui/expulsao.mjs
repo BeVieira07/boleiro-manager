@@ -1,4 +1,6 @@
+import { minutoDoTempo, placarNoMinuto } from '../core/aovivo.mjs';
 import { energiaDe } from '../core/energia.mjs';
+import { clubById } from '../core/estado.mjs';
 import { SUSPENSAO_POR_EXPULSAO } from '../core/escalacao.mjs';
 import { aplicarLanceAoElenco, escalacaoNoMinuto } from '../core/lances.mjs';
 import { banco, elencoParaTrocas, MAX_TROCAS, prepararTroca, trocasDe } from '../core/substituicoes.mjs';
@@ -13,20 +15,28 @@ import { posTag } from './posicoes.mjs';
 
 const el = id => document.getElementById(id);
 const OPCOES = { estilo: ESTILOS, modo: MODOS, form: FORMS };
-const telaCompacta = globalThis.matchMedia?.('(max-width: 600px)');
+const telaCompacta = globalThis.matchMedia?.('(max-width: 799px)'); // #314: folha de baixo no celular, como o resto do jogo
 const emCampo = elenco => elenco.xi.filter(Boolean).length;
 const limite = () => `Você já fez as ${MAX_TROCAS} substituições do jogo.`;
 
-export function novoAvisoExpulsao(v, vermelhos) {
-  const lado = vermelhos[0].side, min = v.min, elenco = elencoParaTrocas(v.g, min);
-  const antes = escalacaoNoMinuto(v.g, lado, min - 1)?.xi ?? v.clube.lineup;
+// todos os expulsos do seu time até o minuto, com a vaga que ocupavam (a vaga fica riscada e não pode ser preenchida)
+function expulsosAte(v, min) {
+  return v.g.ev.filter(e => e.t === 'vermelho' && e.m <= min && v.g[e.side] === v.clube.id).map(e => ({
+    nome: e.name, segundo: e.segundo, vaga: (escalacaoNoMinuto(v.g, e.side, e.m - 1)?.xi ?? v.clube.lineup).indexOf(e.pid)
+  }));
+}
+function novaJanela(v, tipo, novos) {
+  const min = v.min, elenco = elencoParaTrocas(v.g, min);
   return {
-    min, lado, elenco, form: elenco.form, total: emCampo(elenco), tatica: taticaUser(v.clube), sel: null,
-    expulsos: vermelhos.map(e => ({ nome: e.name, segundo: e.segundo, vaga: antes.indexOf(e.pid) })),
-    trocas: trocasDe(v.g, v.clube.id, min), rascunho: [],
+    tipo, min, elenco, form: elenco.form, total: emCampo(elenco), tatica: taticaUser(v.clube), sel: null,
+    expulsos: expulsosAte(v, min), novos, trocas: trocasDe(v.g, v.clube.id, min), rascunho: [],
     leitura: false, msg: '', erro: false
   };
 }
+export const novoAvisoExpulsao = (v, vermelhos) =>
+  novaJanela(v, 'expulsao', vermelhos.map(e => ({ nome: e.name, segundo: e.segundo })));
+/** #314: a mesma janela aberta pelo botão Pausar: tática, formação e trocas com o relógio parado. */
+export const novaPausa = v => novaJanela(v, 'pausa', []);
 
 function opcao(campo, valor, nome, ativo, leitura) {
   if (leitura) return ativo ? `<span class="pill">${esc(nome)}</span>` : '';
@@ -36,10 +46,10 @@ function opcao(campo, valor, nome, ativo, leitura) {
 function htmlTaticas(a) {
   const grupos = [['Estilo', 'estilo'], ['Modo', 'modo'], ['Formação', 'form']];
   const ajustou = a.tatica.estilo !== 'equilibrado' || a.tatica.modo !== 'equilibrado';
-  return `<div class="exp-grupos">${grupos.map(([rot, campo]) => `<div role="group" aria-label="${rot}" class="exp-grupo">
-    <span>${rot}</span><div class="exp-opcoes">${Object.entries(OPCOES[campo]).map(([k, item]) =>
+  return `<div class="exp-grupos">${grupos.map(([rot, campo]) => `<div class="exp-grupo">
+    <span aria-hidden="true">${rot}</span><div class="exp-opcoes" role="group" aria-label="${rot}" tabindex="0">${Object.entries(OPCOES[campo]).map(([k, item]) =>
       opcao(campo, k, item.nome || k, (campo === 'form' ? a.form : a.tatica[campo]) === k, a.leitura)).join('')}</div></div>`).join('')}</div>
-    <p>${ajustou ? dicaTatica(a.tatica) : `Com ${a.total}, um modo defensivo ou o contra-ataque seguram melhor o empate.`}</p>`;
+    <p>${ajustou || !a.expulsos.length ? dicaTatica(a.tatica) : `Com ${a.total}, um modo defensivo ou o contra-ataque seguram melhor o empate.`}</p>`;
 }
 
 function vagasExpulsas(a, elenco) {
@@ -59,7 +69,7 @@ function vagasExpulsas(a, elenco) {
 function htmlCampo(v, a) {
   const elenco = { ...a.elenco };
   if (elenco.form !== a.form) aplicarLanceAoElenco(elenco, { t: 'formacao', form: a.form });
-  return `<div class="exp-secao-topo"><h3>Em campo · ${esc(a.form)}</h3><strong class="exp-contagem">${emCampo(elenco)} jogadores</strong></div>
+  return `<div class="exp-secao-topo"><h3>Em campo · ${esc(a.form)}</h3><strong class="exp-contagem${a.expulsos.length ? '' : ' exp-completo'}">${emCampo(elenco)} jogadores</strong></div>
     ${campoHtml({ ...v.clube, formation: a.form }, { mini: true, acao: 'avExpSair', sel: a.sel, emCampo: elenco.xi,
       semEnergia: true, somenteLeitura: a.leitura, expulsos: vagasExpulsas(a, elenco) })}`;
 }
@@ -92,24 +102,46 @@ function htmlTrocasAplicadas(a) {
       : '<p>Nenhuma substituição feita na janela.</p>'}`;
 }
 
-function htmlJanela(v, a) {
+function htmlCabPausa(v, a) {
+  const t = minutoDoTempo(a.min), p = placarNoMinuto(v.g, a.min), sigla = id => esc(clubById(id)?.short || clubById(id)?.name || '');
+  return `<header class="exp-cab exp-pausa">
+      <span class="exp-pausa-icone" aria-hidden="true">${icone('pausa', { tam: 22 })}</span>
+      <div>
+        <div class="exp-titulo"><h2 id="exp-titulo" tabindex="-1" data-principal>Pausado</h2><span>${t.m}' · ${t.tempo}º tempo</span>
+          <span class="exp-placar">· ${sigla(v.g.h)} ${p.h} x ${p.a} ${sigla(v.g.a)}</span></div>
+        <div id="exp-descricao"><p>Mexa no time com calma: o relógio só volta a correr quando você continuar.</p></div>
+      </div>
+    </header>`;
+}
+function htmlCabExpulsao(v, a) {
   const susp = SUSPENSAO_POR_EXPULSAO, jogos = susp === 1 ? 'jogo' : 'jogos';
   const clube = esc(v.clube.name);
-  return `<section class="exp-janela" role="dialog" aria-modal="true" aria-labelledby="exp-titulo" aria-describedby="exp-descricao">
-    <header class="exp-cab">
+  return `<header class="exp-cab">
       <span class="exp-cartao" aria-hidden="true"></span>
       <div>
         <div class="exp-titulo"><h2 id="exp-titulo" tabindex="-1" data-principal>Expulso</h2><span>${a.min}'</span></div>
-        <div id="exp-descricao">${a.expulsos.map(e => `<p><b>${esc(e.nome)}</b> ${e.segundo ? 'levou o segundo amarelo.' : 'foi expulso.'}
+        <div id="exp-descricao">${a.novos.map(e => `<p><b>${esc(e.nome)}</b> ${e.segundo ? 'levou o segundo amarelo.' : 'foi expulso.'}
           O ${clube} joga com ${a.total} até o fim, e ele cumpre ${susp} ${jogos} de suspensão.</p>`).join('')}</div>
       </div>
       ${a.leitura ? '' : `<span class="exp-selo">${icone('pausa', { tam: 14 })} Jogo pausado</span>`}
-    </header>
+    </header>`;
+}
+function htmlRodape(a) {
+  if (a.leitura) return '<button type="button" class="btn sec" data-acao="avExpFechar">Fechar aviso</button>';
+  if (a.tipo === 'pausa') return `
+        <p>As mudanças valem a partir do minuto ${a.min + 1}.</p>
+        <button type="button" class="btn sec" data-acao="avExpPular" data-secundario>${icone('avancar', { tam: 16 })}Pular para o fim</button>
+        <button type="button" class="btn" data-acao="avExpConfirmar">${icone('play', { tam: 16 })}Continuar</button>`;
+  return `
+        <p>As mudanças valem a partir do minuto ${a.min + 1}. A partida só continua quando você fechar esta janela.</p>
+        <button type="button" class="btn fantasma" data-acao="avExpFechar" data-secundario>Voltar sem mexer</button>
+        <button type="button" class="btn" data-acao="avExpConfirmar">${icone('play', { tam: 16 })}Voltar ao jogo</button>`;
+}
+function htmlJanela(v, a) {
+  return `<section class="exp-janela" role="dialog" aria-modal="true" aria-labelledby="exp-titulo" aria-describedby="exp-descricao">
+    ${a.tipo === 'pausa' ? htmlCabPausa(v, a) : htmlCabExpulsao(v, a)}
     <div class="exp-conteudo">
-      <details class="exp-ajustes">
-        <summary>Tática</summary>
-        <section class="exp-tatica" id="exp-tatica" aria-label="Tática">${htmlTaticas(a)}</section>
-      </details>
+      <section class="exp-tatica" id="exp-tatica" aria-label="Tática">${htmlTaticas(a)}</section>
       <div class="exp-grade">
         <section id="exp-campo" aria-label="Em campo">${htmlCampo(v, a)}</section>
         <section aria-label="Substituições">
@@ -118,11 +150,7 @@ function htmlJanela(v, a) {
         </section>
       </div>
     </div>
-    <footer class="exp-rodape">
-      ${a.leitura ? '<button type="button" class="btn sec" data-acao="avExpFechar">Fechar aviso</button>' : `
-        <p>As mudanças valem a partir do minuto ${a.min + 1}. A partida só continua quando você fechar esta janela.</p>
-        <button type="button" class="btn fantasma" data-acao="avExpFechar">Voltar sem mexer</button>
-        <button type="button" class="btn" data-acao="avExpConfirmar">${icone('play', { tam: 16 })}Voltar ao jogo</button>`}
+    <footer class="exp-rodape">${htmlRodape(a)}
     </footer>
   </section>`;
 }
@@ -130,11 +158,10 @@ function htmlJanela(v, a) {
 function ajustarJanelaExpulsao(caixa) {
   if (!caixa || caixa.hidden) return;
   const compacta = telaCompacta?.matches;
-  caixa.querySelector('.exp-ajustes').open = !compacta;
   const principal = caixa.querySelector('[data-acao="avExpConfirmar"]');
   if (!principal) return;
   // Mantém a ordem do Tab igual à ordem visual nas duas larguras.
-  const voltar = principal.parentElement.querySelector('[data-acao="avExpFechar"]');
+  const voltar = principal.parentElement.querySelector('[data-secundario]');
   const focado = document.activeElement === voltar;
   if (compacta) principal.after(voltar);
   else principal.before(voltar);

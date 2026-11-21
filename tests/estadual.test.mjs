@@ -168,8 +168,7 @@ test('a data do estadual abre ao vivo: cabeçalho do estadual, jogos por estado 
   assert.match(h, /data-acao="avUf\|RJ"/, 'abas para os outros estaduais');
   assert.match(h, /Paulistão: Grupo [AB]/, 'classificação do grupo do seu clube');
   assert.equal(j.run('ui.vivo.jogos.every(g=>g.ev&&g.uf)'), true, 'todos os jogos da data têm lances');
-  assert.match(h, /data-acao="avSair\|/, 'dá para trocar jogador');
-  assert.match(h, /data-acao="avFormacao\|4-3-3"/);
+  assert.match(h, /class="btn sec av-mexer" id="lpausa"/, 'pausar abre a janela para mexer no time (#314)');
   j.acao('avUf|RJ');
   assert.match(j.html(), /Flamengo|Fluminense|Vasco|Botafogo/);
   assert.deepEqual(problemasNasTelas(j, ['aovivo']), []);
@@ -186,7 +185,7 @@ test('troca ao vivo muda o placar guardado do estadual; o resto da data só é c
   // o jogo do ao vivo é o próprio objeto guardado no torneio: mudar o placar dele muda a tabela
   assert.equal(j.run(`(()=>{const tor=torneioDe(userClub().id);return tor.rodadas[${d}].includes(ui.vivo.g)})()`), true);
   r.passo(30);
-  j.acao('avFormacao|4-3-3'); // refaz os gols dos minutos seguintes
+  j.acao('avPausar'); j.acao('avExpTatica|form|4-3-3'); j.acao('avExpConfirmar'); // pela janela da pausa (#314): refaz os gols dos minutos seguintes
   const final = j.run('({h:ui.vivo.g.hg,a:ui.vivo.g.ag,gols:ui.vivo.g.ev.filter(e=>e.t==="gol").length})');
   assert.equal(final.h + final.a, final.gols, 'placar e lances batem depois da troca');
   assert.equal(artilhariaLiga(), antesLiga, 'gol de estadual não entra na artilharia do Brasileirão');

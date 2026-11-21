@@ -79,13 +79,13 @@ test('expulsões do mesmo minuto abrem uma janela e só o fechamento libera o re
   assert.doesNotMatch(j.html(), /Ver o aviso de novo/);
 });
 
-test('folha de expulsão tem tática recolhível e identifica quem sai no título do banco', t => {
+test('janela de expulsão traz a tática acima do campo e identifica quem sai no título do banco', t => {
   const j = novo(), r = jogoComExpulsao(j), caixa = capturarJanela(t);
   r.passo();
-  assert.match(caixa.innerHTML, /<details class="exp-ajustes">\s*<summary>Tática<\/summary>/);
+  assert.match(caixa.innerHTML, /<section class="exp-tatica" id="exp-tatica" aria-label="Tática">[\s\S]*id="exp-campo"/);
   assert.match(caixa.innerHTML, /Toque em quem sai, no campo/);
   const rodape = caixa.innerHTML.split('<footer class="exp-rodape">')[1];
-  assert.match(rodape, /data-acao="avExpFechar">Voltar sem mexer/);
+  assert.match(rodape, /data-acao="avExpFechar" data-secundario>Voltar sem mexer/);
   assert.match(rodape, /data-acao="avExpConfirmar">.*Voltar ao jogo/);
   assert.doesNotMatch(caixa.innerHTML, /Quem entra no lugar de/);
 
@@ -249,8 +249,8 @@ test('a formação mantém o gol vazio e a troca de goleiro funciona numa escala
   assert.equal(xi.filter(Boolean).length, 10);
 });
 
-test('a rodada ao vivo é uma tela com o seu jogo, os outros jogos e a classificação, não um modal', () => {
-  const j = novo(), r = comRelogioManual(j);
+test('a rodada ao vivo é uma tela com o seu jogo, os outros jogos e a classificação, não um modal', t => {
+  const j = novo(), r = comRelogioManual(j), caixa = capturarJanela(t);
   assert.equal(j.run('ui.view'), 'aovivo');
   const h = j.html();
   assert.match(h, /Rodada ao vivo/);
@@ -258,11 +258,14 @@ test('a rodada ao vivo é uma tela com o seu jogo, os outros jogos e a classific
   assert.match(h, /Jogos da rodada/);
   assert.match(h, /Classificação provisória/);
   assert.equal((h.match(/class="linha-jogo( meu)?"/g) || []).length, 10, 'os 10 jogos da série');
-  assert.match(h, /data-acao="avSair\|/, 'dá para escolher quem sai');
-  assert.match(h, /<section class="campo mini"/, 'quem sai é escolhido num campo, como na Escalação');
-  assert.equal((h.match(/class="carta [^"]*" data-acao="avSair\|/g) || []).length, 11, 'uma carta por titular');
-  assert.match(h, /data-acao="avFormacao\|4-3-3"/);
+  assert.doesNotMatch(h, /data-acao="(avSair|avEntrar|avFormacao|tvLiveChip)\|/, 'tática e trocas ficam na janela da pausa (#314)');
   assert.match(h, /data-acao="avAba\|classif"/, 'abas para o celular');
+  j.acao('avPausar');
+  assert.match(caixa.innerHTML, /<section class="campo mini"/, 'quem sai é escolhido num campo, como na Escalação');
+  assert.equal((caixa.innerHTML.match(/class="carta [^"]*" data-acao="avExpSair\|/g) || []).length, 11, 'uma carta por titular');
+  assert.match(caixa.innerHTML, /data-acao="avExpTatica\|form\|4-3-3"/);
+  assert.match(caixa.innerHTML, /data-acao="avExpTatica\|estilo\|/);
+  j.acao('avExpConfirmar');
   r.passo(3);
   assert.equal(j.run('ui.vivo.min'), 3);
 });
@@ -399,19 +402,100 @@ test('as telas não mostram undefined, NaN nem [object', () => {
   j.acao('avAba|rodada'); assert.match(j.html(), /data-aba="rodada"/);
 });
 
-test('pausar para o relógio, e pausado dá para trocar o esquema; continuar retoma (#170)', () => {
-  const j = novo(), r = comRelogioManual(j);
+const outraFormacao = j => j.run("userClub().formation==='4-3-3'?'3-5-2':'4-3-3'");
+
+test('pausar abre a janela de escalação; continuar aplica o rascunho, fecha e retoma (#170, #314)', t => {
+  const j = novo(), r = comRelogioManual(j), caixa = capturarJanela(t), f = outraFormacao(j);
   r.passo(10);
   j.acao('avPausar');
-  assert.equal(j.run('ui.vivo.pausado'), true);
-  j.run("render()"); assert.match(j.html(), /id="lpausa"[^>]*aria-pressed="true"[^>]*>[\s\S]*Continuar/);
+  assert.equal(caixa.hidden, false, 'a janela abre');
+  assert.match(caixa.innerHTML, /<h2 id="exp-titulo"[^>]*>Pausado<\/h2>/);
+  assert.match(caixa.innerHTML, /o relógio só volta a correr quando você continuar/);
+  assert.match(caixa.innerHTML, /data-acao="avExpPular"[^>]*>[\s\S]*Pular para o fim/);
+  assert.match(caixa.innerHTML, /data-acao="avExpConfirmar">[\s\S]*Continuar/);
+  assert.doesNotMatch(caixa.innerHTML, /Expulso|undefined|NaN|style="/);
+  j.run('render()'); assert.match(j.html(), /\d+' · 1º tempo · pausado/);
   r.passo(15);
   assert.equal(j.run('ui.vivo.min'), 10, 'pausado, o relógio não anda');
-  j.acao('avFormacao|4-3-3');
-  assert.equal(j.run('userClub().formation'), '4-3-3', 'pausado, o esquema muda');
-  j.acao('avPausar');
+  j.acao(`avExpTatica|form|${f}`);
+  assert.notEqual(j.run('userClub().formation'), f, 'na janela, a mudança fica no rascunho');
+  j.acao('avExpConfirmar');
+  assert.equal(caixa.hidden, true, 'continuar fecha a janela');
+  assert.equal(j.run('ui.vivo.expulsao'), null);
+  assert.equal(j.run('userClub().formation'), f, 'e aplica o esquema');
   r.passo(2);
   assert.equal(j.run('ui.vivo.min'), 12);
+});
+
+test('com a janela de pausa aberta, pausar de novo (barra de espaço) e fechar (Esc) continuam o jogo (#314)', t => {
+  const j = novo(), r = comRelogioManual(j), caixa = capturarJanela(t), f = outraFormacao(j);
+  r.passo(5);
+  j.acao('avPausar');
+  j.acao(`avExpTatica|form|${f}`);
+  j.acao('avPausar');
+  assert.equal(caixa.hidden, true);
+  assert.equal(j.run('userClub().formation'), f, 'continuar pela barra de espaço também aplica');
+  r.passo(1);
+  assert.equal(j.run('ui.vivo.min'), 6);
+  j.acao('avPausar');
+  j.acao('avExpFechar');
+  assert.equal(caixa.hidden, true);
+  r.passo(1);
+  assert.equal(j.run('ui.vivo.min'), 7);
+});
+
+test('"Pular para o fim" da janela de pausa aplica o rascunho antes de pular (#314)', t => {
+  const j = novo(); comRelogioManual(j); const caixa = capturarJanela(t), f = outraFormacao(j);
+  j.acao('avPausar');
+  j.acao(`avExpTatica|form|${f}`);
+  j.acao('avExpPular');
+  assert.equal(caixa.hidden, true);
+  assert.equal(j.run('ui.vivo.fim'), true);
+  assert.equal(j.run(`ui.vivo.g.ev.some(e => e.t === 'formacao' && e.form === '${f}')`), true, 'a formação entrou no jogo');
+});
+
+test('no replay, pausar só para o relógio: a janela não abre e a dica do replay continua (#314)', t => {
+  const j = novo(), r = jogoComExpulsao(j, { replay: true }), caixa = capturarJanela(t);
+  j.acao('avPausar');
+  assert.equal(caixa.hidden, true);
+  assert.equal(j.run('ui.vivo.expulsao ?? null'), null);
+  assert.equal(j.run('ui.vivo.pausado'), true);
+  j.run('render()'); assert.match(j.html(), /Replay do jogo simulado no servidor/);
+  r.passo(3);
+  assert.equal(j.run('ui.vivo.min'), 62);
+  j.acao('avPausar');
+  r.passo(1);
+  assert.equal(j.run('ui.vivo.min'), 63);
+});
+
+test('a vaga do expulso não pode ser escolhida, nem na expulsão nem na pausa seguinte (#314)', t => {
+  const j = novo(), r = jogoComExpulsao(j), caixa = capturarJanela(t);
+  r.passo();
+  const pid = j.run("ui.vivo.g.ev.find(e => e.t === 'vermelho').pid");
+  assert.match(caixa.innerHTML, /exp-carta-vermelha/);
+  assert.ok(!caixa.innerHTML.includes(`avExpSair|${pid}`), 'a carta do expulso não tem ação');
+  j.acao(`avExpSair|${pid}`);
+  assert.equal(j.run('ui.vivo.expulsao.sel'), null);
+  j.acao('avExpConfirmar');
+  r.passo();
+  j.acao('avPausar');
+  assert.match(caixa.innerHTML, />Pausado</);
+  assert.match(caixa.innerHTML, /exp-carta-vermelha/, 'a vaga continua riscada na pausa');
+  assert.match(caixa.innerHTML, /10 jogadores/);
+  j.acao(`avExpSair|${pid}`);
+  assert.equal(j.run('ui.vivo.expulsao.sel'), null);
+});
+
+test('no revezamento, a expulsão do clube do técnico da vez abre a janela (#314)', t => {
+  const j = novo();
+  j.run("(() => { const c = S.clubs.find(c => c.id !== userClub().id); S.managers.b = { ...structuredClone(tec()), nome: 'B', clubId: c.id }; })()");
+  assert.equal(j.run('tecnicos().length'), 2);
+  const r = jogoComExpulsao(j), caixa = capturarJanela(t);
+  j.run('delete ui.vivo.g.expulsaoAoVivo'); // com vários técnicos, o motor não marca o clube do ao vivo
+  r.passo();
+  assert.equal(caixa.hidden, false);
+  assert.match(caixa.innerHTML, />Expulso</);
+  j.acao('avExpFechar');
 });
 
 test('cabeçalho com tempo de jogo, último lance e estatísticas que batem com o placar (#170)', () => {
