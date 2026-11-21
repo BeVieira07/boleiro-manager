@@ -4,7 +4,7 @@
    Quem joga a rodada é a função jogar-rodada no servidor, quando todos confirmam ou o dono força. O tempo real avisa
    quem confirmou e quando a rodada foi jogada; aí o estado novo é baixado e o seu jogo aparece como replay.
    Nada da liga vai para os saves locais nem da nuvem. */
-import { unavailable } from '../core/escalacao.mjs';
+import { definirCobradores, unavailable } from '../core/escalacao.mjs';
 import { DIVS, P, S, clubById, clubDo, divOf, reindex, table, tec, tecnicos, usarEstado, usarTecnico, userClub } from '../core/estado.mjs';
 import { autoXI, validateLineup } from '../core/motor.mjs';
 import { posDSigla } from '../core/posicoes.mjs';
@@ -66,7 +66,7 @@ async function carregar(id) {
   if (l.error || e.error || !l.data || !e.data) { avisar('Não foi possível abrir a liga.', 'erro'); return false }
   // a escalação e a tática ainda não confirmadas só existem aqui: o estado novo não pode apagá-las
   const uc0 = ui.liga && ui.liga.id === id && S && S.managers[eu] && !S.managers[eu].demitido && clubDo(S.managers[eu]);
-  const meu = uc0 && { clube: uc0.id, lineup: uc0.lineup || [], formation: uc0.formation, tatica: uc0.tatica };
+  const meu = uc0 && { clube: uc0.id, lineup: uc0.lineup || [], formation: uc0.formation, tatica: uc0.tatica, cobradores: uc0.cobradores }; // #288: e a ordem dos pênaltis
   const paraMim = () => (S.propostas || []).filter(x => x.para === eu).length, antes = uc0 ? paraMim() : null;
   usarEstado(e.data); reindex();
   if (!S.managers[eu]) { // #37: saiu ou foi removido da liga
@@ -79,6 +79,7 @@ async function carregar(id) {
   if (meu && !tec().demitido && meu.clube === tec().clubId) {
     const uc = userClub(); uc.formation = meu.formation || uc.formation; uc.tatica = meu.tatica || uc.tatica;
     uc.lineup = meu.lineup.filter(pid => uc.players.some(p => p.id === pid && !unavailable(p))); // quem saiu ou se machucou
+    definirCobradores(meu.cobradores, uc);
     if (validateLineup(uc)) uc.lineup = autoXI(uc);
   }
   if (antes != null && paraMim() > antes) avisar('Você recebeu uma proposta de outro técnico. Veja na tela Liga.', 'info'); // #36
@@ -182,7 +183,7 @@ export async function confirmarLiga() {
   const uc = userClub(), err = validateLineup(uc);
   if (err) { avisar(err, 'erro'); go('escalacao'); return }
   const t = taticaUser(uc);
-  const { error } = await c.from('liga_entradas').upsert({ liga_id: L.id, user_id: eu, rodada: L.rodada, escalacao: { lineup: uc.lineup },
+  const { error } = await c.from('liga_entradas').upsert({ liga_id: L.id, user_id: eu, rodada: L.rodada, escalacao: { lineup: uc.lineup, cobradores: uc.cobradores || [] },
     formacao: uc.formation, estilo: t.estilo, modo: t.modo, pronto: true, atualizado_em: new Date().toISOString() }, { onConflict: 'liga_id,user_id' });
   if (error) { avisar('A rodada já mudou. Atualizando a liga…', 'aviso'); await atualizarAposRodada(); return } // RLS recusa rodada velha
   if (!L.prontos.includes(eu)) L.prontos.push(eu);

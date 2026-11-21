@@ -7,7 +7,7 @@ import { promoverDaBase, venderDaBase } from './base.mjs';
 import { escolherClube, fecharPassagem, gerarPropostas, pedirDemissao, recusarClubes } from './carreira.mjs';
 import { renovarContrato } from './contratos.mjs';
 import { emprestimoJa, exercerOpcaoCompra, proporEmprestimo } from './emprestimos.mjs';
-import { unavailable } from './escalacao.mjs';
+import { definirCobradores, unavailable } from './escalacao.mjs';
 import { RODADA_ESTADUAL } from './estadual.mjs';
 import { P, S, addNewsTodos, clubById, clubDo, criarJogo, ehHumano, tec, tecnicos, usarTecnico, userClub } from './estado.mjs';
 import { migrarSave } from './versao.mjs';
@@ -49,6 +49,7 @@ export function aplicarEntrada(uc, e) {
   const ok = ids.length === 11 && new Set(ids).size === 11 && ids.every(id => doClube.has(id) && !unavailable(uc.players.find(p => p.id === id)));
   uc.lineup = ok ? [...ids] : autoXI(uc);
   uc.tatica = { estilo: ESTILOS[e.estilo] ? e.estilo : 'equilibrado', modo: MODOS[e.modo] ? e.modo : 'equilibrado' };
+  definirCobradores(e.escalacao && e.escalacao.cobradores, uc); // #288: ids conferidos (só do próprio elenco)
 }
 
 /** Joga a rodada atual da liga. entradas: {user_id: linha de liga_entradas}. Quem não confirmou joga com a escalação automática.

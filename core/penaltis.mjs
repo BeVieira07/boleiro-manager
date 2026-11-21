@@ -4,19 +4,30 @@
    Cobram os jogadores em campo no fim do jogo, do mais provável ao goleiro, e cada cobrança depende do cobrador e do
    goleiro adversário. O sorteio usa só a semente recebida: a mesma partida dá a mesma disputa no servidor e no replay.
    Resultado: {v, placar: {[clube]: gols}, cob: [{c, pid, nome, gol}]} (c = clube que cobrou).
-   Saves de antes da #267 guardavam em `pen` só o id do vencedor; a migração 15 o põe em {v}, sem placar nem cobranças. */
+   Saves de antes da #267 guardavam em `pen` só o id do vencedor; a migração 15 o põe em {v}, sem placar nem cobranças.
+   #288: o técnico escolhe a ordem (c.cobradores, ids); quem não está em campo é pulado e o resto segue a ordem automática.
+   Cobrador cansado converte menos (o mesmo fator de energia do jogo). */
+import { fatorEnergia } from './energia.mjs';
 import { clamp, mulberry32 } from './utils.mjs';
 
 const PESO_POS = { A: 0.03, M: 0.01, D: -0.02, G: -0.15 };
-const chance = (p, goleiro) => clamp(0.76 + ((p.ovr ?? 60) - forcaGoleiro(goleiro)) * 0.006 + (PESO_POS[p.pos] ?? 0), 0.5, 0.92);
+const chance = (p, goleiro) => clamp((0.76 + ((p.ovr ?? 60) - forcaGoleiro(goleiro)) * 0.006 + (PESO_POS[p.pos] ?? 0)) * fatorEnergia(p), 0.5, 0.92);
 // sem goleiro em campo (expulso sem troca), quem vai para o gol rende bem menos
 const forcaGoleiro = g => !g ? 30 : g.pos === 'G' ? g.ovr ?? 60 : (g.ovr ?? 60) * 0.5;
-const ordem = p => (p.pos === 'G' ? -100 : 0) + (PESO_POS[p.pos] ?? 0) * 100 + (p.ovr ?? 0) / 10;
 
-/** Cobradores em ordem (o goleiro por último) e o goleiro de um time, a partir dos jogadores em campo. */
-export function timeNaDisputa(id, emCampo) {
-  const jogadores = emCampo.filter(Boolean);
-  const cobradores = [...jogadores].sort((x, y) => ordem(y) - ordem(x) || (x.id < y.id ? -1 : 1));
+/** Força no pênalti (0 a 100): a chance de converter contra um goleiro médio, já com a energia. */
+export const forcaPenalti = p => Math.round(chance(p, { pos: 'G', ovr: 70 }) * 100);
+// ordem automática: a força no pênalti (já com energia e posição), o goleiro por último
+const ordem = p => (p.pos === 'G' ? -100 : 0) + chance(p, { pos: 'G', ovr: 70 }) * 100;
+/** Ordem automática: do mais provável ao goleiro. */
+export const ordemAutomatica = jogadores => [...jogadores].sort((x, y) => ordem(y) - ordem(x) || (x.id < y.id ? -1 : 1));
+
+/** Cobradores em ordem e o goleiro de um time, a partir dos jogadores em campo: primeiro os escolhidos (ids, na ordem
+ *  do técnico) que estão em campo, depois os demais na ordem automática (o goleiro por último). */
+export function timeNaDisputa(id, emCampo, escolhidos = []) {
+  const jogadores = emCampo.filter(Boolean), porId = new Map(jogadores.map(p => [p.id, p]));
+  const primeiro = [...new Set(Array.isArray(escolhidos) ? escolhidos : [])].map(i => porId.get(i)).filter(Boolean);
+  const cobradores = [...primeiro, ...ordemAutomatica(jogadores.filter(p => !primeiro.includes(p)))];
   const goleiro = jogadores.find(p => p.pos === 'G') || [...jogadores].sort((x, y) => x.ovr - y.ovr)[0] || null;
   return { id, cobradores: cobradores.length ? cobradores : [{ id: null, name: 'Cobrador', pos: 'M', ovr: 50 }], goleiro };
 }
