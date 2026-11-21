@@ -20,7 +20,8 @@ const PARES = [
   ['verde', 'painel'], ['ouro', 'painel'], ['perigo', 'painel'], ['info', 'painel'],
   ['tinta-verde', 'verde'], ['#ffffff', 'perigo-forte'], ['#ffffff', 'neutro'],
   ['verde-claro', 'verde-esc'], ['ouro-claro', 'ouro-esc'], ['perigo-claro', 'perigo-esc'], ['#cfe4ff', '#13283f'],
-  ['pos-g-t', 'pos-g'], ['pos-d-t', 'pos-d'], ['pos-m-t', 'pos-m'], ['pos-a-t', 'pos-a']
+  ['pos-g-t', 'pos-g'], ['pos-d-t', 'pos-d'], ['pos-m-t', 'pos-m'], ['pos-a-t', 'pos-a'],
+  ['ouro', 'ouro-esc'], ['verde-claro', 'painel'], ['perigo-claro', 'painel'], ['texto2', 'painel3']
 ];
 
 test('textos e chips passam o contraste mínimo de 4,5:1', () => {

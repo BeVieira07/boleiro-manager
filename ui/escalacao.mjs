@@ -78,15 +78,18 @@ export function sugestoesTroca(lay) {
   return out;
 }
 
-function carta(s, o = {}) {
+function carta(s, o, expulso) {
   const acao = o.acao || 'clickEsc', selId = 'sel' in o ? o.sel : ui.selEsc;
+  if (expulso) return `<div class="carta vazia exp-carta-vermelha"><span class="carta-vaga">Expulso</span><s class="carta-nome">${esc(expulso)}</s><span aria-hidden="true">—</span></div>`;
   if (!s.id) return `<div class="carta vazia"><span class="carta-vaga">${s.d}</span><span>vaga livre</span></div>`;
   const p = P[s.id], u = o.emCampo ? null : unavailable(p), pp = penalidadePosicao(p, s.d), sel = selId === p.id;
   const est = u ? 'indisp' : pp.tipo === 'fora' ? 'fora' : '', nota = u ? (p.inj > 0 ? `${p.inj} rod.` : `susp. ${p.susp}`) : pp.pen ? `-${Math.round(pp.pen * 100)}%` : '';
   const desc = `${POSD[s.d].nome}: ${p.name}, força ${ovrNaPosicao(p, s.d)}, energia ${Math.round(energiaDe(p))}${u ? ', ' + u : pp.tipo === 'fora' ? ', fora de posição, ' + nota : ''}`;
-  return `<button type="button" class="carta ${est}${sel ? ' sel' : ''}" data-acao="${acao}|${p.id}" aria-pressed="${sel}" aria-label="${esc(desc)}" title="${esc(p.name)}"${o.bloqueado ? ' disabled' : ''}>
-    <span class="carta-vaga">${s.d}</span><span class="carta-nome">${esc(p.name)}</span>
-    <span class="carta-pe">${ovrChip(ovrNaPosicao(p, s.d))}${nota ? `<span class="carta-nota">${nota}</span>` : ''}</span>${energiaBarra(p)}</button>`;
+  const miolo = `<span class="carta-vaga">${s.d}</span><span class="carta-nome">${esc(p.name)}</span>
+    <span class="carta-pe">${ovrChip(ovrNaPosicao(p, s.d))}${nota ? `<span class="carta-nota">${nota}</span>` : ''}</span>${o.semEnergia ? '' : energiaBarra(p)}`;
+  const cls = `carta ${est}${sel ? ' sel' : ''}`;
+  if (o.somenteLeitura) return `<div class="${cls}">${miolo}</div>`;
+  return `<button type="button" class="${cls}" data-acao="${acao}|${p.id}" aria-pressed="${sel}" aria-label="${esc(desc)}" title="${esc(p.name)}"${o.bloqueado ? ' disabled' : ''}>${miolo}</button>`;
 }
 
 /** Campo com uma carta por vaga, no esquema do clube. o = {acao, sel, bloqueado, mini}: a ação do clique (padrão: trocar na
@@ -97,7 +100,7 @@ export function campoHtml(uc, o = {}) {
   const sz = FORMS[uc.formation] || FORMS['4-4-2'], idx = (de, n) => Array.from({ length: n }, (_, k) => de + k);
   const linhas = [idx(1 + sz[0] + sz[1], sz[2]), idx(1 + sz[0], sz[1]), idx(1, sz[0]).reverse(), [0]];
   return `<section class="campo${o.mini ? ' mini' : ''}" aria-label="Campo: ${esc(uc.formation)}, ${xi.length} de 11 titulares">
-      ${linhas.map(l => `<div class="linha">${l.map(i => carta(lay[i], o)).join('')}</div>`).join('')}
+      ${linhas.map(l => `<div class="linha">${l.map(i => carta(lay[i], o, o.expulsos?.get(i))).join('')}</div>`).join('')}
     </section>`;
 }
 

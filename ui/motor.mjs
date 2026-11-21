@@ -16,7 +16,8 @@ import { rotuloRodada } from './estadual.mjs';
 export function playRound(aoVivo=true){
   if(bloqueadoNaLiga())return; // na liga, quem joga a rodada é o servidor (#34)
   encerrarVivo(); // a rodada anterior ao vivo, se ficou aberta, termina aqui
-  const r=jogarRodada({adiarCopa:aoVivo&&prefs().aoVivo!=='nunca'});
+  const solo=tecnicos().length===1;
+  const r=jogarRodada({adiarCopa:aoVivo&&prefs().aoVivo!=='nunca', assistir:aoVivo?g=>verAoVivo(g,S.round+(g.uf?0:1)):null});
   if(r.demitido){if(r.tecnico)usarTecnico(r.tecnico);demissao();return} // #37: escolher o novo clube antes da rodada
   if(r.fim){seasonEnd();return}
   if(r.erro){if(r.tecnico)usarTecnico(r.tecnico);avisar(r.erro,'erro');ui.view=r.faltam?'clube':'escalacao';render();return}
@@ -25,7 +26,7 @@ export function playRound(aoVivo=true){
   save();
   if(!aoVivo)return;
   const temCopa=!!S.copa?.pendente, seguir=temCopa?retomarCopa:mostrarResultados;
-  if(mine&&verAoVivo(mine))iniciarVivo(games,mine,seguir,{estadual:r.estadual?.dia,proximo:temCopa?COPA:null});
+  if(mine&&(solo?mine.expulsaoAoVivo===userClub().id:verAoVivo(mine)))iniciarVivo(games,mine,seguir,{estadual:r.estadual?.dia,proximo:temCopa?COPA:null});
   else seguir();
 }
 function fecharCopaAoVivo(){concluirRodadaCopa();save()}

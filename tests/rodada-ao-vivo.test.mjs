@@ -2,7 +2,7 @@
 import { mock, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { DURACAO_COBRANCA, htmlCobranca } from '../ui/penalti-animacao.mjs';
-import { carregarJogo, clubeDaSerie } from './jogo.mjs';
+import { carregarJogo, clubeDaSerie, problemasNasTelas } from './jogo.mjs';
 
 /** `tick(ms)` dispara o intervalo após ms. `passo()` usa o tempo de uma cobrança a cada disparo. */
 function comRelogioManual(j, iniciar = 'playRound()') {
@@ -19,6 +19,214 @@ function comRelogioManual(j, iniciar = 'playRound()') {
   return { tick, agora: agora_, passo: (n = 1) => { for (let i = 0; i < n; i++) tick(DURACAO_COBRANCA) } };
 }
 const novo = () => { const j = carregarJogo({ boot: true }); j.run(`newGame('${clubeDaSerie(j)}')`); return j };
+
+function jogoComExpulsao(j, { lado = 'h', replay = false, goleiro = false, duas = false, t = 'vermelho' } = {}) {
+  return comRelogioManual(j, `(() => {
+    const h = userClub(), a = S.clubs.find(c => c !== h && divOf(c) === divOf(h));
+    const g = { h: h.id, a: a.id, hg: 0, ag: 0, expulsaoAoVivo: h.id,
+      escalacoes: { h: elencoDoJogo(h, getXI(h)), a: elencoDoJogo(a, getXI(a)) }, ev: [] };
+    const expulsar = (lado, i, segundo = false) => {
+      const pid = g.escalacoes[lado].xi[i];
+      g.ev.push({ m: 63, t: '${t}', side: lado, pid, name: P[pid].name, segundo, rodadas: 1 });
+    };
+    expulsar('${lado}', ${goleiro ? 0 : 3});
+    if (${duas}) expulsar('${lado}', 6, true);
+    iniciarVivo([g], g, () => {}, { minuto: 62, replay: ${replay} });
+  })()`);
+}
+
+function capturarJanela(t) {
+  const caixa = { hidden: true, innerHTML: '' }, get = document.getElementById;
+  t.mock.method(document, 'getElementById', id => id === 'av-expulsao' ? caixa : get(id));
+  return caixa;
+}
+
+function jogarTempoNormal(j, r) {
+  for (let i = 0; i < 93; i++) {
+    r.passo();
+    if (j.run('!!ui.vivo.expulsao')) j.acao('avExpFechar');
+  }
+}
+
+test('expulsões do mesmo minuto abrem uma janela e só o fechamento libera o relógio', t => {
+  const j = novo(), r = jogoComExpulsao(j, { duas: true }), caixa = capturarJanela(t);
+  r.passo(3);
+  assert.equal(j.run('ui.vivo.min'), 63);
+  assert.equal(caixa.hidden, false);
+  assert.equal((caixa.innerHTML.match(/role="dialog"/g) || []).length, 1);
+  assert.match(caixa.innerHTML, /aria-modal="true" aria-labelledby="exp-titulo"/);
+  assert.match(caixa.innerHTML, /foi expulso/);
+  assert.match(caixa.innerHTML, /levou o segundo amarelo/);
+  assert.match(caixa.innerHTML, /9 jogadores/);
+  assert.equal((caixa.innerHTML.match(/exp-carta-vermelha/g) || []).length, 2);
+  assert.match(caixa.innerHTML, /a partir do minuto 64/i);
+  assert.doesNotMatch(caixa.innerHTML, /undefined|NaN|style="/);
+  assert.deepEqual(problemasNasTelas(j, ['aovivo']), []);
+  j.acao('avExpFechar');
+  assert.equal(caixa.hidden, true);
+  r.passo();
+  assert.equal(j.run('ui.vivo.min'), 64);
+  j.run('render()');
+  assert.match(j.html(), /Jogo retomado com 9 em campo/);
+  j.acao('avExpReabrir');
+  assert.match(caixa.innerHTML, /Fechar aviso/);
+  assert.doesNotMatch(caixa.innerHTML, /Jogo pausado|avExpConfirmar/);
+  r.passo();
+  assert.equal(j.run('ui.vivo.min'), 65, 'a releitura não pausa o relógio');
+  r.passo(30);
+  assert.equal(caixa.hidden, true, 'a releitura também fecha quando termina a partida');
+  j.run('render()');
+  assert.doesNotMatch(j.html(), /Ver o aviso de novo/);
+});
+
+test('expulsão adversária, replay e lesão não abrem janela', () => {
+  for (const opcoes of [{ lado: 'a' }, { replay: true }, { t: 'lesao' }]) {
+    const j = novo(), r = jogoComExpulsao(j, opcoes);
+    r.passo(2);
+    assert.equal(j.run('ui.vivo.min'), 64);
+    assert.equal(j.run('!!ui.vivo.expulsao'), false);
+  }
+});
+
+test('pênalti e expulsão no mesmo minuto mantêm a ordem dos lances', () => {
+  const j = novo(), r = jogoComExpulsao(j);
+  j.run(`(() => {
+    const { g } = ui.vivo, pid = g.escalacoes.h.xi.at(-1);
+    g.ev.unshift({ t: 'penalti', m: 63, side: 'h', pid, name: P[pid].name, res: 'fora', alvo: 'esq-baixo', pulo: 'esq' });
+  })()`);
+  r.passo(2);
+  assert.equal(j.run('ui.vivo.min'), 63);
+  assert.equal(j.run('!!ui.vivo.escolhaPen && !ui.vivo.expulsao'), true);
+  r.agora(() => j.acao('avPenChutar|auto'));
+  r.passo();
+  assert.equal(j.run('ui.vivo.min'), 63);
+  assert.equal(j.run('!!ui.vivo.expulsao'), true);
+  j.acao('avExpFechar');
+  r.passo();
+  assert.equal(j.run('ui.vivo.min'), 64);
+});
+
+function editarRascunho(j) {
+  const { sai, entra } = j.run(`(() => {
+    const v = ui.vivo;
+    return { sai: elencoParaTrocas(v.g, v.min).xi.find(id => id && P[id].pos !== 'G'),
+      entra: banco(v.g, v.min).find(({ p, motivo }) => p.pos !== 'G' && !motivo).p.id };
+  })()`);
+  j.acao(`avExpSair|${sai}`);
+  j.acao(`avExpEntrar|${entra}`);
+  j.acao('avExpTatica|form|4-3-3');
+  j.acao('avExpTatica|estilo|contra');
+  j.acao('avExpTatica|modo|defensivo');
+  return { sai, entra };
+}
+
+const estadoExpulsao = 'JSON.stringify([ui.vivo.g, userClub().lineup, userClub().formation, userClub().tatica, userClub().players.map(p => p.energia)])';
+
+test('trocas, formação e tática ficam no rascunho até Voltar ao jogo', () => {
+  const j = novo(), r = jogoComExpulsao(j);
+  r.passo();
+  const antes = j.run(estadoExpulsao), { sai, entra } = editarRascunho(j);
+  assert.equal(j.run(estadoExpulsao), antes);
+  j.acao('avExpConfirmar');
+  const resultado = j.run(`(() => {
+    const { g } = ui.vivo, uc = userClub();
+    return { ev: g.ev.filter(e => ['troca', 'formacao'].includes(e.t)), tatica: taticaUser(uc),
+      antes: escalacaoNoMinuto(g, 'h', 62).xi, depois: escalacaoNoMinuto(g, 'h', 63).xi };
+  })()`);
+  assert.deepEqual(resultado.ev.map(e => [e.m, e.t]), [[63, 'troca'], [63, 'formacao']]);
+  assert.deepEqual(resultado.tatica, { estilo: 'contra', modo: 'defensivo' });
+  assert.ok(resultado.antes.includes(sai) && !resultado.antes.includes(entra));
+  assert.ok(resultado.depois.includes(entra) && !resultado.depois.includes(sai));
+  j.run('render()');
+  assert.match(j.html(), /Jogo retomado: 4-3-3, contra-ataque, defensivo/);
+  r.passo();
+  assert.equal(j.run('ui.vivo.min'), 64);
+});
+
+test('Voltar sem mexer descarta o rascunho e mantém escalação, energia e lances', () => {
+  const j = novo(), r = jogoComExpulsao(j);
+  r.passo();
+  const antes = j.run(estadoExpulsao);
+  editarRascunho(j);
+  j.acao('avExpFechar');
+  assert.equal(j.run(estadoExpulsao), antes);
+  assert.equal(j.run('ui.vivo.avisoExpulsao.aplicadas.length'), 0);
+  r.passo();
+  assert.equal(j.run('ui.vivo.min'), 64);
+});
+
+test('mensagens de reserva indisponível, goleiro e 6ª troca aparecem na região aria-live', t => {
+  const j = novo(), r = jogoComExpulsao(j), caixa = capturarJanela(t);
+  r.passo();
+  const { sai, reserva, goleiro } = j.run(`(() => {
+    const v = ui.vivo, b = banco(v.g, v.min);
+    return { sai: v.expulsao.elenco.xi[1], reserva: b.find(x => !x.motivo && x.p.pos !== 'G').p.id,
+      goleiro: b.find(x => !x.motivo && x.p.pos === 'G').p.id };
+  })()`);
+  j.acao(`avExpEntrar|${reserva}`);
+  assert.match(caixa.innerHTML, /aria-live="polite">Primeiro toque em quem sai/);
+  j.acao(`avExpSair|${sai}`);
+  j.acao(`avExpEntrar|${goleiro}`);
+  assert.match(caixa.innerHTML, /aria-live="polite">Goleiro só troca com goleiro/);
+  j.run(`P['${reserva}'].inj = 2`);
+  j.acao(`avExpEntrar|${reserva}`);
+  assert.match(caixa.innerHTML, /aria-live="polite">[^<]*lesionado/);
+  for (let i = 0; i < 5; i++) {
+    const par = j.run(`(() => {
+      const v = ui.vivo, a = v.expulsao;
+      return [a.elenco.xi.find(id => id && P[id].pos !== 'G'),
+        banco(v.g, v.min, a.elenco, a.rascunho).find(x => !x.motivo && x.p.pos !== 'G').p.id];
+    })()`);
+    if (j.run('ui.vivo.expulsao.sel') !== par[0]) j.acao(`avExpSair|${par[0]}`);
+    j.acao(`avExpEntrar|${par[1]}`);
+  }
+  assert.match(caixa.innerHTML, /<b>5<\/b> de 5 feitas/);
+  j.acao(`avExpEntrar|${reserva}`);
+  assert.match(caixa.innerHTML, /aria-live="polite">Você já fez as 5 substituições/);
+  assert.equal(j.run('trocasDe(ui.vivo.g).length'), 0);
+  j.acao('avExpConfirmar');
+  assert.equal(j.run('trocasDe(ui.vivo.g).length'), 5);
+});
+
+test('com o goleiro expulso, a janela e os controles normais aceitam goleiro por jogador de linha', () => {
+  for (const naJanela of [true, false]) {
+    const j = novo(), r = jogoComExpulsao(j, { goleiro: true });
+    r.passo();
+    const { sai, entra } = j.run(`(() => {
+      const v = ui.vivo, { xi } = elencoParaTrocas(v.g, v.min);
+      return { sai: xi[1], entra: banco(v.g, v.min).find(x => !x.motivo && x.p.pos === 'G').p.id };
+    })()`);
+    if (!naJanela) j.acao('avExpFechar');
+    const acao = naJanela ? 'avExp' : 'av';
+    j.acao(`${acao}Sair|${sai}`);
+    j.acao(`${acao}Entrar|${entra}`);
+    if (naJanela) j.acao('avExpConfirmar');
+    const xi = j.run("escalacaoNoMinuto(ui.vivo.g, 'h', 63).xi");
+    assert.equal(xi[0], entra);
+    assert.equal(xi[1], null);
+    assert.equal(xi.filter(Boolean).length, 10);
+    assert.equal(j.run('trocasDe(ui.vivo.g).length'), 1);
+  }
+});
+
+test('a formação mantém o gol vazio e a troca de goleiro funciona numa escalação legada', () => {
+  const j = novo(), r = jogoComExpulsao(j, { goleiro: true });
+  j.run('delete ui.vivo.g.escalacoes; ui.vivo.g.copa = {}');
+  r.passo();
+  j.acao('avExpTatica|form|4-3-3');
+  j.acao('avExpConfirmar');
+  assert.equal(j.run("escalacaoNoMinuto(ui.vivo.g, 'h', 63).xi[0]"), null);
+  const { sai, entra } = j.run(`(() => {
+    const v = ui.vivo;
+    return { sai: elencoParaTrocas(v.g, v.min).xi[1], entra: banco(v.g, v.min).find(x => !x.motivo && x.p.pos === 'G').p.id };
+  })()`);
+  j.acao(`avSair|${sai}`);
+  j.acao(`avEntrar|${entra}`);
+  const xi = j.run("escalacaoNoMinuto(ui.vivo.g, 'h', 63).xi");
+  assert.equal(xi[0], entra);
+  assert.equal(xi[1], null);
+  assert.equal(xi.filter(Boolean).length, 10);
+});
 
 test('a rodada ao vivo é uma tela com o seu jogo, os outros jogos e a classificação, não um modal', () => {
   const j = novo(), r = comRelogioManual(j);
@@ -61,7 +269,7 @@ test('os placares e a classificação provisória andam com o relógio e fecham 
     assert.ok(g[0].h <= g[1].h && g[0].a <= g[1].a, 'o placar só cresce');
     assert.deepEqual([g[1].h, g[1].a], [g[2], g[3]], 'no fim é o resultado do jogo');
   }
-  r.passo(93);
+  jogarTempoNormal(j, r);
   assert.equal(j.run('ui.vivo.fim'), true);
   const prov = j.run(`tabelaNoMinuto(${d},ui.vivo.rodada,ui.vivo.jogos,93)`), real = j.run(`table(${d})`);
   assert.deepEqual(prov, real);
@@ -131,7 +339,7 @@ test('trocas e formação valem só neste jogo: no fim o time volta à escalaç�
   if (entra) j.acao(`avEntrar|${entra}`); else j.run('mudarFormacaoAoVivo(ui.vivo.g,5,"3-5-2")');
   j.acao('avFormacao|' + j.run('userClub().formation===\'5-3-2\'?\'4-3-3\':\'5-3-2\''));
   assert.notEqual(j.run('JSON.stringify([userClub().lineup,userClub().formation])'), antes, 'durante o jogo o time mudou');
-  r.passo(93);
+  jogarTempoNormal(j, r);
   assert.equal(j.run('JSON.stringify([userClub().lineup,userClub().formation])'), antes);
   j.acao('avContinuar');
   assert.equal(j.run('ui.view'), 'rodada');

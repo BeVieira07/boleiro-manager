@@ -25,13 +25,13 @@ export function mudarPref(chave, valor, ev) {
   render();
 }
 
-/** Jogo decisivo: contra um dos 4 primeiros da tabela da sua série, ou nas 5 últimas rodadas. Chamada depois da rodada. */
-export function jogoDecisivo(g) {
+/** Jogo decisivo: contra um dos 4 primeiros da tabela da sua série, ou nas 5 últimas rodadas. */
+export function jogoDecisivo(g, rodada = S.round) {
   if (g.copa) return true;
   const uc = userClub(), adv = g.h === uc.id ? g.a : g.h, pos = table(divOf(uc)).findIndex(x => x.id === adv);
-  return (pos >= 0 && pos < 4) || S.round > S.fixtures.length - 5;
+  return (pos >= 0 && pos < 4) || rodada > S.fixtures.length - 5;
 }
-export function verAoVivo(g) { const v = prefs().aoVivo; return v === 'sempre' || (v === 'decisivos' && jogoDecisivo(g)) }
+export function verAoVivo(g, rodada) { const v = prefs().aoVivo; return v === 'sempre' || (v === 'decisivos' && jogoDecisivo(g, rodada)) }
 
 /** Categoria de uma notícia, pelo texto (as notícias são só texto). */
 export function categoriaNoticia(t) {

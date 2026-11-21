@@ -11,6 +11,7 @@ export function unavailable(p){
   if(p.susp>0)return `suspenso (${p.susp} rod.)`;
   return null;
 }
+export const SUSPENSAO_POR_EXPULSAO = 1;
 const noticiaDe = e => e.t === 'lesao'
   ? `🩹 ${e.name} se lesionou e desfalca o time por ${e.rodadas} rodada(s).`
   : `🟥 ${e.name} foi expulso e cumpre 1 jogo de suspensão.`;
@@ -20,7 +21,7 @@ export function aplicarDisponibilidade(games){
   for(const c of S.clubs)for(const p of c.players){if(p.inj>0)p.inj--;if(p.susp>0)p.susp--}
   for(const g of games)for(const e of g.ev||[]){
     if(e.t==='lesao')P[e.pid].inj=e.rodadas;
-    else if(e.t==='vermelho')P[e.pid].susp=1;
+    else if(e.t==='vermelho')P[e.pid].susp=SUSPENSAO_POR_EXPULSAO;
     else continue;
     addNews(noticiaDe(e),g[e.side]);
   }
@@ -44,9 +45,10 @@ export const SLOTS={
 for(const k in SLOTS)SLOTS[k]=SLOTS[k].split(' ');
 export const slotsDe=f=>SLOTS[f]||SLOTS['4-4-2'];
 // cada vaga recebe quem perde menos ali (a posição do jogador, depois o mais próximo); o resto completa as vagas livres
-export function reslot(ids,f,manterVagas=false){
+export function reslot(ids,f,manterVagas=false,semGoleiro=false){
   const slots=slotsDe(f),left=ids.filter(id=>P[id]),out=slots.map(()=>null);
   slots.forEach((s,i)=>{
+    if(semGoleiro&&s==='GOL')return;
     let best=-1,bp=9;
     left.forEach((id,k)=>{const pen=penalidadePosicao(P[id],s).pen;if(pen<bp||(pen===bp&&best>=0&&P[id].ovr>P[left[best]].ovr)){bp=pen;best=k}});
     if(best>=0)out[i]=left.splice(best,1)[0];
