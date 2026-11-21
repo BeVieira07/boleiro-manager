@@ -45,18 +45,23 @@ export function melhorReserva(elenco, pid) {
 export function aplicarLanceAoElenco(elenco, e) {
   if (e.t === 'formacao' && e.form) {
     elenco.form = e.form;
-    elenco.xi = reslot(elenco.xi.filter(Boolean), e.form, true);
-  } else if (saidaForcada(e) || (e.t === 'troca' && !e.auto && e.sai)) {
+    elenco.xi = reslot(elenco.xi, e.form, true, elenco.goleiroExpulso);
+  } else if (saidaForcada(e) || (e.t === 'troca' && (!e.auto || e.goleiroNoGol) && e.sai)) {
     const i = elenco.xi.indexOf(e.pid ?? e.sai);
     if (i >= 0) {
-      elenco.xi[i] = e.entra ?? null;
+      elenco.xi[i] = e.goleiroNoGol ? null : e.entra ?? null;
+      if (e.t === 'vermelho' && i === 0) elenco.goleiroExpulso = true;
+      if (e.goleiroNoGol) {
+        elenco.xi[0] = e.entra;
+        elenco.goleiroExpulso = false;
+      }
       elenco.banco.delete(e.entra);
     }
   }
 }
 
 export function escalacaoNoMinuto(g, side, min) {
-  const inicial = g.escalacoes?.[side];
+  const inicial = g.escalacoes?.[side] ?? g.escalacaoLegada?.[side];
   if (!inicial) return null;
   const elenco = escalacaoInicial(inicial);
   for (const e of g.ev) if (e.side === side && e.m <= min) aplicarLanceAoElenco(elenco, e);

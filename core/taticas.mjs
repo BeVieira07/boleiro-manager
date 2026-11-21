@@ -1,11 +1,12 @@
 import { P, S, addFin, clubById, ehHumano, tec, userClub } from './estado.mjs';
 import { creditarGolCopa } from './gols-copa.mjs';
 import { wageBill } from './emprestimos.mjs';
-import { energiaDaSaidaForcada } from './energia.mjs';
+import { energiaDaSaidaForcada, energiaDaTroca } from './energia.mjs';
 import { cancelarDesfalque } from './escalacao.mjs';
 import { aplicarLanceAoElenco, escalacaoInicial, escalacaoNoMinuto, melhorReserva, saidaForcada } from './lances.mjs';
 import { chancesDoJogo, noticiarPenaltisDaLiga, pickScorer, power } from './motor.mjs';
 import { NOMES_ALVOS_PENALTI, cobrarPenalti, timeNaDisputa } from './penaltis.mjs';
+import { MAX_TROCAS } from './substituicoes.mjs';
 import { clamp, hashStr, mulberry32, poisson, ri, rnd } from './utils.mjs';
 
 /* ================= estilos de jogo e modo (ataque/defesa) ================= */
@@ -94,6 +95,23 @@ export function chancesComDesfalques(ph,pa,base,inicial){
   return chances;
 }
 
+function recomporGol(elenco, vermelho) {
+  const sai = elenco.xi.map(id => P[id]).filter(p => p && p.pos !== 'G').sort((a, b) => a.ovr - b.ovr)[0];
+  const goleiro = [...elenco.banco].map(id => P[id])
+    .filter(p => p?.pos === 'G').sort((a, b) => b.ovr - a.ovr)[0];
+  if (!sai || !goleiro) return null;
+  return { m: vermelho.m, t: 'troca', side: vermelho.side, auto: true, goleiroNoGol: true, sai: sai.id, entra: goleiro.id,
+    name: `${goleiro.name} entra no lugar de ${sai.name} (expulsão do goleiro)` };
+}
+
+export function energiaDaRecomposicao(g, antes = []) {
+  const atuais = g.ev.filter(e => e.auto && e.goleiroNoGol);
+  const chave = e => `${e.side}|${e.m}|${e.sai}|${e.entra}`;
+  const ajustar = (e, sai, entra) => energiaDaTroca(P[sai], P[entra], e.m, clubById(g[e.side]));
+  for (const e of antes) if (!atuais.some(a => chave(a) === chave(e))) ajustar(e, e.entra, e.sai);
+  for (const e of atuais) if (!antes.some(a => chave(a) === chave(e))) ajustar(e, e.sai, e.entra);
+}
+
 export function simularLances(g,min,revisao=false){
   const clubes={h:clubById(g.h),a:clubById(g.a)};
   const h=clubes.h,a=clubes.a;
@@ -103,8 +121,11 @@ export function simularLances(g,min,revisao=false){
   const th=taticaDe(h,a,inicial.h,inicial.a),ta=taticaDe(a,h,inicial.a,inicial.h);
   const amarelos=new Set();
   const lanceDeAtaque=e=>e.t==='gol'||e.t==='penalti';
-  const pendentes=g.ev.filter(e=>!lanceDeAtaque(e)&&!e.auto&&!e.segundo).sort((x,y)=>x.m-y.m);
+  const recomposicoes=g.ev.filter(e=>e.auto&&e.goleiroNoGol);
   const desfalques=g.ev.filter(saidaForcada);
+  const chaveCartao=e=>`${e.side}|${e.pid}|${e.m}`;
+  const segundosVistos=new Set(desfalques.filter(e=>e.segundo&&e.m<=min).map(chaveCartao));
+  const pendentes=g.ev.filter(e=>!lanceDeAtaque(e)&&(e.m<=min||!e.segundo)&&(!e.auto||(e.goleiroNoGol&&e.m<=min))).sort((x,y)=>x.m-y.m);
   g.ev=g.ev.filter(lanceDeAtaque);
   let de=min+1;
   const sortearAtaques=ate=>{
@@ -118,13 +139,26 @@ export function simularLances(g,min,revisao=false){
     novosPenaltis(g,a,'a',pa.xi,ph.xi,poisson(taxaA),de,ate);
     de=ate+1;
   };
+  const feitas={h:0,a:0},vermelhosNoGol=new Map();
+  // Espera os outros desfalques do minuto antes de escolher quem sai.
+  const recompor=()=>{
+    for(const [side,e] of vermelhosNoGol){
+      if(elencos[side].xi[0]||feitas[side]>=MAX_TROCAS)continue;
+      const troca=recomporGol(elencos[side],e);
+      if(troca){g.ev.push(troca);aplicarLanceAoElenco(elencos[side],troca);feitas[side]++}
+    }
+    vermelhosNoGol.clear();
+  };
+  let minuto;
   for(const lance of pendentes){
+    if(lance.m!==minuto){recompor();minuto=lance.m}
     const elenco=elencos[lance.side];
     if(lance.pid&&!elenco.xi.includes(lance.pid))continue;
     let e=lance;
     if(e.t==='cartao'){
       g.ev.push(e);
       if(!amarelos.has(e.pid)){amarelos.add(e.pid);continue}
+      if(segundosVistos.has(chaveCartao(e)))continue;
       e={...e,t:'vermelho',segundo:true};
     }
     sortearAtaques(e.m);
@@ -135,8 +169,11 @@ export function simularLances(g,min,revisao=false){
       if(entra)g.ev.push(e,{m:e.m,t:'troca',side:e.side,auto:true,name:`${P[entra].name} entra no lugar de ${e.name} (lesão)`});
       else g.ev.push(e);
     }else g.ev.push(e);
+    if(e.t==='troca')feitas[e.side]++;
+    if(e.t==='vermelho'&&e.m>min&&elenco.xi[0]===e.pid&&g.expulsaoAoVivo!==g[e.side])vermelhosNoGol.set(e.side,e);
     aplicarLanceAoElenco(elenco,e);
   }
+  recompor();
   sortearAtaques(93);
   g.ev.sort((x,y)=>x.m-y.m);
   if(revisao)for(const e of desfalques){
@@ -144,6 +181,7 @@ export function simularLances(g,min,revisao=false){
     if(!atual)cancelarDesfalque(g,e);
     energiaDaSaidaForcada(clubes[e.side],e,atual);
   }
+  if(revisao)energiaDaRecomposicao(g,recomposicoes);
 }
 export function mudarTatica(campo,valor){
   const uc=userClub();uc.tatica=Object.assign(taticaUser(uc),{[campo]:valor});

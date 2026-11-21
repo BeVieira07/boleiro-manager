@@ -84,3 +84,49 @@ test('uma troca manual antes de uma lesão prevista cancela o lance e o desfalqu
   assert.equal(r.sobra, false);
   assert.equal(r.jogadores, 11);
 });
+
+test('IA e time sem ao vivo recompõem o gol usando uma troca e tirando o jogador de linha mais fraco', () => {
+  const j = novo();
+  const r = j.run(`(() => {
+    const h = userClub(), a = S.clubs.find(c => c !== h);
+    const g = { h: h.id, a: a.id, hg: 0, ag: 0,
+      escalacoes: { h: elencoDoJogo(h, getXI(h)), a: elencoDoJogo(a, getXI(a)) }, ev: [] };
+    for (const side of ['h', 'a']) {
+      const pid = g.escalacoes[side].xi[0];
+      g.ev.push({ t: 'vermelho', m: 42, side, pid, name: P[pid].name });
+    }
+    simularLances(g, 0);
+    const conferir = side => {
+      const inicial = g.escalacoes[side], xi = escalacaoNoMinuto(g, side, 42).xi;
+      const maisFraco = inicial.xi.slice(1).map(id => P[id]).sort((x, y) => x.ovr - y.ovr)[0].id;
+      const troca = trocasDe(g, g[side], 42)[0];
+      return { automatico: troca.auto, sai: troca.sai === maisFraco,
+        goleiro: xi[0] === troca.entra && P[xi[0]].pos === 'G' && inicial.banco.includes(xi[0]),
+        vaga: xi[inicial.xi.indexOf(maisFraco)], total: xi.filter(Boolean).length };
+    };
+    const automaticos = ['h', 'a'].map(conferir);
+    ressimularDepois(g, 42);
+    return { automaticos, apos: ['h', 'a'].map(side => trocasDe(g, g[side]).length) };
+  })()`);
+  for (const time of r.automaticos) assert.deepEqual(time, { automatico: true, sai: true, goleiro: true, vaga: null, total: 10 });
+  assert.deepEqual(r.apos, [1, 1], 'refazer os gols não duplica a troca automática');
+});
+
+test('sem reserva ou com 5 trocas, o gol fica vazio após a expulsão', () => {
+  const j = novo();
+  const r = j.run(`(() => {
+    const h = userClub(), a = S.clubs.find(c => c !== h);
+    const g = { h: h.id, a: a.id, hg: 0, ag: 0,
+      escalacoes: { h: elencoDoJogo(h, getXI(h)), a: elencoDoJogo(a, getXI(a)) }, ev: [] };
+    g.escalacoes.h.banco = g.escalacoes.h.banco.filter(id => P[id].pos !== 'G');
+    const bancoDaIa = g.escalacoes.a.banco.filter(id => P[id].pos !== 'G');
+    for (let i = 0; i < 5; i++) g.ev.push({ t: 'troca', m: 20 + i, side: 'a', sai: g.escalacoes.a.xi[i + 1], entra: bancoDaIa[i] });
+    for (const side of ['h', 'a']) {
+      const pid = g.escalacoes[side].xi[0];
+      g.ev.push({ t: 'vermelho', m: 50, side, pid, name: P[pid].name });
+    }
+    simularLances(g, 0);
+    return { vagas: ['h', 'a'].map(side => escalacaoNoMinuto(g, side, 93).xi[0]), autos: g.ev.filter(e => e.goleiroNoGol).length };
+  })()`);
+  assert.deepEqual(r, { vagas: [null, null], autos: 0 });
+});

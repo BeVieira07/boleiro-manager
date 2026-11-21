@@ -10,10 +10,10 @@ import { nomeData, penaltiDaFinal } from '../core/estadual.mjs';
 import { COPA, copaNaRodada, penaltiDaCopa } from '../core/copa.mjs';
 import { NOMES_ALVOS_PENALTI, baterNaDisputa, batedoresDaVez, forcaPenalti, ladoDaVez, novaDisputa, placarAte, placarPenaltis, resultadoDisputa, vencedorPenaltis } from '../core/penaltis.mjs';
 import { timesDaVolta } from '../core/gols-copa.mjs';
-import { recobrarPenalti } from '../core/taticas.mjs';
-import { DIVS, P, S, clubById, divOf, divisions, hasTwoDivs, userClub } from '../core/estado.mjs';
+import { ESTILOS, MODOS, mudarTatica, recobrarPenalti, ressimularDepois, taticaUser } from '../core/taticas.mjs';
+import { DIVS, P, S, clubById, divOf, divisions, hasTwoDivs, tecnicos, userClub } from '../core/estado.mjs';
 import { escalacaoNoMinuto, saidaForcada } from '../core/lances.mjs';
-import { MAX_TROCAS, banco, mudarFormacaoAoVivo, substituir, trocasDe } from '../core/substituicoes.mjs';
+import { MAX_TROCAS, banco, elencoParaTrocas, mudarFormacaoAoVivo, substituir, trocasDe } from '../core/substituicoes.mjs';
 import { FORMS, esc, hashStr } from '../core/utils.mjs';
 import { avisar } from './avisos.mjs';
 import { chip, ovrChip } from './componentes.mjs';
@@ -21,6 +21,7 @@ import { campoHtml } from './escalacao.mjs';
 import { VELOCIDADES, prefs, verAoVivo } from './configuracoes.mjs';
 import { jogosCopa } from './copa.mjs';
 import { save, ui } from './estado.mjs';
+import { mostrarJanelaExpulsao, novoAvisoExpulsao, ocultarJanelaExpulsao, resumoExpulsao, validarRascunhoExpulsao } from './expulsao.mjs';
 import { icone } from './icones.mjs';
 import { DURACAO, EVENTO, crest, itemEvento, marcador, textoEvento } from './partida.mjs';
 import { DURACAO_COBRANCA, htmlCobranca } from './penalti-animacao.mjs';
@@ -103,7 +104,7 @@ export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round
     S, clube: uc, xi0: [...(uc.lineup || [])], f0: uc.formation, timer: null, // xi0/f0: trocas e formação valem só neste jogo
     estadual, uf: meu.uf || null, proximo, aoTerminar, cobranca: null, filaCobrancas: [] };
   if (minuto != null && meu.ev.some(e => ['troca', 'formacao'].includes(e.t) && e.m <= minuto && meu[e.side] === uc.id)) {
-    const elenco = escalacaoNoMinuto(meu, meu.h === uc.id ? 'h' : 'a', minuto);
+    const elenco = elencoParaTrocas(meu, minuto);
     v.alterou = true; v.xi1 = elenco.xi.filter(Boolean); v.f1 = elenco.form;
     uc.lineup = [...v.xi1]; uc.formation = v.f1;
   }
@@ -115,6 +116,7 @@ export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round
 /** Larga o jogo ao vivo (se houver) sem chamar o "Continuar": o time volta à escalação de antes das trocas. */
 export function encerrarVivo() {
   const v = ui.vivo; if (!v) return;
+  if (v.expulsao) ocultarJanelaExpulsao();
   clearInterval(v.timer); restaurar(v); ui.vivo = null; ui.tvAoVivo = null;
 }
 /** Devolve o time de antes das trocas, a não ser que a escalação já tenha sido mexida depois delas (aí vale a nova). */
@@ -127,8 +129,16 @@ function restaurar(v) {
 
 // enquanto a cobrança é animada, a tela fica no minuto anterior: placar, lances e tabela só mudam depois do chute
 const minTela = v => v.cobranca ? Math.min(DURACAO, v.cobranca.lance.m - 1) : v.escolhaPen?.lance ? v.escolhaPen.lance.m - 1 : v.min;
+const pausaExpulsao = v => v.expulsao && !v.expulsao.leitura;
+function abrirExpulsaoPendente(v) {
+  v.expulsao = novoAvisoExpulsao(v, v.vermelhosPendentes);
+  v.vermelhosPendentes = null;
+  pintar(v);
+  mostrarJanelaExpulsao(v, avExpFechar);
+}
 function tick(v) {
-  if (ui.vivo !== v || v.S !== S) { clearInterval(v.timer); if (ui.vivo === v) { ui.vivo = null; ui.tvAoVivo = null } return }
+  if (ui.vivo !== v || v.S !== S) { clearInterval(v.timer); if (ui.vivo === v) encerrarVivo(); return }
+  if (pausaExpulsao(v)) return;
   if (v.escolhaPen) return; // #292: esperando o técnico escolher batedor e canto
   if (v.cobranca) {
     if (performance.now() - v.cobranca.inicio < DURACAO_COBRANCA) return;
@@ -138,6 +148,7 @@ function tick(v) {
   }
   if (ui.view !== 'aovivo' || v.pausado || v.fim) return; // pausado: saiu da tela ou apertou Pausar (#170)
   if (v.filaCobrancas.length) { mostrarCobranca(v); return }
+  if (v.vermelhosPendentes) { abrirExpulsaoPendente(v); return }
   if (v.min >= DURACAO) { // disputa de pênaltis (#267)
     if (v.pen === undefined) { fecharTempoNormal(v); return }
     if (v.disputa) { passoDisputa(v); return }
@@ -148,12 +159,15 @@ function tick(v) {
   }
   v.min++;
   v.filaCobrancas = v.g.ev.filter(e => e.m === v.min && e.t === 'penalti');
+  const saidas = v.replay ? [] : v.g.ev.filter(e => e.m === v.min && v.g[e.side] === v.clube.id && saidaForcada(e));
+  if (saidas.length) v.sel = null;
+  const vermelhos = saidas.filter(e => e.t === 'vermelho');
+  if (vermelhos.length && !ui.liga && tecnicos().length === 1) v.vermelhosPendentes = vermelhos;
   if (v.filaCobrancas.length) mostrarCobranca(v);
+  else if (v.vermelhosPendentes) { abrirExpulsaoPendente(v); return }
   pintar(v);
-  if (!v.replay && v.g.ev.some(e => e.m === v.min && v.g[e.side] === v.clube.id && saidaForcada(e))) {
-    v.sel = null; controles(v);
-  }
-  if (v.min >= DURACAO && !v.cobranca) fecharTempoNormal(v);
+  if (saidas.length) controles(v);
+  if (v.min >= DURACAO && !v.cobranca && !v.escolhaPen) fecharTempoNormal(v);
 }
 function mostrarCobranca(v) {
   const lance = v.filaCobrancas.shift();
@@ -191,6 +205,9 @@ function fecharTempoNormal(v) {
 }
 function terminar(v) {
   clearInterval(v.timer); v.fim = true; ui.tvAoVivo = null; restaurar(v);
+  if (v.expulsao) ocultarJanelaExpulsao();
+  v.expulsao = v.avisoExpulsao = null;
+  pintarAvisoExpulsao(v);
   v.aoTerminar?.();
   pintar(v);
   const c = el('av-controles'), b = el('av-botoes');
@@ -204,14 +221,14 @@ export function avAba(a) { if (ui.vivo && ABAS[a]) { ui.vivo.aba = a; render() }
 export function avDiv(d) { if (ui.vivo) { ui.vivo.div = d; paineis(ui.vivo) } }
 export function avComp(c) { if (ui.vivo) { ui.vivo.comp = c; paineis(ui.vivo) } }
 export function avUf(uf) { if (ui.vivo) { ui.vivo.uf = uf; paineis(ui.vivo) } }
-export function avSair(id) { const v = ui.vivo; if (!v || v.fim || v.replay || v.min >= DURACAO) return; v.sel = v.sel === id ? null : id; controles(v) }
+export function avSair(id) { const v = ui.vivo; if (!v || v.fim || v.replay || pausaExpulsao(v) || v.min >= DURACAO) return; v.sel = v.sel === id ? null : id; controles(v) }
 export function avEntrar(id) {
-  const v = ui.vivo; if (!v || v.fim || v.replay || !v.sel || v.min >= DURACAO) return;
+  const v = ui.vivo; if (!v || v.fim || v.replay || pausaExpulsao(v) || !v.sel || v.min >= DURACAO) return;
   aplicar(v, substituir(v.g, v.min, v.sel, id));
 }
-export function avFormacao(f) { const v = ui.vivo; if (!v || v.fim || v.replay || v.min >= DURACAO) return; aplicar(v, mudarFormacaoAoVivo(v.g, v.min, f)) }
+export function avFormacao(f) { const v = ui.vivo; if (!v || v.fim || v.replay || pausaExpulsao(v) || v.min >= DURACAO) return; aplicar(v, mudarFormacaoAoVivo(v.g, v.min, f)) }
 export function avPular() {
-  const v = ui.vivo; if (!v || v.fim) return;
+  const v = ui.vivo; if (!v || v.fim || pausaExpulsao(v)) return;
   v.min = DURACAO; v.pausado = false;
   v.cobranca = null; v.filaCobrancas = []; v.escolhaPen = null;
   pintarCobranca(v);
@@ -221,7 +238,7 @@ export function avPular() {
 }
 /** Pausa ou continua o relógio (#170). Pausado, as trocas e o esquema continuam disponíveis. */
 export function avPausar() {
-  const v = ui.vivo; if (!v || v.fim) return;
+  const v = ui.vivo; if (!v || v.fim || pausaExpulsao(v)) return;
   v.pausado = !v.pausado;
   const b = el('av-botoes'); if (b) b.innerHTML = botoes(v);
   const c = el('lclk'); if (c) c.textContent = relogio(v);
@@ -229,7 +246,7 @@ export function avPausar() {
 }
 // barra de espaço pausa e continua (fora de campos e botões, que já usam o espaço)
 if (globalThis.document && document.addEventListener) document.addEventListener('keydown', ev => {
-  if (ev.key !== ' ' || ui.view !== 'aovivo' || !ui.vivo || ui.vivo.fim) return;
+  if (ev.key !== ' ' || ui.view !== 'aovivo' || !ui.vivo || ui.vivo.fim || pausaExpulsao(ui.vivo)) return;
   const t = ev.target && ev.target.tagName; if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON'].includes(t)) return;
   ev.preventDefault(); avPausar();
 });
@@ -239,11 +256,64 @@ function aplicar(v, r) {
   v.sel = null; v.alterou = true; v.xi1 = [...v.clube.lineup]; v.f1 = v.clube.formation; save(); avisar(r.msg); pintar(v); controles(v); paineis(v);
 }
 
+function pintarAvisoExpulsao(v) {
+  const aviso = el('av-exp-resumo'); if (aviso) aviso.innerHTML = resumoExpulsao(v);
+}
+
+function retomarDepoisDaExpulsao(v, aplicadas = [], mudou = false) {
+  const a = v.expulsao, elenco = elencoParaTrocas(v.g, a.min), tatica = taticaUser(v.clube);
+  const resumo = mudou ? `Jogo retomado: ${elenco.form}, ${ESTILOS[tatica.estilo].nome.toLowerCase()}, ${MODOS[tatica.modo].nome.toLowerCase()}.`
+    : `Jogo retomado com ${elenco.xi.filter(Boolean).length} em campo.`;
+  v.avisoExpulsao = { ...a, elenco, tatica, resumo, aplicadas, form: elenco.form, sel: null, leitura: true,
+    trocas: trocasDe(v.g, v.clube.id, a.min), rascunho: [] };
+  v.expulsao = null;
+  pintar(v); pintarAvisoExpulsao(v);
+  ocultarJanelaExpulsao();
+  controles(v);
+}
+
+export function avExpFechar() {
+  const v = ui.vivo;
+  if (!v?.expulsao) return;
+  if (v.expulsao.leitura) {
+    v.expulsao = null;
+    ocultarJanelaExpulsao();
+  } else retomarDepoisDaExpulsao(v);
+}
+
+export function avExpConfirmar() {
+  const v = ui.vivo, a = v?.expulsao;
+  if (!a || a.leitura || !validarRascunhoExpulsao(v, a)) return;
+  const { g } = v, { min, form, tatica, rascunho } = a;
+  const mexeuNoTime = rascunho.length > 0 || form !== a.elenco.form;
+  const anterior = taticaUser(v.clube), campos = ['estilo', 'modo'].filter(c => anterior[c] !== tatica[c]);
+  const mudou = min < DURACAO && (mexeuNoTime || campos.length > 0);
+  if (mudou) {
+    const opcoes = { recalcular: false };
+    for (const { sai, entra } of rascunho) substituir(g, min, sai, entra, opcoes);
+    if (form !== a.elenco.form) mudarFormacaoAoVivo(g, min, form, opcoes);
+    for (const c of campos) mudarTatica(c, tatica[c]);
+    ressimularDepois(g, min);
+    if (mexeuNoTime) {
+      v.alterou = true; v.xi1 = [...v.clube.lineup]; v.f1 = v.clube.formation;
+    }
+    save();
+  }
+  retomarDepoisDaExpulsao(v, rascunho, mudou);
+}
+
+export function avExpReabrir() {
+  const v = ui.vivo;
+  if (!v?.avisoExpulsao || v.fim || v.expulsao) return;
+  v.expulsao = v.avisoExpulsao;
+  mostrarJanelaExpulsao(v, avExpFechar);
+}
+
 /* ---------- pedaços da página ---------- */
 const relogio = v => {
   if (v.fim) return 'Fim de jogo';
   if (v.min >= DURACAO && v.pen) return `Pênaltis${v.pausado ? ' · pausado' : ''}`;
-  const t = minutoDoTempo(v.min); return `${t.m}' · ${t.tempo}º tempo${v.pausado ? ' · pausado' : ''}`;
+  const t = minutoDoTempo(v.min); return `${t.m}' · ${t.tempo}º tempo${v.pausado || pausaExpulsao(v) ? ' · pausado' : ''}`;
 };
 function htmlEscolhaPenalti(v) {
   const { lance, pid, disputa, i } = v.escolhaPen, clube = clubById(disputa ? v.disputa.times[i].id : v.g[lance.side]);
@@ -318,7 +388,15 @@ function pintar(v) {
   const sig = soma(v, minTela(v));
   if (sig !== v.sig) { v.sig = sig; paineis(v) }
 }
-function controles(v) { const c = el('av-controles'); if (c) c.innerHTML = htmlControles(v) }
+function controles(v) {
+  const c = el('av-controles'); if (!c) return;
+  const at = document.activeElement, acao = at?.dataset?.acao, dentro = acao && c.contains(at);
+  c.innerHTML = htmlControles(v);
+  if (dentro) {
+    const destino = [...c.querySelectorAll('[data-acao]')].find(n => n.dataset.acao === acao && !n.disabled) ?? el('lpausa');
+    destino?.focus({ preventScroll: true });
+  }
+}
 function paineis(v) {
   const rodada = el('av-rodada'), classif = el('av-classif');
   if (rodada) rodada.innerHTML = htmlRodada(v);
@@ -340,9 +418,9 @@ const botoes = v => v.fim
 function htmlControles(v) {
   if (v.fim || v.min >= DURACAO) return '';
   if (v.replay) return `<p class="muted dica">${icone('info', { tam: 14 })} Replay do jogo simulado no servidor. Na liga, escalação, formação e tática valem para a rodada inteira: as trocas ficam bloqueadas.</p>`;
-  const uc = userClub(), feitas = trocasDe(v.g, uc.id).length, cheio = feitas >= MAX_TROCAS;
-  const elenco = escalacaoNoMinuto(v.g, v.g.h === uc.id ? 'h' : 'a', v.min);
-  const sel = v.sel && P[v.sel], form = uc.formation || '4-4-2';
+  const uc = userClub(), feitas = trocasDe(v.g, uc.id, v.min).length, cheio = feitas >= MAX_TROCAS;
+  const elenco = elencoParaTrocas(v.g, v.min);
+  const sel = v.sel && P[v.sel], form = elenco.form;
   const jog = p => `${posTag(p)}<span class="troca-nome">${esc(p.name)}</span>${ovrChip(p.ovr)}`;
   const dica = cheio ? `As ${MAX_TROCAS} substituições já foram feitas.` : sel ? `Escolha no banco quem entra no lugar de ${esc(sel.name)}.` : 'Escolha em campo quem sai.';
   const reservas = banco(v.g, v.min).sort((a, b) => !a.motivo - !b.motivo || b.p.ovr - a.p.ovr);
@@ -351,7 +429,7 @@ function htmlControles(v) {
     <section class="trocas" aria-label="Substituições"><div class="card-topo"><h2 class="t3">Substituições</h2><span class="muted">${feitas} de ${MAX_TROCAS}</span></div>
       <p class="muted dica" aria-live="polite">${dica}</p>
       <div class="trocas-listas">
-        ${campoHtml(uc, { acao: 'avSair', sel: v.sel, bloqueado: cheio, mini: true, emCampo: elenco?.xi })}
+        ${campoHtml({ ...uc, formation: form }, { acao: 'avSair', sel: v.sel, bloqueado: cheio, mini: true, emCampo: elenco.xi })}
         <ul class="lista-troca" aria-label="Banco">${reservas.map(({ p, motivo }) =>
           `<li><button type="button" class="troca-item" data-acao="avEntrar|${p.id}"${!sel || cheio || motivo ? ' disabled' : ''}>${jog(p)}${motivo ? `<span class="muted">${esc(motivo)}</span>` : ''}</button></li>`).join('')}</ul>
       </div></section>`;
@@ -447,7 +525,7 @@ export function vAoVivo() {
   if (!v || v.S !== S) return `<p class="muted">Nenhum jogo em andamento.</p><button class="btn sec" data-acao="go|clube">Painel do clube</button>`;
   v.sig = soma(v, minTela(v));
   return `<div class="vivo" id="vivo" data-aba="${v.aba}">
-    <section class="vivo-cab card" aria-label="Seu jogo">${htmlCab(v)}</section>
+    <section class="vivo-cab card" aria-label="Seu jogo">${htmlCab(v)}<div id="av-exp-resumo">${resumoExpulsao(v)}</div></section>
     <div class="chips vivo-abas" role="group" aria-label="Área da tela">${Object.entries(ABAS).map(([k, r]) => chip(v.g.copa && k === 'classif' ? 'Chaveamento' : r, `avAba|${k}`, v.aba === k)).join('')}</div>
     <section class="vivo-meu" aria-label="Seu time">${htmlMeu(v)}</section>
     <section class="vivo-rodada" id="av-rodada" aria-label="Jogos da rodada">${htmlRodada(v)}</section>
