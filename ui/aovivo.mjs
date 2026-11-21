@@ -239,7 +239,7 @@ export function avPular() {
 export function avPausar() {
   const v = ui.vivo; if (!v || v.fim) return;
   if (v.expulsao?.tipo === 'pausa' && !v.expulsao.leitura) { avExpConfirmar(); return }
-  if (pausaExpulsao(v)) return;
+  if (pausaExpulsao(v) || v.expulsao?.leitura) return; // com o aviso da expulsão aberto, primeiro feche o aviso
   if (!v.pausado && podeMexer(v)) {
     v.expulsao = novaPausa(v); v.sel = null;
     pintar(v); pintarBotoes(v);
@@ -254,7 +254,7 @@ export function avPausar() {
 // barra de espaço pausa e continua (fora de campos e botões, que já usam o espaço)
 if (globalThis.document && document.addEventListener) document.addEventListener('keydown', ev => {
   if (ev.key !== ' ' || ui.view !== 'aovivo' || !ui.vivo || ui.vivo.fim || (pausaExpulsao(ui.vivo) && ui.vivo.expulsao.tipo !== 'pausa')) return;
-  const t = ev.target && ev.target.tagName; if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'SUMMARY'].includes(t)) return;
+  const t = ev.target && ev.target.tagName; if (['INPUT', 'SELECT', 'TEXTAREA', 'BUTTON', 'SUMMARY'].includes(t) || ev.target?.closest?.('.exp-opcoes')) return;
   ev.preventDefault(); avPausar();
 });
 export function avContinuar() { const v = ui.vivo; if (!v) return; const { done } = v; encerrarVivo(); done() }
@@ -274,7 +274,9 @@ function pintarBotoes(v) {
 
 function retomarDepoisDaExpulsao(v, aplicadas = [], mudou = false) {
   if (v.expulsao.tipo === 'pausa') {
+    const { min } = v.expulsao, t = taticaUser(v.clube);
     v.expulsao = null;
+    if (mudou) avisar(`Mudou para ${elencoParaTrocas(v.g, min).form}, ${ESTILOS[t.estilo].nome.toLowerCase()}, ${MODOS[t.modo].nome.toLowerCase()}: vale a partir do minuto ${min + 1}.`);
     ocultarJanelaExpulsao();
     pintar(v); pintarBotoes(v);
     el('lpausa')?.focus?.({ preventScroll: true });

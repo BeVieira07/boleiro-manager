@@ -185,7 +185,7 @@ test('troca ao vivo muda o placar guardado do estadual; o resto da data só é c
   // o jogo do ao vivo é o próprio objeto guardado no torneio: mudar o placar dele muda a tabela
   assert.equal(j.run(`(()=>{const tor=torneioDe(userClub().id);return tor.rodadas[${d}].includes(ui.vivo.g)})()`), true);
   r.passo(30);
-  j.acao('avFormacao|4-3-3'); // refaz os gols dos minutos seguintes
+  j.acao('avPausar'); j.acao('avExpTatica|form|4-3-3'); j.acao('avExpConfirmar'); // pela janela da pausa (#314): refaz os gols dos minutos seguintes
   const final = j.run('({h:ui.vivo.g.hg,a:ui.vivo.g.ag,gols:ui.vivo.g.ev.filter(e=>e.t==="gol").length})');
   assert.equal(final.h + final.a, final.gols, 'placar e lances batem depois da troca');
   assert.equal(artilhariaLiga(), antesLiga, 'gol de estadual não entra na artilharia do Brasileirão');

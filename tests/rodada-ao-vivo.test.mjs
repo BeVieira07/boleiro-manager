@@ -491,6 +491,7 @@ test('no revezamento, a expulsão do clube do técnico da vez abre a janela (#31
   j.run("(() => { const c = S.clubs.find(c => c.id !== userClub().id); S.managers.b = { ...structuredClone(tec()), nome: 'B', clubId: c.id }; })()");
   assert.equal(j.run('tecnicos().length'), 2);
   const r = jogoComExpulsao(j), caixa = capturarJanela(t);
+  j.run('delete ui.vivo.g.expulsaoAoVivo'); // com vários técnicos, o motor não marca o clube do ao vivo
   r.passo();
   assert.equal(caixa.hidden, false);
   assert.match(caixa.innerHTML, />Expulso</);
