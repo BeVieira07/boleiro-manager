@@ -33,6 +33,28 @@ test('cobrança aceita escolhas independentes e usa o gerador recebido', () => {
   assert.equal(resultado('dir-alto', 'dir', 0.08), 'fora');
 });
 
+test('simulação usa o canto do batedor quando salvo e sorteia pela semente em Variar', () => {
+  const j = novoJogo(), alvo = 'meio-alto';
+  const { escolhidos, variados, repetidos } = j.run(`(() => {
+    const c = userClub(), pid = getXI(c).find(id => P[id].pos !== 'G');
+    const { h, a } = S.fixtures[0].find(g => [g.h, g.a].includes(c.id));
+    definirCobradores([pid], c);
+    const simular = () => Array.from({ length: 100 }, (_, i) => {
+      S.rng = semente('canto #294', i);
+      return simulate({ h, a }).ev.filter(e => e.t === 'penalti' && e.pid === pid);
+    }).flat();
+    definirCantos({ [pid]: '${alvo}' }, c);
+    const escolhidos = simular();
+    definirCantos({}, c);
+    return { escolhidos, variados: simular(), repetidos: simular() };
+  })()`);
+  assert.ok(escolhidos.length > 0);
+  assert.ok(escolhidos.every(e => e.alvo === alvo));
+  assert.ok(new Set(escolhidos.map(e => e.pulo)).size > 1);
+  assert.ok(new Set(variados.map(e => e.alvo)).size > 1);
+  assert.deepEqual(variados, repetidos);
+});
+
 test('calibração em 20.000 jogos: cerca de 0,3 pênalti por jogo e média de gols estável', t => {
   const j = novoJogo(), total = 20000;
   const { gols, resultados } = j.run(`(() => {

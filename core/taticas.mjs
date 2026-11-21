@@ -75,8 +75,9 @@ function novosPenaltis(g, clube, side, xi, adversarios, n, de, ate) {
   const { cobradores } = timeNaDisputa(clube.id, xi, clube.cobradores);
   const batedor = cobradores.find(p => p.pos !== 'G');
   const { goleiro } = timeNaDisputa(g[side === 'h' ? 'a' : 'h'], adversarios);
+  const alvo = clube.cantos?.[batedor.id];
   for (let i = 0; i < n; i++) {
-    const m = ri(de, ate), cobranca = cobrarPenalti(batedor, goleiro, rnd);
+    const m = ri(de, ate), cobranca = cobrarPenalti(batedor, goleiro, rnd, { alvo });
     g.ev.push({ m, t: 'penalti', side, pid: batedor.id, name: batedor.name, gk: goleiro?.id ?? null, ...cobranca });
     if (cobranca.res === 'gol') registrarGol(g, side, batedor, m, true);
   }

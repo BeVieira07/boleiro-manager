@@ -59,10 +59,13 @@
 .campo.mini .ovr{font-size:12px;min-width:28px}
 .carta:disabled{opacity:.55;cursor:not-allowed}
 
-/* #288: ordem dos batedores de pênalti */
+/* Pênaltis: ordem dos batedores e cantos preferidos */
 .cobradores{list-style:none;margin:var(--e3) 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
-.cobradores li{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--linha);border-radius:var(--r)}
+.cobradores li{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--linha);border-radius:var(--r)}
+.cobrador-info{display:flex;flex:2 1 280px;min-width:0;align-items:center;gap:8px}
+.cobradores select{flex:1 1 155px;min-width:0;max-width:100%;font-size:13px}
+.cobradores .reserva-nome{overflow-wrap:anywhere}
 .cobradores li.titular-pen{border-color:var(--verde)}
 .cobradores .num{min-width:18px;text-align:right;color:var(--muted);font-weight:700}
 .cobradores .barra{width:48px}
-@media(max-width:520px){.cobradores li{gap:6px;padding:6px}.cobradores .barra{width:28px}}
+@media(max-width:520px){.cobradores li{gap:6px;padding:6px}.cobrador-info{gap:6px}.cobradores .barra{width:28px}}
