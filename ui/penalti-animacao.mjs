@@ -72,6 +72,6 @@ export function htmlCobranca(lance, { batedor = lance.name, goleiro, clube = 'ti
         <path d="M0-2l2.3 1.6-.9 2.6h-2.8l-.9-2.6zM0-2v-3.5M2.3-.4l3-.9M1.4 2.2l2 2M-1.4 2.2l-2 2M-2.3-.4l-3-.9"/>
       </g>
     </svg>
-    <figcaption>${esc(texto)}</figcaption>
+    <figcaption><span class="cobranca-antes" aria-hidden="true">${esc(`${batedor || 'O batedor'} na bola`)}</span><span class="cobranca-resultado">${esc(texto)}</span></figcaption>
   </figure>`;
 }

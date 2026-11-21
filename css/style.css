@@ -693,6 +693,8 @@ body.em-jogo .avisos{bottom:24px}
   border-radius:var(--r);background:var(--painel);color:var(--texto);text-align:center
 }
 .cobranca-animacao figcaption{padding:var(--e2) var(--e3);font-size:13px;font-weight:600;overflow-wrap:anywhere}
+/* a legenda só mostra o resultado quando a bola chega; sem animação, mostra direto */
+.cobranca-antes{display:none}
 .cobranca-campo{display:block;width:100%;height:auto;background:linear-gradient(var(--painel3),var(--verde-esc))}
 .cobranca-linhas{fill:none;stroke:var(--verde-claro);stroke-opacity:.24}
 .cobranca-rede{fill:none;stroke:var(--texto2);stroke-opacity:.34;transform-box:fill-box;transform-origin:center}
@@ -721,7 +723,13 @@ body.em-jogo .avisos{bottom:24px}
   .cobranca-goleiro{animation-name:cobranca-mergulho}
   .cobranca-impacto{animation-name:cobranca-batida}
   .cobranca-animacao[data-res="gol"] .cobranca-rede{animation-name:cobranca-balanco}
+  .cobranca-antes{display:inline}
+  .cobranca-antes,.cobranca-resultado{animation-duration:var(--cobranca-duracao);animation-delay:var(--cobranca-atraso);animation-fill-mode:both;animation-timing-function:steps(1,end)}
+  .cobranca-antes{animation-name:cobranca-some}
+  .cobranca-resultado{animation-name:cobranca-aparece}
 }
+@keyframes cobranca-some{0%{visibility:visible;position:static}55%,100%{visibility:hidden;position:absolute}}
+@keyframes cobranca-aparece{0%{visibility:hidden;position:absolute}55%,100%{visibility:visible;position:static}}
 @keyframes cobranca-chute{
   0%,15%{transform:translate(180px,140px);animation-timing-function:cubic-bezier(.24,.57,.42,1)}
   39%{transform:translate(var(--bola-impacto)) scale(.72);animation-timing-function:ease-out}

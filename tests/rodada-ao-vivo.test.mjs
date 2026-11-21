@@ -224,7 +224,8 @@ test('cobra os pênaltis do jogo em destaque em ordem, com o relógio parado, e 
   assert.match(aviso.innerHTML, /data-res="gol"/);
   j.run('render()');
   assert.match(j.html(), /role="status" aria-live="polite"[^>]*><figure[^>]*data-res="gol"/);
-  assert.match(j.html(), /<figcaption>Pênalti para o [^<]+: Batedor da casa converte<\/figcaption>/);
+  assert.match(j.html(), /<span class="cobranca-antes" aria-hidden="true">Batedor da casa na bola<\/span><span class="cobranca-resultado">Pênalti para o [^<]+: Batedor da casa converte<\/span>/);
+  assert.match(j.html(), /id="lsc"[^>]*>0 x 0</, 'o placar só muda depois da cobrança');
   assert.doesNotMatch(j.html(), /undefined|NaN/);
   r.tick(DURACAO_COBRANCA - 1);
   assert.equal(j.run('ui.vivo.min'), 10);
@@ -279,7 +280,8 @@ test('o componente desenha seis alvos e o quadro final de cada desfecho', () => 
     const html = htmlCobranca({ res, alvo, pulo }, { batedor: 'Vitor Roque', goleiro: 'Everson', clube: 'Palmeiras' });
     assert.ok(html.includes(`data-res="${res}" data-alvo="${alvo}" data-pulo="${pulo}"`));
     assert.ok(html.includes(`--bola-impacto:${impacto};--bola-fim:${fim};`));
-    assert.ok(html.includes(`<figcaption>Pênalti para o Palmeiras: ${texto}</figcaption>`));
+    assert.ok(html.includes(`<span class="cobranca-resultado">Pênalti para o Palmeiras: ${texto}</span>`));
+    assert.ok(html.includes('<span class="cobranca-antes" aria-hidden="true">Vitor Roque na bola</span>'));
     assert.equal((html.match(/class="cobranca-alvo/g) || []).length, 6);
     assert.equal(html.includes('class="cobranca-impacto"'), res === 'trave');
     assert.doesNotMatch(html, /undefined|NaN/);
