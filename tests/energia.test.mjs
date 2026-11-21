@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { carregarJogo, clubeDaSerie, jogarRodada, jogarTemporada, problemasNasTelas, virarTemporada } from './jogo.mjs';
 
-const novo = (i = 10, semente) => { const j = carregarJogo({ boot: true, semente }); j.run(`newGame('${clubeDaSerie(j, 'A', i)}')`); j.run('S.estaduais=null'); return j };
+const novo = (i = 10) => { const j = carregarJogo({ boot: true }); j.run(`newGame('${clubeDaSerie(j, 'A', i)}')`); j.run('S.estaduais=null'); return j };
 
 test('a energia tira rendimento: nada a partir de 70, até 8% aos 30 e até 20% no zero; risco de lesão até o triplo', () => {
   const j = carregarJogo();
@@ -81,7 +81,7 @@ test('energia baixa aumenta as lesões na rodada', () => {
 });
 
 test('uma temporada com a escalação automática: o time roda sozinho e a força quase não cai', () => {
-  const j = novo(0, 20261116); // mantém goleiro disponível na campanha usada para medir energia
+  const j = novo(0);
   const forca = () => j.run('(()=>{const p=power(userClub());return p.att+p.def+p.mid})()');
   for (let r = 1; r <= 30; r++) {
     j.run('userClub().lineup=autoXI(userClub());playRound(false)');

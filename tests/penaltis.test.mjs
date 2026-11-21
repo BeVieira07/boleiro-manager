@@ -137,7 +137,7 @@ test('final estadual: cobram os que terminaram em campo e a disputa sai pela sem
 });
 
 test('uma temporada inteira: estaduais e sul-americanas decididos nos pênaltis guardam placar e cobranças', () => {
-  const j = carregarJogo({ boot: true, estaduais: true, continentais: true, semente: 20261116 });
+  const j = carregarJogo({ boot: true, estaduais: true, continentais: true });
   j.run(`newGame('c121')`);
   jogarTemporada(j);
   assert.equal(j.run('S.round'), j.run('S.fixtures.length'), j.alertas.at(-1));
