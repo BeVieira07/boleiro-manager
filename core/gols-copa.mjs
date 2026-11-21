@@ -57,7 +57,12 @@ const emCampoNoFim = (g, side) => (escalacaoNoMinuto(g, side, Infinity)?.xi || [
 /** Disputa do jogo de volta `g` (com lances), se o confronto empatou. `ida` = placar da ida do ponto de vista de g.h e g.a. */
 export function penaltisDaVolta(g, ida, seed) {
   if (!ida || ida.h + g.hg !== ida.a + g.ag) return null;
-  return disputarPenaltis(timeNaDisputa(g.a, emCampoNoFim(g, 'a'), escolhidos(g.a)), timeNaDisputa(g.h, emCampoNoFim(g, 'h'), escolhidos(g.h)), seed);
+  if (g.penInterativa) return g.penInterativa; // #293: a disputa que o técnico jogou ao vivo vale na conclusão
+  return disputarPenaltis(...timesDaVolta(g), seed);
+}
+/** Os dois times da disputa da volta (fora, casa), com quem terminou em campo e a ordem escolhida. */
+export function timesDaVolta(g) {
+  return [timeNaDisputa(g.a, emCampoNoFim(g, 'a'), escolhidos(g.a)), timeNaDisputa(g.h, emCampoNoFim(g, 'h'), escolhidos(g.h))];
 }
 // jogo das sul-americanas (sem lances): os titulares da força; o estrangeiro, o melhor goleiro e os dez melhores da linha
 function emCampoSemLances(c) {

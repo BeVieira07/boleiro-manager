@@ -94,6 +94,42 @@ export function disputarPenaltis(casa, fora, semente) {
   return { v, placar: { [times[0].id]: gols[0], [times[1].id]: gols[1] }, cob };
 }
 
+/* ---------- #293: disputa passo a passo (interativa no ao vivo) ----------
+   Mesmas regras de disputarPenaltis (5 alternadas, parada antecipada, morte súbita), mas cada cobrança usa cobrarPenalti
+   (6 alvos), o técnico pode escolher batedor e canto, e o batedor não repete até todos do time baterem.
+   O estado vive só na tela (o gerador não vai para o save); o resultado tem o mesmo formato de `pen`. */
+export function novaDisputa(casa, fora, semente) {
+  const r = mulberry32(semente), times = r() < 0.5 ? [casa, fora] : [fora, casa];
+  return { r, times, gols: [0, 0], batidas: [0, 0], cob: [], usados: [[], []] };
+}
+function disputaDecidida({ gols: [g0, g1], batidas: [b0, b1] }) {
+  if (b0 <= 5 && b1 <= 5 && (g0 + 5 - b0 < g1 || g1 + 5 - b1 < g0)) return true;
+  return b0 === b1 && b0 >= 5 && g0 !== g1;
+}
+/** Índice (0 ou 1, em d.times) de quem bate agora, ou null se a disputa acabou. */
+export const ladoDaVez = d => disputaDecidida(d) ? null : d.batidas[0] > d.batidas[1] ? 1 : 0;
+/** Quem do time i ainda pode bater nesta volta (todos batem antes de alguém repetir). */
+export function batedoresDaVez(d, i) {
+  const t = d.times[i], livres = t.cobradores.filter(p => !d.usados[i].includes(p.id));
+  return livres.length ? livres : t.cobradores;
+}
+/** Bate a próxima cobrança: {pid, alvo} escolhidos ou, sem escolha, o próximo da ordem e o canto sorteado. */
+export function baterNaDisputa(d, { pid, alvo } = {}) {
+  const i = ladoDaVez(d); if (i == null) return null;
+  const lista = batedoresDaVez(d, i); if (lista === d.times[i].cobradores) d.usados[i] = [];
+  const p = lista.find(x => x.id === pid) || lista[0], adv = d.times[1 - i];
+  const c = cobrarPenalti(p, adv.goleiro, d.r, alvo ? { alvo } : {});
+  d.usados[i].push(p.id); d.batidas[i]++;
+  const gol = c.res === 'gol'; if (gol) d.gols[i]++;
+  const x = { c: d.times[i].id, pid: p.id, nome: p.name, gol, alvo: c.alvo, pulo: c.pulo, res: c.res, gk: adv.goleiro?.id ?? null };
+  d.cob.push(x); return x;
+}
+/** Resultado no formato de `pen` ({v, placar, cob}), quando ladoDaVez(d) é null. */
+export function resultadoDisputa(d) {
+  const [a, b] = d.times, v = d.gols[0] > d.gols[1] ? a.id : b.id;
+  return { v, placar: { [a.id]: d.gols[0], [b.id]: d.gols[1] }, cob: d.cob.map(({ c, pid, nome, gol, alvo, pulo, res }) => ({ c, pid, nome, gol, alvo, pulo, res })) };
+}
+
 /** Quem venceu nos pênaltis (aceita o `pen` antigo, só com o id), ou null. */
 export const vencedorPenaltis = pen => pen == null ? null : typeof pen === 'object' ? pen.v : pen;
 /** Placar da disputa como "4 x 3", do ponto de vista de h contra a; '' se o save só sabe quem venceu. */

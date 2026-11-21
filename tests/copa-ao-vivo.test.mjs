@@ -44,6 +44,7 @@ test('a ida abre depois do Brasileirão e confirma o placar revisto sem creditar
 
 test('a volta retomada de um save decide nos pênaltis e encerra a final só uma vez', () => {
   const j = finalDeCopa();
+  j.acao('mudarPref|penaltisInterativos', 'on', { target: { type: 'checkbox', checked: false } }); // disputa automática (a interativa tem teste próprio, #293)
   j.run(`const c=S.copa.fases[0].jogos[0];
     c.ida={h:0,a:0,autores:{h:[],a:[]}};S.round=2;S.fixtures[1].forEach(g=>{g.hg=0;g.ag=0});
     if(validateLineup())userClub().lineup=autoXI(userClub());playRound();avPular();avContinuar();`);
