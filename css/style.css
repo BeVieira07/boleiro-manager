@@ -402,8 +402,6 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .ev.gol .ev-ic{color:var(--texto)} .ev.cartao .ev-ic{color:var(--ouro)} .ev.vermelho .ev-ic{color:var(--perigo)} .ev.lesao .ev-ic{color:var(--info)}
 .ev.nosso{background:var(--verde-esc);border-radius:8px;border-bottom-color:transparent}
 .ev.nosso b{color:var(--verde-claro)}
-.tatica-vivo{display:flex;flex-direction:column;gap:var(--e2)}
-.tatica-vivo .chips>.muted{font-size:12px;min-width:48px}
 .fim-acoes{justify-content:flex-end}
 /* #135: tela da rodada ao vivo (ui/aovivo.mjs): o seu jogo, os outros jogos e a classificação no mesmo relógio */
 .vivo{display:grid;gap:var(--e4);grid-template-columns:minmax(0,1fr);align-items:start}
@@ -417,13 +415,6 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .marca-ev.troca,.marca-ev.formacao{background:var(--verde-claro);height:12px;top:4px}
 .marca-ev.troca.auto{height:6px;top:14px}
 .trocas{display:flex;flex-direction:column;gap:var(--e2)}
-.trocas-listas{display:grid;gap:var(--e3);grid-template-columns:repeat(auto-fit,minmax(min(300px,100%),1fr));align-items:start}
-.lista-troca{list-style:none;margin:0;padding:0;display:grid;gap:6px}
-.troca-item{display:flex;align-items:center;gap:var(--e2);width:100%;min-height:40px;padding:6px 10px;border-radius:var(--r);border:1px solid var(--linha);background:var(--painel);color:var(--texto);font:inherit;text-align:left;cursor:pointer}
-.troca-item:hover:not(:disabled){border-color:var(--verde)}
-.troca-item.on{border-color:var(--verde);background:var(--verde-esc)}
-.troca-item:disabled{opacity:.55;cursor:not-allowed}
-.troca-nome{flex:1;min-width:0;overflow-wrap:anywhere}
 @media(max-width:520px){.placar-num{font-size:44px}.placar .crest.g{width:48px;height:48px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
@@ -551,7 +542,17 @@ body.em-jogo .avisos{bottom:24px}
   white-space:nowrap;text-transform:uppercase;font-size:12px;font-weight:700
 }
 .exp-conteudo{min-height:0;overflow:auto;overscroll-behavior:contain}
-.exp-ajustes>summary,.exp-banco-escolha{display:none}
+.exp-banco-escolha{display:none}
+/* #314: variante pausa (cabeçalho dourado) */
+.exp-cab.exp-pausa{border-bottom-color:var(--ouro);background:var(--painel2)}
+.exp-pausa-icone{
+  flex:none;display:grid;place-items:center;width:48px;height:48px;border-radius:var(--r);
+  background:var(--ouro);color:var(--ouro-esc)
+}
+.exp-pausa .exp-titulo{flex-wrap:wrap}
+.exp-pausa .exp-titulo span{color:var(--ouro)}
+.exp-pausa .exp-titulo .exp-placar{color:var(--texto)}
+.av-rot-celular{display:none}
 .exp-tatica{padding:var(--e3) var(--e6);background:var(--painel3);border-bottom:1px solid var(--linha)}
 .exp-grupos,.exp-opcoes{display:flex;flex-wrap:wrap}
 .exp-grupos{gap:var(--e2) var(--e5)}
@@ -568,6 +569,7 @@ body.em-jogo .avisos{bottom:24px}
 .exp-secao-topo{display:flex;align-items:baseline;justify-content:space-between;gap:var(--e2);margin-bottom:var(--e2);font-size:13px}
 .exp-secao-topo h3{margin:0;color:var(--ouro)}
 .exp-contagem{font:700 18px/1 var(--f-titulo);color:var(--perigo-claro);text-transform:uppercase}
+.exp-contagem.exp-completo{color:var(--texto2)}
 .exp-janela .campo.mini{padding-block:var(--e3)}
 .exp-janela .campo.mini .carta{max-width:100px;min-height:66px}
 .exp-janela .campo.mini .carta-nome{font-size:12px}
@@ -614,8 +616,8 @@ body.em-jogo .avisos{bottom:24px}
   .exp-grade{grid-template-columns:minmax(0,1fr)}
   .exp-cab,.exp-tatica,.exp-grade,.exp-rodape{padding-inline:var(--e3)}
 }
-/* #311: folha de expulsão no celular */
-@media(max-width:600px){
+/* #311: folha de expulsão no celular (#314: abaixo de 800 px) */
+@media(max-width:799px){
   :root{--exp-recuo:min(96px,20dvh)}
   .exp-camada{align-items:flex-end;padding:var(--exp-recuo) 0 0;background:rgb(5 10 8 / .72)}
   .exp-janela{
@@ -649,15 +651,22 @@ body.em-jogo .avisos{bottom:24px}
   .exp-selo{margin:0;justify-self:start;padding:2px var(--e2);font-size:11px}
   .exp-selo .icone{width:12px;height:12px}
   .exp-conteudo{flex:1;overflow-x:hidden;scrollbar-width:thin}
-  .exp-ajustes{background:var(--painel3);border-bottom:1px solid var(--linha)}
-  .exp-ajustes>summary{
-    display:list-item;min-height:44px;padding:10px var(--e4);list-style-position:inside;
-    color:var(--texto2);font-weight:700;line-height:24px;cursor:pointer
-  }
-  .exp-ajustes>summary:focus-visible{outline:2px solid var(--ouro);outline-offset:-3px;box-shadow:none}
-  .exp-tatica{padding:0 var(--e4) var(--e3);border:0}
-  .exp-grupos,.exp-grupo{max-width:100%}
-  .exp-opcoes .chip{max-width:100%;white-space:normal;text-align:left;overflow-wrap:anywhere}
+  /* #314: tática em três linhas que rolam para o lado, acima do campo */
+  .exp-tatica{padding:var(--e2) var(--e4) var(--e3)}
+  .exp-grupos{flex-direction:column;flex-wrap:nowrap;gap:var(--e2)}
+  .exp-grupo{min-width:0}
+  .exp-opcoes{flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin}
+  .exp-opcoes .chip{flex:none;white-space:nowrap}
+  .exp-pausa::before{background:var(--ouro-borda)}
+  .exp-pausa-icone{grid-row:span 2;align-self:start;width:40px;height:40px}
+  .exp-pausa .exp-titulo h2{font-size:34px}
+  .exp-pausa .exp-titulo span{font-size:17px}
+  /* botão de pausa do ao vivo */
+  .av-mexer:not([aria-pressed="true"]){flex:1;border-color:var(--ouro);background:var(--ouro-esc);color:var(--ouro-claro);font:700 15px/1 var(--f-titulo);letter-spacing:.06em;text-transform:uppercase}
+  .av-mexer .av-rot-largo{display:none}
+  .av-mexer .av-rot-celular{display:inline}
+  .av-pular{flex:none;width:52px;padding-inline:0;justify-content:center}
+  .av-pular-texto{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
   .exp-grade{gap:var(--e3);padding:var(--e3) var(--e4)}
   .exp-contagem{font-size:16px}
   .exp-janela .campo.mini{min-height:236px;gap:var(--e2);border-radius:var(--r-lg)}
@@ -686,11 +695,11 @@ body.em-jogo .avisos{bottom:24px}
     padding:var(--e2) var(--e4) calc(var(--e2) + env(safe-area-inset-bottom))
   }
   .exp-rodape p{margin:0 0 var(--e1);font-size:11px}
-  .exp-rodape .fantasma{border-color:transparent;font:700 15px/1 var(--f-titulo);letter-spacing:.06em}
+  .exp-rodape [data-secundario]{border-color:transparent;background:transparent;font:700 15px/1 var(--f-titulo);letter-spacing:.06em}
   .exp-retomada{display:grid;grid-template-columns:auto minmax(0,1fr);overflow-wrap:anywhere}
   .exp-retomada button{grid-column:2;justify-self:start;max-width:100%;white-space:normal;text-align:left}
 }
-@media(max-width:600px) and (prefers-reduced-motion:no-preference){
+@media(max-width:799px) and (prefers-reduced-motion:no-preference){
   .exp-janela{animation-name:exp-folha-entrada}
 }
 @keyframes exp-folha-entrada{from{transform:translateY(100%)}to{transform:translateY(0)}}

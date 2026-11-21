@@ -21,7 +21,7 @@ test('a ida abre depois do Brasileirão e confirma o placar revisto sem creditar
   assert.match(j.html(), /Ir para a Copa do Brasil/);
   j.acao('avContinuar');
   assert.match(j.html(), /Copa do Brasil · Final \(ida\)/);
-  assert.match(j.html(), /Substituições/);
+  assert.match(j.html(), /class="btn sec av-mexer" id="lpausa"/, 'pausar abre a janela de escalação (#314)');
   const golsDaLiga = j.run('Object.values(P).map(p=>p.goals)');
   const antes = j.run(`({ lineup: [...userClub().lineup], formation: userClub().formation })`);
   j.run(`ui.vivo.min=40; const e=escalacaoNoMinuto(ui.vivo.g,'h',40);

@@ -168,8 +168,7 @@ test('a data do estadual abre ao vivo: cabeçalho do estadual, jogos por estado 
   assert.match(h, /data-acao="avUf\|RJ"/, 'abas para os outros estaduais');
   assert.match(h, /Paulistão: Grupo [AB]/, 'classificação do grupo do seu clube');
   assert.equal(j.run('ui.vivo.jogos.every(g=>g.ev&&g.uf)'), true, 'todos os jogos da data têm lances');
-  assert.match(h, /data-acao="avSair\|/, 'dá para trocar jogador');
-  assert.match(h, /data-acao="avFormacao\|4-3-3"/);
+  assert.match(h, /class="btn sec av-mexer" id="lpausa"/, 'pausar abre a janela para mexer no time (#314)');
   j.acao('avUf|RJ');
   assert.match(j.html(), /Flamengo|Fluminense|Vasco|Botafogo/);
   assert.deepEqual(problemasNasTelas(j, ['aovivo']), []);
