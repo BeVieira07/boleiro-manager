@@ -685,6 +685,64 @@ body.em-jogo .avisos{bottom:24px}
 .cob-nome{flex:1;min-width:0;overflow-wrap:anywhere}
 .cob.gol b{color:var(--verde)}
 .cob.perdeu b{color:var(--perigo)}
+/* #291: cobrança vista de trás do batedor. O estado base é o quadro final. */
+.vivo-cobranca:empty{position:absolute}
+.vivo-cobranca:not(:empty)+.ult-lance{display:none}
+.cobranca-animacao{
+  width:100%;max-width:440px;margin:0 auto;overflow:hidden;border:1px solid var(--linha);
+  border-radius:var(--r);background:var(--painel);color:var(--texto);text-align:center
+}
+.cobranca-animacao figcaption{padding:var(--e2) var(--e3);font-size:13px;font-weight:600;overflow-wrap:anywhere}
+.cobranca-campo{display:block;width:100%;height:auto;background:linear-gradient(var(--painel3),var(--verde-esc))}
+.cobranca-linhas{fill:none;stroke:var(--verde-claro);stroke-opacity:.24}
+.cobranca-rede{fill:none;stroke:var(--texto2);stroke-opacity:.34;transform-box:fill-box;transform-origin:center}
+.cobranca-rede path:first-child{fill:var(--painel3);fill-opacity:.5}
+.cobranca-gol{fill:none;stroke:var(--texto);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.cobranca-alvo{fill:var(--painel3);fill-opacity:.7;stroke:var(--texto2);stroke-opacity:.58;stroke-dasharray:2 2}
+.cobranca-alvo.selecionado{stroke:var(--ouro);stroke-opacity:1;stroke-dasharray:none}
+.cobranca-marca{fill:var(--verde-claro)}
+.cobranca-bola{
+  fill:var(--texto);stroke:var(--lateral);stroke-width:.8;
+  transform:translate(var(--bola-fim)) scale(var(--bola-escala))
+}
+.cobranca-bola path{fill:var(--lateral)}
+.cobranca-goleiro{
+  fill:var(--ouro);stroke:var(--ouro);stroke-width:3;
+  transform:translate(var(--goleiro-fim)) rotate(var(--goleiro-giro))
+}
+.cobranca-luvas{fill:var(--texto);stroke:none}
+.cobranca-impacto{fill:none;stroke:var(--ouro);stroke-width:1.5;stroke-dasharray:3 2;opacity:.75}
+.cobranca-animacao[data-res="gol"] .cobranca-rede{stroke:var(--verde-claro);stroke-opacity:.55}
+@media(prefers-reduced-motion:no-preference){
+  .cobranca-bola,.cobranca-goleiro,.cobranca-impacto,.cobranca-animacao[data-res="gol"] .cobranca-rede{
+    animation-duration:var(--cobranca-duracao);animation-delay:var(--cobranca-atraso);animation-fill-mode:both
+  }
+  .cobranca-bola{animation-name:cobranca-chute}
+  .cobranca-goleiro{animation-name:cobranca-mergulho}
+  .cobranca-impacto{animation-name:cobranca-batida}
+  .cobranca-animacao[data-res="gol"] .cobranca-rede{animation-name:cobranca-balanco}
+}
+@keyframes cobranca-chute{
+  0%,15%{transform:translate(180px,140px);animation-timing-function:cubic-bezier(.24,.57,.42,1)}
+  39%{transform:translate(var(--bola-impacto)) scale(.72);animation-timing-function:ease-out}
+  62%,100%{transform:translate(var(--bola-fim)) scale(var(--bola-escala))}
+}
+@keyframes cobranca-mergulho{
+  0%,13%{transform:translate(0);animation-timing-function:ease-out}
+  25%{transform:translate(var(--goleiro-impulso),-6px) rotate(var(--goleiro-giro-inicial));animation-timing-function:ease-out}
+  39%,100%{transform:translate(var(--goleiro-fim)) rotate(var(--goleiro-giro))}
+}
+@keyframes cobranca-balanco{
+  0%,39%{transform:none;stroke-opacity:.34}
+  44%{transform:translateY(-3px) scale(1.025,.96);stroke-opacity:.82}
+  51%{transform:translateY(1px) scale(.994,1.015)}
+  61%,100%{transform:none;stroke-opacity:.55}
+}
+@keyframes cobranca-batida{
+  0%,38%{opacity:0}
+  40%{opacity:1}
+  60%,100%{opacity:.75}
+}
 .ev-cartao{color:var(--ouro)}
 .ev-vermelho{color:var(--perigo)}
 .ev-lesao{color:var(--info)}

@@ -21,6 +21,7 @@ import { jogosCopa } from './copa.mjs';
 import { save, ui } from './estado.mjs';
 import { icone } from './icones.mjs';
 import { DURACAO, EVENTO, crest, itemEvento, marcador, textoEvento } from './partida.mjs';
+import { DURACAO_COBRANCA, htmlCobranca } from './penalti-animacao.mjs';
 import { posTag } from './posicoes.mjs';
 import { chipsTaticaAoVivo } from './taticas.mjs';
 import { go, render } from './telas.mjs';
@@ -64,7 +65,7 @@ export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round
   const uc = userClub();
   const v = ui.vivo = { g: meu, jogos, rodada, done, replay, min: minuto ?? 0, fim: false, aba: 'meu', div: divOf(uc), comp: 'liga', sel: null, sig: '',
     S, clube: uc, xi0: [...(uc.lineup || [])], f0: uc.formation, timer: null, // xi0/f0: trocas e formação valem só neste jogo
-    estadual, uf: meu.uf || null, proximo, aoTerminar };
+    estadual, uf: meu.uf || null, proximo, aoTerminar, cobranca: null, filaCobrancas: [] };
   if (minuto != null && meu.ev.some(e => ['troca', 'formacao'].includes(e.t) && e.m <= minuto && meu[e.side] === uc.id)) {
     const elenco = escalacaoNoMinuto(meu, meu.h === uc.id ? 'h' : 'a', minuto);
     v.alterou = true; v.xi1 = elenco.xi.filter(Boolean); v.f1 = elenco.form;
@@ -90,22 +91,37 @@ function restaurar(v) {
 
 function tick(v) {
   if (ui.vivo !== v || v.S !== S) { clearInterval(v.timer); if (ui.vivo === v) { ui.vivo = null; ui.tvAoVivo = null } return }
+  if (v.cobranca) {
+    if (performance.now() - v.cobranca.inicio < DURACAO_COBRANCA) return;
+    v.cobranca = null;
+    if (ui.view === 'aovivo') pintarCobranca(v);
+  }
   if (ui.view !== 'aovivo' || v.pausado || v.fim) return; // pausado: saiu da tela ou apertou Pausar (#170)
+  if (v.filaCobrancas.length) { mostrarCobranca(v); return }
   if (v.min >= DURACAO) { // disputa de pênaltis (#267)
+    if (v.pen === undefined) { fecharTempoNormal(v); return }
     if (++v.passo % PASSO_PEN) return;
     v.cob++; pintar(v);
     if (v.cob >= v.pen.cob.length) terminar(v);
     return;
   }
-  v.min++; pintar(v);
+  v.min++;
+  v.filaCobrancas = v.g.ev.filter(e => e.m === v.min && e.t === 'penalti');
+  if (v.filaCobrancas.length) mostrarCobranca(v);
+  pintar(v);
   if (!v.replay && v.g.ev.some(e => e.m === v.min && v.g[e.side] === v.clube.id && saidaForcada(e))) {
     v.sel = null; controles(v);
   }
-  if (v.min >= DURACAO) {
-    if (!prepararPenaltis(v)) { terminar(v); return }
-    const c = el('av-controles'); if (c) c.innerHTML = ''; // sem trocas na disputa
-    pintar(v);
-  }
+  if (v.min >= DURACAO && !v.cobranca) fecharTempoNormal(v);
+}
+function mostrarCobranca(v) {
+  v.cobranca = { lance: v.filaCobrancas.shift(), inicio: performance.now() };
+  pintarCobranca(v);
+}
+function fecharTempoNormal(v) {
+  if (!prepararPenaltis(v)) { terminar(v); return }
+  controles(v); // sem trocas na disputa
+  pintar(v);
 }
 function terminar(v) {
   clearInterval(v.timer); v.fim = true; ui.tvAoVivo = null; restaurar(v);
@@ -131,6 +147,8 @@ export function avFormacao(f) { const v = ui.vivo; if (!v || v.fim || v.replay |
 export function avPular() {
   const v = ui.vivo; if (!v || v.fim) return;
   v.min = DURACAO; v.pausado = false;
+  v.cobranca = null; v.filaCobrancas = [];
+  pintarCobranca(v);
   if (prepararPenaltis(v)) v.cob = v.pen.cob.length;
   terminar(v);
 }
@@ -160,6 +178,19 @@ const relogio = v => {
   if (v.min >= DURACAO && v.pen) return `Pênaltis${v.pausado ? ' · pausado' : ''}`;
   const t = minutoDoTempo(v.min); return `${t.m}' · ${t.tempo}º tempo${v.pausado ? ' · pausado' : ''}`;
 };
+function htmlCobrancaAtual(v) {
+  if (!v.cobranca) return '';
+  const { lance, inicio } = v.cobranca;
+  return htmlCobranca(lance, {
+    clube: clubById(v.g[lance.side])?.name,
+    goleiro: P[lance.gk]?.name,
+    decorrido: performance.now() - inicio
+  });
+}
+function pintarCobranca(v) {
+  const c = el('av-cobranca');
+  if (c) c.innerHTML = htmlCobrancaAtual(v);
+}
 // #267: placar da disputa e as cobranças já batidas, na ordem
 function htmlPenaltis(v) {
   if (v.min < DURACAO || !v.pen?.cob) return '';
@@ -264,6 +295,7 @@ function htmlCab(v) {
   return `<div class="cab-jogo"><div class="cab-topo"><span class="sobretitulo">${esc(competicao(v))}</span><span class="relogio" id="lclk" aria-live="off">${relogio(v)}</span></div>
     <div class="placar">${lado(H, 'casa')}<div class="placar-centro"><div class="placar-num" id="lsc" aria-live="polite">${p.h} x ${p.a}</div></div>${lado(A, 'fora')}</div>
     ${v.g.copa?.ida ? `<p class="muted" id="av-agregado">${esc(textoAgregado(v))}</p>` : ''}
+    <div class="vivo-cobranca" id="av-cobranca" role="status" aria-live="polite" aria-atomic="true">${htmlCobrancaAtual(v)}</div>
     <p class="ult-lance" id="lult">${lanceTxt(v.g, v.min)}</p>
     <div class="penaltis" id="av-pen">${htmlPenaltis(v)}</div>
     <div class="tempo" aria-hidden="true"><div class="tempo-trilho"><div class="tempo-feito" id="lbar" style="width:${Math.min(100, v.min / DURACAO * 100)}%"></div></div><div class="tempo-marcas" id="lmarcas">${marcas}</div>
