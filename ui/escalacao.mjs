@@ -85,6 +85,11 @@ function carta(s, o, i) {
     const miolo = `<span class="carta-vaga">${destino ? s.d : 'Expulso'}</span><s class="carta-nome">${esc(expulso)}</s>`;
     const cls = 'carta vazia exp-carta-vermelha';
     if (destino) return `<button type="button" class="${cls} exp-destino" data-acao="avExpVaga|${i}" aria-label="Mover ${esc(o.mover)} para cá, vaga de ${s.d} de ${esc(expulso)}, expulso">${miolo}<small>Mover aqui</small></button>`;
+    // #326: sem ninguém escolhido, tocar na vaga do expulso marca a vaga; o próximo jogador tocado vai para ela
+    if (o.vagaAcao && i > 0 && !o.somenteLeitura) {
+      const marcada = o.vagaSel === i;
+      return `<button type="button" class="${cls}${marcada ? ' sel' : ''}" data-acao="${o.vagaAcao}|${i}" aria-pressed="${marcada}" aria-label="Vaga de ${s.d} de ${esc(expulso)}, expulso: escolher quem vai para ela">${miolo}<small>${marcada ? 'Toque em quem vem' : 'Trocar de posição'}</small></button>`;
+    }
     return `<div class="${cls}">${miolo}<span aria-hidden="true">—</span></div>`;
   }
   if (!s.id) return `<div class="carta vazia"><span class="carta-vaga">${s.d}</span><span>vaga livre</span></div>`;

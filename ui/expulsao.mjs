@@ -1,7 +1,7 @@
 import { minutoDoTempo, placarNoMinuto } from '../core/aovivo.mjs';
 import { energiaDe } from '../core/energia.mjs';
 import { clubById } from '../core/estado.mjs';
-import { SUSPENSAO_POR_EXPULSAO } from '../core/escalacao.mjs';
+import { SUSPENSAO_POR_EXPULSAO, slotsDe } from '../core/escalacao.mjs';
 import { aplicarLanceAoElenco } from '../core/lances.mjs';
 import { banco, elencoParaTrocas, MAX_TROCAS, prepararFormacao, prepararPosicao, prepararTroca, trocasDe } from '../core/substituicoes.mjs';
 import { ESTILOS, MODOS, taticaUser } from '../core/taticas.mjs';
@@ -62,7 +62,7 @@ function htmlCampo(v, a) {
   const mover = a.sel && elenco.xi.indexOf(a.sel) > 0 ? v.clube.players.find(p => p.id === a.sel)?.name : null;
   return `<div class="exp-secao-topo"><h3>Em campo · ${esc(a.form)}</h3><strong class="exp-contagem${elenco.expulsos.size ? '' : ' exp-completo'}">${emCampo(elenco)} jogadores</strong></div>
     ${campoHtml({ ...v.clube, formation: a.form }, { mini: true, acao: 'avExpSair', sel: a.sel, emCampo: elenco.xi,
-      semEnergia: true, somenteLeitura: a.leitura, expulsos: elenco.expulsos, mover })}`;
+      semEnergia: true, somenteLeitura: a.leitura, expulsos: elenco.expulsos, mover, vagaAcao: 'avExpVaga', vagaSel: a.vagaSel })}`;
 }
 
 function htmlBanco(v, a) {
@@ -226,6 +226,7 @@ function registrarNoRascunho(v, a, elenco, lance, msg, foco) {
   a.elenco = elenco;
   a.rascunho.push(lance);
   a.sel = null;
+  a.vagaSel = null;
   a.erro = false;
   a.msg = msg;
   atualizarCampoEBanco(v, a, `avExpSair|${foco}`);
@@ -242,6 +243,13 @@ export function avExpSair(id) {
   if (!a || !id) return;
   const elenco = elencoExibido(a), vaga = elenco.xi.indexOf(id);
   if (vaga < 0) return;
+  if (a.vagaSel != null) { // #326: a vaga do expulso foi marcada antes; este jogador vai para ela
+    const destino = a.vagaSel;
+    a.vagaSel = null; a.sel = id;
+    moverNoRascunho(v, a, elenco, destino);
+    if (a.sel === id) { a.sel = null; atualizarCampoEBanco(v, a) } // não moveu: o erro fica na mensagem
+    return;
+  }
   if (a.sel && a.sel !== id) { moverNoRascunho(v, a, elenco, vaga); return }
   a.sel = a.sel === id ? null : id;
   a.erro = false;
@@ -251,9 +259,14 @@ export function avExpSair(id) {
 
 export function avExpVaga(indice) {
   const v = ui.vivo, a = rascunhoAberto(v);
-  if (!a?.sel) return;
+  if (!a) return;
   const elenco = elencoExibido(a), vaga = Number(indice);
-  if (elenco.expulsos.has(vaga)) moverNoRascunho(v, a, elenco, vaga);
+  if (!elenco.expulsos.has(vaga) || vaga <= 0) return;
+  if (a.sel) { moverNoRascunho(v, a, elenco, vaga); return }
+  a.vagaSel = a.vagaSel === vaga ? null : vaga;
+  a.erro = false;
+  a.msg = a.vagaSel == null ? '' : `Toque em quem vai para a vaga de ${slotsDe(elenco.form)[vaga]}.`;
+  atualizarCampoEBanco(v, a, `avExpVaga|${vaga}`);
 }
 
 export function avExpEntrar(id) {
@@ -261,6 +274,7 @@ export function avExpEntrar(id) {
   if (!a) return;
   const trocas = trocasNoRascunho(a);
   if (trocas.length >= MAX_TROCAS) { avisarRascunho(v, a, limite()); return }
+  if (a.vagaSel != null) { avisarRascunho(v, a, 'Só um jogador em campo pode ir para a vaga do expulso. Toque nele no campo.'); return }
   if (!a.sel) { avisarRascunho(v, a, 'Primeiro toque em quem sai, no campo.'); return }
   const elenco = elencoExibido(a), r = prepararTroca(v.g, a.min, a.sel, id, elenco, trocas);
   if (r.erro) { avisarRascunho(v, a, r.erro); return }
@@ -273,6 +287,7 @@ export function avExpTatica(campo, valor) {
   if (campo === 'form') {
     a.form = valor;
     a.sel = null;
+    a.vagaSel = null;
   } else a.tatica[campo] = valor;
   atualizar(v, a, [['exp-tatica', htmlTaticas(a)], ['exp-campo', htmlCampo(v, a)], ['exp-banco', htmlBanco(v, a)]]);
 }
