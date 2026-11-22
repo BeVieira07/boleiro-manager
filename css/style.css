@@ -412,7 +412,7 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 @media(max-width:899px){.vivo[data-aba="meu"] :is(.vivo-rodada,.vivo-classif),.vivo[data-aba="rodada"] :is(.vivo-meu,.vivo-classif),.vivo[data-aba="classif"] :is(.vivo-meu,.vivo-rodada){display:none}}
 @media(min-width:900px){.vivo{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr)}.vivo-abas{display:none}.vivo-cab{grid-column:1/-1;grid-row:1}.vivo-meu{grid-column:1;grid-row:2/span 2}.vivo-rodada{grid-column:2;grid-row:2}.vivo-classif{grid-column:2;grid-row:3}}
 .ev.troca .ev-ic,.ev.formacao .ev-ic{color:var(--verde-claro)}
-.marca-ev.troca,.marca-ev.formacao{background:var(--verde-claro);height:12px;top:4px}
+.marca-ev.troca,.marca-ev.formacao,.marca-ev.posicao{background:var(--verde-claro);height:12px;top:4px}
 .marca-ev.troca.auto{height:6px;top:14px}
 .trocas{display:flex;flex-direction:column;gap:var(--e2)}
 @media(max-width:520px){.placar-num{font-size:44px}.placar .crest.g{width:48px;height:48px}}
@@ -575,6 +575,9 @@ body.em-jogo .avisos{bottom:24px}
 .exp-janela .campo.mini .carta-nome{font-size:12px}
 .exp-janela .carta.exp-carta-vermelha{background:var(--perigo-esc);border-color:var(--perigo);color:var(--perigo-claro)}
 .exp-carta-vermelha .carta-vaga{background:var(--perigo-forte);color:#fff;text-transform:uppercase}
+.exp-janela .carta.exp-destino{border-color:var(--ouro);cursor:pointer}
+.exp-janela .carta.exp-destino:hover{border-style:solid;box-shadow:0 0 0 2px var(--ouro)}
+.exp-carta-vermelha small{font-size:11px;line-height:1.1}
 .exp-passos,.exp-reservas{margin:0;padding:0;list-style:none}
 .exp-passos{display:grid;grid-template-columns:1fr 1fr;gap:var(--e2);margin-bottom:var(--e2)}
 .exp-passos li{display:flex;align-items:center;gap:var(--e2);padding:var(--e2);border:1px solid var(--linha);border-radius:var(--r);font-size:12px}

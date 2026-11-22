@@ -1,6 +1,6 @@
 import { energiaDaTroca } from './energia.mjs';
 import { P, userClub } from './estado.mjs';
-import { SLOTS, unavailable } from './escalacao.mjs';
+import { SLOTS, slotsDe, unavailable } from './escalacao.mjs';
 import { aplicarLanceAoElenco, escalacaoInicial, escalacaoNoMinuto, saidaForcada } from './lances.mjs';
 import { ressimularDepois } from './taticas.mjs';
 
@@ -10,6 +10,10 @@ import { ressimularDepois } from './taticas.mjs';
    servidor, então aqui só o solo e o revezamento trocam. */
 export const MAX_TROCAS = 5;
 const lado = (g, id) => g.h === id ? 'h' : 'a';
+function erroAoMexer(g, min, clube) {
+  if (g.h !== clube && g.a !== clube) return 'Esse não é o jogo do seu time.';
+  if (min >= 93) return 'O jogo já acabou.';
+}
 export const trocasDe = (g, clube = userClub().id, min = Infinity) => [
   ...(g.trocas || []).filter(t => t.clube === clube),
   ...(g.ev || []).filter(e => e.auto && e.goleiroNoGol && g[e.side] === clube && e.m <= min)
@@ -46,9 +50,8 @@ export function banco(g, min = 0, elenco = elencoParaTrocas(g, min), trocas = tr
 
 /** Valida uma troca com a escalação da partida ou com a projeção do rascunho. */
 export function prepararTroca(g, min, sai, entra, elenco = elencoParaTrocas(g, min), trocas = trocasDe(g, userClub().id, min)) {
-  const uc = userClub();
-  if (g.h !== uc.id && g.a !== uc.id) return { erro: 'Esse não é o jogo do seu time.' };
-  if (min >= 93) return { erro: 'O jogo já acabou.' };
+  const uc = userClub(), erro = erroAoMexer(g, min, uc.id);
+  if (erro) return { erro };
   if (trocas.length >= MAX_TROCAS) return { erro: `Você já fez as ${MAX_TROCAS} substituições do jogo.` };
   const side = lado(g, uc.id), e = P[entra], jogador = P[sai];
   if (!jogador || !elenco.xi.includes(sai)) return { erro: 'Quem sai precisa estar em campo.' };
@@ -78,19 +81,49 @@ export function substituir(g, min, sai, entra, { recalcular = true } = {}) {
   return { ok: true, msg: r.msg };
 }
 
-/** Muda a formação do seu time durante o jogo; os mesmos 11 se reacomodam nas vagas novas (fora de posição rende menos). */
-export function mudarFormacaoAoVivo(g, min, f, { recalcular = true } = {}) {
-  const uc = userClub();
-  if (g.h !== uc.id && g.a !== uc.id) return { erro: 'Esse não é o jogo do seu time.' };
-  if (min >= 93) return { erro: 'O jogo já acabou.' };
+/** Valida um movimento com a escalação da partida ou com a projeção do rascunho. */
+export function prepararPosicao(g, min, pid, vaga, elenco = elencoParaTrocas(g, min)) {
+  const uc = userClub(), erro = erroAoMexer(g, min, uc.id);
+  if (erro) return { erro };
+  const origem = elenco.xi.indexOf(pid), slots = slotsDe(elenco.form);
+  if (!P[pid] || origem < 0) return { erro: 'Quem muda de vaga precisa estar em campo.' };
+  if (!Number.isInteger(vaga) || vaga < 0 || vaga >= slots.length || vaga === origem) return { erro: 'Escolha outra vaga em campo.' };
+  if (origem === 0 || vaga === 0) return { erro: 'A vaga do goleiro não pode trocar com uma vaga de linha.' };
+  const destino = P[elenco.xi[vaga]];
+  const name = destino ? `${P[pid].name} e ${destino.name} trocaram de vaga.` : `${P[pid].name} foi para a vaga de ${slots[vaga]}.`;
+  return { lance: { m: min, t: 'posicao', side: lado(g, uc.id), pid, vaga, name } };
+}
+
+/** Move um jogador de vaga depois do minuto `min`, com troca de vagas se o destino estiver ocupado. */
+export function mudarPosicaoAoVivo(g, min, pid, vaga, { recalcular = true } = {}) {
+  const uc = userClub(), elenco = elencoParaTrocas(g, min);
+  const r = prepararPosicao(g, min, pid, vaga, elenco);
+  if (r.erro) return r;
+  guardarEscalacaoLegada(g, r.lance.side, uc);
+  aplicarLanceAoElenco(elenco, r.lance);
+  uc.lineup = elenco.xi.filter(Boolean);
+  g.ev.push(r.lance);
+  if (recalcular) ressimularDepois(g, min);
+  return { ok: true, msg: r.lance.name };
+}
+
+export function prepararFormacao(g, min, f, elenco = elencoParaTrocas(g, min)) {
+  const uc = userClub(), erro = erroAoMexer(g, min, uc.id);
+  if (erro) return { erro };
   if (!Object.hasOwn(SLOTS, f)) return { erro: 'Formação desconhecida.' };
-  const side = lado(g, uc.id), elenco = elencoParaTrocas(g, min);
   if (elenco.form === f) return { erro: `O time já joga no ${f}.` };
-  const lance = { m: min, t: 'formacao', side, form: f, name: `Muda para o ${f}` };
-  guardarEscalacaoLegada(g, side, uc);
-  aplicarLanceAoElenco(elenco, lance);
+  return { lance: { m: min, t: 'formacao', side: lado(g, uc.id), form: f, name: `Muda para o ${f}` } };
+}
+
+/** Muda a formação do seu time durante o jogo; os jogadores se reacomodam nas vagas novas. */
+export function mudarFormacaoAoVivo(g, min, f, { recalcular = true } = {}) {
+  const uc = userClub(), elenco = elencoParaTrocas(g, min);
+  const r = prepararFormacao(g, min, f, elenco);
+  if (r.erro) return r;
+  guardarEscalacaoLegada(g, r.lance.side, uc);
+  aplicarLanceAoElenco(elenco, r.lance);
   uc.formation = f; uc.lineup = elenco.xi.filter(Boolean);
-  g.ev.push(lance);
+  g.ev.push(r.lance);
   if (recalcular) ressimularDepois(g, min);
   return { ok: true, msg: `Agora no ${f}: vale a partir do minuto ${min + 1}.` };
 }

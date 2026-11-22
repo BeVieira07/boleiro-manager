@@ -13,7 +13,7 @@ import { timesDaVolta } from '../core/gols-copa.mjs';
 import { ESTILOS, MODOS, mudarTatica, recobrarPenalti, ressimularDepois, taticaUser } from '../core/taticas.mjs';
 import { DIVS, P, S, clubById, divOf, divisions, hasTwoDivs, userClub } from '../core/estado.mjs';
 import { escalacaoNoMinuto, saidaForcada } from '../core/lances.mjs';
-import { elencoParaTrocas, mudarFormacaoAoVivo, substituir, trocasDe } from '../core/substituicoes.mjs';
+import { elencoParaTrocas, mudarFormacaoAoVivo, mudarPosicaoAoVivo, substituir, trocasDe } from '../core/substituicoes.mjs';
 import { esc, hashStr } from '../core/utils.mjs';
 import { avisar } from './avisos.mjs';
 import { chip } from './componentes.mjs';
@@ -100,7 +100,7 @@ export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round
   const v = ui.vivo = { g: meu, jogos, rodada, done, replay, min: minuto ?? 0, fim: false, aba: 'meu', div: divOf(uc), comp: 'liga', sel: null, sig: '',
     S, clube: uc, xi0: [...(uc.lineup || [])], f0: uc.formation, timer: null, // xi0/f0: trocas e formação valem só neste jogo
     estadual, uf: meu.uf || null, proximo, aoTerminar, cobranca: null, filaCobrancas: [] };
-  if (minuto != null && meu.ev.some(e => ['troca', 'formacao'].includes(e.t) && e.m <= minuto && meu[e.side] === uc.id)) {
+  if (minuto != null && meu.ev.some(e => ['troca', 'formacao', 'posicao'].includes(e.t) && e.m <= minuto && meu[e.side] === uc.id)) {
     const elenco = elencoParaTrocas(meu, minuto);
     v.alterou = true; v.xi1 = elenco.xi.filter(Boolean); v.f1 = elenco.form;
     uc.lineup = [...v.xi1]; uc.formation = v.f1;
@@ -305,15 +305,20 @@ export function avExpFechar() {
 
 export function avExpConfirmar() {
   const v = ui.vivo, a = v?.expulsao;
-  if (!a || a.leitura || !validarRascunhoExpulsao(v, a)) return;
-  const { g } = v, { min, form, tatica, rascunho } = a;
-  const mexeuNoTime = rascunho.length > 0 || form !== a.elenco.form;
+  if (!a || a.leitura) return;
+  const lances = validarRascunhoExpulsao(v, a);
+  if (!lances) return;
+  const { g } = v, { min, tatica } = a;
+  const mexeuNoTime = lances.length > 0;
   const anterior = taticaUser(v.clube), campos = ['estilo', 'modo'].filter(c => anterior[c] !== tatica[c]);
   const mudou = min < DURACAO && (mexeuNoTime || campos.length > 0);
   if (mudou) {
     const opcoes = { recalcular: false };
-    for (const { sai, entra } of rascunho) substituir(g, min, sai, entra, opcoes);
-    if (form !== a.elenco.form) mudarFormacaoAoVivo(g, min, form, opcoes);
+    for (const e of lances) {
+      if (e.t === 'posicao') mudarPosicaoAoVivo(g, min, e.pid, e.vaga, opcoes);
+      else if (e.t === 'formacao') mudarFormacaoAoVivo(g, min, e.form, opcoes);
+      else substituir(g, min, e.sai, e.entra, opcoes);
+    }
     for (const c of campos) mudarTatica(c, tatica[c]);
     ressimularDepois(g, min);
     if (mexeuNoTime) {
@@ -321,7 +326,7 @@ export function avExpConfirmar() {
     }
     save();
   }
-  retomarDepoisDaExpulsao(v, rascunho, mudou);
+  retomarDepoisDaExpulsao(v, lances.filter(e => e.t !== 'formacao'), mudou);
 }
 
 /** #314: "Pular para o fim" da janela de pausa: aplica o rascunho antes de pular. */

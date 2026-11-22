@@ -2,8 +2,8 @@ import { minutoDoTempo, placarNoMinuto } from '../core/aovivo.mjs';
 import { energiaDe } from '../core/energia.mjs';
 import { clubById } from '../core/estado.mjs';
 import { SUSPENSAO_POR_EXPULSAO } from '../core/escalacao.mjs';
-import { aplicarLanceAoElenco, escalacaoNoMinuto } from '../core/lances.mjs';
-import { banco, elencoParaTrocas, MAX_TROCAS, prepararTroca, trocasDe } from '../core/substituicoes.mjs';
+import { aplicarLanceAoElenco } from '../core/lances.mjs';
+import { banco, elencoParaTrocas, MAX_TROCAS, prepararFormacao, prepararPosicao, prepararTroca, trocasDe } from '../core/substituicoes.mjs';
 import { ESTILOS, MODOS, taticaUser } from '../core/taticas.mjs';
 import { esc, FORMS } from '../core/utils.mjs';
 import { abrirCamada, fecharCamada } from './avisos.mjs';
@@ -19,17 +19,11 @@ const telaCompacta = globalThis.matchMedia?.('(max-width: 799px)'); // #314: fol
 const emCampo = elenco => elenco.xi.filter(Boolean).length;
 const limite = () => `Você já fez as ${MAX_TROCAS} substituições do jogo.`;
 
-// todos os expulsos do seu time até o minuto, com a vaga que ocupavam (a vaga fica riscada e não pode ser preenchida)
-function expulsosAte(v, min) {
-  return v.g.ev.filter(e => e.t === 'vermelho' && e.m <= min && v.g[e.side] === v.clube.id).map(e => ({
-    nome: e.name, segundo: e.segundo, vaga: (escalacaoNoMinuto(v.g, e.side, e.m - 1)?.xi ?? v.clube.lineup).indexOf(e.pid)
-  }));
-}
 function novaJanela(v, tipo, novos) {
   const min = v.min, elenco = elencoParaTrocas(v.g, min);
   return {
     tipo, min, elenco, form: elenco.form, total: emCampo(elenco), tatica: taticaUser(v.clube), sel: null,
-    expulsos: expulsosAte(v, min), novos, trocas: trocasDe(v.g, v.clube.id, min), rascunho: [],
+    novos, trocas: trocasDe(v.g, v.clube.id, min), rascunho: [],
     leitura: false, msg: '', erro: false
   };
 }
@@ -49,33 +43,30 @@ function htmlTaticas(a) {
   return `<div class="exp-grupos">${grupos.map(([rot, campo]) => `<div class="exp-grupo">
     <span aria-hidden="true">${rot}</span><div class="exp-opcoes" role="group" aria-label="${rot}" tabindex="0">${Object.entries(OPCOES[campo]).map(([k, item]) =>
       opcao(campo, k, item.nome || k, (campo === 'form' ? a.form : a.tatica[campo]) === k, a.leitura)).join('')}</div></div>`).join('')}</div>
-    <p>${ajustou || !a.expulsos.length ? dicaTatica(a.tatica) : `Com ${a.total}, um modo defensivo ou o contra-ataque seguram melhor o empate.`}</p>`;
+    <p>${ajustou || !a.elenco.expulsos.size ? dicaTatica(a.tatica) : `Com ${a.total}, um modo defensivo ou o contra-ataque seguram melhor o empate.`}</p>`;
 }
 
-function vagasExpulsas(a, elenco) {
-  const vagas = new Map(), mesmosSlots = a.form === a.elenco.form;
-  const expulsos = a.expulsos.filter(e => e.vaga !== 0 || !elenco.xi[0]);
-  for (const e of expulsos) {
-    if (mesmosSlots && e.vaga >= 0 && !elenco.xi[e.vaga]) vagas.set(e.vaga, e.nome);
-  }
-  const restantes = expulsos.filter(e => !(mesmosSlots && vagas.has(e.vaga)));
-  for (const e of restantes.sort((x, y) => x.vaga - y.vaga)) {
-    const i = elenco.xi.findIndex((id, k) => !id && !vagas.has(k) && (k !== 0 || e.vaga === 0));
-    if (i >= 0) vagas.set(i, e.nome);
-  }
-  return vagas;
+const formacaoPendente = a => a.form === a.elenco.form ? null : { t: 'formacao', form: a.form };
+const trocasNoRascunho = a => [...a.trocas, ...a.rascunho.filter(e => e.t === 'troca')];
+
+function elencoExibido(a) {
+  const formacao = formacaoPendente(a);
+  if (!formacao) return a.elenco;
+  const elenco = { ...a.elenco };
+  aplicarLanceAoElenco(elenco, formacao);
+  return elenco;
 }
 
 function htmlCampo(v, a) {
-  const elenco = { ...a.elenco };
-  if (elenco.form !== a.form) aplicarLanceAoElenco(elenco, { t: 'formacao', form: a.form });
-  return `<div class="exp-secao-topo"><h3>Em campo · ${esc(a.form)}</h3><strong class="exp-contagem${a.expulsos.length ? '' : ' exp-completo'}">${emCampo(elenco)} jogadores</strong></div>
+  const elenco = elencoExibido(a);
+  const mover = a.sel && elenco.xi.indexOf(a.sel) > 0 ? v.clube.players.find(p => p.id === a.sel)?.name : null;
+  return `<div class="exp-secao-topo"><h3>Em campo · ${esc(a.form)}</h3><strong class="exp-contagem${elenco.expulsos.size ? '' : ' exp-completo'}">${emCampo(elenco)} jogadores</strong></div>
     ${campoHtml({ ...v.clube, formation: a.form }, { mini: true, acao: 'avExpSair', sel: a.sel, emCampo: elenco.xi,
-      semEnergia: true, somenteLeitura: a.leitura, expulsos: vagasExpulsas(a, elenco) })}`;
+      semEnergia: true, somenteLeitura: a.leitura, expulsos: elenco.expulsos, mover })}`;
 }
 
 function htmlBanco(v, a) {
-  const trocas = [...a.trocas, ...a.rascunho];
+  const trocas = trocasNoRascunho(a);
   const reservas = banco(v.g, a.min, a.elenco, trocas)
     .sort((x, y) => Number(!!x.motivo) - Number(!!y.motivo) || y.p.ovr - x.p.ovr);
   const sai = v.clube.players.find(p => p.id === a.sel);
@@ -84,8 +75,8 @@ function htmlBanco(v, a) {
     <h3><span class="exp-banco-padrao">Substituições</span>${sai ? `<span class="exp-banco-escolha">Quem entra no lugar de ${esc(sai.name)}?</span>` : ''}</h3>
     <span><b>${trocas.length}</b> de ${MAX_TROCAS}${feitas}</span></div>
     <ol class="exp-passos">
-      <li${a.sel ? '' : ' aria-current="step"'}><b>1</b> Toque em quem sai, no campo</li>
-      <li${a.sel ? ' aria-current="step"' : ''}><b>2</b> Escolha quem entra</li>
+      <li${a.sel ? '' : ' aria-current="step"'}><b>1</b> Toque em um jogador no campo</li>
+      <li${a.sel ? ' aria-current="step"' : ''}><b>2</b> Escolha um reserva ou toque em outra vaga para mudar de posição</li>
     </ol>
     <ul class="exp-reservas" aria-label="Banco de reservas">${reservas.map(({ p, motivo }) => {
       const nota = p.pos === 'G' && !a.elenco.goleiroExpulso ? 'só por goleiro' : '';
@@ -96,8 +87,9 @@ function htmlBanco(v, a) {
     }).join('')}</ul>`;
 }
 
-function htmlTrocasAplicadas(a) {
-  return `<div class="exp-secao-topo"><h3>Substituições</h3><span><b>${a.trocas.length}</b> de ${MAX_TROCAS} feitas</span></div>
+function htmlAlteracoesAplicadas(a) {
+  const moveu = a.aplicadas.some(e => e.t === 'posicao');
+  return `<div class="exp-secao-topo"><h3>${moveu ? 'Alterações em campo' : 'Substituições'}</h3><span><b>${a.trocas.length}</b> de ${MAX_TROCAS} feitas</span></div>
     ${a.aplicadas.length ? `<ul class="exp-aplicadas">${a.aplicadas.map(t => `<li>${esc(t.name)}</li>`).join('')}</ul>`
       : '<p>Nenhuma substituição feita na janela.</p>'}`;
 }
@@ -144,8 +136,8 @@ function htmlJanela(v, a) {
       <section class="exp-tatica" id="exp-tatica" aria-label="Tática">${htmlTaticas(a)}</section>
       <div class="exp-grade">
         <section id="exp-campo" aria-label="Em campo">${htmlCampo(v, a)}</section>
-        <section aria-label="Substituições">
-          <div id="exp-banco">${a.leitura ? htmlTrocasAplicadas(a) : htmlBanco(v, a)}</div>
+        <section aria-label="Substituições e posições">
+          <div id="exp-banco">${a.leitura ? htmlAlteracoesAplicadas(a) : htmlBanco(v, a)}</div>
           ${a.leitura ? '' : `<p id="exp-mensagem" class="exp-mensagem" aria-live="polite">${esc(a.msg)}</p>`}
         </section>
       </div>
@@ -222,29 +214,57 @@ function rascunhoAberto(v) {
   return v?.expulsao && !v.expulsao.leitura && ui.view === 'aovivo' ? v.expulsao : null;
 }
 
+function atualizarCampoEBanco(v, a, foco) {
+  atualizar(v, a, [['exp-campo', htmlCampo(v, a)], ['exp-banco', htmlBanco(v, a)]], foco);
+}
+
+function registrarNoRascunho(v, a, elenco, lance, msg, foco) {
+  // Uma operação usa as vagas que estão na tela. Grave a formação exibida antes dela.
+  const formacao = formacaoPendente(a);
+  if (formacao) a.rascunho.push(formacao);
+  aplicarLanceAoElenco(elenco, lance);
+  a.elenco = elenco;
+  a.rascunho.push(lance);
+  a.sel = null;
+  a.erro = false;
+  a.msg = msg;
+  atualizarCampoEBanco(v, a, `avExpSair|${foco}`);
+}
+
+function moverNoRascunho(v, a, elenco, vaga) {
+  const r = prepararPosicao(v.g, a.min, a.sel, vaga, elenco);
+  if (r.erro) { avisarRascunho(v, a, r.erro); return }
+  registrarNoRascunho(v, a, elenco, r.lance, r.lance.name, a.sel);
+}
+
 export function avExpSair(id) {
   const v = ui.vivo, a = rascunhoAberto(v);
-  if (!a?.elenco.xi.includes(id)) return;
+  if (!a || !id) return;
+  const elenco = elencoExibido(a), vaga = elenco.xi.indexOf(id);
+  if (vaga < 0) return;
+  if (a.sel && a.sel !== id) { moverNoRascunho(v, a, elenco, vaga); return }
   a.sel = a.sel === id ? null : id;
-  a.erro = a.trocas.length + a.rascunho.length >= MAX_TROCAS;
-  a.msg = a.erro ? limite() : '';
-  atualizar(v, a, [['exp-campo', htmlCampo(v, a)], ['exp-banco', htmlBanco(v, a)]]);
+  a.erro = false;
+  a.msg = '';
+  atualizarCampoEBanco(v, a);
+}
+
+export function avExpVaga(indice) {
+  const v = ui.vivo, a = rascunhoAberto(v);
+  if (!a?.sel) return;
+  const elenco = elencoExibido(a), vaga = Number(indice);
+  if (elenco.expulsos.has(vaga)) moverNoRascunho(v, a, elenco, vaga);
 }
 
 export function avExpEntrar(id) {
   const v = ui.vivo, a = rascunhoAberto(v);
   if (!a) return;
-  const trocas = [...a.trocas, ...a.rascunho];
+  const trocas = trocasNoRascunho(a);
   if (trocas.length >= MAX_TROCAS) { avisarRascunho(v, a, limite()); return }
   if (!a.sel) { avisarRascunho(v, a, 'Primeiro toque em quem sai, no campo.'); return }
-  const r = prepararTroca(v.g, a.min, a.sel, id, a.elenco, trocas);
+  const elenco = elencoExibido(a), r = prepararTroca(v.g, a.min, a.sel, id, elenco, trocas);
   if (r.erro) { avisarRascunho(v, a, r.erro); return }
-  aplicarLanceAoElenco(a.elenco, r.lance);
-  a.rascunho.push(r.lance);
-  a.sel = null;
-  a.erro = false;
-  a.msg = `${r.lance.name}. Troca no rascunho.`;
-  atualizar(v, a, [['exp-campo', htmlCampo(v, a)], ['exp-banco', htmlBanco(v, a)]], `avExpSair|${id}`);
+  registrarNoRascunho(v, a, elenco, r.lance, `${r.lance.name}. Troca no rascunho.`, id);
 }
 
 export function avExpTatica(campo, valor) {
@@ -258,14 +278,20 @@ export function avExpTatica(campo, valor) {
 }
 
 export function validarRascunhoExpulsao(v, a) {
-  const elenco = elencoParaTrocas(v.g, a.min), feitas = trocasDe(v.g, v.clube.id, a.min);
-  for (const { sai, entra } of a.rascunho) {
-    const r = prepararTroca(v.g, a.min, sai, entra, elenco, feitas);
-    if (r.erro) { avisarRascunho(v, a, r.erro); return false }
+  const { g } = v, { min } = a, elenco = elencoParaTrocas(g, min), feitas = trocasDe(g, v.clube.id, min);
+  const lances = [], formacao = formacaoPendente(a);
+  const rascunho = formacao ? [...a.rascunho, formacao] : a.rascunho;
+  for (const e of rascunho) {
+    let r;
+    if (e.t === 'posicao') r = prepararPosicao(g, min, e.pid, e.vaga, elenco);
+    else if (e.t === 'formacao') r = prepararFormacao(g, min, e.form, elenco);
+    else r = prepararTroca(g, min, e.sai, e.entra, elenco, feitas);
+    if (r.erro) { avisarRascunho(v, a, r.erro); return null }
     aplicarLanceAoElenco(elenco, r.lance);
-    feitas.push(r.lance);
+    if (e.t === 'troca') feitas.push(r.lance);
+    lances.push(r.lance);
   }
-  return true;
+  return lances;
 }
 
 export function resumoExpulsao(v) {
