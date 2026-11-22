@@ -74,7 +74,7 @@ Falha relatada não é sucesso: ler o motivo e decidir (devolver ao Codex, assum
 
 Para cada branch entregue:
 
-1. `git fetch origin` e criar uma worktree de revisão: `git worktree add ../BM-REV-N origin/issue-N-<resumo>` (não mexer na worktree do Codex nem na pasta principal).
+1. `git fetch origin` e criar uma worktree de revisão: `git worktree add --detach ../Boleiro-Worktrees/rev-N origin/issue-N-<resumo>` (não mexer na worktree do Codex nem na pasta principal).
 2. Ler o diff inteiro: `git diff origin/main...origin/issue-N-<resumo>`. Conferir:
    - [ ] Cumpre **todos** os critérios de aceite da issue (e nada fora do pedido).
    - [ ] Lógica certa nos casos de borda; sem quebrar saves antigos (migração, quando o formato do save muda).
@@ -95,7 +95,7 @@ Para cada branch entregue:
 3. Merge sem perguntar: `gh pr merge <branch> --repo BeVieira07/Boleiro-Manager --merge`.
 4. Conferir os workflows (`pages.yml`; `funcao.yml` quando `core/` mudou) e, para a função, 401 sem login (skill `liga-online`).
 5. Issue fechada e em **Done** no quadro.
-6. Limpar: `git worktree remove --force ../BM-REV-N`. A worktree do Codex é do Orca; deixar o Orca fechar.
+6. Limpar (#330): encerrar o `serve` aberto na revisão, `git worktree remove --force ../Boleiro-Worktrees/rev-N`, e fechar a worktree do Codex pelo Orca com `orca worktree rm --worktree "id:<id do orca worktree list --json>" --force --delete-branch` (só depois do merge e conferindo que o commit está na `main`).
 
 ## 5. Relatório ao usuário
 
