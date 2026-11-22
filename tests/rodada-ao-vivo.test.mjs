@@ -1,7 +1,7 @@
 // #135: tela da rodada ao vivo (substituições, formação, outros jogos e classificação no mesmo relógio)
 import { mock, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DURACAO_COBRANCA, htmlCobranca } from '../ui/penalti-animacao.mjs';
+import { DURACAO_COBRANCA, htmlCobranca } from '../ui/partida/penalti-animacao.mjs';
 import { carregarJogo, clubeDaSerie, problemasNasTelas } from './jogo.mjs';
 
 /** `tick(ms)` dispara o intervalo após ms. `passo()` usa o tempo de uma cobrança a cada disparo. */

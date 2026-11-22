@@ -3,10 +3,18 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { carregarJogo, clubeDaSerie } from './jogo.mjs';
+import { arquivosMjs, carregarJogo, clubeDaSerie } from './jogo.mjs';
 
-const ler = dir => readdirSync(new URL(`../${dir}/`, import.meta.url)).filter(f => f.endsWith('.mjs'))
+const ler = dir => arquivosMjs(dir) // #332: com as subpastas
   .map(f => [f, readFileSync(new URL(`../${dir}/${f}`, import.meta.url), 'utf8')]);
+
+test('as varreduras de ui/ leem também as subpastas (#332)', () => {
+  const git = spawnSync('git', ['ls-files', 'ui'], { cwd: new URL('..', import.meta.url), encoding: 'utf8' });
+  const versionados = git.stdout.split('\n').filter(f => f.endsWith('.mjs')).length;
+  assert.ok(versionados > 30);
+  assert.equal(arquivosMjs('ui').length, versionados, 'arquivosMjs("ui") deixa algum .mjs de fora');
+  assert.ok(arquivosMjs('ui').some(f => f.includes('/')), 'há módulos em subpastas');
+});
 
 test('core/ não usa tela, DOM nem armazenamento', () => {
   const proibido = /\b(document|window|localStorage|alert|confirm|prompt|render|openModal|closeModal)\s*[.(]/;

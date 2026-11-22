@@ -2,10 +2,10 @@ import { DIVS, S, divOf, table, tec, tecnicos, userClub } from '../core/estado.m
 import { esc, money } from '../core/utils.mjs';
 import { ui } from './estado.mjs';
 import { icone } from './icones.mjs';
-import { rotuloRodada } from './estadual.mjs';
-import { situacaoLiga } from './ligajogo.mjs';
-import { botaoRodada } from './motor.mjs';
-import { crest } from './partida.mjs';
+import { rotuloRodada } from './temporada/estadual.mjs';
+import { situacaoLiga } from './liga/ligajogo.mjs';
+import { botaoRodada } from './temporada/motor.mjs';
+import { crest } from './partida/partida.mjs';
 import { render } from './telas.mjs';
 
 const SECOES = [

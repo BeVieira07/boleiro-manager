@@ -403,7 +403,7 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .ev.nosso{background:var(--verde-esc);border-radius:8px;border-bottom-color:transparent}
 .ev.nosso b{color:var(--verde-claro)}
 .fim-acoes{justify-content:flex-end}
-/* #135: tela da rodada ao vivo (ui/aovivo.mjs): o seu jogo, os outros jogos e a classificação no mesmo relógio */
+/* #135: tela da rodada ao vivo (ui/partida/aovivo.mjs): o seu jogo, os outros jogos e a classificação no mesmo relógio */
 .vivo{display:grid;gap:var(--e4);grid-template-columns:minmax(0,1fr);align-items:start}
 .vivo-meu{display:flex;flex-direction:column;gap:var(--e4);min-width:0}
 .vivo-rodada,.vivo-classif{display:flex;flex-direction:column;gap:var(--e3);min-width:0}

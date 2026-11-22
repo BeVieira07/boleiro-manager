@@ -1,7 +1,7 @@
 // #292: no ao vivo, o técnico escolhe o batedor e o canto do pênalti do seu time
 import { mock, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DURACAO_COBRANCA } from '../ui/penalti-animacao.mjs';
+import { DURACAO_COBRANCA } from '../ui/partida/penalti-animacao.mjs';
 import { carregarJogo, clubeDaSerie } from './jogo.mjs';
 
 const novo = () => { const j = carregarJogo({ boot: true }); j.run(`newGame('${clubeDaSerie(j)}')`); j.run('S.estaduais=null'); return j };

@@ -6,14 +6,14 @@ import assert from 'node:assert/strict';
 import { carregarJogo, clubeDaSerie, problemasNasTelas } from './jogo.mjs';
 
 const raiz = new URL('../', import.meta.url);
-const conta = await import(new URL('ui/conta.mjs', raiz));
+const conta = await import(new URL('ui/inicio/conta.mjs', raiz));
 const { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga, removerTecnicoLiga } = await import(new URL('core/liga.mjs', raiz));
 const est = await import(new URL('core/estado.mjs', raiz)); // est.S: o S muda a cada usarEstado
 const { DADOS_PADRAO } = await import(new URL('core/dados-padrao.mjs', raiz));
 
 // confirmar() chama o callback async sem esperar: deixa as promessas terminarem
 const esperar = (ms = 0) => new Promise(r => setTimeout(r, ms));
-const { recarga } = await import(new URL('ui/ligajogo.mjs', raiz));
+const { recarga } = await import(new URL('ui/liga/ligajogo.mjs', raiz));
 recarga.espera = 0; // #124: nos testes, a recarga pelo tempo real não espera (o teste próprio dela muda isto)
 const copia = x => JSON.parse(JSON.stringify(x));
 

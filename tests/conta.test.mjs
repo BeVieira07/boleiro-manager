@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { carregarJogo } from './jogo.mjs';
 
-const conta = await import(new URL('../ui/conta.mjs', import.meta.url));
+const conta = await import(new URL('../ui/inicio/conta.mjs', import.meta.url));
 
 // cliente falso do Supabase: guarda o que foi pedido
 function clienteFalso({ sessao = null } = {}) {

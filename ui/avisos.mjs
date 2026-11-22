@@ -6,7 +6,7 @@
    Modais prendem o foco (Tab), fecham com Esc e devolvem o foco ao elemento de origem. */
 import { esc } from '../core/utils.mjs';
 import { icone } from './icones.mjs';
-import { prefs } from './configuracoes.mjs';
+import { prefs } from './inicio/configuracoes.mjs';
 
 // Para os testes (sem navegador): registra as mensagens e responde "sim" às confirmações.
 export const avisosTeste = { ouvir: null, autoConfirmar: false };

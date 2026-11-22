@@ -1,7 +1,7 @@
 import { sampleData } from '../core/dados.mjs';
 import { DADOS_PADRAO } from '../core/dados-padrao.mjs';
 import { S, criarJogo } from '../core/estado.mjs';
-import { podeCriarSave, salvarJogo } from './saves.mjs';
+import { podeCriarSave, salvarJogo } from './inicio/saves.mjs';
 import { go, render } from './telas.mjs';
 import { avisar } from './avisos.mjs';
 

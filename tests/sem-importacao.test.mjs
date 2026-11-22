@@ -2,13 +2,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
-import { TELAS, carregarJogo, clubeDaSerie } from './jogo.mjs';
+import { TELAS, arquivosMjs, carregarJogo, clubeDaSerie } from './jogo.mjs';
 
 const PROIBIDO = /type="file"|Importar|Exportar|Carregar (save|JSON)|Gerenciar dados|loadSaveFile|loadDataFile|exportSave|exportData/;
 
 test('o código não tem campo de arquivo nem leitura de arquivo', () => {
   const raiz = new URL('../ui/', import.meta.url);
-  for (const f of readdirSync(raiz).filter(f => f.endsWith('.mjs'))) {
+  for (const f of arquivosMjs('ui')) {
     const t = readFileSync(new URL(f, raiz), 'utf8');
     assert.doesNotMatch(t, /type="file"|FileReader|createObjectURL/, `ui/${f}`);
   }

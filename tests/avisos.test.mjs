@@ -2,11 +2,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { carregarJogo, clubeDaSerie } from './jogo.mjs';
+import { arquivosMjs, carregarJogo, clubeDaSerie } from './jogo.mjs';
 
 test('não restam alert, prompt nem confirm em ui/', () => {
   const dir = new URL('../ui/', import.meta.url), achados = [];
-  for (const f of readdirSync(dir)) {
+  for (const f of arquivosMjs('ui')) {
     readFileSync(new URL(f, dir), 'utf8').split('\n').forEach((l, i) => { if (/(^|[^\w.])(alert|confirm|prompt)\s*\(/.test(l)) achados.push(`${f}:${i + 1}`) });
   }
   assert.deepEqual(achados, []);

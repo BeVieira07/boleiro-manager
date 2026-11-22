@@ -107,7 +107,7 @@ liga_resultados (liga_id, temporada, rodada, semente, jogos jsonb)              
    - Grava o novo estado (`versao + 1`), os jogos da rodada em `liga_resultados` e limpa os `pronto`.
 4. O Realtime avisa os navegadores. Cada um baixa o resultado e mostra o "jogo ao vivo" como **replay** dos eventos que o servidor gerou.
 
-**Como ficou (#34):** regras em `core/liga.mjs`; função `supabase/functions/jogar-rodada` (veja o README dela: o `core/` é importado do próprio repositório e vai junto no deploy, feito pelo workflow `funcao.yml`); o estado só é gravado pelas funções do banco `liga_iniciar` e `liga_gravar_rodada` (migração `..._liga_rodada.sql`), que só a chave de serviço chama. `ligas.rodada` conta as rodadas jogadas desde o começo da liga (não volta a 0 na virada) e é a rodada das `liga_entradas`. No navegador, `ui/ligajogo.mjs` abre o estado da liga nas telas do jogo (`ui.liga`), sem gravar save local nem na nuvem; mercado, empréstimos e temporada ficam bloqueados até a #35. Na liga ninguém é demitido por enquanto (#37).
+**Como ficou (#34):** regras em `core/liga.mjs`; função `supabase/functions/jogar-rodada` (veja o README dela: o `core/` é importado do próprio repositório e vai junto no deploy, feito pelo workflow `funcao.yml`); o estado só é gravado pelas funções do banco `liga_iniciar` e `liga_gravar_rodada` (migração `..._liga_rodada.sql`), que só a chave de serviço chama. `ligas.rodada` conta as rodadas jogadas desde o começo da liga (não volta a 0 na virada) e é a rodada das `liga_entradas`. No navegador, `ui/liga/ligajogo.mjs` abre o estado da liga nas telas do jogo (`ui.liga`), sem gravar save local nem na nuvem; mercado, empréstimos e temporada ficam bloqueados até a #35. Na liga ninguém é demitido por enquanto (#37).
 
 **O que muda em relação ao solo:**
 - **Mudar tática durante o jogo (#3)** não existe na liga, porque o jogo já foi simulado. Na liga, a tática vale para a rodada inteira.
@@ -125,7 +125,7 @@ liga_resultados (liga_id, temporada, rodada, semente, jogos jsonb)              
 
 ### 3.6 Solo com conta e save na nuvem
 
-- Mesmo jogo de hoje. O `ui/saves.mjs` ganha um segundo destino: além do `localStorage`, envia o save para a tabela `saves` quando o usuário está logado.
+- Mesmo jogo de hoje. O `ui/inicio/saves.mjs` ganha um segundo destino: além do `localStorage`, envia o save para a tabela `saves` quando o usuário está logado.
 - Ao abrir, a tela inicial lista os saves locais e os da nuvem, e mostra qual é o mais recente quando houver os dois.
 - Sem login, tudo continua funcionando como hoje (offline).
 - Com o save na nuvem, o limite de 5 saves do `localStorage` deixa de valer para quem está logado.
