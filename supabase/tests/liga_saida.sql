@@ -1,5 +1,5 @@
 -- #37: saída de membros. Usuário logado não chama a função; versão velha não grava; o dono que sai passa a liga ao membro
--- mais antigo; o último que sai encerra a liga; quem não é membro não muda nada. Rollback no fim.
+-- mais antigo; o último que sai apaga a liga; quem não é membro não muda nada. Rollback no fim.
 begin;
 insert into auth.users (id, email) values
   ('00000000-0000-0000-0000-0000000000b1', 'dono@exemplo.com'),
@@ -29,9 +29,9 @@ begin
   if exists (select 1 from public.liga_membros where liga_id = l and user_id = '00000000-0000-0000-0000-0000000000b3') then raise exception 'membro ficou'; end if;
   if not public.liga_remover_membro(l, '00000000-0000-0000-0000-0000000000b1', 2, '{"n":1}') then raise exception 'dono não saiu'; end if;
   if (select dono_id from public.ligas where id = l) <> '00000000-0000-0000-0000-0000000000b2' then raise exception 'dono não passou ao mais antigo'; end if;
+  if public.liga_remover_membro(l, '00000000-0000-0000-0000-0000000000b3', 3, '{"n":0}') then raise exception 'removeu quem não é membro'; end if;
   if not public.liga_remover_membro(l, '00000000-0000-0000-0000-0000000000b2', 3, '{"n":0}') then raise exception 'último não saiu'; end if;
-  if (select status from public.ligas where id = l) <> 'encerrada' then raise exception 'liga não encerrou'; end if;
-  if public.liga_remover_membro(l, '00000000-0000-0000-0000-0000000000b2', 4, '{"n":0}') then raise exception 'removeu quem não é membro'; end if;
+  if exists (select 1 from public.ligas where id = l) then raise exception 'liga não foi excluída'; end if;
 end $$;
 select 'saída de membros OK' as resultado;
 rollback;

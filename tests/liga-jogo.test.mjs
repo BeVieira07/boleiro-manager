@@ -21,13 +21,20 @@ function servidorFalso(clubes) {
   const srv = {
     liga: { id: 'L1', nome: 'Pelada', dono_id: 'a', status: 'aberta', rodada: 0, versao: 0, series: ['A'] },
     membros: [{ user_id: 'a', club_id: clubes[0], nome: 'Ana' }, { user_id: 'b', club_id: clubes[1], nome: 'Bia' }],
-    estado: null, entradas: [], resultados: [], ouvintes: [], cargas: 0
+    estado: null, entradas: [], resultados: [], ouvintes: [], cargas: 0, chamadas: []
   };
+  const apagarLiga = () => Object.assign(srv, { liga: null, membros: [], estado: null, entradas: [], resultados: [] });
   // tempo real: avisa os canais assinados
   srv.emitir = (table, novo) => srv.ouvintes.filter(o => o.table === table).forEach(o => o.cb({ new: copia(novo) }));
   // a função jogar-rodada, como no servidor
   const funcao = (uid, { acao, forcar, mercado, membro, rodada }) => {
     const L = srv.liga;
+    if (!L) return { erro: 'Liga não encontrada.', status: 404 };
+    if (acao === 'excluir') {
+      if (L.dono_id !== uid) return { erro: 'Só o dono pode excluir a liga.', status: 403 };
+      apagarLiga();
+      return { ok: true };
+    }
     if (rodada != null && rodada !== L.rodada) return { ok: true, jaJogada: true };
     if (acao === 'sair' || acao === 'remover') { // #37, como liga_remover_membro
       const alvo = acao === 'sair' ? uid : membro;
@@ -35,7 +42,7 @@ function servidorFalso(clubes) {
       if (L.status === 'andamento') { const r = removerTecnicoLiga(copia(srv.estado), alvo); if (r.erro) return r; srv.estado = copia(est.S); L.versao++ }
       srv.membros = srv.membros.filter(m => m.user_id !== alvo);
       if (L.dono_id === alvo) L.dono_id = srv.membros[0]?.user_id;
-      srv.emitir('ligas', L);
+      if (srv.membros.length) srv.emitir('ligas', L); else apagarLiga();
       return { ok: true, saiu: alvo };
     }
     if (acao === 'mercado') { // #35
@@ -73,12 +80,13 @@ function servidorFalso(clubes) {
   };
   srv.cliente = uid => ({
     auth: { getSession: async () => ({ data: { session: { user: { id: uid, email: uid + '@x.com' } } } }), onAuthStateChange: () => ({}), signOut: async () => ({ error: null }) },
-    functions: { invoke: async (_nome, { body }) => {
+    functions: { invoke: async (nome, { body }) => {
+      srv.chamadas.push({ nome, body });
       if (srv.sessaoEncerrada) return { data: null, error: { message: '401', context: { status: 401, json: async () => ({ erro: 'Entre na sua conta.' }) } } }; // #95
       // o servidor roda noutra máquina: aqui ele divide o S global com o navegador, então o S do navegador é devolvido depois
       const s0 = est.S, r = funcao(uid, body);
       est.usarEstado(s0); if (s0) est.reindex();
-      return r.erro ? { data: null, error: { message: r.erro, context: { json: async () => r } } } : { data: r, error: null };
+      return r.erro ? { data: null, error: { message: r.erro, context: { status: r.status, json: async () => r } } } : { data: r, error: null };
     } },
     from: tabela => ({
       select: () => consulta(() => ({
@@ -90,7 +98,7 @@ function servidorFalso(clubes) {
       })[tabela], tabela === 'ligas' ? l => srv.membros.some(m => m.user_id === uid) ? [{ ...l, liga_membros: srv.membros }] : []
         : tabela === 'profiles' ? () => srv.membros.map(m => ({ id: m.user_id, nome: m.nome })) : null), // lista de perfis (lobby)
       upsert: async linha => {
-        if (linha.rodada !== srv.liga.rodada) return { error: { message: 'RLS' } }; // a regra do banco recusa rodada velha
+        if (linha.rodada !== srv.liga?.rodada) return { error: { message: 'RLS' } }; // a regra do banco recusa rodada velha ou liga excluída
         srv.entradas = srv.entradas.filter(e => e.user_id !== linha.user_id).concat(copia(linha));
         // #78: como o gatilho marcar_pronto, quem confirmou vai para liga_membros, e é ela que o tempo real manda
         const m = srv.membros.find(x => x.user_id === linha.user_id); m.pronto_rodada = linha.pronto ? linha.rodada : null;
@@ -102,7 +110,7 @@ function servidorFalso(clubes) {
     rpc: async (nome, { p_liga }) => {
       if (nome !== 'liga_estado_meu') return { data: null, error: { message: 'função desconhecida: ' + nome } };
       srv.cargas++;
-      return resp(p_liga === srv.liga.id && srv.membros.some(m => m.user_id === uid) ? srv.estado ?? null : null);
+      return resp(p_liga === srv.liga?.id && srv.membros.some(m => m.user_id === uid) ? srv.estado ?? null : null);
     },
     channel: () => {
       const c = { on: (_ev, { table }, cb) => { srv.ouvintes.push({ table, cb, c }); return c }, subscribe: () => c };
@@ -397,13 +405,13 @@ test('saída de membros: o dono remove um técnico e depois sai; o clube volta p
   assert.equal(j.run('tecnicos().length'), 1, 'o navegador recarregou a liga');
   assert.equal(j.run(`ehHumano('${clubeBia}')`), false, 'o clube da Bia voltou para a IA');
   await j.acao('deixarLiga|L1'); await esperar();
-  assert.equal(srv.membros.length, 0);
+  assert.equal(srv.liga, null, 'a saída do último membro apaga a liga');
   assert.equal(j.run('ui.liga'), null);
   assert.equal(j.run('ui.view'), 'ligas');
   assert.ok(j.alertas.some(a => a.includes('Você saiu da liga')));
 });
 
-test('quem não é dono não remove ninguém (#37)', async () => {
+test('quem não é dono não remove ninguém nem exclui a liga', async () => {
   const j0 = carregarJogo();
   const srv = servidorFalso([clubeDaSerie(j0, 'A', 0), clubeDaSerie(j0, 'A', 1)]);
   await como(srv, 'a'); carregarJogo({ boot: true }).acao('comecarLiga|L1'); await esperar();
@@ -411,11 +419,57 @@ test('quem não é dono não remove ninguém (#37)', async () => {
   const k = carregarJogo({ boot: true });
   await k.acao('entrarNaLiga|L1'); await k.acao('go|liga');
   assert.doesNotMatch(k.html(), /removerMembro/);
+  assert.doesNotMatch(k.html(), /Excluir liga/);
   await k.acao('removerMembro|L1|a'); await esperar();
   assert.ok(k.alertas.some(a => a.includes('Só o dono')));
+  await k.acao('excluirLiga|L1'); await esperar();
+  assert.equal(k.alertas.at(-1), 'Só o dono pode excluir a liga.');
+  assert.equal(k.run('ui.view'), 'liga');
+  assert.equal(srv.liga.id, 'L1');
   assert.equal(srv.membros.length, 2);
   k.run('sairDaLiga()');
 });
+
+test('o dono exclui a liga em andamento e volta para a lista com o aviso', async () => {
+  const j = carregarJogo({ boot: true });
+  const srv = servidorFalso([clubeDaSerie(j, 'A', 0), clubeDaSerie(j, 'A', 1)]);
+  await como(srv, 'a');
+  await j.acao('comecarLiga|L1'); await esperar();
+  await j.acao('go|liga');
+  assert.match(j.html(), /data-acao="excluirLiga\|L1"[^>]*>Excluir liga/);
+
+  await j.acao('excluirLiga|L1'); await esperar();
+  assert.deepEqual(srv.chamadas.at(-1), { nome: 'jogar-rodada', body: { liga: 'L1', acao: 'excluir' } });
+  assert.equal(srv.liga, null);
+  assert.equal(j.run('ui.liga'), null);
+  assert.equal(j.run('S'), null);
+  assert.equal(j.run('ui.view'), 'ligas');
+  assert.match(j.html(), /nenhuma liga/);
+  assert.equal(j.alertas.at(-1), 'Liga excluída.');
+});
+
+for (const acao of ['mercado', 'confirmar rodada']) {
+  test(`liga excluída volta para a lista ao tentar ${acao === 'mercado' ? 'usar o mercado' : acao}`, async () => {
+    const j = carregarJogo({ boot: true });
+    const srv = servidorFalso([clubeDaSerie(j, 'A', 0), clubeDaSerie(j, 'A', 1)]);
+    await srv.cliente('a').functions.invoke('jogar-rodada', { body: { liga: 'L1', acao: 'iniciar' } });
+    await como(srv, 'b');
+    await j.acao('entrarNaLiga|L1');
+    await srv.cliente('a').functions.invoke('jogar-rodada', { body: { liga: 'L1', acao: 'excluir' } });
+    const antes = j.alertas.length;
+
+    if (acao === 'mercado') {
+      const pid = j.run('userClub().players.find(p=>!userClub().lineup.includes(p.id)).id');
+      await j.acao(`toggleListed|${pid}`);
+      assert.equal(srv.chamadas.at(-1).body.acao, 'mercado');
+    } else await j.acao('confirmarLiga');
+    assert.equal(j.run('ui.liga'), null);
+    assert.equal(j.run('S'), null);
+    assert.equal(j.run('ui.view'), 'ligas');
+    assert.match(j.html(), /nenhuma liga/);
+    assert.deepEqual(j.alertas.slice(antes), ['Esta liga não está mais disponível.']);
+  });
+}
 
 test('várias mudanças seguidas do estado viram uma recarga só (#124)', async () => {
   const j0 = carregarJogo();
