@@ -1160,14 +1160,6 @@ body.em-jogo .avisos{bottom:24px}
 .lp-escalacao{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:center}
 .lp-campo .carta{min-width:0}
 .lp-cab-secao{display:flex;align-items:flex-end;justify-content:space-between;gap:var(--e5);flex-wrap:wrap;margin-bottom:var(--e6)}
-.lp-clubes{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:var(--e4);margin:0;padding:0;list-style:none}
-.lp-clube{position:relative;display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;padding:0 var(--e3) var(--e4);border:1px solid var(--linha);border-radius:var(--r);background:var(--painel);color:var(--texto);font:inherit;text-align:left;cursor:pointer;overflow:hidden}
-.lp-clube:hover{border-color:var(--verde)}
-.lp-clube-faixa{display:flex;justify-content:flex-end;align-self:stretch;height:56px;margin:0 calc(-1 * var(--e3));padding:8px 10px;
-  background:repeating-linear-gradient(135deg,rgb(255 255 255 / .06) 0 12px,transparent 12px 24px),var(--verde-esc);font:800 14px/1 var(--f-titulo);color:var(--texto2)}
-.lp-clube .crest{width:52px;height:52px;margin:-28px 0 var(--e2);padding:5px;border:2px solid var(--linha);border-radius:50%;background:var(--painel);object-fit:contain}
-.lp-clube b{font:italic 800 22px/1 var(--f-titulo);text-transform:uppercase}
-.lp-clube .muted{font-size:13px}
 .lp-modos{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--e5);margin-top:var(--e5)}
 .lp-modo{padding:var(--e6)}
 .lp-modo p{margin-bottom:var(--e4)}
@@ -1205,8 +1197,52 @@ body.em-jogo .avisos{bottom:24px}
   .lp-tela-abas span:not(.on):not(.lp-tela-marca){display:none}
   .lp-tela-painel{flex-wrap:wrap}
   .lp-tela-grade{grid-template-columns:minmax(0,1fr)}
-  .lp-clubes{grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--e3)}
-  .lp-clube b{font-size:18px}
   .lp-modo{padding:var(--e4)}
   .lp-perguntas summary{font-size:19px}
+}
+
+/* #338: seção de clubes da landing: o favorito x o azarão e o álbum por série. --cor vem do clube (style no elemento) */
+.lp-duelo{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:var(--e5);align-items:center;margin-bottom:clamp(40px,6vw,72px)}
+.lp-duelo-card{--cor:var(--verde-esc);border:1px solid var(--linha);border-radius:var(--r-lg);background:var(--painel);overflow:hidden}
+.lp-duelo-faixa,.lp-figurinha-faixa{background:repeating-linear-gradient(135deg,rgb(255 255 255 / .14) 0 14px,transparent 14px 28px),var(--cor)}
+.lp-duelo-faixa{display:flex;align-items:flex-start;justify-content:space-between;height:104px;padding:var(--e4) var(--e5)}
+.lp-duelo-rotulo{padding:4px 10px;border-radius:var(--r-sm);background:var(--lateral);color:var(--ouro);font:italic 800 16px/1 var(--f-titulo);letter-spacing:.06em;text-transform:uppercase}
+.lp-uf,.lp-pos{padding:2px 6px;border-radius:var(--r-sm);background:rgb(0 0 0 / .55);color:#fff;font:800 14px/1.2 var(--f-titulo)}
+.lp-duelo-corpo{display:flex;flex-direction:column;align-items:flex-start;gap:var(--e2);padding:0 var(--e6) var(--e6)}
+.lp-duelo-corpo .crest{width:92px;height:92px;margin-top:-46px;padding:10px;border:3px solid var(--linha);border-radius:50%;background:var(--painel);object-fit:contain}
+.lp-duelo-corpo h3{margin:var(--e2) 0 0;font:italic 800 clamp(30px,3.4vw,44px)/1 var(--f-titulo);letter-spacing:0;text-transform:uppercase;color:var(--texto)}
+.lp-duelo-corpo>p{margin:0;font-size:14px}
+.lp-duelo-dados,.lp-duelo-meta{display:flex;gap:var(--e6);margin:var(--e2) 0 0}
+.lp-duelo-dados dt,.lp-duelo-meta dt{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.lp-duelo-dados dd{margin:2px 0 0;font:800 30px/1.1 var(--f-titulo)}
+.lp-duelo-meta dd{margin:2px 0 0;font-weight:700}
+.lp-duelo-corpo .btn{margin-top:var(--e3)}
+.lp-duelo-x{display:flex;flex-direction:column;align-items:center;gap:var(--e2);max-width:140px;text-align:center;color:var(--texto2);font-size:13px}
+.lp-duelo-x b{font:italic 800 72px/1 var(--f-titulo);color:var(--ouro)}
+.lp-album-topo{display:flex;align-items:center;justify-content:space-between;gap:var(--e4);flex-wrap:wrap;margin-bottom:var(--e5)}
+.lp-album-titulo{margin:0;font:italic 800 clamp(28px,3vw,38px)/1 var(--f-titulo);letter-spacing:0;text-transform:uppercase;color:var(--texto)}
+.lp-abas{display:flex;gap:4px;padding:4px;border:1px solid var(--linha);border-radius:var(--r);background:var(--lateral)}
+.lp-aba{min-height:44px;padding:0 18px;border:1px solid transparent;border-radius:var(--r-sm);background:none;color:var(--texto2);font:700 17px/1 var(--f-titulo);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.lp-aba small{margin-left:4px;font-size:12px;color:var(--muted)}
+.lp-aba[aria-pressed="true"]{border-color:var(--verde);background:var(--verde-esc);color:var(--verde-claro)}
+.lp-album{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:var(--e3);margin:0;padding:0;list-style:none}
+.lp-figurinha{--cor:var(--verde-esc);display:flex;flex-direction:column;align-items:center;gap:6px;width:100%;height:100%;padding:0 6px var(--e3);border:1px solid var(--linha);border-radius:var(--r);background:var(--painel);color:var(--texto);font:inherit;text-align:center;cursor:pointer;overflow:hidden}
+.lp-figurinha:hover{border-color:var(--verde)}
+.lp-figurinha-faixa{display:flex;align-self:stretch;height:34px;margin:0 -6px;padding:5px 6px}
+.lp-figurinha .crest{width:46px;height:46px;margin-top:-22px;padding:4px;border:2px solid var(--linha);border-radius:50%;background:var(--painel);object-fit:contain}
+.lp-figurinha b{display:flex;align-items:center;min-height:2.3em;font:800 15px/1.1 var(--f-titulo);text-transform:uppercase;overflow-wrap:break-word;hyphens:manual}
+.lp-figurinha .estrelas{margin-top:auto;font-size:11px;letter-spacing:1px}
+.lp-album-nota{margin:var(--e4) 0 0;font-size:13px}
+@media(max-width:1099px){.lp-album{grid-template-columns:repeat(5,minmax(0,1fr))}}
+@media(max-width:799px){
+  .lp-duelo{grid-template-columns:minmax(0,1fr)}
+  .lp-duelo-x{flex-direction:row;max-width:none;justify-self:center}
+  .lp-duelo-x b{font-size:44px}
+  .lp-duelo-corpo{padding:0 var(--e4) var(--e4)}
+  .lp-abas{width:100%}
+  .lp-aba{flex:1;padding:0 6px;font-size:15px}
+}
+@media(max-width:599px){
+  .lp-album{grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--e2)}
+  .lp-aba small{display:none}
 }

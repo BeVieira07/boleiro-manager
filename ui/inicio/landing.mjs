@@ -1,13 +1,15 @@
 /* ================= landing page (#316): a primeira tela ao abrir o site =================
    Apresenta o jogo e leva ao menu (Continuar, Novo jogo, jogos salvos) ou direto à escolha de clube. */
+import { corOk } from '../../core/dados.mjs';
 import { DIVS, divOf } from '../../core/estado.mjs';
-import { esc } from '../../core/utils.mjs';
+import { esc, money } from '../../core/utils.mjs';
 import { onlineConfigurado, usuarioAtual } from './conta.mjs';
 import { MAX_TECNICOS, getData, ui } from '../estado.mjs';
 import { icone } from '../icones.mjs';
 import { crest } from '../partida/partida.mjs';
 import { novoJogo } from './saves.mjs';
-import { estrelas, selecionarClubeInicio } from './escolha.mjs';
+import { clubesPreparados, estrelas, expectativa, selecionarClubeInicio } from './escolha.mjs';
+import { render } from '../telas.mjs';
 
 const ITENS = [
   ['Séries A, B, C e D', '80 clubes em quatro divisões, pontos corridos com ida e volta. No fim do ano sobem 4 e caem 4 entre séries vizinhas, e quanto mais baixa a série, menor a cota de TV e o caixa.'],
@@ -59,11 +61,57 @@ function campo() {
     ${CAMPO.map(l => `<div class="linha">${l.map(carta).join('')}</div>`).join('')}</div>`;
 }
 
-function cartaoClube(c) {
-  return `<li><button type="button" class="lp-clube" data-acao="escolherClubeLanding|${esc(c.id)}">
-    <span class="lp-clube-faixa"><span>${esc(c.uf || '')}</span></span>${crest(c, 'm')}
-    <b>${esc(c.name)}</b><span class="muted">${DIVS[divOf(c)] || ''} · ${estrelas(c.strength)}</span>
-    <span class="sr">: começar um jogo novo com este clube</span></button></li>`;
+/* #338: seção de clubes, com o favorito contra o azarão e o álbum de cada série */
+const SERIES_ALBUM = ['A', 'B', 'C', 'D'];
+// a cor do clube vai numa variável CSS (é dado do clube, como no escudo); cor inválida cai no verde do tema
+const corDo = c => corOk(c.color) ? ` style="--cor:${c.color}"` : '';
+const porForca = (a, b) => b.strength - a.strength || a.name.localeCompare(b.name, 'pt-BR');
+
+function cartaoDuelo(c, rotulo, clubes) {
+  return `<article class="lp-duelo-card"${corDo(c)} aria-labelledby="lp-duelo-${esc(c.id)}">
+    <div class="lp-duelo-faixa"><span class="lp-duelo-rotulo">${rotulo}</span><span class="lp-uf">${esc(c.uf || '')}</span></div>
+    <div class="lp-duelo-corpo">${crest(c, 'g')}
+      <h3 id="lp-duelo-${esc(c.id)}">${esc(c.name)}</h3>
+      <p class="muted">${DIVS[divOf(c)] || ''} · ${estrelas(c.strength)}</p>
+      <dl class="lp-duelo-dados"><div><dt>Força</dt><dd>${c.strength}</dd></div><div><dt>Caixa inicial</dt><dd>${money(c.balance)}</dd></div></dl>
+      <dl class="lp-duelo-meta"><div><dt>A diretoria quer</dt><dd>${esc(expectativa(c, clubes))}</dd></div></dl>
+      <button type="button" class="btn sec" data-acao="escolherClubeLanding|${esc(c.id)}">Jogar com ${esc(c.name)}</button>
+    </div>
+  </article>`;
+}
+
+function album(clubes, serie) {
+  const daSerie = clubes.filter(c => divOf(c) === serie).sort(porForca);
+  const abas = SERIES_ALBUM.map(s => {
+    const n = clubes.filter(c => divOf(c) === s).length;
+    return `<button type="button" class="lp-aba" data-acao="lpSerie|${s}" aria-pressed="${s === serie}">Série ${s} <small>${n}</small></button>`;
+  }).join('');
+  return `<div class="lp-album-topo"><h3 class="lp-album-titulo" id="lp-album-t">O álbum completo</h3>
+      <div class="lp-abas" role="group" aria-label="Série do álbum">${abas}</div></div>
+    <ol class="lp-album" aria-labelledby="lp-album-t">${daSerie.map((c, i) => `<li><button type="button" class="lp-figurinha"${corDo(c)} data-acao="escolherClubeLanding|${esc(c.id)}">
+      <span class="lp-figurinha-faixa"><span class="lp-pos">${i + 1}</span></span>${crest(c, 'm')}
+      <b>${esc(c.name)}</b>${estrelas(c.strength)}<span class="sr">: começar um jogo novo com este clube</span></button></li>`).join('')}</ol>
+    <p class="muted lp-album-nota">Toque num escudo para começar um jogo novo com o clube.</p>`;
+}
+
+function secaoClubes() {
+  const clubes = clubesPreparados();
+  if (!clubes.length) return '';
+  const ordem = [...clubes].sort(porForca);
+  const favorito = ordem[0], azarao = [...ordem].reverse().find(c => divOf(c) === 'D') ?? ordem.at(-1);
+  const serie = SERIES_ALBUM.includes(ui.lpSerie) ? ui.lpSerie : 'A';
+  return `<div class="lp-duelo">${cartaoDuelo(favorito, 'O favorito', clubes)}
+      <div class="lp-duelo-x" aria-hidden="true"><b>X</b><span>${favorito.strength - azarao.strength} pontos de força de diferença</span></div>
+      ${cartaoDuelo(azarao, 'O azarão', clubes)}</div>
+    <p class="sr">${favorito.strength - azarao.strength} pontos de força de diferença entre ${esc(favorito.name)} e ${esc(azarao.name)}.</p>
+    ${album(clubes, serie)}`;
+}
+
+/** Aba do álbum de clubes da landing. */
+export function lpSerie(s) {
+  if (!SERIES_ALBUM.includes(s)) return;
+  ui.lpSerie = s;
+  render();
 }
 
 function ligaOnline() {
@@ -112,7 +160,7 @@ export function vLanding() {
     <div class="lp-cab-secao"><div><p class="lp-sobre">80 clubes</p><h2 id="lp-clubes-t">Do Maracanã ao Barradão</h2>
       <p class="lp-texto">Cada clube começa com força, caixa e cobrança diferentes. Pegar um gigante é mais fácil; subir com um clube da Série D é outra história.</p></div>
       <button type="button" class="btn sec" data-acao="novoJogo">Escolher meu clube</button></div>
-    <ul class="lp-clubes">${fortes.slice(0, 8).map(cartaoClube).join('')}</ul>
+    ${secaoClubes()}
   </div></section>
 
   <section class="lp-secao lp-escuro" id="lp-amigos" aria-labelledby="lp-amigos-t"><div class="lp-largura">

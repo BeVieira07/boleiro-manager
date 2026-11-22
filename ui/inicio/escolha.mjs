@@ -24,7 +24,8 @@ const ORDENS = {
 };
 const preparados = new WeakMap();
 
-function clubesPreparados() {
+/** #338: também usado pela landing, para mostrar a mesma força, caixa e meta da escolha de clube. */
+export function clubesPreparados() {
   const dados = getData();
   if (preparados.has(dados)) return preparados.get(dados);
   const clubes = structuredClone(dados.clubs);
@@ -56,7 +57,7 @@ function clubesPreparados() {
   return clubes;
 }
 
-function expectativa(c, clubes) {
+export function expectativa(c, clubes) {
   const div = divOf(c);
   const series = divsOf(clubes);
   const concorrentes = clubes.filter(x => divOf(x) === div);
