@@ -4,8 +4,19 @@ import { carregarJogo, clubeDaSerie, jogarTemporada, jogarRodada, problemasNasTe
 
 const saveIds = ls => Object.keys(ls).filter(k => k.startsWith('brasfoot_save_v2_'));
 
-test('abertura: tela inicial, sem jogo carregado', () => {
-  const j = carregarJogo({ boot: true });
+test('abertura: a landing é a primeira tela e "Jogar agora" leva ao menu (#316)', () => {
+  const j = carregarJogo({ boot: true, landing: true });
+  assert.equal(j.run('ui.view'), 'landing');
+  assert.equal(j.run('S'), null);
+  const h = j.html();
+  assert.match(h, /Assuma o clube\. <span>Aguente a diretoria\.<\/span>/);
+  assert.match(h, /data-acao="go\|menu"[^>]*>Jogar agora/);
+  assert.match(h, /href="#lp-jogo"/);
+  for (const t of ['Séries A, B, C e D', 'Do Maracanã ao Barradão', 'Antes do apito', 'sem ligação com a CBF']) assert.ok(h.includes(t), t);
+  assert.doesNotMatch(h, /Últimas/i, 'sem a faixa Últimas');
+  assert.equal((h.match(/data-acao="escolherClubeLanding\|/g) || []).length, 8, 'os 8 clubes mais fortes da Série A');
+  assert.doesNotMatch(h, /undefined|NaN|\[object/);
+  j.acao('go|menu');
   assert.equal(j.run('ui.view'), 'menu');
   assert.equal(j.run('S'), null);
   assert.match(j.html(), /Boleiro Manager/);
@@ -136,4 +147,15 @@ test('o menu inicial abre uma campanha nova ou continua a mais recente', () => {
   assert.match(j.html(), /<li class="save-linha">/);
   assert.match(j.html(), new RegExp(`aria-label="Excluir o jogo salvo do ${clube}"`));
   assert.deepEqual(problemasNasTelas(j, ['menu']), []);
+});
+
+test('na landing, "Jogar a rodada 1" e os cartões de clube abrem a escolha de clube do jogo novo (#316)', () => {
+  const j = carregarJogo({ boot: true, landing: true });
+  j.acao('novoJogo');
+  assert.equal(j.run('ui.view'), 'inicio');
+  const k = carregarJogo({ boot: true, landing: true });
+  const id = k.html().match(/data-acao="escolherClubeLanding\|([^"]+)"/)[1];
+  k.acao(`escolherClubeLanding|${id}`);
+  assert.equal(k.run('ui.view'), 'inicio');
+  assert.equal(k.run('ui.escolhaClube.id'), id, 'o clube do cartão já vem escolhido');
 });

@@ -27,6 +27,7 @@ import { vMercado } from './mercado.mjs';
 import { botaoRodada } from './motor.mjs';
 import { crest, newSeason, seasonEnd } from './partida.mjs';
 import { vMenu } from './saves.mjs';
+import { vLanding } from './landing.mjs';
 import { vTecnico } from './tecnico.mjs';
 
 /* ================= telas ================= */
@@ -42,7 +43,7 @@ export function divTabs(){
 const ROLAVEIS='.tabela-rolavel,.tw,.nav-resto';
 let telaDesenhada=null;
 export function render(){
-  if(!S&&!['inicio','ligas','lobby','config'].includes(ui.view))ui.view='menu';
+  if(!S&&!['inicio','landing','ligas','lobby','config'].includes(ui.view))ui.view='menu';
   if(S&&!TITULOS[ui.view])ui.view='clube';
   if(S&&tec()&&tec().demitido&&!['carreira','tecnico','config'].includes(ui.view))ui.view='carreira'; // #37: sem clube, primeiro escolher o novo
   const mesma=telaDesenhada===ui.view;
@@ -54,8 +55,8 @@ export function render(){
   const selecao=typeof at?.selectionStart==='number'?[at.selectionStart,at.selectionEnd]:null;
   document.body.classList.toggle('em-jogo',!!S);
   document.getElementById('lateral').innerHTML=lateral();
-  const V={menu:vMenu,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,base:vBase,tabela:vTabela,competicoes:vCompeticoes,copa:vCopa,libertadores:vLibertadores,sulamericana:vSulamericana,estadual:vEstadual,jogos:vJogos,artilharia:vArt,mercado:vMercado,financas:vFin,tecnico:vTecnico,rodada:vRodada,aovivo:vAoVivo,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
-  const topo=S?barraAcoes(TITULOS[ui.view]):['menu','inicio'].includes(ui.view)?'':`<div class="topo-simples"><button class="btn fantasma" data-acao="go|menu">${icone('voltar')}Tela inicial</button></div>`;
+  const V={menu:vMenu,landing:vLanding,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,base:vBase,tabela:vTabela,competicoes:vCompeticoes,copa:vCopa,libertadores:vLibertadores,sulamericana:vSulamericana,estadual:vEstadual,jogos:vJogos,artilharia:vArt,mercado:vMercado,financas:vFin,tecnico:vTecnico,rodada:vRodada,aovivo:vAoVivo,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
+  const topo=S?barraAcoes(TITULOS[ui.view]):['menu','inicio','landing'].includes(ui.view)?'':`<div class="topo-simples"><button class="btn fantasma" data-acao="go|menu">${icone('voltar')}Tela inicial</button></div>`;
   document.getElementById('app').innerHTML=topo+V[ui.view]();
   if(pag){
     const els=[...document.querySelectorAll(ROLAVEIS)];

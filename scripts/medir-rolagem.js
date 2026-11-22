@@ -36,6 +36,7 @@
     };
   }
 
+  go('landing'); medir('landing');
   go('menu'); medir('menu');
   go('inicio'); medir('inicio');
   document.querySelector('.clube-escolha')?.click(); medir('inicio/clube escolhido');

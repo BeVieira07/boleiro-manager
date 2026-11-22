@@ -19,6 +19,7 @@ import * as estado from './estado.mjs';
 import * as expulsao from './expulsao.mjs';
 import * as forma from './forma.mjs';
 import * as fichaJogador from './ficha-jogador.mjs';
+import * as landing from './landing.mjs';
 import * as layout from './layout.mjs';
 import * as liga from './liga.mjs';
 import * as ligajogo from './ligajogo.mjs';
@@ -33,7 +34,7 @@ import * as telas from './telas.mjs';
 import * as utils from './utils.mjs';
 
 export const acoes = Object.fromEntries(
-  [aovivo, artilharia, avisos, base, configuracoes, conta, diretoria, elenco, emprestimos, escolha, escalacao, estado, expulsao, fichaJogador, forma, layout, liga, ligajogo, mercado, motor, nuvem, partida, posicoes, saves, taticas, telas, utils]
+  [aovivo, artilharia, avisos, base, configuracoes, conta, diretoria, elenco, emprestimos, escolha, escalacao, estado, expulsao, fichaJogador, forma, landing, layout, liga, ligajogo, mercado, motor, nuvem, partida, posicoes, saves, taticas, telas, utils]
     .flatMap(m => Object.entries(m)).filter(([, f]) => typeof f === 'function'));
 
 /** Executa a ação descrita em data-acao / data-mudar. */
@@ -66,13 +67,13 @@ export function iniciar() {
   saves.migrarSaveAntigo(); // save de slot único (versões antigas) vira o primeiro da lista
   utils.store.del(utils.APIKEY_KEY); // a chave da API-Football não fica mais guardada no navegador (#52)
   utils.store.del(utils.DATA_KEY); // dados importados pela antiga tela Dados deixam de valer: o jogo só usa os dados padrão (#187)
-  usarEstado(null); estado.ui.view = 'menu'; // tela inicial: continuar, carregar ou começar um jogo
+  usarEstado(null); estado.ui.view = 'landing'; // #316: abre na landing; "Jogar agora" leva ao menu (continuar, carregar ou começar)
   telas.render();
 }
 
 if (!globalThis.__TESTE__) {
   ligarEventos(); iniciar();
   // login online (só se ui/config.mjs estiver preenchido); ao entrar, envia os saves pendentes e lista os da nuvem (#31)
-  conta.iniciarConta(() => { if (estado.ui.view === 'menu') telas.render(); nuvem.sincronizar() });
+  conta.iniciarConta(() => { if (['menu', 'landing'].includes(estado.ui.view)) telas.render(); nuvem.sincronizar() });
   window.addEventListener('online', () => nuvem.sincronizar()); // sem internet o save fica pendente; manda quando voltar
 }
