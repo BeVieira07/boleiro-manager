@@ -225,8 +225,12 @@ export function ressimularDepois(g,min){
   });
   if(g.escalacoes)simularLances(g,min,true);
   else if(min<93){
-    const s=golsSegmento(g.lh,g.la,taticaDe(H,A),taticaDe(A,H),min+1,93);
-    novosGols(g,power(H),power(A),poisson(s.h),poisson(s.a),min+1,93);
+    // Em partidas legadas, uma mudança de posição também precisa atualizar as chances restantes.
+    const moveu=g.ev.some(e=>e.t==='posicao'&&e.m<=min);
+    const ph=power(H,moveu?escalacaoNoMinuto(g,'h',min):null),pa=power(A,moveu?escalacaoNoMinuto(g,'a',min):null);
+    const chances=moveu?chancesDoJogo(ph,pa):{h:g.lh,a:g.la};
+    const s=golsSegmento(chances.h,chances.a,taticaDe(H,A),taticaDe(A,H),min+1,93);
+    novosGols(g,ph,pa,poisson(s.h),poisson(s.a),min+1,93);
     g.ev.sort((x,y)=>x.m-y.m);
   }
   acertarDepois(g,antes);

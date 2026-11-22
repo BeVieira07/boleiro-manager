@@ -27,7 +27,8 @@ export function sortearLances(elenco, side) {
 }
 
 export function escalacaoInicial(elenco) {
-  return { xi: [...elenco.xi], banco: new Set(elenco.banco), form: elenco.form };
+  // O mapa liga cada vaga riscada ao expulso e é reconstruído pelos lances.
+  return { xi: [...elenco.xi], banco: new Set(elenco.banco), form: elenco.form, expulsos: new Map() };
 }
 
 export function melhorReserva(elenco, pid) {
@@ -46,14 +47,33 @@ export function aplicarLanceAoElenco(elenco, e) {
   if (e.t === 'formacao' && e.form) {
     elenco.form = e.form;
     elenco.xi = reslot(elenco.xi, e.form, true, elenco.goleiroExpulso);
+    if (elenco.expulsos.size) {
+      const nomes = [...elenco.expulsos].sort(([a], [b]) => a - b).map(([, nome]) => nome);
+      elenco.expulsos = new Map();
+      elenco.xi.forEach((id, i) => {
+        if (!id && nomes.length) elenco.expulsos.set(i, nomes.shift());
+      });
+    }
+  } else if (e.t === 'posicao') {
+    const i = elenco.xi.indexOf(e.pid);
+    if (i <= 0 || !Number.isInteger(e.vaga) || e.vaga <= 0 || e.vaga >= slotsDe(elenco.form).length || e.vaga === i) return;
+    [elenco.xi[i], elenco.xi[e.vaga]] = [elenco.xi[e.vaga] ?? null, e.pid];
+    if (elenco.expulsos.has(e.vaga)) {
+      elenco.expulsos.set(i, elenco.expulsos.get(e.vaga));
+      elenco.expulsos.delete(e.vaga);
+    }
   } else if (saidaForcada(e) || (e.t === 'troca' && (!e.auto || e.goleiroNoGol) && e.sai)) {
     const i = elenco.xi.indexOf(e.pid ?? e.sai);
     if (i >= 0) {
       elenco.xi[i] = e.goleiroNoGol ? null : e.entra ?? null;
-      if (e.t === 'vermelho' && i === 0) elenco.goleiroExpulso = true;
+      if (e.t === 'vermelho') {
+        elenco.expulsos.set(i, e.name ?? P[e.pid]?.name);
+        if (i === 0) elenco.goleiroExpulso = true;
+      }
       if (e.goleiroNoGol) {
         elenco.xi[0] = e.entra;
         elenco.goleiroExpulso = false;
+        elenco.expulsos.delete(0);
       }
       elenco.banco.delete(e.entra);
     }

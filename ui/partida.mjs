@@ -24,7 +24,7 @@ export function detalhePenaltis(pen,H,A){
 }
 /* #62: jogo ao vivo (a tela é ui/aovivo.mjs, #135) com placar grande, linha do tempo com marcadores, eventos com ícones e tática em chips */
 export const DURACAO=93;
-export const EVENTO={gol:['bola','Gol'],penalti:['bola','Pênalti'],cartao:['cartao','Cartão amarelo'],vermelho:['cartao','Cartão vermelho'],lesao:['lesao','Lesão'],troca:['trocar','Substituição'],formacao:['trocar','Mudança de formação']};
+export const EVENTO={gol:['bola','Gol'],penalti:['bola','Pênalti'],cartao:['cartao','Cartão amarelo'],vermelho:['cartao','Cartão vermelho'],lesao:['lesao','Lesão'],troca:['trocar','Substituição'],formacao:['trocar','Mudança de formação'],posicao:['trocar','Mudança de posição']};
 export function textoEvento(e,team){
   if(e.t==='penalti')return textoPenalti(e,team.name,P[e.gk]?.name);
   if(e.t==='lesao')return `${e.name} se lesionou`;
