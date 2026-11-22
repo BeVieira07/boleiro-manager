@@ -44,7 +44,8 @@ const PATHS = {
   descer: 'M12 5v14M19 12l-7 7-7-7',
   liga: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M23 21v-2a4 4 0 00-3-3.87',
   fogo: 'M12 3s5 4 5 9a5 5 0 01-10 0c0-2 1-3 1-3s0 2 2 2c0-4 2-8 2-8z',
-  lixo: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13'
+  lixo: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
+  copiar: 'M9 9h11v11H9zM5 15H4V4h11v1'
 };
 // ícones cheios (fill) em vez de traço
 const CHEIOS = new Set(['play', 'avancar', 'cartao']);

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 const EXCECOES = new Set(['.marca-sub']); // "MANAGER" do logotipo, decorativo
-const css = ['style.css', 'escalacao.css'].map(f => readFileSync(new URL(`../css/${f}`, import.meta.url), 'utf8')).join('\n').replace(/\/\*[\s\S]*?\*\//g, '');
+const css = ['style.css', 'escalacao.css', 'ligas.css'].map(f => readFileSync(new URL(`../css/${f}`, import.meta.url), 'utf8')).join('\n').replace(/\/\*[\s\S]*?\*\//g, '');
 
 test('o CSS não usa font-size abaixo de 11 px', () => {
   const pequenas = [];
