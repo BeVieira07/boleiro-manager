@@ -14,7 +14,7 @@ test('abertura: a landing é a primeira tela e "Jogar agora" leva ao menu (#316)
   assert.match(h, /href="#lp-jogo"/);
   for (const t of ['Séries A, B, C e D', 'Do Maracanã ao Barradão', 'Antes do apito', 'sem ligação com a CBF']) assert.ok(h.includes(t), t);
   assert.doesNotMatch(h, /Últimas/i, 'sem a faixa Últimas');
-  assert.equal((h.match(/data-acao="escolherClubeLanding\|/g) || []).length, 8, 'os 8 clubes mais fortes da Série A');
+  assert.equal((h.match(/data-acao="escolherClubeLanding\|/g) || []).length, 22, '#338: favorito, azarão e os 20 do álbum');
   assert.doesNotMatch(h, /undefined|NaN|\[object/);
   j.acao('go|menu');
   assert.equal(j.run('ui.view'), 'menu');
@@ -164,4 +164,37 @@ test('na landing, todo "Jogar agora" leva ao menu e os cartões de clube abrem a
   k.acao(`escolherClubeLanding|${id}`);
   assert.equal(k.run('ui.view'), 'inicio');
   assert.equal(k.run('ui.escolhaClube.id'), id, 'o clube do cartão já vem escolhido');
+});
+
+test('landing: favorito x azarão com os dados da escolha de clube e álbum por série (#338)', () => {
+  const j = carregarJogo({ boot: true, landing: true });
+  const dados = j.run(`(() => {
+    const cs = clubesPreparados(), ordem = [...cs].sort((a, b) => b.strength - a.strength);
+    const fav = ordem[0], aza = [...ordem].reverse().find(c => divOf(c) === 'D');
+    return { fav: { nome: fav.name, forca: fav.strength, caixa: money(fav.balance), meta: expectativa(fav, cs) },
+      aza: { nome: aza.name, forca: aza.strength, caixa: money(aza.balance), meta: expectativa(aza, cs), div: divOf(aza) } };
+  })()`);
+  const h = j.html();
+  assert.match(h, /O favorito/);
+  assert.match(h, /O azarão/);
+  for (const c of [dados.fav, dados.aza]) {
+    assert.ok(h.includes(`Jogar com ${c.nome}`), c.nome);
+    assert.ok(h.includes(`<dd>${c.forca}</dd>`) && h.includes(c.caixa) && h.includes(c.meta), `dados de ${c.nome}`);
+  }
+  assert.equal(dados.aza.div, 'D');
+  assert.ok(h.includes(`${dados.fav.forca - dados.aza.forca} pontos de força de diferença`));
+  assert.match(h, /data-acao="lpSerie\|A" aria-pressed="true"/);
+  const serie = s => j.run(`clubesPreparados().filter(c => divOf(c) === '${s}').sort((a, b) => b.strength - a.strength || a.name.localeCompare(b.name, 'pt-BR')).map(c => c.id)`);
+  const noAlbum = () => [...j.html().split('class="lp-album"')[1].matchAll(/escolherClubeLanding\|([^"]+)"/g)].map(m => m[1]);
+  assert.deepEqual(noAlbum(), serie('A'), 'Série A pela força');
+  j.acao('lpSerie|C');
+  assert.match(j.html(), /data-acao="lpSerie\|C" aria-pressed="true"/);
+  assert.deepEqual(noAlbum(), serie('C'), 'a aba troca a série do álbum');
+  j.acao('lpSerie|Z');
+  assert.match(j.html(), /data-acao="lpSerie\|C" aria-pressed="true"/, 'série inválida não muda nada');
+  assert.doesNotMatch(j.html(), /undefined|NaN|\[object/);
+  const id = serie('C')[0];
+  j.acao(`escolherClubeLanding|${id}`);
+  assert.equal(j.run('ui.view'), 'inicio');
+  assert.equal(j.run('ui.escolhaClube.id'), id, 'o escudo do álbum abre a escolha com o clube marcado');
 });
