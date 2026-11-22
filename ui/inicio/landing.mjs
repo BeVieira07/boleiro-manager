@@ -89,7 +89,7 @@ export function vLanding() {
       <p class="lp-sobre">Manager de futebol no navegador</p>
       <h1 id="lp-titulo">Assuma o clube. <span>Aguente a diretoria.</span></h1>
       <p class="lp-texto">Escolha um dos 80 clubes das Séries A, B, C e D, arme o time, negocie no mercado e jogue a temporada inteira. Abre no navegador, no computador ou no celular, sem instalar nada.</p>
-      <div class="lp-acoes">${jogar('Jogar a rodada 1', 'novoJogo')}<a class="btn sec lp-ver" href="#lp-jogo">Ver o que tem no jogo</a></div>
+      <div class="lp-acoes">${jogar('Jogar agora', 'go|menu')}<a class="btn sec lp-ver" href="#lp-jogo">Ver o que tem no jogo</a></div>
       <p class="lp-nota">Seus jogos ficam salvos no navegador. Criar conta é opcional e só serve para a nuvem e as ligas online.</p>
     </div>
     ${previa(palmeiras, bragantino, tabela.filter(Boolean))}
@@ -132,7 +132,7 @@ export function vLanding() {
   <section class="lp-final" aria-labelledby="lp-final-t"><div class="lp-largura">
     <h2 id="lp-final-t">A rodada 1 <span>tá esperando</span></h2>
     <p class="lp-texto">Abre no navegador, escolhe o clube e começa. Leva menos tempo que o aquecimento.</p>
-    ${jogar('Jogar agora', 'novoJogo')}
+    ${jogar('Jogar agora', 'go|menu')}
   </div></section>
 
   <footer class="lp-rodape"><div class="lp-largura">

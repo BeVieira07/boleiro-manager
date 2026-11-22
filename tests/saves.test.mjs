@@ -149,10 +149,16 @@ test('o menu inicial abre uma campanha nova ou continua a mais recente', () => {
   assert.deepEqual(problemasNasTelas(j, ['menu']), []);
 });
 
-test('na landing, "Jogar a rodada 1" e os cartões de clube abrem a escolha de clube do jogo novo (#316)', () => {
+test('na landing, todo "Jogar agora" leva ao menu e os cartões de clube abrem a escolha de clube (#316, #334)', () => {
   const j = carregarJogo({ boot: true, landing: true });
+  const h = j.html();
+  assert.doesNotMatch(h, /Jogar a rodada 1/);
+  const botoes = [...h.matchAll(/data-acao="([^"]+)"[^>]*>(?:<[^>]+>)*(?:[^<]*<\/svg>)?(?:<span>)?Jogar agora/g)].map(m => m[1]);
+  assert.deepEqual(botoes, ['go|menu', 'go|menu', 'go|menu'], 'topo, destaque e chamada final');
+  j.acao('go|menu');
+  assert.equal(j.run('ui.view'), 'menu');
   j.acao('novoJogo');
-  assert.equal(j.run('ui.view'), 'inicio');
+  assert.equal(j.run('ui.view'), 'inicio', '"Escolher meu clube" continua abrindo a escolha de clube');
   const k = carregarJogo({ boot: true, landing: true });
   const id = k.html().match(/data-acao="escolherClubeLanding\|([^"]+)"/)[1];
   k.acao(`escolherClubeLanding|${id}`);
