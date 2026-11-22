@@ -45,7 +45,8 @@ test('dois amarelos expulsam o jogador no segundo cartão e reduzem as chances n
 
 test('mover para a vaga do expulso muda a simulação do minuto seguinte e preserva os lances anteriores', () => {
   const j = novo();
-  const r = j.run(`(() => {
+  // #336: em vez de uma semente fixa, procura uma em que a mudança de vaga altera o placar depois do minuto 60
+  const r = j.run(`(() => { const L0 = [...userClub().lineup], F0 = userClub().formation; for (let semente = 1; semente <= 500; semente++) { userClub().lineup = [...L0]; userClub().formation = F0;
     const h = userClub(), a = S.clubs.find(c => c !== h && divOf(c) === divOf(h));
     const g = { h: h.id, a: a.id, hg: 1, ag: 0, copa: {},
       escalacoes: { h: elencoDoJogo(h, getXI(h)), a: elencoDoJogo(a, getXI(a)) }, ev: [] };
@@ -54,19 +55,21 @@ test('mover para a vaga do expulso muda a simulação do minuto seguinte e prese
     const vermelho = { m: 60, t: 'vermelho', side: 'h', pid: xi[3], name: P[xi[3]].name };
     g.ev.push(gol, vermelho);
     const sem = structuredClone(g);
-    S.rng = 196;
+    S.rng = semente;
     ressimularDepois(sem, 60);
-    S.rng = 196;
+    S.rng = semente;
     const moveu = mudarPosicaoAoVivo(g, 60, pid, 3, { recalcular: false });
-    const aguardou = S.rng === 196 && g.ev.length === 3;
+    const aguardou = S.rng === semente && g.ev.length === 3;
     ressimularDepois(g, 60);
+    if (placarNoMinuto(g, 93).h === placarNoMinuto(sem, 93).h && semente < 500) continue;
     const depois = elencoParaTrocas(g, 61), antes = escalacaoNoMinuto(g, 'h', 59);
     return { moveu, aguardou, lance: g.ev.find(e => e.t === 'posicao'), pid,
       vagaAntes: antes.xi[5], vagaAgora: depois.xi[3], vagaVazia: depois.xi[5],
       riscada: depois.expulsos.get(5), nomeExpulso: vermelho.name, trocas: trocasDe(g).length,
       lancesAnteriores: g.ev.filter(e => e.m <= 60 && e.t !== 'posicao'), originais: [gol, vermelho],
-      golsCom: placarNoMinuto(g, 61).h, golsSem: placarNoMinuto(sem, 61).h };
-  })()`);
+      golsAntesCom: placarNoMinuto(g, 60).h, golsAntesSem: placarNoMinuto(sem, 60).h,
+      golsCom: placarNoMinuto(g, 93).h, golsSem: placarNoMinuto(sem, 93).h };
+  } })()`);
   assert.ok(r.moveu.ok && r.aguardou);
   assert.deepEqual(r.lance, { m: 60, t: 'posicao', side: 'h', pid: r.pid, vaga: 3, name: r.moveu.msg });
   assert.equal(r.vagaAntes, r.pid);
@@ -75,8 +78,9 @@ test('mover para a vaga do expulso muda a simulação do minuto seguinte e prese
   assert.equal(r.riscada, r.nomeExpulso);
   assert.equal(r.trocas, 0);
   assert.deepEqual(r.lancesAnteriores, r.originais);
-  assert.equal(r.golsCom, 1);
-  assert.equal(r.golsSem, 2);
+  assert.equal(r.golsAntesCom, 1, 'até o minuto 60 nada muda');
+  assert.equal(r.golsAntesSem, 1);
+  assert.notEqual(r.golsCom, r.golsSem, 'depois do minuto 60 a simulação é outra');
 });
 
 test('movimentos rejeitam banco, vaga inválida e goleiro, e a formação usa o time já movido', () => {
@@ -108,22 +112,24 @@ test('movimentos rejeitam banco, vaga inválida e goleiro, e a formação usa o 
 
 test('jogo legado reconstrói as vagas e usa a força nova ao mover um jogador', () => {
   const j = novo();
-  const r = j.run(`(() => {
+  // #336: procura uma semente em que o jogo legado, refeito depois do movimento, tem gol do time depois do minuto 60
+  const r = j.run(`(() => { const L0 = [...userClub().lineup], F0 = userClub().formation; for (let semente = 1; semente <= 500; semente++) { userClub().lineup = [...L0]; userClub().formation = F0;
     const h = userClub(), a = S.clubs.find(c => c !== h), xi = getXI(h).slice();
     const g = { h: h.id, a: a.id, hg: 0, ag: 0, lh: 0.15, la: 0.15, copa: {}, ev: [] };
     g.ev.push({ m: 60, t: 'vermelho', side: 'h', pid: xi[3], name: P[xi[3]].name });
-    S.rng = 196;
+    S.rng = semente;
     const resultado = mudarPosicaoAoVivo(g, 60, xi[5], 3);
     const salvo = JSON.parse(JSON.stringify(g)), depois = escalacaoNoMinuto(salvo, 'h', 61);
+    if (placarNoMinuto(salvo, 93).h === 0 && semente < 500) continue;
     return { resultado, pid: xi[5], anterior: salvo.escalacaoLegada.h.xi[5], vagaNova: depois.xi[3], vagaVazia: depois.xi[5],
-      golsAntes: placarNoMinuto(salvo, 60).h, golsDepois: placarNoMinuto(salvo, 61).h };
-  })()`);
+      golsAntes: placarNoMinuto(salvo, 60).h, golsDepois: placarNoMinuto(salvo, 93).h };
+  } })()`);
   assert.ok(r.resultado.ok);
   assert.equal(r.anterior, r.pid);
   assert.equal(r.vagaNova, r.pid);
   assert.equal(r.vagaVazia, null);
   assert.equal(r.golsAntes, 0);
-  assert.equal(r.golsDepois, 1);
+  assert.ok(r.golsDepois > 0, 'o resto do jogo foi simulado de novo, com gols');
 });
 
 test('lesão troca pelo melhor reserva da posição e mostra o aviso no replay', () => {

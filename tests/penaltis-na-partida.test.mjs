@@ -72,8 +72,9 @@ test('calibração em 20.000 jogos: cerca de 0,2 pênalti por jogo e média de g
   })()`);
   const n = Object.values(resultados).reduce((a, b) => a + b, 0);
   const proporcoes = Object.fromEntries(Object.entries(resultados).map(([res, total]) => [res, total / n]));
-  // 51.460 gols antes da mudança (92d22bf), nos mesmos confrontos e com as mesmas sementes.
-  const antes = 51460 / total, depois = gols / total;
+  // Referência de gols por jogo nos mesmos confrontos e sementes: 2,573 em 92d22bf (#304); 2,518 depois da #336, quando
+  // "Escalar melhores" passou a pôr cada jogador na posição real (os times da IA deixaram de usar atacantes na defesa).
+  const antes = 2.518, depois = gols / total;
   t.diagnostic(`${(n / total).toFixed(4)} pênalti/jogo. ${Object.entries(proporcoes).map(([res, p]) =>
     `${res} ${(100 * p).toFixed(2)}%`).join(', ')}. Gols/jogo antes ${antes.toFixed(4)}, depois ${depois.toFixed(4)}.`);
   assert.ok(n / total >= 0.18 && n / total <= 0.22);

@@ -77,3 +77,35 @@ test('sem goleiro disponível, um jogador de linha vai para o gol e a rodada é 
   j.run("for(const p of userClub().players)if(p.pos==='G')p.inj=0");
   assert.equal(j.run('validateLineup()'), 'Escale exatamente 1 goleiro.');
 });
+
+test('"Escalar melhores" põe cada jogador na posição real, mesmo com reservas fracos (#336)', () => {
+  const j = carregarJogo({ boot: true });
+  j.run(`newGame('${clubeDaSerie(j)}')`);
+  // laterais muito fracos e um atacante craque: antes, o craque ia jogar de lateral
+  const r = j.run(`(() => {
+    const uc = userClub();
+    for (const p of uc.players) if (['LD', 'LE'].includes(posDSigla(p))) p.ovr = 40;
+    const craque = uc.players.find(p => posDSigla(p) === 'ATA'); craque.ovr = 99;
+    uc.formation = '4-4-2'; escalarMelhores();
+    const slots = slotsDe('4-4-2');
+    return { slots, pos: uc.lineup.map(id => posDSigla(P[id])), craque: uc.lineup.indexOf(craque.id) };
+  })()`);
+  assert.equal(r.pos.length, 11);
+  assert.deepEqual(r.pos, r.slots, 'cada vaga com um jogador da mesma posição');
+  assert.equal(r.slots[r.craque], 'ATA', 'o craque joga no ataque');
+});
+
+test('sem ninguém disponível da posição, a vaga ainda é preenchida por quem perde menos (#336)', () => {
+  const j = carregarJogo({ boot: true });
+  j.run(`newGame('${clubeDaSerie(j)}')`);
+  const r = j.run(`(() => {
+    const uc = userClub();
+    for (const p of uc.players) if (posDSigla(p) === 'LE') p.inj = 5; // todos os laterais esquerdos lesionados
+    uc.formation = '4-4-2'; escalarMelhores();
+    const i = slotsDe('4-4-2').indexOf('LE');
+    return { n: uc.lineup.length, le: posDSigla(P[uc.lineup[i]]), lesionado: uc.lineup.some(id => P[id].inj > 0) };
+  })()`);
+  assert.equal(r.n, 11);
+  assert.notEqual(r.le, 'LE', 'alguém de outra posição cobre a lateral');
+  assert.equal(r.lesionado, false);
+});

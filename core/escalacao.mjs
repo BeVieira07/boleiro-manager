@@ -1,6 +1,6 @@
 import { P, S, addNews, tecnicos, userClub } from './estado.mjs';
 import { autoXI, getXI } from './motor.mjs';
-import { POSD, ovrNaPosicao, penalidadePosicao } from './posicoes.mjs';
+import { POSD, ovrNaPosicao, penalidadePosicao, posDSigla } from './posicoes.mjs';
 import { fatorEnergia } from './energia.mjs';
 import { NOMES_ALVOS_PENALTI } from './penaltis.mjs';
 
@@ -61,8 +61,10 @@ export function autoSlotXI(club,f){
   const pool=club.players.filter(p=>!unavailable(p)),jog=[...(pool.length>=11?pool:club.players)];
   const out=[];
   for(const s of slots){
+    // #336: primeiro quem é da posição; de fora só se não houver ninguém dela (ex.: craque de atacante não vira lateral)
+    const daPosicao=jog.some(p=>posDSigla(p)===s);
     let best=-1,bv=-1;
-    jog.forEach((p,k)=>{const v=ovrNaPosicao(p,s)*fatorEnergia(p);if(v>bv){bv=v;best=k}});
+    jog.forEach((p,k)=>{if(daPosicao&&posDSigla(p)!==s)return;const v=ovrNaPosicao(p,s)*fatorEnergia(p);if(v>bv){bv=v;best=k}});
     if(best>=0)out.push(jog.splice(best,1)[0].id);
   }
   return out;
