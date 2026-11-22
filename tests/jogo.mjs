@@ -54,14 +54,15 @@ const escopo = new Proxy({}, {
 });
 const avaliar = new Function('escopo', 'codigo', 'with (escopo) { return eval(codigo) }');
 
-/** Começa do zero: sem jogo, armazenamento vazio (ou o `ls` dado). `boot: true` abre o jogo como no navegador.
+/** Começa do zero: sem jogo, armazenamento vazio (ou o `ls` dado). `boot: true` abre o jogo como no navegador e clica em
+ *  "Jogar agora" na landing (#316), indo ao menu; com `landing: true`, para na landing.
  *  `semente`: o Math.random recomeça dela a cada carregarJogo (tests/sorteio-fixo.mjs), então o teste não depende da ordem. */
-export function carregarJogo({ boot = false, ls = {}, limiteLs = Infinity, estaduais = false, continentais = false, semente = 20261115 } = {}) {
+export function carregarJogo({ boot = false, landing = false, ls = {}, limiteLs = Infinity, estaduais = false, continentais = false, semente = 20261115 } = {}) {
   Math.random = sorteioFixo(semente);
   ESTADUAIS.ligados = estaduais; CONTINENTAIS.ligados = continentais;
   amb.app = ''; amb.alertas = []; amb.ls = ls; amb.limite = limiteLs; amb.campos = {};
   usarEstado(null); Object.assign(ui, JSON.parse(UI_INICIAL)); salvarJogo.avisou = false;
-  if (boot) main.iniciar();
+  if (boot) { main.iniciar(); if (!landing) main.executar('go|menu') }
   return { run: c => avaliar(escopo, c), ls: amb.ls, alertas: amb.alertas, html: () => amb.app, acao: (spec, ...extra) => main.executar(spec, extra), campo: (id, v) => { amb.campos[id] = v }, main };
 }
 

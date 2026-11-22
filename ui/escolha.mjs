@@ -93,7 +93,7 @@ export function selecionarClubeInicio(id) {
   render();
 }
 
-function estrelas(forca) {
+export function estrelas(forca) {
   const n = clamp(Math.round((forca - 62) / 4), 1, 5);
   return `<span class="estrelas" aria-hidden="true">${'★'.repeat(n)}<span class="apagada">${'★'.repeat(5-n)}</span></span><span class="sr">Força ${forca}, ${n} de 5 estrelas</span>`;
 }
