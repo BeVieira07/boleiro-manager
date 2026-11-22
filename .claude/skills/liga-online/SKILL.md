@@ -10,7 +10,7 @@ Responder em **PT-BR**. As regras gerais (issues, branches, commits, testes) est
 ## Onde fica cada coisa
 - Projeto Supabase: ref `nfctxdzapspnxwttrwym` (sa-east-1, plano free; pausa após ~1 semana sem uso, reativar no painel).
 - Site: https://bevieira07.github.io/boleiro-manager/ (**minúsculas**; com maiúsculas dá 404). Publicado pelo workflow `pages.yml` a cada push na `main`.
-- Navegador: `ui/config.mjs` (URL e chave **pública**), `ui/conta.mjs` (login), `ui/nuvem.mjs` (saves na nuvem), `ui/liga.mjs` (lista de ligas e lobby), `ui/ligajogo.mjs` (jogar a liga).
+- Navegador: `ui/config.mjs` (URL e chave **pública**), `ui/inicio/conta.mjs` (login), `ui/inicio/nuvem.mjs` (saves na nuvem), `ui/liga/liga.mjs` (lista de ligas e lobby), `ui/liga/ligajogo.mjs` (jogar a liga).
 - Servidor: `supabase/functions/jogar-rodada/index.ts` (uma função só para começar a liga, jogar a rodada, o mercado (inclusive propostas entre técnicos, pedir demissão e escolher clube, #37) e `sair`/`remover` membros (#37: `removerTecnicoLiga` no estado + `liga_remover_membro`, que passa a liga ao membro mais antigo ou a encerra)), `supabase/migrations/*.sql`, `supabase/tests/*.sql`.
 - Regras que o servidor roda: `core/liga.mjs` (`iniciarLiga`, `jogarRodadaLiga`, `acaoMercadoLiga`), `core/propostas.mjs`.
 - A chave service_role/secret **nunca** entra no repositório (`tests/conta.test.mjs` confere).
@@ -35,7 +35,7 @@ A função importa o `core/` do próprio repositório por caminho relativo (`../
 - Semente (#79): `seed` e `rng` nunca ficam em `liga_estado` (gatilho `privado.guardar_segredo` os move para `liga_segredo`, sem leitura para membros); a função os devolve com `lerEstado`. `liga_resultados.semente` é a da rodada, não a da liga.
 - `liga_estado.estado` é o `S` da liga (JSON). O servidor passa todo estado por `migrarSave` (`core/versao.mjs`): campo novo no save = migração nova no fim de `MIGRACOES`, e as ligas antigas são atualizadas na primeira ação.
 - Controle de versão: toda gravação exige a `versao` lida; se outra gravou antes, o servidor refaz (até 3 vezes). A rodada nunca é jogada duas vezes.
-- Mudança de versão vinda do tempo real não recarrega na hora (#124): `agendarRecarga` em `ui/ligajogo.mjs` junta as mudanças de 1,5 s (`recarga.espera`; nos testes, 0) numa recarga só.
+- Mudança de versão vinda do tempo real não recarrega na hora (#124): `agendarRecarga` em `ui/liga/ligajogo.mjs` junta as mudanças de 1,5 s (`recarga.espera`; nos testes, 0) numa recarga só.
 - O navegador nunca grava o estado; ao recarregar, mantém escalação, formação e tática ainda não confirmadas.
 
 ## Diagnosticar pelos logs
@@ -65,5 +65,5 @@ order by timestamp desc limit 40
 
 ## Testar
 - Node, com Supabase falso: `tests/liga-jogo.test.mjs` (servidor falso que roda as regras do `core/`), `tests/liga-rodada.test.mjs` (regras), `tests/conta.test.mjs` (login; o cliente falso imita a trava do supabase-js).
-- Navegador de verdade (tempo de tela, fluxo real de botão, imagens): `npm start` e `node scripts/navegador.mjs <url> <arquivo.js>`, com uma expressão que importa os módulos (`await import('/ui/conta.mjs')`) e devolve o que medir.
+- Navegador de verdade (tempo de tela, fluxo real de botão, imagens): `npm start` e `node scripts/navegador.mjs <url> <arquivo.js>`, com uma expressão que importa os módulos (`await import('/ui/inicio/conta.mjs')`) e devolve o que medir.
 - Medidas de referência (80 clubes): uma rodada ~27 ms no navegador; a mais lenta da liga no servidor ~66 ms (limite 2 s de CPU).

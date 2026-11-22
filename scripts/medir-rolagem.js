@@ -6,10 +6,10 @@
   const { criarJogo, userClub } = await import('/core/estado.mjs');
   const { DADOS_PADRAO } = await import('/core/dados-padrao.mjs');
   const { autoXI, jogarRodada, validateLineup } = await import('/core/motor.mjs');
-  const { avAba, encerrarVivo, iniciarVivo, avPausar } = await import('/ui/aovivo.mjs');
+  const { avAba, encerrarVivo, iniciarVivo, avPausar } = await import('/ui/partida/aovivo.mjs');
   const { ui } = await import('/ui/estado.mjs');
-  const { configurarConta, iniciarConta } = await import('/ui/conta.mjs');
-  const { abrirLigas, abrirLobby } = await import('/ui/liga.mjs');
+  const { configurarConta, iniciarConta } = await import('/ui/inicio/conta.mjs');
+  const { abrirLigas, abrirLobby } = await import('/ui/liga/liga.mjs');
   const { confirmar } = await import('/ui/avisos.mjs');
 
   const resultados = {};

@@ -1,0 +1,316 @@
+/* ================= jogando a liga (#34) =================
+   O estado da liga vem do servidor (liga_estado) e as telas do jogo o mostram como se fosse um save, com o técnico
+   da vez = você. Escalação, formação e tática são ajustadas aqui e enviadas em "Confirmar rodada" (liga_entradas).
+   Quem joga a rodada é a função jogar-rodada no servidor, quando todos confirmam ou o dono força. O tempo real avisa
+   quem confirmou e quando a rodada foi jogada; aí o estado novo é baixado e o seu jogo aparece como replay.
+   Nada da liga vai para os saves locais nem da nuvem. */
+import { definirCantos, definirCobradores, unavailable } from '../../core/escalacao.mjs';
+import { DIVS, P, S, clubById, clubDo, divOf, reindex, table, tec, tecnicos, usarEstado, usarTecnico, userClub } from '../../core/estado.mjs';
+import { autoXI, validateLineup } from '../../core/motor.mjs';
+import { posDSigla } from '../../core/posicoes.mjs';
+import { descrever } from '../../core/propostas.mjs';
+import { taticaUser } from '../../core/taticas.mjs';
+import { esc, money } from '../../core/utils.mjs';
+import { migrarCarreira } from '../../core/versao.mjs';
+import { avisar, confirmar, pedirValor } from '../avisos.mjs';
+import { clienteLogado, sessaoEncerrada, usuarioAtual } from '../inicio/conta.mjs';
+import { ui } from '../estado.mjs';
+import { icone } from '../icones.mjs';
+import { closeModal, crest, openModal } from '../partida/partida.mjs';
+import { iniciarReplaysDaRodada, iniciarVivo } from '../partida/aovivo.mjs';
+import { go, render } from '../telas.mjs';
+import { verAoVivo } from '../inicio/configuracoes.mjs';
+import { abrirLigas, abrirLobby, pararLobby } from './liga.mjs';
+import { rotuloRodada } from '../temporada/estadual.mjs';
+import { RODADA_ESTADUAL } from '../../core/estadual.mjs';
+
+export const FUNCAO = 'jogar-rodada';
+let canal = null;
+
+/** Chama a função do servidor; erros viram aviso. */
+async function chamarFuncao(corpo) {
+  const c = clienteLogado(); if (!c) { avisar('Você não está mais conectado. Entre na sua conta de novo.', 'erro'); return null }
+  const { data, error } = await c.functions.invoke(FUNCAO, { body: corpo });
+  if (error) {
+    const status = error.context?.status;
+    if (status === 401) { sairDaLiga(); usarEstado(null); go('menu'); await sessaoEncerrada(); return null } // #95: como voltarMenu
+    let msg = error.message;
+    try { const j = await error.context.json(); if (j && j.erro) msg = j.erro } catch { /* resposta sem JSON */ }
+    if (status === 404 && msg === 'Liga não encontrada.') { await voltarDaLiga(); return null }
+    avisar(msg, 'erro'); return null;
+  }
+  return data;
+}
+
+/** Na liga, o que mudaria o jogo só neste navegador fica bloqueado (o servidor é o dono do estado). */
+export function bloqueadoNaLiga() {
+  if (!ui.liga) return false;
+  avisar('Na liga, as rodadas e a virada da temporada são jogadas no servidor. Ajuste a escalação e a tática e confirme a rodada.', 'aviso');
+  return true;
+}
+
+/** O dono começa a liga: o servidor monta o estado com os clubes de cada técnico. */
+export function comecarLiga(id) {
+  confirmar({ titulo: 'Começar a liga?', texto: 'Depois de começar, ninguém mais entra e os clubes ficam fixos.', ok: 'Começar' }, async () => {
+    pararLobby(); // o dono entra por aqui; o tempo real do lobby é para os outros (#235)
+    const r = await chamarFuncao({ liga: id, acao: 'iniciar' });
+    if (r && r.iniciada) { avisar('A liga começou!', 'ok'); await entrarNaLiga(id) }
+    else if (ui.view === 'lobby') await abrirLobby(id); // não começou: volta a escutar o lobby
+  });
+}
+
+async function carregar(id) {
+  const c = clienteLogado(), eu = usuarioAtual() && usuarioAtual().id;
+  const recarregando = ui.liga?.id === id;
+  const [l, e, en] = await Promise.all([
+    c.from('ligas').select('id, nome, dono_id, status, rodada, versao').eq('id', id).maybeSingle(),
+    c.rpc('liga_estado_meu', { p_liga: id }), // #121: o estado sem o que é privado dos outros técnicos
+    c.from('liga_membros').select('user_id, pronto_rodada').eq('liga_id', id) // #78: a escalação dos outros não é lida, só quem confirmou
+  ]);
+  if (recarregando && ui.liga?.id !== id) return false;
+  if (!l.error && !l.data) {
+    if (!ui.liga?.saindo) await voltarDaLiga();
+    return false;
+  }
+  if (l.error || e.error || !e.data) { avisar('Não foi possível abrir a liga.', 'erro'); return false }
+  // a escalação, a tática e os ajustes de pênalti ainda não confirmados só existem aqui
+  const uc0 = ui.liga && ui.liga.id === id && S && S.managers[eu] && !S.managers[eu].demitido && clubDo(S.managers[eu]);
+  const meu = uc0 && { clube: uc0.id, lineup: uc0.lineup || [], formation: uc0.formation, tatica: uc0.tatica,
+    cobradores: uc0.cobradores, cantos: uc0.cantos };
+  const paraMim = () => (S.propostas || []).filter(x => x.para === eu).length, antes = uc0 ? paraMim() : null;
+  usarEstado(e.data); reindex();
+  if (!S.managers[eu]) { // #37: saiu ou foi removido da liga
+    const saindo = ui.liga && ui.liga.saindo; sairDaLiga(); usarEstado(null);
+    if (!saindo) { avisar('Você não faz mais parte desta liga.', 'aviso'); go('ligas') }
+    return false;
+  }
+  usarTecnico(eu);
+  migrarCarreira(tec()); // liga antiga: monta a própria carreira enquanto o servidor ainda não migrou o save
+  if (meu && !tec().demitido && meu.clube === tec().clubId) {
+    const uc = userClub(); uc.formation = meu.formation || uc.formation; uc.tatica = meu.tatica || uc.tatica;
+    uc.lineup = meu.lineup.filter(pid => uc.players.some(p => p.id === pid && !unavailable(p))); // quem saiu ou se machucou
+    definirCobradores(meu.cobradores, uc);
+    definirCantos(meu.cantos, uc);
+    if (validateLineup(uc)) uc.lineup = autoXI(uc);
+  }
+  if (antes != null && paraMim() > antes) avisar('Você recebeu uma proposta de outro técnico. Veja na tela Liga.', 'info'); // #36
+  ui.liga = { ...(ui.liga && ui.liga.id === id ? ui.liga : {}), id, nome: l.data.nome, dono: l.data.dono_id === eu, rodada: l.data.rodada, versao: l.data.versao,
+    prontos: (en.data || []).filter(x => x.pronto_rodada === l.data.rodada).map(x => x.user_id) };
+  return true;
+}
+
+/** Abre a liga em andamento nas telas do jogo. */
+export async function entrarNaLiga(id) {
+  if (!clienteLogado()) { avisar('Entre na sua conta para jogar a liga.'); return }
+  if (!(await carregar(id))) return;
+  assinar(id);
+  go('clube');
+}
+
+function assinar(id) {
+  const c = clienteLogado(); if (!c || !c.channel) return;
+  if (canal) c.removeChannel(canal);
+  canal = c.channel('liga-' + id)
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'liga_membros', filter: `liga_id=eq.${id}` }, p => {
+      const n = p.new || {}; if (!ui.liga || !n.user_id) return;
+      const s = new Set(ui.liga.prontos);
+      if (n.pronto_rodada === ui.liga.rodada) s.add(n.user_id); else s.delete(n.user_id);
+      ui.liga.prontos = [...s]; render();
+    })
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'ligas', filter: `id=eq.${id}` }, p => {
+      if (!ui.liga || !p.new) return;
+      if (p.new.rodada !== ui.liga.rodada) atualizarAposRodada();
+      else if (p.new.versao !== ui.liga.versao) agendarRecarga(p.new.versao); // alguém negociou (#35); várias mudanças seguidas = uma recarga (#124)
+    })
+    .subscribe();
+}
+export function sairDaLiga() {
+  const c = clienteLogado();
+  if (canal && c) c.removeChannel(canal);
+  clearTimeout(recarga.timer); recarga.timer = null;
+  canal = null; ui.liga = null;
+}
+
+export async function voltarDaLiga(mensagem = 'Esta liga não está mais disponível.', tipo = 'aviso') {
+  sairDaLiga(); usarEstado(null); avisar(mensagem, tipo); await abrirLigas();
+}
+
+/** O estado mudou sem rodada nova (mercado): baixa de novo, sem replay. */
+async function recarregar() { const L = ui.liga; if (L && !L.atualizando && (await carregar(L.id))) render() }
+/* #124: cada mudança de versão faria todos baixarem o estado inteiro (~600 KB). A primeira mudança abre uma janela de
+   `espera` ms e as seguintes só anotam a versão; no fim da janela há uma recarga só, e nenhuma se o estado já está nessa
+   versão (quem fez a ação já baixou). */
+export const recarga = { espera: 1500, timer: null, versao: null };
+function agendarRecarga(versao) {
+  recarga.versao = versao;
+  if (recarga.timer) return;
+  recarga.timer = setTimeout(() => { recarga.timer = null; if (ui.liga && ui.liga.versao !== recarga.versao) recarregar() }, recarga.espera);
+  recarga.timer.unref && recarga.timer.unref();
+}
+
+/** Ação de mercado na liga (#35): o servidor sorteia a resposta da IA, aplica e grava; depois baixa o estado novo. */
+export async function mercadoLiga(acao, msgOk) {
+  const L = ui.liga; if (!L) return;
+  const r = await chamarFuncao({ liga: L.id, acao: 'mercado', mercado: acao });
+  if (!r) return;
+  if (await carregar(L.id)) render();
+  const msg = r.msg || msgOk; if (msg) avisar(msg, r.aceita === false ? 'info' : 'ok');
+}
+
+let recusando = false;
+export async function recusarClubesLiga() {
+  const L = ui.liga;
+  if (!L || recusando) return;
+  recusando = true;
+  try {
+    const rodada = L.rodada;
+    const r = await chamarFuncao({ liga: L.id, acao: 'mercado', rodada, mercado: { tipo: 'recusarClubes' } });
+    if (!r || !ui.liga || ui.liga.id !== L.id) return;
+    if (r.jaJogada) { await atualizarAposRodada(); return }
+    const jogo = await chamarFuncao({ liga: L.id, acao: 'jogar', rodada });
+    if (ui.liga?.id !== L.id) return;
+    if (jogo?.jogada || jogo?.jaJogada) await atualizarAposRodada();
+    else if (await carregar(L.id)) render();
+  } finally { recusando = false }
+}
+
+/** A rodada foi jogada no servidor: baixa o estado novo e mostra o seu jogo como replay (uma vez só). */
+export async function atualizarAposRodada() {
+  const L = ui.liga; if (!L || L.atualizando) return;
+  L.atualizando = true;
+  const antes = L.rodada;
+  try { if (!(await carregar(L.id))) return } finally { if (ui.liga) ui.liga.atualizando = false }
+  if (ui.liga.rodada === antes) { render(); return }
+  const { data: r } = await clienteLogado().from('liga_resultados').select('temporada, rodada, jogos').eq('liga_id', L.id)
+    .order('temporada', { ascending: false }).order('rodada', { ascending: false }).limit(1).maybeSingle();
+  if (ui.liga?.id !== L.id) return;
+  if (!r) { render(); return }
+  const pre = r.rodada < 0; // #132: data do estadual (RODADA_ESTADUAL = primeira data)
+  const games = r.jogos.filter(g => !g.copa), copa = r.jogos.filter(g => g.copa);
+  const fim = () => { ui.lastRound = pre ? { pre: r.rodada - RODADA_ESTADUAL, games } : { round: r.rodada + 1, games }; ui.view = 'rodada'; render() };
+  if (tec().demitido) { fim(); return }
+  if (!pre) { iniciarReplaysDaRodada(games, copa, fim, { replay: true, rodada: r.rodada }); return }
+  const me = userClub().id, meu = games.find(g => g.h === me || g.a === me);
+  if (meu && verAoVivo(meu)) iniciarVivo(games, meu, fim, { replay: true, estadual: r.rodada - RODADA_ESTADUAL }); else fim();
+}
+
+/** Envia a sua escalação, formação e tática da rodada e pede ao servidor para jogar (ele só joga quando todos confirmaram). */
+export async function confirmarLiga() {
+  const c = clienteLogado(), L = ui.liga, eu = usuarioAtual() && usuarioAtual().id; if (!c || !L || !eu) return;
+  const uc = userClub(), err = validateLineup(uc);
+  if (err) { avisar(err, 'erro'); go('escalacao'); return }
+  const t = taticaUser(uc);
+  const escalacao = { lineup: uc.lineup, cobradores: uc.cobradores || [], cantos: uc.cantos || {} };
+  const { error } = await c.from('liga_entradas').upsert({ liga_id: L.id, user_id: eu, rodada: L.rodada, escalacao,
+    formacao: uc.formation, estilo: t.estilo, modo: t.modo, pronto: true, atualizado_em: new Date().toISOString() }, { onConflict: 'liga_id,user_id' });
+  if (error) { // RLS recusa rodada velha ou liga indisponível
+    await atualizarAposRodada();
+    if (ui.liga?.id === L.id) avisar('A confirmação da rodada não foi salva.', 'aviso');
+    return;
+  }
+  if (!L.prontos.includes(eu)) L.prontos.push(eu);
+  render();
+  const r = await chamarFuncao({ liga: L.id, acao: 'jogar' });
+  if (r && r.faltam) avisar(`Rodada confirmada. ${r.faltam === 1 ? 'Falta 1 técnico' : `Faltam ${r.faltam} técnicos`} confirmar.`, 'ok');
+  else if (r && (r.jogada || r.jaJogada)) await atualizarAposRodada();
+}
+/** O dono joga a rodada sem esperar quem não confirmou (essas escalações são automáticas). */
+export function forcarLiga() {
+  const L = ui.liga; if (!L) return;
+  confirmar({ titulo: 'Forçar a rodada?', texto: `Quem ainda não confirmou joga com a escalação automática.`, ok: 'Jogar a rodada' }, async () => {
+    const r = await chamarFuncao({ liga: L.id, acao: 'jogar', forcar: true });
+    if (r && (r.jogada || r.jaJogada)) await atualizarAposRodada();
+  });
+}
+
+/** Botões da rodada na barra de ações, no lugar de "Jogar rodada". */
+export function botaoLiga(cls) {
+  if (tec().demitido) return `<button class="${cls}" data-acao="go|carreira">Escolher novo clube</button>`; // #37
+  const L = ui.liga, eu = usuarioAtual() && usuarioAtual().id, n = tecnicos().length, k = L.prontos.length;
+  const meu = L.prontos.includes(eu)
+    ? `<button class="${cls}" disabled>${icone('ok', { tam: 16 })}Confirmado · ${k} de ${n}</button>`
+    : `<button class="${cls}" data-acao="confirmarLiga">${icone('ok', { tam: 16 })}Confirmar ${rotuloRodada()}</button>`;
+  return meu + (L.dono && k < n ? '<button class="btn sec" data-acao="forcarLiga">Forçar rodada</button>' : '');
+}
+/** Quem já confirmou, para a barra de ações. */
+export const situacaoLiga = () => `<div class="vez">Liga <b>${esc(ui.liga.nome)}</b> ${tecnicos().map(t => { const ok = ui.liga.prontos.includes(t.id);
+  return `<span class="pill" title="${ok ? 'confirmou' : 'falta confirmar'}">${ok ? icone('ok', { tam: 12, rotulo: 'confirmou' }) : '…'} ${esc(t.nome)}</span>` }).join(' ')}</div>`;
+
+/** Tela da liga (#35): técnicos, clubes, posição e quem confirmou a rodada. */
+export function vLigaJogo() {
+  const L = ui.liga; if (!L) return '<p class="muted">Você não está jogando uma liga.</p>';
+  const eu = usuarioAtual() && usuarioAtual().id, n = tecnicos().length;
+  const linhas = tecnicos().map(t => { const c = clubDo(t), pos = table(divOf(c)).findIndex(x => x.id === c.id) + 1, ok = L.prontos.includes(t.id);
+    return `<tr><th scope="row">${esc(t.nome)}${t.id === eu ? ' <span class="pill">você</span>' : ''}</th><td>${crest(c)} ${esc(c.name)}</td><td>${DIVS[divOf(c)]}</td>
+      <td class="n">${S.round ? pos + 'º' : '-'}</td><td>${ok ? icone('ok', { tam: 12 }) + ' confirmou' : 'falta confirmar'}</td>
+      <td>${L.dono && t.id !== eu ? botaoRemover(L.id, t.id, t.nome) : ''}</td></tr>` }).join('');
+  return `<section class="card"><h2 class="t3">${esc(L.nome)}</h2><div class="tw" tabindex="0" role="region" aria-label="Técnicos da liga"><table><caption class="sr">Técnicos da liga</caption>
+    <thead><tr><th>Técnico</th><th>Clube</th><th>Série</th><th class="n">Posição</th><th>Rodada ${S.round + 1}</th><td></td></tr></thead><tbody>${linhas}</tbody></table></div></section>
+  ${vPropostas()}
+  <p class="muted">Negócios com a IA aparecem nas notícias de todos. A rodada é jogada quando todos confirmam${L.dono ? ' ou quando você força' : ' ou quando o dono força'}.</p>
+  <div class="row">${L.dono && L.prontos.length < n ? '<button class="btn sec" data-acao="forcarLiga">Forçar rodada</button>' : ''}<button class="btn sec" data-acao="go|tabela">Ver classificação</button>${botaoSairLiga(L.id)}${L.dono ? botaoExcluirLiga(L.id) : ''}</div>`;
+}
+
+/* ---------- propostas entre técnicos (#36): as regras estão em core/propostas.mjs e rodam no servidor ---------- */
+export const botaoProposta = p => ui.liga && tecnicos().length > 1
+  ? `<button class="btn sec sm" data-acao="propostaForm|${p.id}">${p.clubId === userClub().id ? 'Oferecer' : 'Proposta'}</button>` : '';
+export function propostaForm(pid) {
+  const p = P[pid], meu = p.clubId === userClub().id;
+  const alvo = meu ? `<label>Para <select id="ppPara">${tecnicos().filter(t => t.id !== S.atual && !t.demitido).map(t => `<option value="${esc(t.id)}">${esc(t.nome)} (${esc(clubDo(t).name)})</option>`).join('')}</select></label>`
+    : `<p>Clube: <b>${esc(clubById(p.clubId).name)}</b> (${esc(tecnicos().find(t => t.clubId === p.clubId).nome)})</p>`;
+  openModal(`<h2>${meu ? 'Oferecer' : 'Proposta por'} ${esc(p.name)}</h2>
+   <p class="muted">${posDSigla(p)} · força ${p.ovr} · valor ${money(p.value)} · salário ${money(p.wage)}/rod.</p>
+   <div class="row" style="flex-direction:column;align-items:flex-start;gap:10px">${alvo}
+   <label>Negócio <select id="ppNeg"><option value="transferencia">Transferência</option><option value="emprestimo">Empréstimo</option></select></label>
+   <label>Valor (no empréstimo, taxa; pode ser 0) <input id="ppValor" inputmode="decimal" style="width:90px" value="${p.value.toFixed(1).replace('.', ',')}"> mi</label>
+   <p class="muted">Empréstimo: 1 ano, salário dividido 50/50, sem opção de compra, e só de jogador na lista de empréstimo${p.emprestar ? ' (este está)' : ' (este não está)'}.</p></div>
+   <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn sec" data-acao="closeModal">Cancelar</button><button class="btn" data-acao="enviarProposta|${pid}">Enviar proposta</button></div>`);
+}
+export function enviarProposta(pid) {
+  const v = id => document.getElementById(id), n = x => parseFloat(String(x).replace(',', '.'));
+  const a = { tipo: 'proporTecnico', pid, negocio: v('ppNeg').value, valor: n(v('ppValor').value) };
+  if (P[pid].clubId === userClub().id) a.para = v('ppPara').value;
+  closeModal(); return mercadoLiga(a);
+}
+export const responderProposta = (tipo, id) => mercadoLiga({ tipo, id }); // aceitarProposta, recusarProposta, cancelarProposta
+export function contrapropor(id) {
+  const pr = (S.propostas || []).find(x => x.id === id); if (!pr) return;
+  pedirValor({ titulo: 'Contraproposta', texto: descrever(pr), rotulo: pr.negocio === 'emprestimo' ? 'Nova taxa' : 'Novo valor', sufixo: 'milhões',
+    valor: String(pr.valor).replace('.', ','), ok: 'Enviar contraproposta', validar: v => isNaN(v) || v < 0 ? 'Digite um valor em milhões (ex.: 4,5).' : '' },
+    v => mercadoLiga({ tipo: 'contraproposta', id, valor: v }));
+}
+function vPropostas() {
+  const ps = S.propostas || [], rec = ps.filter(x => x.para === S.atual), env = ps.filter(x => x.de === S.atual);
+  if (!rec.length && !env.length) return '<p class="muted">Nenhuma proposta entre técnicos. Faça uma pelo Mercado (jogadores de outros técnicos) ou pelo Elenco (Oferecer).</p>';
+  const nome = id => esc(S.managers[id] ? S.managers[id].nome : '?');
+  return `<section class="card"><h2 class="t3" id="propostas-tecnicos">Propostas entre técnicos</h2><div class="tw" tabindex="0" role="region" aria-labelledby="propostas-tecnicos"><table><caption class="sr">Propostas recebidas e enviadas</caption><tbody>
+   ${rec.map(x => `<tr><td>De ${nome(x.de)}: ${esc(descrever(x))}</td><td><div class="acoes"><button class="btn sm" data-acao="responderProposta|aceitarProposta|${x.id}">Aceitar</button><button class="btn sec sm" data-acao="contrapropor|${x.id}">Contraproposta</button><button class="btn sec sm" data-acao="responderProposta|recusarProposta|${x.id}">Recusar</button></div></td></tr>`).join('')}
+   ${env.map(x => `<tr><td>Para ${nome(x.para)}: ${esc(descrever(x))}</td><td><button class="btn sec sm" data-acao="responderProposta|cancelarProposta|${x.id}">Retirar</button></td></tr>`).join('')}
+  </tbody></table></div></section>`;
+}
+
+/* ---------- saída de membros (#37): o clube de quem sai volta para a IA; o dono que sai passa a liga ao membro mais antigo ---------- */
+export const botaoRemover = (ligaId, membro, nome) => `<button class="btn fantasma sm" data-acao="removerMembro|${esc(ligaId)}|${esc(membro)}" aria-label="Remover ${esc(nome)} da liga">Remover</button>`;
+export const botaoSairLiga = ligaId => `<button class="btn fantasma" data-acao="deixarLiga|${esc(ligaId)}">Sair da liga</button>`;
+export const botaoExcluirLiga = ligaId => `<button class="btn perigo" data-acao="excluirLiga|${esc(ligaId)}">Excluir liga</button>`;
+export function excluirLiga(id) {
+  confirmar({ titulo: 'Excluir liga?', texto: 'A liga vai desaparecer para todos os membros. Esta ação não pode ser desfeita.', ok: 'Excluir liga', perigo: true }, async () => {
+    pararLobby();
+    if (await chamarFuncao({ liga: id, acao: 'excluir' })) await voltarDaLiga('Liga excluída.', 'ok');
+    else if (ui.view === 'lobby') await abrirLobby(id);
+  });
+}
+export function deixarLiga(id) {
+  confirmar({ titulo: 'Sair da liga?', texto: 'Seu clube volta a ser da IA e você deixa de participar desta liga. Se você é o dono, a liga passa para o membro mais antigo.', ok: 'Sair da liga', perigo: true }, async () => {
+    if (ui.liga) ui.liga.saindo = true; // o aviso de tempo real da própria saída não deve mostrar "não faz mais parte"
+    if (!(await chamarFuncao({ liga: id, acao: 'sair' }))) { if (ui.liga) ui.liga.saindo = false; return }
+    await voltarDaLiga('Você saiu da liga.', 'ok');
+  });
+}
+export function removerMembro(id, membro) {
+  confirmar({ titulo: 'Remover este técnico da liga?', texto: 'O clube dele volta a ser da IA, e ele deixa de participar desta liga.', ok: 'Remover', perigo: true }, async () => {
+    if (!(await chamarFuncao({ liga: id, acao: 'remover', membro }))) return;
+    avisar('Técnico removido da liga.', 'ok');
+    if (ui.liga) { if (await carregar(id)) render() } else await abrirLobby(id);
+  });
+}

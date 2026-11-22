@@ -30,12 +30,17 @@ globalThis.prompt = () => null;
 
 const RAIZ = new URL('..', import.meta.url);
 // um de cada vez: imports em paralelo de módulos com ciclo (ui/telas <-> ui/saves, ui/liga) quebram no Node 22 (ERR_VM_MODULE_LINK_FAILURE)
-const carregar = async dir => { const ms = []; for (const f of readdirSync(new URL(dir, RAIZ)).filter(f => f.endsWith('.mjs'))) ms.push(await import(new URL(`${dir}/${f}`, RAIZ))); return ms };
+/** #332: os .mjs de uma pasta do jogo, com as subpastas (ex.: 'ui/partida/aovivo.mjs' vira 'partida/aovivo.mjs'),
+ *  na ordem do nome do arquivo, como antes das subpastas: a ordem dos imports importa por causa dos ciclos. */
+const nomeBase = f => f.slice(f.lastIndexOf('/') + 1);
+export const arquivosMjs = dir => readdirSync(new URL(`${dir}/`, RAIZ), { recursive: true }).map(f => String(f).replace(/\\/g, '/'))
+  .filter(f => f.endsWith('.mjs')).sort((a, b) => nomeBase(a) < nomeBase(b) ? -1 : nomeBase(a) > nomeBase(b) ? 1 : 0);
+const carregar = async dir => { const ms = []; for (const f of arquivosMjs(dir)) ms.push(await import(new URL(`${dir}/${f}`, RAIZ))); return ms };
 const modulos = [...await carregar('core'), ...await carregar('ui')];
 const main = await import(new URL('ui/main.mjs', RAIZ));
 const { usarEstado } = await import(new URL('core/estado.mjs', RAIZ));
 const { ui } = await import(new URL('ui/estado.mjs', RAIZ));
-const { salvarJogo } = await import(new URL('ui/saves.mjs', RAIZ));
+const { salvarJogo } = await import(new URL('ui/inicio/saves.mjs', RAIZ));
 const { avisosTeste } = await import(new URL('ui/avisos.mjs', RAIZ));
 // #132: os estaduais (pré-temporada) ficam desligados, salvo carregarJogo({ estaduais: true }); assim cada "Jogar" é uma rodada da liga
 const { ESTADUAIS } = await import(new URL('core/estadual.mjs', RAIZ));

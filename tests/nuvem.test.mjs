@@ -3,8 +3,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { carregarJogo, clubeDaSerie, jogarRodada } from './jogo.mjs';
 
-const conta = await import(new URL('../ui/conta.mjs', import.meta.url));
-const nuvem = await import(new URL('../ui/nuvem.mjs', import.meta.url));
+const conta = await import(new URL('../ui/inicio/conta.mjs', import.meta.url));
+const nuvem = await import(new URL('../ui/inicio/nuvem.mjs', import.meta.url));
 
 function servidorFalso() {
   const srv = { linhas: {}, online: true, envios: 0 };

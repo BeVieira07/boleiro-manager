@@ -2,12 +2,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { carregarJogo, clubeDaSerie, jogarRodada, problemasNasTelas } from './jogo.mjs';
+import { arquivosMjs, carregarJogo, clubeDaSerie, jogarRodada, problemasNasTelas } from './jogo.mjs';
 
 test('nenhuma classe do CSS fica sem uso nas telas', () => {
   const raiz = new URL('..', import.meta.url);
   const css = ['style.css', 'escalacao.css', 'temporada-figma.css', 'ligas.css'].map(f => readFileSync(new URL('css/' + f, raiz), 'utf8')).join('\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/url\([^)]*\)/g, '');
-  const codigo = [...readdirSync(new URL('ui', raiz)).map(f => readFileSync(new URL('ui/' + f, raiz), 'utf8')), readFileSync(new URL('index.html', raiz), 'utf8')].join('\n');
+  const codigo = [...arquivosMjs('ui').map(f => readFileSync(new URL('ui/' + f, raiz), 'utf8')), readFileSync(new URL('index.html', raiz), 'utf8')].join('\n');
   const classes = new Set([...css.matchAll(/\.([a-zA-Z][\w-]*)/g)].map(m => m[1]).filter(c => !/^\d/.test(c)));
   const sobra = [...classes].filter(c => !new RegExp(`(^|[^\\w-])${c}([^\\w-]|$)`).test(codigo));
   assert.deepEqual(sobra, []);

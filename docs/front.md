@@ -33,14 +33,14 @@ Os nomes antigos (`--panel`, `--accent`, `--danger`…) apontam para os novos e 
 | `.chip` | opção ou filtro; `.on` ou `aria-pressed="true"` marca o ativo. Agrupe em `.chips` com `role="group"` e `aria-label`. JS: `chip(rotulo, acao, on)` em `ui/componentes.mjs`. |
 | `.pill` | informação curta, sem clique. |
 | `.tag` | status: `.ok`, `.aviso`, `.erro`, `.info`. JS: `tag(texto, tipo)`. |
-| `.pos.G/.D/.M/.A` | sigla da posição colorida pelo grupo (`posTag(p)` em `ui/posicoes.mjs`). |
+| `.pos.G/.D/.M/.A` | sigla da posição colorida pelo grupo (`posTag(p)` em `ui/clube/posicoes.mjs`). |
 | `.ovr.alto/.medio/.baixo` | overall em chip: alto 76+, médio 68–75, baixo até 67. JS: `ovrChip(v)`. |
 | `.tend` | seta de tendência do overall (`tendenciaTag(p)`). |
 | `.barra` | progresso (8 px; `.fina` 6 px). JS: `barra(pct, cor)`. |
 | `.stats` + `.stat` | linha de indicadores com rótulo, valor grande (`.stat-valor`), unidade, barra e subtexto. JS: `stat({rotulo, valor, unid, sub, cor, pct})`. |
 | `table` / `.tw` / `.tabela-rolavel` | O contêiner da tabela rola na horizontal quando precisa. Use `tabindex="0"`, `role="region"` e um nome acessível para permitir que as setas desloquem a tabela. `tr.me` destaca o seu clube, `tr.tit` os titulares, `td.n` alinha números à direita e `td.c` centraliza. |
 | `.busca` | campo de busca com ícone. |
-| `.crest` | escudo redondo (`.m` 40 px, `.g` 68 px). `crest(c)` em `ui/partida.mjs` troca pela sigla colorida se a imagem falhar. |
+| `.crest` | escudo redondo (`.m` 40 px, `.g` 68 px). `crest(c)` em `ui/partida/partida.mjs` troca pela sigla colorida se a imagem falhar. |
 
 ## Ícones
 
@@ -51,14 +51,14 @@ Os nomes antigos (`--panel`, `--accent`, `--danger`…) apontam para os novos e 
 | Módulo | O que tem |
 |---|---|
 | `ui/layout.mjs` | menu lateral (barra inferior no celular) e barra de ações do topo (#58) |
-| `ui/clube.mjs` | painel do clube (#59) |
-| `ui/elenco.mjs`, `ui/jogadores.mjs` | tabela do Elenco; filtros, busca e ordenação reaproveitados pelo Mercado (#60) |
-| `ui/base.mjs`, `css/temporada-figma.css` | aba Base do grupo Time, com resumo de vagas e chegada de jovens, lista e ações de promoção e venda (#270) |
-| `ui/escalacao.mjs`, `css/escalacao.css` | campo com cartas (#61) |
-| `ui/partida.mjs` | linha do tempo, escudo e modal; `ui/aovivo.mjs` é a tela da rodada ao vivo (#62, #135) |
-| `ui/competicoes.mjs` | painel de Competições: próximos jogos, uma linha por competição e as que ficaram de fora; cada competição devolve o cartão dela (#175, maquete em `docs/maquetes/competicoes.png`) |
-| `ui/mercado.mjs` | tela Mercado: indicadores (`stat`), abas com contagem, filtros (país, liga, clube, posição, busca, valor máx.) e tabela com situação e negociação (#186, maquete em `docs/maquetes/mercado.png`); o botão de ver o jogador fica de fora até haver tela de detalhe |
-| `ui/artilharia.mjs` | tela Artilharia: filtros por competição, pódio, ranking com empate e "seus artilheiros"; todas as competições viram o mesmo modelo de linhas (`linhasDe`) (#184, maquete em `docs/maquetes/artilharia.png`) |
+| `ui/clube/clube.mjs` | painel do clube (#59) |
+| `ui/clube/elenco.mjs`, `ui/clube/jogadores.mjs` | tabela do Elenco; filtros, busca e ordenação reaproveitados pelo Mercado (#60) |
+| `ui/clube/base.mjs`, `css/temporada-figma.css` | aba Base do grupo Time, com resumo de vagas e chegada de jovens, lista e ações de promoção e venda (#270) |
+| `ui/clube/escalacao.mjs`, `css/escalacao.css` | campo com cartas (#61) |
+| `ui/partida/partida.mjs` | linha do tempo, escudo e modal; `ui/partida/aovivo.mjs` é a tela da rodada ao vivo (#62, #135) |
+| `ui/temporada/competicoes.mjs` | painel de Competições: próximos jogos, uma linha por competição e as que ficaram de fora; cada competição devolve o cartão dela (#175, maquete em `docs/maquetes/competicoes.png`) |
+| `ui/clube/mercado.mjs` | tela Mercado: indicadores (`stat`), abas com contagem, filtros (país, liga, clube, posição, busca, valor máx.) e tabela com situação e negociação (#186, maquete em `docs/maquetes/mercado.png`); o botão de ver o jogador fica de fora até haver tela de detalhe |
+| `ui/temporada/artilharia.mjs` | tela Artilharia: filtros por competição, pódio, ranking com empate e "seus artilheiros"; todas as competições viram o mesmo modelo de linhas (`linhasDe`) (#184, maquete em `docs/maquetes/artilharia.png`) |
 | `ui/avisos.mjs` | `avisar` (toasts), `confirmar` e `pedirValor` no lugar de `alert`, `confirm` e `prompt` (#64) |
 
 Atributos de evento (ligados em `ui/main.mjs`): `data-acao` (clique), `data-mudar` (change) e `data-digitar` (cada tecla; use quando a tela não pode ser redesenhada inteira, para o campo não perder o foco).
@@ -74,6 +74,6 @@ Atributos de evento (ligados em `ui/main.mjs`): `data-acao` (clique), `data-muda
 - Animações e transições somem com `prefers-reduced-motion`.
 - A página faz a rolagem vertical do conteúdo. Menus e modais que excedem a altura disponível rolam no próprio painel. Um modal pausa a rolagem da página enquanto estiver aberto.
 - Para auditar largura e painéis roláveis no Chrome, execute `npm start` e `node scripts/navegador.mjs http://localhost:3000/ scripts/medir-rolagem.js` com `LARGURA` em 360, 390, 1366 e 1920. Use `ALTURA` para testar janelas baixas.
-- Landing (#316): `ui/landing.mjs` (`vLanding`, tela `landing`) é a primeira tela ao abrir o site; "Jogar agora" leva ao menu (`menu`) e "Jogar a rodada 1" ou os cartões de clube abrem a escolha de clube. Estilos com o prefixo `lp-`. Nos testes, `carregarJogo({ boot: true })` já clica em "Jogar agora"; use `landing: true` para parar na landing.
-- Ao vivo (#310, #314): tática, formação e trocas ficam numa janela só (`ui/expulsao.mjs`, camada `#av-expulsao`), em duas variantes: **pausa** (aberta pelo botão Pausar, cabeçalho dourado) e **expulsão** (abre sozinha no vermelho do seu time, cabeçalho vermelho). As mudanças ficam num rascunho e só valem ao continuar. Abaixo de 800 px a janela vira folha de baixo, com a tática em linhas que rolam para o lado. No replay da liga a janela não abre.
+- Landing (#316): `ui/inicio/landing.mjs` (`vLanding`, tela `landing`) é a primeira tela ao abrir o site; "Jogar agora" leva ao menu (`menu`) e "Jogar a rodada 1" ou os cartões de clube abrem a escolha de clube. Estilos com o prefixo `lp-`. Nos testes, `carregarJogo({ boot: true })` já clica em "Jogar agora"; use `landing: true` para parar na landing.
+- Ao vivo (#310, #314): tática, formação e trocas ficam numa janela só (`ui/partida/expulsao.mjs`, camada `#av-expulsao`), em duas variantes: **pausa** (aberta pelo botão Pausar, cabeçalho dourado) e **expulsão** (abre sozinha no vermelho do seu time, cabeçalho vermelho). As mudanças ficam num rascunho e só valem ao continuar. Abaixo de 800 px a janela vira folha de baixo, com a tática em linhas que rolam para o lado. No replay da liga a janela não abre.
 - `tests/acessibilidade.test.mjs` percorre todas as telas e confere essas regras; `tests/telas.test.mjs` garante que nenhuma classe do CSS fica sem uso.

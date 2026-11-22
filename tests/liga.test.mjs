@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { carregarJogo, clubeDaSerie } from './jogo.mjs';
 
-const conta = await import(new URL('../ui/conta.mjs', import.meta.url));
+const conta = await import(new URL('../ui/inicio/conta.mjs', import.meta.url));
 const { avisosTeste } = await import(new URL('../ui/avisos.mjs', import.meta.url));
 const esperar = () => new Promise(r => setTimeout(r, 0)); // confirmar() não espera o callback async
 
