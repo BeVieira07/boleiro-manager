@@ -6,7 +6,7 @@ import { carregarJogo, clubeDaSerie, jogarRodada, problemasNasTelas } from './jo
 
 test('nenhuma classe do CSS fica sem uso nas telas', () => {
   const raiz = new URL('..', import.meta.url);
-  const css = ['style.css', 'escalacao.css', 'temporada-figma.css'].map(f => readFileSync(new URL('css/' + f, raiz), 'utf8')).join('\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/url\([^)]*\)/g, '');
+  const css = ['style.css', 'escalacao.css', 'temporada-figma.css', 'ligas.css'].map(f => readFileSync(new URL('css/' + f, raiz), 'utf8')).join('\n').replace(/\/\*[\s\S]*?\*\//g, '').replace(/url\([^)]*\)/g, '');
   const codigo = [...readdirSync(new URL('ui', raiz)).map(f => readFileSync(new URL('ui/' + f, raiz), 'utf8')), readFileSync(new URL('index.html', raiz), 'utf8')].join('\n');
   const classes = new Set([...css.matchAll(/\.([a-zA-Z][\w-]*)/g)].map(m => m[1]).filter(c => !/^\d/.test(c)));
   const sobra = [...classes].filter(c => !new RegExp(`(^|[^\\w-])${c}([^\\w-]|$)`).test(codigo));
