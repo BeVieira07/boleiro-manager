@@ -153,7 +153,8 @@ test('a vaga riscada acompanha o movimento, a substituição usa a nova vaga e o
     return { mover: a.elenco.xi[5], outro: a.elenco.xi[1], nome: a.elenco.expulsos.get(3),
       reserva: banco(g, min).find(({ p, motivo }) => p.pos === 'D' && !motivo).p.id };
   })()`);
-  assert.doesNotMatch(caixa.innerHTML, /avExpVaga\|/);
+  assert.match(caixa.innerHTML, /data-acao="avExpVaga\|3" aria-pressed="false"[^>]*>[\s\S]*?Trocar de posição/, '#326: sem ninguém escolhido, a vaga só se marca');
+  assert.doesNotMatch(caixa.innerHTML, /Mover .*para cá/);
   j.acao(`avExpSair|${mover}`);
   assert.match(caixa.innerHTML, /<button[^>]*data-acao="avExpVaga\|3" aria-label="Mover .*para cá, vaga de ZAG/);
   j.acao('avExpVaga|3');
@@ -215,7 +216,7 @@ test('na pausa, o movimento usa a vaga da formação exibida e o goleiro só pod
     return { form: Object.keys(FORMS).find(f => f !== elenco.form), goleiro: elenco.xi[0], jogador: elenco.xi[1] };
   })()`);
   j.acao(`avExpSair|${goleiro}`);
-  assert.doesNotMatch(caixa.innerHTML, /avExpVaga\|/);
+  assert.doesNotMatch(caixa.innerHTML, /Mover .*para cá/, 'o goleiro não vai para a vaga de linha');
   j.acao(`avExpSair|${jogador}`);
   assert.match(caixa.innerHTML, /aria-live="polite">A vaga do goleiro/);
   assert.equal(j.run('ui.vivo.expulsao.rascunho.length'), 0);
@@ -568,12 +569,12 @@ test('no replay, pausar só para o relógio: a janela não abre e a dica do repl
   assert.equal(j.run('ui.vivo.min'), 63);
 });
 
-test('a vaga do expulso fica riscada e só é acionável após escolher um jogador em campo', t => {
+test('a vaga do expulso fica riscada e não é um jogador: tocar nela só marca a vaga (#326)', t => {
   const j = novo(), r = jogoComExpulsao(j), caixa = capturarJanela(t);
   r.passo();
   const pid = j.run("ui.vivo.g.ev.find(e => e.t === 'vermelho').pid");
   assert.match(caixa.innerHTML, /exp-carta-vermelha/);
-  assert.doesNotMatch(caixa.innerHTML, /avExpVaga\|/);
+  assert.match(caixa.innerHTML, /data-acao="avExpVaga\|\d+" aria-pressed="false"/);
   assert.ok(!caixa.innerHTML.includes(`avExpSair|${pid}`), 'a carta do expulso não tem ação');
   j.acao(`avExpSair|${pid}`);
   assert.equal(j.run('ui.vivo.expulsao.sel'), null);
@@ -582,7 +583,7 @@ test('a vaga do expulso fica riscada e só é acionável após escolher um jogad
   j.acao('avPausar');
   assert.match(caixa.innerHTML, />Pausado</);
   assert.match(caixa.innerHTML, /exp-carta-vermelha/, 'a vaga continua riscada na pausa');
-  assert.doesNotMatch(caixa.innerHTML, /avExpVaga\|/);
+  assert.match(caixa.innerHTML, /data-acao="avExpVaga\|\d+" aria-pressed="false"/);
   assert.match(caixa.innerHTML, /10 jogadores/);
   j.acao(`avExpSair|${pid}`);
   assert.equal(j.run('ui.vivo.expulsao.sel'), null);
@@ -722,4 +723,35 @@ test('na defesa a luva do goleiro chega no ponto da bola', () => {
     const giro = Number(html.match(/--gr4:(-?[\d.]+)deg/)[1]);
     assert.equal(Math.sign(giro), alvo.startsWith('esq') ? -1 : 1, `${alvo}: o goleiro vai para o lado da bola`);
   }
+});
+
+test('tocar na vaga do expulso e depois num jogador em campo leva o jogador para a vaga (#326)', t => {
+  const j = novo(), r = jogoComExpulsao(j), caixa = capturarJanela(t);
+  r.passo();
+  const vaga = j.run('[...ui.vivo.expulsao.elenco.expulsos.keys()][0]');
+  assert.ok(vaga > 0);
+  assert.match(caixa.innerHTML, new RegExp(`data-acao="avExpVaga\\|${vaga}" aria-pressed="false"`), 'a carta do expulso é um botão');
+  j.acao(`avExpVaga|${vaga}`);
+  assert.equal(j.run('ui.vivo.expulsao.vagaSel'), vaga);
+  assert.match(caixa.innerHTML, new RegExp(`data-acao="avExpVaga\\|${vaga}" aria-pressed="true"`));
+  assert.match(j.run('ui.vivo.expulsao.msg'), /Toque em quem vai para a vaga de/);
+  // com a vaga marcada, o banco não serve: só quem está em campo vai para a vaga do expulso
+  const reserva = j.run('banco(ui.vivo.g, ui.vivo.min).find(x => !x.motivo && x.p.pos !== "G").p.id');
+  j.acao(`avExpEntrar|${reserva}`);
+  assert.match(j.run('ui.vivo.expulsao.msg'), /Só um jogador em campo/);
+  assert.equal(j.run('ui.vivo.expulsao.rascunho.length'), 0);
+  const origem = j.run(`ui.vivo.expulsao.elenco.xi.findIndex((id, i) => id && i > 0 && i !== ${vaga})`);
+  const pid = j.run(`ui.vivo.expulsao.elenco.xi[${origem}]`);
+  j.acao(`avExpSair|${pid}`);
+  assert.equal(j.run(`ui.vivo.expulsao.elenco.xi[${vaga}]`), pid, 'o jogador foi para a vaga do expulso');
+  assert.equal(j.run(`ui.vivo.expulsao.elenco.xi[${origem}]`), null, 'a vaga dele ficou vazia');
+  assert.equal(j.run(`ui.vivo.expulsao.elenco.expulsos.has(${origem})`), true, 'e riscada com o expulso');
+  assert.equal(j.run('ui.vivo.expulsao.vagaSel'), null);
+  assert.equal(j.run('ui.vivo.expulsao.sel'), null);
+  assert.deepEqual(j.run('ui.vivo.expulsao.rascunho.map(e => e.t)'), ['posicao'], 'não gasta substituição');
+  j.acao(`avExpVaga|${origem}`);
+  j.acao(`avExpVaga|${origem}`);
+  assert.equal(j.run('ui.vivo.expulsao.vagaSel'), null, 'tocar de novo desmarca');
+  j.acao('avExpConfirmar');
+  assert.equal(j.run(`elencoParaTrocas(ui.vivo.g, ui.vivo.min).xi[${vaga}]`), pid, 'vale no jogo depois de continuar');
 });

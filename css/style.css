@@ -576,6 +576,8 @@ body.em-jogo .avisos{bottom:24px}
 .exp-janela .carta.exp-carta-vermelha{background:var(--perigo-esc);border-color:var(--perigo);color:var(--perigo-claro)}
 .exp-carta-vermelha .carta-vaga{background:var(--perigo-forte);color:#fff;text-transform:uppercase}
 .exp-janela .carta.exp-destino{border-color:var(--ouro);cursor:pointer}
+.exp-janela button.carta.exp-carta-vermelha{cursor:pointer}
+.exp-janela .carta.exp-carta-vermelha.sel{border:2px solid var(--ouro);box-shadow:0 0 0 2px var(--ouro-esc)}
 .exp-janela .carta.exp-destino:hover{border-style:solid;box-shadow:0 0 0 2px var(--ouro)}
 .exp-carta-vermelha small{font-size:11px;line-height:1.1}
 .exp-passos,.exp-reservas{margin:0;padding:0;list-style:none}
