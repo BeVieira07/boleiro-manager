@@ -32,9 +32,11 @@ async function chamarFuncao(corpo) {
   const c = clienteLogado(); if (!c) { avisar('Você não está mais conectado. Entre na sua conta de novo.', 'erro'); return null }
   const { data, error } = await c.functions.invoke(FUNCAO, { body: corpo });
   if (error) {
-    if (error.context && error.context.status === 401) { sairDaLiga(); usarEstado(null); go('menu'); await sessaoEncerrada(); return null } // #95: como voltarMenu
+    const status = error.context?.status;
+    if (status === 401) { sairDaLiga(); usarEstado(null); go('menu'); await sessaoEncerrada(); return null } // #95: como voltarMenu
     let msg = error.message;
     try { const j = await error.context.json(); if (j && j.erro) msg = j.erro } catch { /* resposta sem JSON */ }
+    if (status === 404 && msg === 'Liga não encontrada.') { await voltarDaLiga(); return null }
     avisar(msg, 'erro'); return null;
   }
   return data;
@@ -52,18 +54,25 @@ export function comecarLiga(id) {
   confirmar({ titulo: 'Começar a liga?', texto: 'Depois de começar, ninguém mais entra e os clubes ficam fixos.', ok: 'Começar' }, async () => {
     pararLobby(); // o dono entra por aqui; o tempo real do lobby é para os outros (#235)
     const r = await chamarFuncao({ liga: id, acao: 'iniciar' });
-    if (r && r.iniciada) { avisar('A liga começou!', 'ok'); await entrarNaLiga(id) } else await abrirLobby(id); // não começou: volta a escutar o lobby
+    if (r && r.iniciada) { avisar('A liga começou!', 'ok'); await entrarNaLiga(id) }
+    else if (ui.view === 'lobby') await abrirLobby(id); // não começou: volta a escutar o lobby
   });
 }
 
 async function carregar(id) {
   const c = clienteLogado(), eu = usuarioAtual() && usuarioAtual().id;
+  const recarregando = ui.liga?.id === id;
   const [l, e, en] = await Promise.all([
     c.from('ligas').select('id, nome, dono_id, status, rodada, versao').eq('id', id).maybeSingle(),
     c.rpc('liga_estado_meu', { p_liga: id }), // #121: o estado sem o que é privado dos outros técnicos
     c.from('liga_membros').select('user_id, pronto_rodada').eq('liga_id', id) // #78: a escalação dos outros não é lida, só quem confirmou
   ]);
-  if (l.error || e.error || !l.data || !e.data) { avisar('Não foi possível abrir a liga.', 'erro'); return false }
+  if (recarregando && ui.liga?.id !== id) return false;
+  if (!l.error && !l.data) {
+    if (!ui.liga?.saindo) await voltarDaLiga();
+    return false;
+  }
+  if (l.error || e.error || !e.data) { avisar('Não foi possível abrir a liga.', 'erro'); return false }
   // a escalação, a tática e os ajustes de pênalti ainda não confirmados só existem aqui
   const uc0 = ui.liga && ui.liga.id === id && S && S.managers[eu] && !S.managers[eu].demitido && clubDo(S.managers[eu]);
   const meu = uc0 && { clube: uc0.id, lineup: uc0.lineup || [], formation: uc0.formation, tatica: uc0.tatica,
@@ -122,6 +131,10 @@ export function sairDaLiga() {
   canal = null; ui.liga = null;
 }
 
+export async function voltarDaLiga(mensagem = 'Esta liga não está mais disponível.', tipo = 'aviso') {
+  sairDaLiga(); usarEstado(null); avisar(mensagem, tipo); await abrirLigas();
+}
+
 /** O estado mudou sem rodada nova (mercado): baixa de novo, sem replay. */
 async function recarregar() { const L = ui.liga; if (L && !L.atualizando && (await carregar(L.id))) render() }
 /* #124: cada mudança de versão faria todos baixarem o estado inteiro (~600 KB). A primeira mudança abre uma janela de
@@ -155,6 +168,7 @@ export async function recusarClubesLiga() {
     if (!r || !ui.liga || ui.liga.id !== L.id) return;
     if (r.jaJogada) { await atualizarAposRodada(); return }
     const jogo = await chamarFuncao({ liga: L.id, acao: 'jogar', rodada });
+    if (ui.liga?.id !== L.id) return;
     if (jogo?.jogada || jogo?.jaJogada) await atualizarAposRodada();
     else if (await carregar(L.id)) render();
   } finally { recusando = false }
@@ -169,6 +183,7 @@ export async function atualizarAposRodada() {
   if (ui.liga.rodada === antes) { render(); return }
   const { data: r } = await clienteLogado().from('liga_resultados').select('temporada, rodada, jogos').eq('liga_id', L.id)
     .order('temporada', { ascending: false }).order('rodada', { ascending: false }).limit(1).maybeSingle();
+  if (ui.liga?.id !== L.id) return;
   if (!r) { render(); return }
   const pre = r.rodada < 0; // #132: data do estadual (RODADA_ESTADUAL = primeira data)
   const games = r.jogos.filter(g => !g.copa), copa = r.jogos.filter(g => g.copa);
@@ -188,7 +203,11 @@ export async function confirmarLiga() {
   const escalacao = { lineup: uc.lineup, cobradores: uc.cobradores || [], cantos: uc.cantos || {} };
   const { error } = await c.from('liga_entradas').upsert({ liga_id: L.id, user_id: eu, rodada: L.rodada, escalacao,
     formacao: uc.formation, estilo: t.estilo, modo: t.modo, pronto: true, atualizado_em: new Date().toISOString() }, { onConflict: 'liga_id,user_id' });
-  if (error) { avisar('A rodada já mudou. Atualizando a liga…', 'aviso'); await atualizarAposRodada(); return } // RLS recusa rodada velha
+  if (error) { // RLS recusa rodada velha ou liga indisponível
+    await atualizarAposRodada();
+    if (ui.liga?.id === L.id) avisar('A confirmação da rodada não foi salva.', 'aviso');
+    return;
+  }
   if (!L.prontos.includes(eu)) L.prontos.push(eu);
   render();
   const r = await chamarFuncao({ liga: L.id, acao: 'jogar' });
@@ -229,7 +248,7 @@ export function vLigaJogo() {
     <thead><tr><th>Técnico</th><th>Clube</th><th>Série</th><th class="n">Posição</th><th>Rodada ${S.round + 1}</th><td></td></tr></thead><tbody>${linhas}</tbody></table></div></section>
   ${vPropostas()}
   <p class="muted">Negócios com a IA aparecem nas notícias de todos. A rodada é jogada quando todos confirmam${L.dono ? ' ou quando você força' : ' ou quando o dono força'}.</p>
-  <div class="row">${L.dono && L.prontos.length < n ? '<button class="btn sec" data-acao="forcarLiga">Forçar rodada</button>' : ''}<button class="btn sec" data-acao="go|tabela">Ver classificação</button>${botaoSairLiga(L.id)}</div>`;
+  <div class="row">${L.dono && L.prontos.length < n ? '<button class="btn sec" data-acao="forcarLiga">Forçar rodada</button>' : ''}<button class="btn sec" data-acao="go|tabela">Ver classificação</button>${botaoSairLiga(L.id)}${L.dono ? botaoExcluirLiga(L.id) : ''}</div>`;
 }
 
 /* ---------- propostas entre técnicos (#36): as regras estão em core/propostas.mjs e rodam no servidor ---------- */
@@ -273,11 +292,19 @@ function vPropostas() {
 /* ---------- saída de membros (#37): o clube de quem sai volta para a IA; o dono que sai passa a liga ao membro mais antigo ---------- */
 export const botaoRemover = (ligaId, membro, nome) => `<button class="btn fantasma sm" data-acao="removerMembro|${esc(ligaId)}|${esc(membro)}" aria-label="Remover ${esc(nome)} da liga">Remover</button>`;
 export const botaoSairLiga = ligaId => `<button class="btn fantasma" data-acao="deixarLiga|${esc(ligaId)}">Sair da liga</button>`;
+export const botaoExcluirLiga = ligaId => `<button class="btn perigo" data-acao="excluirLiga|${esc(ligaId)}">Excluir liga</button>`;
+export function excluirLiga(id) {
+  confirmar({ titulo: 'Excluir liga?', texto: 'A liga vai desaparecer para todos os membros. Esta ação não pode ser desfeita.', ok: 'Excluir liga', perigo: true }, async () => {
+    pararLobby();
+    if (await chamarFuncao({ liga: id, acao: 'excluir' })) await voltarDaLiga('Liga excluída.', 'ok');
+    else if (ui.view === 'lobby') await abrirLobby(id);
+  });
+}
 export function deixarLiga(id) {
   confirmar({ titulo: 'Sair da liga?', texto: 'Seu clube volta a ser da IA e você deixa de participar desta liga. Se você é o dono, a liga passa para o membro mais antigo.', ok: 'Sair da liga', perigo: true }, async () => {
     if (ui.liga) ui.liga.saindo = true; // o aviso de tempo real da própria saída não deve mostrar "não faz mais parte"
     if (!(await chamarFuncao({ liga: id, acao: 'sair' }))) { if (ui.liga) ui.liga.saindo = false; return }
-    sairDaLiga(); usarEstado(null); avisar('Você saiu da liga.', 'ok'); await abrirLigas();
+    await voltarDaLiga('Você saiu da liga.', 'ok');
   });
 }
 export function removerMembro(id, membro) {

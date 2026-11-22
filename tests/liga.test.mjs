@@ -5,10 +5,12 @@ import assert from 'node:assert/strict';
 import { carregarJogo, clubeDaSerie } from './jogo.mjs';
 
 const conta = await import(new URL('../ui/conta.mjs', import.meta.url));
+const { avisosTeste } = await import(new URL('../ui/avisos.mjs', import.meta.url));
+const esperar = () => new Promise(r => setTimeout(r, 0)); // confirmar() não espera o callback async
 
 // servidor falso: imita as funções criar_liga / entrar_liga / escolher_clube e o filtro "só membros veem"
 function servidorFalso() {
-  const srv = { ligas: [], membros: [], nomes: { a: 'Ana', b: 'Bia', c: 'Caio' } };
+  const srv = { ligas: [], membros: [], nomes: { a: 'Ana', b: 'Bia', c: 'Caio' }, chamadas: [] };
   srv.cliente = uid => {
     const minhas = () => srv.ligas.filter(l => srv.membros.some(m => m.liga_id === l.id && m.user_id === uid));
     const erro = message => ({ data: null, error: { message } });
@@ -33,6 +35,15 @@ function servidorFalso() {
     return {
       auth: { getSession: async () => ({ data: { session: { user: { id: uid, email: uid + '@x.com' } } } }), onAuthStateChange: () => ({}) },
       rpc: async (nome, args) => rpc[nome](args),
+      functions: { invoke: async (nome, { body }) => {
+        srv.chamadas.push({ nome, body });
+        assert.equal(body.acao, 'excluir');
+        const l = srv.ligas.find(l => l.id === body.liga);
+        if (l?.dono_id !== uid) return { data: null, error: { message: 'Só o dono pode excluir a liga.' } };
+        srv.ligas = srv.ligas.filter(liga => liga.id !== l.id);
+        srv.membros = srv.membros.filter(m => m.liga_id !== l.id);
+        return { data: { ok: true }, error: null };
+      } },
       from: tabela => ({
         select: () => {
           if (tabela === 'profiles') return {
@@ -76,6 +87,7 @@ test('criar liga, convidar por código e cada amigo escolher um clube diferente'
   j.campo('clubeLiga', clA);
   await j.acao('criarLiga');
   assert.equal(j.run('ui.view'), 'lobby');
+  assert.match(j.html(), /data-acao="excluirLiga\|L1"[^>]*>Excluir liga/);
   const codigo = srv.ligas[0].codigo_convite;
   assert.match(j.html(), new RegExp(`<b[^>]*>${codigo}</b>`), 'o lobby mostra o código de convite');
 
@@ -88,6 +100,7 @@ test('criar liga, convidar por código e cada amigo escolher um clube diferente'
   k.campo('codigoLiga', ' ' + codigo.toLowerCase());
   await k.acao('entrarLiga');
   assert.equal(k.run('ui.view'), 'lobby');
+  assert.doesNotMatch(k.html(), /Excluir liga/);
   assert.match(k.html(), /Ana/); assert.match(k.html(), /escolhendo clube/);
   assert.match(k.html(), new RegExp(`value="${clA}"[^>]*disabled`), 'o clube da Ana aparece ocupado');
   await k.acao(`escolherClubeLiga|L1`, clA);
@@ -100,6 +113,36 @@ test('criar liga, convidar por código e cada amigo escolher um clube diferente'
   assert.match(k.html(), /2 técnico/);
 });
 
+test('no lobby, excluir a liga exige confirmação e atualiza a lista de todos os membros', async () => {
+  const srv = servidorFalso();
+  await como(srv, 'a');
+  const j = carregarJogo({ boot: true });
+  j.campo('nomeLiga', 'Pelada'); j.campo('serieLigaA', true); j.campo('clubeLiga', clubeDaSerie(j, 'A', 0));
+  await j.acao('criarLiga');
+  await srv.cliente('b').rpc('entrar_liga', { codigo: srv.ligas[0].codigo_convite });
+  avisosTeste.autoConfirmar = false;
+  try {
+    await j.acao('excluirLiga|L1');
+    assert.match(j.alertas.at(-1), /todos os membros.*não pode ser desfeita/);
+    assert.deepEqual(srv.chamadas, []);
+    await j.acao('responderDialogo|nao');
+    assert.equal(j.run('ui.view'), 'lobby');
+    assert.equal(srv.ligas.length, 1);
+    assert.deepEqual(srv.chamadas, []);
+
+    await j.acao('excluirLiga|L1');
+    await j.acao('responderDialogo|sim'); await esperar();
+    assert.deepEqual(srv.chamadas, [{ nome: 'jogar-rodada', body: { liga: 'L1', acao: 'excluir' } }]);
+    assert.equal(j.run('ui.view'), 'ligas');
+    assert.match(j.html(), /nenhuma liga/);
+    assert.equal(j.alertas.at(-1), 'Liga excluída.');
+  } finally { avisosTeste.autoConfirmar = true }
+
+  await como(srv, 'b');
+  await j.acao('abrirLigas');
+  assert.match(j.html(), /nenhuma liga/);
+});
+
 test('quem não é membro não vê a liga', async () => {
   const srv = servidorFalso();
   const j = carregarJogo({ boot: true });
@@ -110,7 +153,8 @@ test('quem não é membro não vê a liga', async () => {
   await j.acao('abrirLigas');
   assert.doesNotMatch(j.html(), /Secreta/);
   await j.acao('abrirLobby|L1');
-  assert.ok(j.alertas.some(a => a.includes('Não foi possível abrir')));
+  assert.equal(j.run('ui.view'), 'ligas');
+  assert.equal(j.alertas.at(-1), 'Esta liga não está mais disponível.');
 });
 
 test('deslogado: sem botão de ligas e a tela pede login', async () => {

@@ -10,7 +10,7 @@ import { getData, ui } from './estado.mjs';
 import { crest } from './partida.mjs';
 import { go, render } from './telas.mjs';
 import { avisar } from './avisos.mjs';
-import { botaoRemover, botaoSairLiga, entrarNaLiga } from './ligajogo.mjs';
+import { botaoExcluirLiga, botaoRemover, botaoSairLiga, entrarNaLiga, voltarDaLiga } from './ligajogo.mjs';
 
 const liga = { lista: null, atual: null, erro: null };
 const SERIES = ['A', 'B', 'C', 'D'];
@@ -76,13 +76,18 @@ export async function entrarLiga() {
 /** Lobby: membros da liga, com nome e clube. */
 export async function abrirLobby(id) {
   const c = clienteLogado(); if (!c) return;
+  const nesteLobby = () => ui.view === 'lobby' && liga.atual?.id === id;
+  const atualizando = nesteLobby();
   const [l, m] = await Promise.all([
     c.from('ligas').select('id, nome, codigo_convite, status, series, dono_id').eq('id', id).maybeSingle(),
     c.from('liga_membros').select('user_id, club_id, entrou_em').eq('liga_id', id).order('entrou_em')
   ]);
-  if (l.error || m.error || !l.data) { avisar('Não foi possível abrir a liga.', 'erro'); return }
+  if (atualizando && !nesteLobby()) return;
+  if (l.error || m.error) { avisar('Não foi possível abrir a liga.', 'erro'); return }
+  if (!l.data) return voltarDaLiga();
   const ids = m.data.map(x => x.user_id);
   const p = await c.from('profiles').select('id, nome').in('id', ids);
+  if (atualizando && !nesteLobby()) return;
   const nomes = Object.fromEntries((p.data || []).map(x => [x.id, x.nome]));
   liga.atual = { ...l.data, membros: m.data.map(x => ({ ...x, nome: nomes[x.user_id] || 'Técnico' })) };
   go('lobby');
@@ -156,5 +161,5 @@ export function vLobby() {
    <select aria-label="Seu clube" data-mudar="escolherClubeLiga|${esc(l.id)}"><option value="">Escolha…</option>${opcoesClubes(l.series, ocupados, meu.club_id)}</select></div>` : ''}
   ${acaoLiga(l, eu)}
   <div class="row"><button class="btn sec" data-acao="abrirLobby|${esc(l.id)}">Atualizar</button>
-   <button class="btn sec" data-acao="abrirLigas">← Minhas ligas</button>${meu ? botaoSairLiga(l.id) : ''}</div></div>`;
+   <button class="btn sec" data-acao="abrirLigas">← Minhas ligas</button>${meu ? botaoSairLiga(l.id) : ''}${l.dono_id === eu ? botaoExcluirLiga(l.id) : ''}</div></div>`;
 }

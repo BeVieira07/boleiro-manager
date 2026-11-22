@@ -15,6 +15,7 @@ const CORS = {
 const resposta = (corpo: unknown, status = 200) =>
   new Response(JSON.stringify(corpo), { status, headers: { ...CORS, 'Content-Type': 'application/json' } });
 const erro = (msg: string, status = 400) => resposta({ erro: msg }, status);
+const ligaNaoEncontrada = () => erro('Liga não encontrada.', 404);
 // #79: a semente (seed) e o gerador (rng) ficam em liga_segredo, que só o servidor lê; o gatilho do banco os tira do estado
 // gravado, e aqui eles voltam antes de rodar as regras. Sem a tabela ou sem linha (estado antigo), vale o que estiver no estado.
 async function lerEstado(admin: any, ligaId: string) {
@@ -40,7 +41,7 @@ Deno.serve(async (req) => {
     const ligaId = String(corpo.liga || ''), acao = corpo.acao, forcar = !!corpo.forcar;
 
     const { data: liga } = await admin.from('ligas').select('id, dono_id, status, rodada, versao, series').eq('id', ligaId).maybeSingle();
-    if (!liga) return erro('Liga não encontrada.', 404);
+    if (!liga) return ligaNaoEncontrada();
     const { data: membros } = await admin.from('liga_membros').select('user_id, club_id').eq('liga_id', ligaId);
     if (!membros || !membros.some((m) => m.user_id === eu)) return erro('Você não é membro desta liga.', 403);
 
@@ -65,10 +66,12 @@ Deno.serve(async (req) => {
       // (duas confirmações ao mesmo tempo, não é erro); senão foi o mercado, e a rodada é refeita com o estado novo.
       for (let tentativa = 0; tentativa < 3; tentativa++) {
         const { data: l } = await admin.from('ligas').select('status, rodada').eq('id', ligaId).single();
+        if (!l) return ligaNaoEncontrada();
         if (l.status !== 'andamento') return erro('A liga ainda não começou.', 409);
         if (l.rodada !== liga.rodada) return resposta({ ok: true, jogada: false, jaJogada: true });
         const { data: entradas } = await admin.from('liga_entradas').select('*').eq('liga_id', ligaId).eq('rodada', l.rodada);
         const est = await lerEstado(admin, ligaId);
+        if (!est) return ligaNaoEncontrada();
         const prontos = new Set((entradas || []).filter((e) => e.pronto).map((e) => e.user_id));
         // #37: quem está sem clube (escolhendo uma proposta) não é esperado
         const semClube = new Set(Object.values(est.estado.managers || {}).filter((t: any) => t.demitido).map((t: any) => t.id));
@@ -92,9 +95,10 @@ Deno.serve(async (req) => {
     }
 
     if (acao === 'mercado') { // #35: a resposta da IA é sorteada aqui, então recarregar a página não muda nada
+      if (liga.status !== 'andamento') return erro('A liga ainda não começou.', 409);
       for (let tentativa = 0; tentativa < 3; tentativa++) {
         const est = await lerEstado(admin, ligaId);
-        if (!est || liga.status !== 'andamento') return erro('A liga ainda não começou.', 409);
+        if (!est) return ligaNaoEncontrada();
         if (corpo.mercado?.tipo === 'recusarClubes') {
           const { data: atual } = await admin.from('ligas').select('rodada').eq('id', ligaId).single();
           if (atual?.rodada !== corpo.rodada) return resposta({ ok: true, jaJogada: true });
@@ -112,6 +116,14 @@ Deno.serve(async (req) => {
       }
       return erro('A liga mudou ao mesmo tempo. Tente de novo.', 409);
     }
+    if (acao === 'excluir') {
+      if (liga.dono_id !== eu) return erro('Só o dono pode excluir a liga.', 403);
+      const { data: excluida, error } = await admin.rpc('liga_excluir', { p_liga: ligaId, p_dono: eu });
+      if (error) throw error;
+      if (excluida) return resposta({ ok: true });
+      const { data: atual } = await admin.from('ligas').select('id').eq('id', ligaId).maybeSingle();
+      return atual ? erro('Só o dono pode excluir a liga.', 403) : ligaNaoEncontrada();
+    }
     if (acao === 'sair' || acao === 'remover') { // #37: sair da liga, ou o dono remove um membro; o clube volta para a IA
       const alvo = acao === 'sair' ? eu : String(corpo.membro || '');
       if (acao === 'remover' && liga.dono_id !== eu) return erro('Só o dono remove membros.', 403);
@@ -121,6 +133,7 @@ Deno.serve(async (req) => {
         let p_estado = null, p_versao = null;
         if (liga.status === 'andamento') {
           const est = await lerEstado(admin, ligaId);
+          if (!est) return ligaNaoEncontrada();
           // bloco síncrono, como na rodada
           const r = removerTecnicoLiga(est.estado, alvo);
           if (r.erro) return erro(r.erro);
