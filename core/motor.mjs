@@ -22,13 +22,13 @@ export function getXI(club){
   if(ehHumano(club)){club.lineup=(club.lineup||[]).filter(id=>P[id]&&P[id].clubId===club.id);return club.lineup}
   return autoXI(club);
 }
-export function power(club,elenco){
+export function power(club,elenco,energia){
   const vagas=elenco?.xi||getXI(club),xi=vagas.map(id=>P[id]).filter(Boolean);
   // com 11 titulares na ordem das vagas, quem joga fora de posição rende menos
   const sl=(elenco||xi.length===11)?slotsDe(elenco?.form||club.formation):null;
   const xe=vagas.flatMap((id,i)=>{
     const p=P[id];
-    return p?[{pos:p.pos,ovr:(sl?ovrNaPosicao(p,sl[i]):p.ovr)*fatorEnergia(p)}]:[];
+    return p?[{pos:p.pos,ovr:(sl?ovrNaPosicao(p,sl[i]):p.ovr)*fatorEnergia(p,energia?.(p))}]:[];
   });
   const grp=pos=>xe.filter(p=>p.pos===pos);
   const avg=(arr,f)=>arr.length?arr.reduce((s,p)=>s+p.ovr,0)/arr.length:f;
@@ -51,10 +51,11 @@ export function chancesDoJogo(ph,pa,neutro=false){
   const la=clamp(1.1*Math.pow(pa.att/ph.def,3)*Math.pow(pa.mid/ph.mid,0.8)*(neutro?1:0.9),0.15,4.5);
   return {h:lh,a:la};
 }
-export function simulate(g,{clubeAoVivo}={}){
+export function simulate(g,{clubeAoVivo,cansacoNoJogo=true}={}){
   const H=clubById(g.h),A=clubById(g.a);
   const titulares=c=>g.copa&&validateLineup(c)?autoXI(c):getXI(c);
-  const h=elencoDoJogo(H,titulares(H)),a=elencoDoJogo(A,titulares(A));
+  const h=elencoDoJogo(H,titulares(H),cansacoNoJogo),a=elencoDoJogo(A,titulares(A),cansacoNoJogo);
+  g.cansacoNoJogo=cansacoNoJogo;
   g.escalacoes={h,a};
   const chances=chancesDoJogo(power(H,h),power(A,a));
   g.lh=chances.h;g.la=chances.a;g.hg=0;g.ag=0;
@@ -80,7 +81,7 @@ export function validateLineup(uc=userClub()){
 // regra: joga a rodada atual. Devolve {erro, tecnico}, {demitido}, {fim} ou {jogos, meu, copa} (meu = jogo do técnico da vez;
 // copa = confrontos da Copa do Brasil jogados nesta rodada, #51). Na pré-temporada, joga uma data dos estaduais (#132) e
 // devolve {jogos, meu, estadual} (jogos = os do estadual; estadual = a data), sem a rodada avançar.
-export function jogarRodada({ adiarCopa = false, assistir = null } = {}){
+export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo = tecnicos().length === 1 } = {}){
   concluirRodadaCopa();
   const semClube=tecnicos().find(t=>t.demitido&&!t.recusouClubes);
   if(semClube)return {demitido:true,tecnico:semClube.id};
@@ -91,7 +92,7 @@ export function jogarRodada({ adiarCopa = false, assistir = null } = {}){
   for(const t of ativos){const e=validateLineup(clubDo(t));if(e)return {erro:(tecnicos().length>1?t.nome+': ':'')+e,tecnico:t.id}}
   const idSolo=tecnicos().length===1?userClub().id:null;
   const clubeAoVivo=g=>idSolo&&(g.h===idSolo||g.a===idSolo)&&assistir?.(g)?idSolo:null;
-  const pre=jogarPreTemporada(clubeAoVivo); // #132: estaduais antes da rodada 1
+  const pre=jogarPreTemporada(clubeAoVivo,cansacoNoJogo); // #132: estaduais antes da rodada 1
   if(pre){
     for(const t of tecnicos())t.pronto=false;
     S.atual=tecnicos()[0].id;
@@ -103,7 +104,7 @@ export function jogarRodada({ adiarCopa = false, assistir = null } = {}){
   limparEventosAntigos(); // #195: os lances das rodadas anteriores já foram usados; só o placar fica no save
   S.rng=semente(S.seed,S.season,S.round); // a rodada depende só do estado e das escolhas, não do que foi sorteado antes
   if(ehJanela(S.round))janelaIA(); // #103: começo e metade da temporada
-  const games=S.fixtures[S.round].map(g=>simulate(g,{clubeAoVivo:clubeAoVivo(g)}));
+  const games=S.fixtures[S.round].map(g=>simulate(g,{clubeAoVivo:clubeAoVivo(g),cansacoNoJogo}));
   for(const g of games)noticiarPenaltisDaLiga(g,S.round);
   const jogaram=anotarTitulares(new Map(),games,getXI,clubById); // #136: titulares do jogo, antes de lesões e energia mudarem
   aplicarDisponibilidade(games);
@@ -144,16 +145,18 @@ export function jogarRodada({ adiarCopa = false, assistir = null } = {}){
     }
   }
   const {copa,pendente}=semSuspensoesPorAmarelos(()=>{
-    const copa=jogarCopa(S.round,true);
+    const copa=jogarCopa(S.round,true,cansacoNoJogo);
     const pendente=adiarCopa&&copa.some(g=>ehHumano(g.h)||ehHumano(g.a));
     if(!pendente)concluirCopa();
-    const continentais=jogarContinentais(S.round); // #133, #134: Libertadores e Sul-Americana
+    const continentais=jogarContinentais(S.round,cansacoNoJogo); // #133, #134: Libertadores e Sul-Americana
     anotarTitulares(jogaram,[...copa,...continentais],getXI,clubById); // #136: as copas são outros jogos na mesma rodada
     return {copa,pendente};
   });
-  atualizarEnergia(jogaram);
-  for(const g of games)for(const e of g.ev.filter(saidaForcada))energiaDaSaidaForcada(clubById(g[e.side]),null,e);
-  for(const g of games)energiaDaRecomposicao(g);
+  atualizarEnergia(jogaram,[...games,...copa]);
+  if(!cansacoNoJogo)for(const g of games){
+    for(const e of g.ev.filter(saidaForcada))energiaDaSaidaForcada(clubById(g[e.side]),null,e);
+    energiaDaRecomposicao(g);
+  }
   for(const t of tecnicos())t.pronto=false;
   S.atual=tecnicos()[0].id; // depois da rodada, a vez volta ao primeiro técnico
   S.round++;

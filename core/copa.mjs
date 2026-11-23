@@ -47,7 +47,7 @@ export const agregado = j => ({ h: (j.ida ? j.ida.h : 0) + (j.volta ? j.volta.h 
 export const penaltiDaCopa = (g, rodada) => penaltisDaVolta(g, g.copa.ida, semente(S.seed, S.season, 'copa', rodada, g.a, g.h));
 
 /** Simula a data da copa e devolve os jogos na ordem do chaveamento. */
-export function jogarCopa(r, adiar = false) {
+export function jogarCopa(r, adiar = false, cansacoNoJogo = true) {
   const quando = copaNaRodada(r), copa = S.copa; if (!quando || copa.campeao) return [];
   const fase = copa.fases[quando.fase]; if (!fase) return [];
   const perna = quando.volta ? 'volta' : 'ida';
@@ -56,7 +56,7 @@ export function jogarCopa(r, adiar = false) {
   const jogos = fase.jogos.map(j => simulate({
     h: quando.volta ? j.a : j.h, a: quando.volta ? j.h : j.a,
     copa: { ...quando, ida: quando.volta ? { h: j.ida?.a ?? 0, a: j.ida?.h ?? 0 } : null }
-  }));
+  }, { cansacoNoJogo }));
   copa.pendente = { rodada: r, jogos };
   if (!adiar) concluirCopa();
   return jogos;

@@ -95,9 +95,11 @@ function carta(s, o, i) {
   if (!s.id) return `<div class="carta vazia"><span class="carta-vaga">${s.d}</span><span>vaga livre</span></div>`;
   const p = P[s.id], u = o.emCampo ? null : unavailable(p), pp = penalidadePosicao(p, s.d), sel = selId === p.id;
   const est = u ? 'indisp' : pp.tipo === 'fora' ? 'fora' : '', nota = u ? (p.inj > 0 ? `${p.inj} rod.` : `susp. ${p.susp}`) : pp.pen ? `-${Math.round(pp.pen * 100)}%` : '';
-  const desc = `${POSD[s.d].nome}: ${p.name}, força ${ovrNaPosicao(p, s.d)}, energia ${Math.round(energiaDe(p))}${u ? ', ' + u : pp.tipo === 'fora' ? ', fora de posição, ' + nota : ''}`;
+  const energia = o.energia?.(p) ?? energiaDe(p);
+  const desc = `${POSD[s.d].nome}: ${p.name}, força ${ovrNaPosicao(p, s.d)}, energia ${Math.round(energia)}${u ? ', ' + u : pp.tipo === 'fora' ? ', fora de posição, ' + nota : ''}`;
+  const energiaHtml = o.energia ? `<small aria-hidden="true">Energia ${Math.round(energia)}</small>` : o.semEnergia ? '' : energiaBarra(p);
   const miolo = `<span class="carta-vaga">${s.d}</span><span class="carta-nome">${esc(p.name)}</span>
-    <span class="carta-pe">${ovrChip(ovrNaPosicao(p, s.d))}${nota ? `<span class="carta-nota">${nota}</span>` : ''}</span>${o.semEnergia ? '' : energiaBarra(p)}`;
+    <span class="carta-pe">${ovrChip(ovrNaPosicao(p, s.d))}${nota ? `<span class="carta-nota">${nota}</span>` : ''}</span>${energiaHtml}`;
   const cls = `carta ${est}${sel ? ' sel' : ''}${destino && !sel ? ' exp-destino' : ''}`;
   if (o.somenteLeitura) return `<div class="${cls}">${miolo}</div>`;
   return `<button type="button" class="${cls}" data-acao="${acao}|${p.id}" aria-pressed="${sel}" aria-label="${esc(desc)}" title="${esc(p.name)}"${o.bloqueado ? ' disabled' : ''}>${miolo}</button>`;

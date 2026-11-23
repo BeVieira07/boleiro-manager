@@ -1,7 +1,7 @@
 import { P, S, addFin, clubById, ehHumano, tec, userClub } from './estado.mjs';
 import { creditarGolCopa } from './gols-copa.mjs';
 import { wageBill } from './emprestimos.mjs';
-import { energiaDaSaidaForcada, energiaDaTroca } from './energia.mjs';
+import { acertarEnergiaDaPartida, energiaDaSaidaForcada, energiaDaTroca, energiaDoElenco, MINUTOS_JOGO, minutosDaPartida, perdaPorEnergia, TRECHO_CANSACO } from './energia.mjs';
 import { cancelarDesfalque, conciliarAmarelos } from './escalacao.mjs';
 import { aplicarLanceAoElenco, escalacaoInicial, escalacaoNoMinuto, melhorReserva, saidaForcada } from './lances.mjs';
 import { chancesDoJogo, noticiarPenaltisDaLiga, pickScorer, power } from './motor.mjs';
@@ -116,7 +116,9 @@ export function simularLances(g,min,revisao=false){
   const clubes={h:clubById(g.h),a:clubById(g.a)};
   const h=clubes.h,a=clubes.a;
   const elencos={h:escalacaoInicial(g.escalacoes.h),a:escalacaoInicial(g.escalacoes.a)};
-  const inicial={h:power(h,elencos.h),a:power(a,elencos.a)};
+  const forca=(side,m)=>power(clubes[side],elencos[side],g.cansacoNoJogo?p=>energiaDoElenco(p,elencos[side],m):undefined);
+  const minutosAntes=revisao&&g.cansacoNoJogo?{h:minutosDaPartida(g,'h'),a:minutosDaPartida(g,'a')}:null;
+  const inicial={h:forca('h',0),a:forca('a',0)};
   const base=chancesDoJogo(inicial.h,inicial.a);
   const th=taticaDe(h,a,inicial.h,inicial.a),ta=taticaDe(a,h,inicial.a,inicial.h);
   const amarelos=new Set();
@@ -128,9 +130,9 @@ export function simularLances(g,min,revisao=false){
   const pendentes=g.ev.filter(e=>!lanceDeAtaque(e)&&(e.m<=min||!e.segundo)&&(!e.auto||(e.goleiroNoGol&&e.m<=min))).sort((x,y)=>x.m-y.m);
   g.ev=g.ev.filter(lanceDeAtaque);
   let de=min+1;
-  const sortearAtaques=ate=>{
-    if(de>ate)return;
-    const ph=power(h,elencos.h),pa=power(a,elencos.a);
+  const sortearTrecho=ate=>{
+    const meio=(de+ate-1)/2;
+    const ph=forca('h',meio),pa=forca('a',meio);
     const chances=chancesComDesfalques(ph,pa,base,inicial);
     const s=golsSegmento(chances.h,chances.a,th,ta,de,ate);
     const taxaH=taxaDePenaltis(s.h,ph.xi),taxaA=taxaDePenaltis(s.a,pa.xi);
@@ -138,6 +140,15 @@ export function simularLances(g,min,revisao=false){
     novosPenaltis(g,h,'h',ph.xi,pa.xi,poisson(taxaH),de,ate);
     novosPenaltis(g,a,'a',pa.xi,ph.xi,poisson(taxaA),de,ate);
     de=ate+1;
+  };
+  const sortearAtaques=ate=>{
+    if(de>ate)return;
+    // Trechos sem variação de rendimento mantêm os mesmos sorteios.
+    if(g.cansacoNoJogo&&ate-de>=TRECHO_CANSACO&&Object.values(elencos).some(elenco=>elenco.xi.some(id=>P[id]&&
+      perdaPorEnergia(energiaDoElenco(P[id],elenco,ate))>perdaPorEnergia(energiaDoElenco(P[id],elenco,de-1))))){
+      while(de+TRECHO_CANSACO-1<ate)sortearTrecho(de+TRECHO_CANSACO-1);
+    }
+    sortearTrecho(ate);
   };
   const feitas={h:0,a:0},vermelhosNoGol=new Map();
   // Espera os outros desfalques do minuto antes de escolher quem sai.
@@ -174,14 +185,15 @@ export function simularLances(g,min,revisao=false){
     aplicarLanceAoElenco(elenco,e);
   }
   recompor();
-  sortearAtaques(93);
+  sortearAtaques(MINUTOS_JOGO);
   g.ev.sort((x,y)=>x.m-y.m);
   if(revisao)for(const e of desfalques){
     const atual=g.ev.find(n=>n.t===e.t&&n.pid===e.pid&&n.m===e.m);
     if(!atual)cancelarDesfalque(g,e);
-    energiaDaSaidaForcada(clubes[e.side],e,atual);
+    if(!g.cansacoNoJogo)energiaDaSaidaForcada(clubes[e.side],e,atual);
   }
-  if(revisao)energiaDaRecomposicao(g,recomposicoes);
+  if(minutosAntes)for(const side of ['h','a'])acertarEnergiaDaPartida(g,side,minutosAntes[side]);
+  else if(revisao)energiaDaRecomposicao(g,recomposicoes);
   if(revisao)conciliarAmarelos(g);
 }
 export function mudarTatica(campo,valor){

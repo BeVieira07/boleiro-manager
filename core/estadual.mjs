@@ -122,7 +122,7 @@ export function estadualPelaFrente() {
   return E.torneios.some(t => !t.final && t.grupos.flat().some(id => ehHumano(id)));
 }
 
-function jogarData(d, clubeAoVivo) {
+function jogarData(d, clubeAoVivo, cansacoNoJogo) {
   const E = S.estaduais;
   S.rng = semente(S.seed, S.season, 'estadual', d); // como a rodada: depende só do estado e das escolhas
   const jogos = [];
@@ -134,12 +134,16 @@ function jogarData(d, clubeAoVivo) {
       jogos.push([tor, f.jogo, volta ? 'Final (volta)' : 'Final (ida)']);
     }
   }
-  const jogaram = anotarTitulares(new Map(), jogos.map(([, g]) => g), getXI, clubById); // #136: a energia também gasta aqui
-  for (const [tor, g] of jogos) { simulate(g, { clubeAoVivo: clubeAoVivo(g) }); bilheteria(tor, g) } // #230: lances como na liga
+  const partidas = jogos.map(([, g]) => g);
+  // Na liga online, mantém a contagem da escalação anterior à simulação.
+  const titulares = () => anotarTitulares(new Map(), partidas, getXI, clubById);
+  const jogaram = cansacoNoJogo ? null : titulares();
+  for (const [tor, g] of jogos) { simulate(g, { clubeAoVivo: clubeAoVivo(g), cansacoNoJogo }); bilheteria(tor, g) } // #230: lances como na liga
+  const escalados = jogaram ?? titulares();
   for (const [, g] of jogos) if (g.final === 'volta') g.pen = penaltiDaFinal(g); // #267: o replay da liga mostra a disputa; trocas ao vivo a refazem
-  aplicarDisponibilidade(jogos.map(([, g]) => g)); // lesões e expulsões do jogo (#196) valem também no estadual
-  atualizarEnergia(jogaram);
-  for (const [, g] of jogos) energiaDaRecomposicao(g);
+  aplicarDisponibilidade(partidas); // lesões e expulsões do jogo (#196) valem também no estadual
+  atualizarEnergia(escalados, partidas);
+  if (!cansacoNoJogo) for (const g of partidas) energiaDaRecomposicao(g);
   E.pendente = d;
   return jogos.map(([, g]) => g);
 }
@@ -168,7 +172,7 @@ function concluirData(d) {
   }
   atualizarForma(jogos.filter(g => g.escalacoes), id => { const g = jogos.find(x => x.h === id || x.a === id); return g.escalacoes[g.h === id ? 'h' : 'a'].xi.filter(Boolean) });
   for (const g of jogos) { // o save não guarda lances antigos (#195)
-    delete g.ev; delete g.escalacoes; delete g.trocas; delete g.bicho; delete g.expulsaoAoVivo; delete g.escalacaoLegada; delete g.amarelos;
+    delete g.ev; delete g.escalacoes; delete g.trocas; delete g.bicho; delete g.expulsaoAoVivo; delete g.escalacaoLegada; delete g.amarelos; delete g.cansacoNoJogo;
   }
 }
 // bilheteria (metade da de um jogo da liga): não depende do placar, entra na hora
@@ -207,13 +211,13 @@ function encerrar(tor) {
 /** Joga as datas da pré-temporada até a próxima com jogo de clube com técnico (chamada por jogarRodada).
  *  Devolve {dia, jogos} (dia = a data com jogo de técnico; jogos = os da data, de todos os estados) ou null quando a
  *  pré-temporada acabou sem jogo de técnico, e aí a rodada da liga é jogada na mesma chamada. */
-export function jogarPreTemporada(clubeAoVivo = () => null) {
+export function jogarPreTemporada(clubeAoVivo = () => null, cansacoNoJogo = true) {
   const E = S.estaduais;
   if (E && E.temporada === S.season && E.pendente != null) concluirData(E.pendente); // a última data jogada (#230)
   if (!emPreTemporada()) return null;
   while (E.dia < E.datas) {
     const d = E.dia, humano = temHumano(d);
-    const jogos = jogarData(d, clubeAoVivo); E.dia++;
+    const jogos = jogarData(d, clubeAoVivo, cansacoNoJogo); E.dia++;
     // os próprios jogos (não cópias): o ao vivo muda o placar deles, e a data é concluída com o placar final
     if (humano) return { dia: d, jogos };
     concluirData(d);

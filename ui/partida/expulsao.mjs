@@ -1,5 +1,5 @@
 import { minutoDoTempo, placarNoMinuto } from '../../core/aovivo.mjs';
-import { energiaDe } from '../../core/energia.mjs';
+import { energiaDoElenco } from '../../core/energia.mjs';
 import { clubById } from '../../core/estado.mjs';
 import { SUSPENSAO_POR_EXPULSAO, slotsDe } from '../../core/escalacao.mjs';
 import { aplicarLanceAoElenco } from '../../core/lances.mjs';
@@ -62,7 +62,8 @@ function htmlCampo(v, a) {
   const mover = a.sel && elenco.xi.indexOf(a.sel) > 0 ? v.clube.players.find(p => p.id === a.sel)?.name : null;
   return `<div class="exp-secao-topo"><h3>Em campo · ${esc(a.form)}</h3><strong class="exp-contagem${elenco.expulsos.size ? '' : ' exp-completo'}">${emCampo(elenco)} jogadores</strong></div>
     ${campoHtml({ ...v.clube, formation: a.form }, { mini: true, acao: 'avExpSair', sel: a.sel, emCampo: elenco.xi,
-      semEnergia: true, somenteLeitura: a.leitura, expulsos: elenco.expulsos, mover, vagaAcao: 'avExpVaga', vagaSel: a.vagaSel })}`;
+      energia: elenco.energiaInicial ? p => energiaDoElenco(p, elenco, a.min) : null, semEnergia: true,
+      somenteLeitura: a.leitura, expulsos: elenco.expulsos, mover, vagaAcao: 'avExpVaga', vagaSel: a.vagaSel })}`;
 }
 
 function htmlBanco(v, a) {
@@ -80,7 +81,7 @@ function htmlBanco(v, a) {
     </ol>
     <ul class="exp-reservas" aria-label="Banco de reservas">${reservas.map(({ p, motivo }) => {
       const nota = p.pos === 'G' && !a.elenco.goleiroExpulso ? 'só por goleiro' : '';
-      const energia = `Energia ${Math.round(energiaDe(p))}`;
+      const energia = `Energia ${Math.round(energiaDoElenco(p, a.elenco, a.min))}`;
       return `<li><button type="button" data-acao="avExpEntrar|${esc(p.id)}" class="exp-reserva">${posTag(p)}
         <span class="exp-nome">${esc(p.name)}<small><span class="exp-energia">${energia}${nota ? ' · ' : ''}</span>${nota}</small></span>
         ${motivo ? `<small class="exp-indisponivel">${esc(motivo)}</small>` : ''}${ovrChip(p.ovr)}</button></li>`;

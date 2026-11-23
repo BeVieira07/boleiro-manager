@@ -1,5 +1,6 @@
 import { P, S, ehHumano } from './estado.mjs';
 import { ESTILOS, MODOS, taticaUser } from './taticas.mjs';
+import { escalacaoNoMinuto } from './lances.mjs';
 import { clamp } from './utils.mjs';
 
 /* ================= energia dos jogadores (#136) =================
@@ -10,6 +11,8 @@ import { clamp } from './utils.mjs';
    o risco de lesão (riscoLesao). Os jogos de cada rodada (liga, copa e estaduais) entram em atualizarEnergia. */
 export const ENERGIA_MAX = 100, CANSADO = 40;
 export const GASTO_BASE = 18, RECUPERA = 0.3, DESCANSO = 12;
+export const MINUTOS_JOGO = 93;
+export const TRECHO_CANSACO = 15;
 export const energiaDe = p => p.energia ?? ENERGIA_MAX;
 
 /** Quanto do overall se perde com essa energia (0 a 0,2): nada a partir de 70, até 8% aos 30 e até 20% no zero. */
@@ -18,52 +21,114 @@ export function perdaPorEnergia(e) {
   if (e >= 30) return 0.08 * (70 - e) / 40;
   return 0.08 + 0.12 * (30 - e) / 30;
 }
-export const fatorEnergia = p => 1 - perdaPorEnergia(energiaDe(p));
+export const fatorEnergia = (p, e = energiaDe(p)) => 1 - perdaPorEnergia(e);
 /** Multiplicador da chance de lesão: 1 até 30 de energia, chegando a 3 no zero. */
-export const riscoLesao = p => { const e = energiaDe(p); return e < 30 ? 1 + 2 * (30 - e) / 30 : 1 };
+export const riscoLesao = (p, e = energiaDe(p)) => e < 30 ? 1 + 2 * (30 - e) / 30 : 1;
 
 const idadeGasto = a => a >= 32 ? 1.2 : a >= 29 ? 1.1 : a <= 22 ? 0.9 : 1;
 const idadeRecupera = a => a >= 33 ? 0.9 : a >= 30 ? 0.95 : a <= 23 ? 1.1 : 1;
 /** Energia gasta num jogo; `fad` é o cansaço da tática (estilo + modo): quanto mais intenso, mais gasta. */
 export const gastoPorJogo = (p, fad = 0.02) => GASTO_BASE * (p.pos === 'G' ? 0.5 : 1) * idadeGasto(p.age) * (1 + fad * 3);
-const fadDe = c => { const t = ehHumano(c) ? taticaUser(c) : { estilo: 'equilibrado', modo: 'equilibrado' }; return ESTILOS[t.estilo].fad + MODOS[t.modo].fad };
+export const fadDe = c => { const t = ehHumano(c) ? taticaUser(c) : { estilo: 'equilibrado', modo: 'equilibrado' }; return ESTILOS[t.estilo].fad + MODOS[t.modo].fad };
+
+/** Energia sem a recuperação da rodada. O desgaste da tática é fixado na escalação inicial. */
+export function energiaNoJogo(p, min, inicial = energiaDe(p), fad) {
+  return Math.max(0, inicial - gastoPorJogo(p, fad) * clamp(min, 0, MINUTOS_JOGO) / MINUTOS_JOGO);
+}
+
+function minutosEmCampo(periodo, min) {
+  return periodo ? Math.max(0, Math.min(min, periodo.fim ?? min) - periodo.inicio) : 0;
+}
+
+/** A escalação é reconstruída pelos lances, incluindo os minutos cumpridos por quem já saiu. */
+export function energiaDoElenco(p, elenco, min) {
+  const inicial = elenco?.energiaInicial?.[p.id];
+  if (inicial == null) return energiaDe(p);
+  return energiaNoJogo(p, minutosEmCampo(elenco.periodos?.get(p.id), min), inicial, elenco.fad);
+}
+
+function recuperarEnergia(p, e, descanso) {
+  e = Math.max(0, e);
+  e += RECUPERA * idadeRecupera(p.age) * (ENERGIA_MAX - e) + descanso;
+  return Math.round(clamp(e, 0, ENERGIA_MAX) * 10) / 10;
+}
 
 /** Nova energia do jogador depois de uma rodada: `jogos` jogos como titular (0 = ficou de fora). */
 export function energiaDepois(p, jogos, fad = 0.02) {
   let e = energiaDe(p);
   for (let i = 0; i < jogos; i++) e -= gastoPorJogo(p, fad);
-  e = Math.max(0, e);
-  e += RECUPERA * idadeRecupera(p.age) * (ENERGIA_MAX - e) + (jogos ? 0 : DESCANSO);
-  return Math.round(clamp(e, 0, ENERGIA_MAX) * 10) / 10;
+  return recuperarEnergia(p, e, jogos ? 0 : DESCANSO);
 }
 
 /** #198: troca ao vivo no minuto `min` (core/substituicoes.mjs). A rodada já gastou o jogo inteiro do titular e deu folga a quem
  *  estava no banco; aqui se acerta pelos minutos de cada um: quem sai recupera a parte que não jogou, quem entra paga a que jogou. */
 export function energiaDaTroca(sai, entra, min, clube) {
-  ajustarMinutos(sai, min - 93, clube);
-  ajustarMinutos(entra, 93 - min, clube);
+  ajustarMinutos(sai, min - MINUTOS_JOGO, clube);
+  ajustarMinutos(entra, MINUTOS_JOGO - min, clube);
 }
 
 function ajustarMinutos(p, minutos, clube) {
   if (!p || !minutos) return;
   const gasto = DESCANSO + (1 - RECUPERA * idadeRecupera(p.age)) * gastoPorJogo(p, fadDe(clube));
-  p.energia = Math.round(clamp(energiaDe(p) - minutos / 93 * gasto, 0, ENERGIA_MAX) * 10) / 10;
+  p.energia = Math.round(clamp(energiaDe(p) - minutos / MINUTOS_JOGO * gasto, 0, ENERGIA_MAX) * 10) / 10;
 }
 
 export function energiaDaSaidaForcada(clube, antes, depois) {
   const m = (depois || antes).m;
-  if (!antes || !depois) ajustarMinutos(P[(depois || antes).pid], depois ? m - 93 : 93 - m, clube);
+  if (!antes || !depois) ajustarMinutos(P[(depois || antes).pid], depois ? m - MINUTOS_JOGO : MINUTOS_JOGO - m, clube);
   if (antes?.entra !== depois?.entra) {
-    ajustarMinutos(P[antes?.entra], m - 93, clube);
-    ajustarMinutos(P[depois?.entra], 93 - m, clube);
+    ajustarMinutos(P[antes?.entra], m - MINUTOS_JOGO, clube);
+    ajustarMinutos(P[depois?.entra], MINUTOS_JOGO - m, clube);
   }
 }
 
-/** Fim de uma rodada. `jogaram` associa cada clube ao número de partidas por titular. */
-export function atualizarEnergia(jogaram) {
+function energiaPorMinutos(p, inicial, minutos, fad) {
+  const jogos = minutos / MINUTOS_JOGO;
+  // Proporcionaliza o descanso que cabia antes de jogar, respeitando o teto de energia da folga.
+  const folga = Math.min(DESCANSO, (ENERGIA_MAX - inicial) * (1 - RECUPERA * idadeRecupera(p.age)));
+  return recuperarEnergia(p, inicial - gastoPorJogo(p, fad) * jogos, folga * Math.max(0, 1 - jogos));
+}
+
+/** Fim da rodada. Cada partida solo entrega os minutos reais. Copas sem lances contam como jogos inteiros. */
+export function atualizarEnergia(jogaram, partidas = []) {
+  const solo = partidas.filter(g => g.cansacoNoJogo);
+  const minutos = solo.length ? Object.fromEntries([...jogaram.values()].flatMap(j => [...j].map(([id, n]) => [id, n * MINUTOS_JOGO]))) : null;
+  if (solo.length) {
+    // Liga e copas da mesma data compartilham o saldo, inclusive ao retomar uma copa do save.
+    const data = solo[0].uf ? `estadual|${S.estaduais.dia}` : S.round;
+    S.energiaRodada = { id: `${S.season}|${data}`, minutos };
+  } else delete S.energiaRodada;
+  for (const g of solo) {
+    g.escalacoes.energiaRodada = S.energiaRodada.id;
+    for (const side of ['h', 'a']) {
+      for (const id of g.escalacoes[side].xi.filter(Boolean)) minutos[id] -= MINUTOS_JOGO;
+      for (const [id, n] of minutosDaPartida(g, side)) minutos[id] = (minutos[id] || 0) + n;
+    }
+  }
   for (const c of S.clubs) {
     const j = jogaram.get(c.id), fad = j ? fadDe(c) : 0;
-    for (const p of c.players) p.energia = energiaDepois(p, j?.get(p.id) || 0, fad);
+    for (const p of c.players) p.energia = solo.length
+      ? energiaPorMinutos(p, energiaDe(p), minutos[p.id] || 0, fad)
+      : energiaDepois(p, j?.get(p.id) || 0, fad);
+  }
+}
+
+/** A revisão ao vivo acerta só a diferença de minutos, usando o saldo da rodada para recuperar uma vez. */
+export function minutosDaPartida(g, side) {
+  const elenco = escalacaoNoMinuto(g, side, MINUTOS_JOGO);
+  return new Map([...elenco.periodos].map(([id, periodo]) => [id, minutosEmCampo(periodo, MINUTOS_JOGO)]));
+}
+
+export function acertarEnergiaDaPartida(g, side, antes) {
+  const rodada = S.energiaRodada;
+  if (!rodada || rodada.id !== g.escalacoes.energiaRodada) return;
+  const { energiaInicial, fad } = g.escalacoes[side];
+  const depois = minutosDaPartida(g, side);
+  for (const id of new Set([...antes.keys(), ...depois.keys()])) {
+    const diferenca = (depois.get(id) || 0) - (antes.get(id) || 0);
+    if (!diferenca || !P[id]) continue;
+    const min = rodada.minutos[id] = (rodada.minutos[id] || 0) + diferenca;
+    P[id].energia = energiaPorMinutos(P[id], energiaInicial[id], min, fad);
   }
 }
 /** Anota os titulares de cada clube dos jogos `jogos` ({h, a}) antes de a rodada mexer em lesões e escalações. */
@@ -78,6 +143,12 @@ export function anotarTitulares(jogaram, jogos, getXI, clubById) {
   return jogaram;
 }
 /** Virada de temporada: férias, todo mundo volta com a energia cheia. */
-export function ferias() { for (const c of S.clubs) { for (const p of c.players) p.energia = ENERGIA_MAX; for (const p of c.base || []) p.energia = ENERGIA_MAX } }
+export function ferias() {
+  delete S.energiaRodada;
+  for (const c of S.clubs) {
+    for (const p of c.players) p.energia = ENERGIA_MAX;
+    for (const p of c.base || []) p.energia = ENERGIA_MAX;
+  }
+}
 /** Titulares abaixo de CANSADO (para o aviso na tela do clube). */
 export const cansados = (xi, P) => xi.map(id => P[id]).filter(p => p && energiaDe(p) < CANSADO);

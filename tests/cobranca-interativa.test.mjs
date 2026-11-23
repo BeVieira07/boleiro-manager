@@ -47,7 +47,10 @@ test('tela: no pênalti do seu time o relógio para, você escolhe batedor e can
   const comRelogio = f => { const t = mock.method(performance, 'now', () => agora); try { return f() } finally { t.mock.restore() } };
   const tick = ms => { agora += ms; comRelogio(fn) };
   assert.equal(j.run('ui.view'), 'aovivo');
-  for (let i = 0; i < 200 && !j.run('!!ui.vivo.escolhaPen'); i++) tick(DURACAO_COBRANCA);
+  for (let i = 0; i < 200 && !j.run('!!ui.vivo.escolhaPen'); i++) {
+    tick(DURACAO_COBRANCA);
+    if (j.run('!!ui.vivo.expulsao')) j.acao('avExpFechar');
+  }
   assert.equal(j.run('!!ui.vivo.escolhaPen'), true, 'o jogo parou no pênalti do seu time');
   j.run('render()');
   const h = j.html();
