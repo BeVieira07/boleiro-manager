@@ -72,7 +72,7 @@ test('migração recupera campanhas, vínculo e títulos identificáveis sem alt
   j.run(`criarJogo([{ id: 'a', nome: 'Ana', clubId: '${ana}' }, { id: 'b', nome: 'Bia', clubId: '${bia}' }], getData())`);
   const s = j.run('S.season'), nome = j.run('userClub().name');
   j.run(`
-    S.versao = VERSAO_SAVE - 1;
+    S.versao = 15; // antes da carreira na versão 16
     for (const t of tecnicos()) delete t.carreira;
     S.round = 8;
     S.managers.a.historico = [{ s: S.season - 1, div: 'A', pos: 1, alvo: 3 }];
@@ -105,7 +105,7 @@ test('migração recupera campanhas, vínculo e títulos identificáveis sem alt
   });
   assert.deepEqual(j.run('tec().historico'), [{ s: s - 1, div: 'A', pos: 1, alvo: 3 }]);
   const json = j.run('JSON.stringify(S.managers)');
-  j.run('S.versao--; migrarSave(S)');
+  j.run('S.versao = 15; migrarSave(S)');
   assert.equal(j.run('JSON.stringify(S.managers)'), json);
   assert.equal(j.run('S.rng'), rng);
 });

@@ -28,6 +28,7 @@ export function prepararEstrangeiro(c) {
   const melhores = new Set([...c.players].sort((a, b) => b.ovr - a.ovr).slice(0, BANCO).map(p => p.id));
   for (const p of c.players) {
     p.clubId = c.id;
+    p.amar ??= 0;
     if (p.contrato == null) p.contrato = contratoInicial(p);
     if (p.pot == null) p.pot = potInicial(p);
     if (p.value == null || p.wage == null) refreshEconomics(p);

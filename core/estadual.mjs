@@ -168,7 +168,7 @@ function concluirData(d) {
   }
   atualizarForma(jogos.filter(g => g.escalacoes), id => { const g = jogos.find(x => x.h === id || x.a === id); return g.escalacoes[g.h === id ? 'h' : 'a'].xi.filter(Boolean) });
   for (const g of jogos) { // o save não guarda lances antigos (#195)
-    delete g.ev; delete g.escalacoes; delete g.trocas; delete g.bicho; delete g.expulsaoAoVivo; delete g.escalacaoLegada;
+    delete g.ev; delete g.escalacoes; delete g.trocas; delete g.bicho; delete g.expulsaoAoVivo; delete g.escalacaoLegada; delete g.amarelos;
   }
 }
 // bilheteria (metade da de um jogo da liga): não depende do placar, entra na hora

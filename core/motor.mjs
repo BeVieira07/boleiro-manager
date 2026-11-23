@@ -6,7 +6,7 @@ import { anotarTitulares, atualizarEnergia, energiaDaSaidaForcada, fatorEnergia 
 import { atualizarConfianca } from './diretoria.mjs';
 import { jogarPreTemporada } from './estadual.mjs';
 import { processLoans, wageBill } from './emprestimos.mjs';
-import { aplicarDisponibilidade, autoSlotXI, slotsDe, unavailable } from './escalacao.mjs';
+import { aplicarDisponibilidade, autoSlotXI, semSuspensoesPorAmarelos, slotsDe, unavailable } from './escalacao.mjs';
 import { P, S, addFin, addNews, bilheteriaBase, clubById, clubDo, divOf, ehHumano, table, tec, tecnicos, tvQuota, userClub } from './estado.mjs';
 import { adiarForma, aplicarFormaPendente } from './forma.mjs';
 import { noticiaPenaltis } from './gols-copa.mjs';
@@ -143,11 +143,15 @@ export function jogarRodada({ adiarCopa = false, assistir = null } = {}){
       }
     }
   }
-  const copa=jogarCopa(S.round,true);
-  const pendente=adiarCopa&&copa.some(g=>ehHumano(g.h)||ehHumano(g.a));
-  if(!pendente)concluirCopa();
-  const continentais=jogarContinentais(S.round); // #133, #134: Libertadores e Sul-Americana
-  atualizarEnergia(anotarTitulares(jogaram,[...copa,...continentais],getXI,clubById)); // #136: as copas são outros jogos na mesma rodada
+  const {copa,pendente}=semSuspensoesPorAmarelos(()=>{
+    const copa=jogarCopa(S.round,true);
+    const pendente=adiarCopa&&copa.some(g=>ehHumano(g.h)||ehHumano(g.a));
+    if(!pendente)concluirCopa();
+    const continentais=jogarContinentais(S.round); // #133, #134: Libertadores e Sul-Americana
+    anotarTitulares(jogaram,[...copa,...continentais],getXI,clubById); // #136: as copas são outros jogos na mesma rodada
+    return {copa,pendente};
+  });
+  atualizarEnergia(jogaram);
   for(const g of games)for(const e of g.ev.filter(saidaForcada))energiaDaSaidaForcada(clubById(g[e.side]),null,e);
   for(const g of games)energiaDaRecomposicao(g);
   for(const t of tecnicos())t.pronto=false;
@@ -186,7 +190,7 @@ function concluirRodada(games){
 export function concluirRodadaCopa(){
   const pendente=S.copa?.pendente;
   if(!pendente)return;
-  concluirCopa();
+  semSuspensoesPorAmarelos(concluirCopa);
   concluirRodada(S.fixtures[pendente.rodada]);
 }
 

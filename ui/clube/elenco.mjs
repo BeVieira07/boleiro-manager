@@ -4,7 +4,7 @@
 import { RENOVA_ATE, pedidoRenovacao, renovarContrato } from '../../core/contratos.mjs';
 import { energiaDe } from '../../core/energia.mjs';
 import { loanOf, wageBill } from '../../core/emprestimos.mjs';
-import { unavailable } from '../../core/escalacao.mjs';
+import { AMARELOS_PARA_SUSPENSAO, unavailable } from '../../core/escalacao.mjs';
 import { P, userClub } from '../../core/estado.mjs';
 import { getXI } from '../../core/motor.mjs';
 import { esc, money } from '../../core/utils.mjs';
@@ -27,6 +27,11 @@ function status(p, tit) {
   return `<span class="st ${tit ? 'ok' : ''}">${tit ? 'Titular' : 'Reserva'}</span>`;
 }
 
+function amarelos(p) {
+  const n = p.amar ?? 0, pendurado = n === AMARELOS_PARA_SUSPENSAO - 1;
+  return `<span class="st${pendurado ? ' aviso' : ''}">${n} ${n === 1 ? 'amarelo' : 'amarelos'}${pendurado ? ' · Pendurado' : ''}</span>`;
+}
+
 const COLUNAS = [
   ['Pos.', 'pos', 'c-pos'], ['Jogador', 'nome', 'c-nome'], ['Idade', 'idade', 'n'],
   ['Força', 'ovr', 'c'], ['Potencial', 'pot'], ['Energia', 'energia'], ['Gols', 'gols', 'n'], ['Valor', 'valor', 'n'],
@@ -42,7 +47,7 @@ function linha(p, xi) {
   const acoes = loanOf(p.id) ? '' : `<button class="btn sm ${p.listed ? 'perigo' : 'sec'}" data-acao="toggleListed|${p.id}" aria-pressed="${!!p.listed}">${p.listed ? 'À venda' : 'Pôr à venda'}</button><button class="btn sec sm" data-acao="quickSell|${p.id}">Vender já</button>${botaoProposta(p)}`;
   return `<tr class="${tit ? 'tit' : ''}${unavailable(p) ? ' indisp' : ''}">
     <td class="c-pos">${posTag(p)}</td>
-    <th scope="row" class="c-nome"><div class="jogador"><span class="camisa" aria-hidden="true">${p.number ?? ''}</span>${p.number != null ? `<span class="sr">camisa ${p.number}, </span>` : ''}<div><b>${esc(p.name)}</b><span class="elenco-situacao">${status(p, tit)}${loanTag(p)}</span></div></div></th>
+    <th scope="row" class="c-nome"><div class="jogador"><span class="camisa" aria-hidden="true">${p.number ?? ''}</span>${p.number != null ? `<span class="sr">camisa ${p.number}, </span>` : ''}<div><b>${esc(p.name)}</b><span class="elenco-situacao">${status(p, tit)}${loanTag(p)}${amarelos(p)}</span></div></div></th>
     <td class="n c-idade"><span class="rot">Idade </span>${p.age}</td>
     <td class="c c-ovr"><span class="rot">Força</span><span class="forca">${ovrChip(p.ovr)}${tendenciaTag(p)}</span></td>
     <td class="c-pot"><span class="rot">Potencial</span>${potTag(p)}</td>
@@ -97,5 +102,6 @@ export function vElenco() {
     <thead><tr>${COLUNAS.map(([rotulo, chave, classe]) => th(rotulo, chave, f, a, classe)).join('')}${th('Mercado', '', f, a)}</tr></thead>
     <tbody id="corpoElenco">${corpoElenco(lista, titulares)}</tbody></table></div></section>
   <p class="muted nota">As setas mostram a variação do overall desde o início da temporada, e as estrelas, até onde o jogador pode chegar. A barra de forma sobe com bons jogos e cai no banco. A energia cai a cada jogo como titular e volta no descanso; abaixo de 70 o jogador rende menos e abaixo de 30 também se lesiona mais. Quem chega ao fim do contrato sem renovar sai de graça na virada da temporada.</p>
+  <p class="muted nota">Um jogador pendurado cumpre um jogo de suspensão se receber o próximo amarelo no Brasileirão ou no estadual.</p>
   ${vLoans()}`;
 }

@@ -65,7 +65,11 @@ const MIGRACOES = [
     for (const tor of s.estaduais?.torneios || []) tor.gols ??= {};
   },
   s => migrarPenaltis(s), // 15: disputa de pênaltis com placar e cobranças (#267); os antigos guardam só o vencedor
-  () => tecnicos().forEach(migrarCarreira) // 16: passagens, temporadas e títulos do técnico (#273)
+  () => tecnicos().forEach(migrarCarreira), // 16: passagens, temporadas e títulos do técnico (#273)
+  s => { // 17: amarelos acumulados durante a temporada (#341)
+    const estrangeiros = Object.values(s.continentais?.estrangeiros ?? {});
+    for (const c of [...s.clubs, ...estrangeiros]) for (const p of [...c.players, ...(c.base || [])]) p.amar ??= 0;
+  }
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 

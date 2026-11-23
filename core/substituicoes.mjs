@@ -1,6 +1,6 @@
 import { energiaDaTroca } from './energia.mjs';
 import { P, userClub } from './estado.mjs';
-import { SLOTS, slotsDe, unavailable } from './escalacao.mjs';
+import { SLOTS, indisponivelNaCopa, slotsDe, unavailable } from './escalacao.mjs';
 import { aplicarLanceAoElenco, escalacaoInicial, escalacaoNoMinuto, saidaForcada } from './lances.mjs';
 import { ressimularDepois } from './taticas.mjs';
 
@@ -41,10 +41,11 @@ function guardarEscalacaoLegada(g, side, uc) {
 /** Quem pode entrar agora: do banco, disponível e que ainda não saiu neste jogo. Devolve [{p, motivo}] (motivo = por que não pode). */
 export function banco(g, min = 0, elenco = elencoParaTrocas(g, min), trocas = trocasDe(g, userClub().id, min)) {
   const uc = userClub(), side = lado(g, uc.id);
+  const indisponivel = g.copa ? indisponivelNaCopa : unavailable;
   const saiu = new Set([...trocas.map(t => t.sai),
     ...(g.ev || []).filter(e => e.side === side && e.m <= min && saidaForcada(e)).map(e => e.pid)]);
   return uc.players.filter(p => !elenco.xi.includes(p.id)).map(p => ({
-    p, motivo: saiu.has(p.id) ? 'já saiu neste jogo' : unavailable(p) || (!elenco.banco.has(p.id) ? 'indisponível no início do jogo' : null)
+    p, motivo: saiu.has(p.id) ? 'já saiu neste jogo' : indisponivel(p) || (!elenco.banco.has(p.id) ? 'indisponível no início do jogo' : null)
   }));
 }
 

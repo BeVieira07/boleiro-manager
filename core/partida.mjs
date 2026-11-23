@@ -5,6 +5,7 @@ import { criarContinentais, vagasBrasileiras } from './continental.mjs';
 import { criarCopa } from './copa.mjs';
 import { ferias } from './energia.mjs';
 import { criarEstaduais } from './estadual.mjs';
+import { todosEstrangeiros } from './estrangeiros.mjs';
 import { fakePlayer, refreshEconomics } from './dados.mjs';
 import { confiancaFimTemporada, confiancaNovaTemporada } from './diretoria.mjs';
 import { DIVS, MOVE_N, P, S, addFin, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, hasTwoDivs, makeAllFixtures, reindex, seasonPrize, table, tecnicos, topScorers, userClub } from './estado.mjs';
@@ -66,6 +67,7 @@ export function iniciarTemporada(){
   S.season++;S.round=0;S.fixtures=makeAllFixtures(S.clubs);
   reindex();criarCopa();criarEstaduais();criarContinentais(vagas);
   processLoans(); // #142: empréstimo de 1 ano feito na rodada 0 volta agora
+  for(const c of [...S.clubs,...todosEstrangeiros()])for(const p of [...c.players,...(c.base||[])])p.amar=0;
   for(const t of tecnicos().filter(t=>!t.demitido)){t.offers=[];confiancaNovaTemporada(t);const uc=clubDo(t);uc.lineup=getXI(uc);if(uc.lineup.length<11)uc.lineup=autoXI(uc)}
   addNewsTodos(`📅 Começa a temporada ${S.season}!`);
 }
