@@ -59,7 +59,7 @@ test('mesmo estado e mesmas escolhas dão o mesmo resultado', () => {
 test('virada da liga migra a carreira antiga e grava o título da série antes de iniciar a próxima temporada', () => {
   const estado = JSON.parse(novaLiga(['A']));
   const { season: s, managers, fixtures } = estado, clube = managers['u-ana'].clubId;
-  estado.versao--;
+  estado.versao = 15; // antes da carreira na versão 16
   for (const t of Object.values(managers)) delete t.carreira;
   estado.round = fixtures.length - 1;
   for (const g of fixtures.slice(0, -1).flat()) {

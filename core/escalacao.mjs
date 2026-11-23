@@ -6,31 +6,115 @@ import { NOMES_ALVOS_PENALTI } from './penaltis.mjs';
 
 /* ================= escalação: tela, disponibilidade e trocas ================= */
 // Disponibilidade: p.inj = rodadas de lesão restantes, p.susp = rodadas de suspensão restantes (ausentes em saves antigos = disponível)
-export function unavailable(p){
+function indisponibilidade(p,susp){
   if(p.inj>0)return `lesionado (${p.inj} rod.)`;
-  if(p.susp>0)return `suspenso (${p.susp} rod.)`;
+  if(susp>0)return `suspenso (${susp} rod.)`;
   return null;
 }
+let considerarAmarelos = true;
+const suspensaoSemAmarelos = p => p.suspSemAmarelos ?? p.susp;
+export const indisponivelNaCopa = p => indisponibilidade(p, suspensaoSemAmarelos(p));
+export const unavailable = p => considerarAmarelos ? indisponibilidade(p, p.susp) : indisponivelNaCopa(p);
+
+// As copas da mesma rodada mantêm a disponibilidade por lesão e vermelho.
+export function semSuspensoesPorAmarelos(jogar) {
+  const antes = considerarAmarelos;
+  considerarAmarelos = false;
+  try { return jogar() } finally { considerarAmarelos = antes }
+}
+
 export const SUSPENSAO_POR_EXPULSAO = 1;
+export const AMARELOS_PARA_SUSPENSAO = 3;
 const noticiaDe = e => e.t === 'lesao'
   ? `🩹 ${e.name} se lesionou e desfalca o time por ${e.rodadas} rodada(s).`
   : `🟥 ${e.name} foi expulso e cumpre 1 jogo de suspensão.`;
 
-// Depois da rodada, cumpre as ausências anteriores e aplica os desfalques do jogo.
+// Quando há suspensão por amarelos, guarda quanto resta por vermelho (inclusive zero).
+function suspenderPorVermelho(p, jogos) {
+  if (p.suspSemAmarelos != null) p.suspSemAmarelos = jogos;
+  else p.susp = jogos;
+}
+
+function encerrarSuspensaoPorAmarelos(p) {
+  if (p.suspSemAmarelos == null) return;
+  p.susp = p.suspSemAmarelos;
+  delete p.suspSemAmarelos;
+}
+
+function noticiarSuspensaoPorAmarelos(g, pid, clube, suspenso) {
+  const { rodada, chave } = g.amarelos, amarelos = `${chave}|${pid}`;
+  if (suspenso) {
+    addNews(`${P[pid].name} acumulou ${AMARELOS_PARA_SUSPENSAO} cartões amarelos e cumpre 1 jogo de suspensão.`, clube, rodada, { amarelos });
+    return;
+  }
+  for (const t of tecnicos().filter(t => t.clubId === clube)) {
+    const i = t.news.findIndex(n => n.amarelos === amarelos);
+    if (i >= 0) t.news.splice(i, 1);
+  }
+}
+
+// No ao vivo, compara os amarelos válidos antes e depois da revisão dos lances.
+// A contagem anterior ao jogo permite desfazer o cartão mesmo quando ele zerou o acúmulo.
+export function conciliarAmarelos(g) {
+  if (!g.amarelos) return; // copa, replay legado ou partida ainda sem disciplina aplicada
+  const eventos = g.ev || [];
+  const expulsosPorDois = new Set(eventos.filter(e => e.t === 'vermelho' && e.segundo).map(e => e.pid));
+  const validos = new Map(eventos.filter(e => e.t === 'cartao' && !expulsosPorDois.has(e.pid) && P[e.pid])
+    .map(e => [e.pid, g[e.side]]));
+  const { contagens } = g.amarelos;
+  for (const [pid, { antes, clube }] of Object.entries(contagens)) {
+    if (validos.has(pid)) continue;
+    const p = P[pid];
+    if (p) {
+      p.amar = antes;
+      if (antes === AMARELOS_PARA_SUSPENSAO - 1) {
+        encerrarSuspensaoPorAmarelos(p);
+        noticiarSuspensaoPorAmarelos(g, pid, clube, false);
+      }
+    }
+    delete contagens[pid];
+  }
+  for (const [pid, clube] of validos) {
+    if (Object.hasOwn(contagens, pid)) continue;
+    const p = P[pid], antes = p.amar ?? 0;
+    contagens[pid] = { antes, clube };
+    p.amar = antes + 1;
+    if (p.amar < AMARELOS_PARA_SUSPENSAO) continue;
+    p.amar = 0;
+    p.suspSemAmarelos = suspensaoSemAmarelos(p) ?? 0;
+    p.susp = 1;
+    noticiarSuspensaoPorAmarelos(g, pid, clube, true);
+  }
+}
+
+// Depois da data, cumpre as ausências anteriores e aplica os desfalques dos jogos.
 export function aplicarDisponibilidade(games){
-  for(const c of S.clubs)for(const p of c.players){if(p.inj>0)p.inj--;if(p.susp>0)p.susp--}
-  for(const g of games)for(const e of g.ev||[]){
-    if(e.t==='lesao')P[e.pid].inj=e.rodadas;
-    else if(e.t==='vermelho')P[e.pid].susp=SUSPENSAO_POR_EXPULSAO;
-    else continue;
-    addNews(noticiaDe(e),g[e.side]);
+  const novos = games.filter(g => g.ev && !g.amarelos && !g.copa);
+  if (games.length && !novos.length) return;
+  const jogaram = new Set(novos.flatMap(g => [g.h, g.a]));
+  for(const c of S.clubs)for(const p of c.players){
+    if(p.inj>0)p.inj--;
+    if(jogaram.has(c.id))encerrarSuspensaoPorAmarelos(p);
+    const susp=suspensaoSemAmarelos(p);
+    if(susp>0)suspenderPorVermelho(p,susp-1);
+  }
+  for(const g of novos){
+    for(const e of g.ev){
+      if(e.t==='lesao')P[e.pid].inj=e.rodadas;
+      else if(e.t==='vermelho')suspenderPorVermelho(P[e.pid],SUSPENSAO_POR_EXPULSAO);
+      else continue;
+      addNews(noticiaDe(e),g[e.side]);
+    }
+    const data = g.uf ? `estadual|${g.uf}|${S.estaduais?.dia}` : S.round;
+    g.amarelos = { rodada: S.round, chave: `${S.season}|${data}|${g.h}|${g.a}`, contagens: {} };
+    conciliarAmarelos(g);
   }
 }
 
 // Uma troca manual pode tirar o jogador antes de um lance previsto.
 export function cancelarDesfalque(g,e){
   if(e.t==='lesao')P[e.pid].inj=0;
-  else P[e.pid].susp=0;
+  else suspenderPorVermelho(P[e.pid],0);
   for(const t of tecnicos().filter(t=>t.clubId===g[e.side])){
     const i=t.news.findIndex(n=>n.r===S.round-1&&n.t===noticiaDe(e));
     if(i>=0)t.news.splice(i,1);

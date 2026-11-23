@@ -2,7 +2,7 @@ import { P, S, addFin, clubById, ehHumano, tec, userClub } from './estado.mjs';
 import { creditarGolCopa } from './gols-copa.mjs';
 import { wageBill } from './emprestimos.mjs';
 import { energiaDaSaidaForcada, energiaDaTroca } from './energia.mjs';
-import { cancelarDesfalque } from './escalacao.mjs';
+import { cancelarDesfalque, conciliarAmarelos } from './escalacao.mjs';
 import { aplicarLanceAoElenco, escalacaoInicial, escalacaoNoMinuto, melhorReserva, saidaForcada } from './lances.mjs';
 import { chancesDoJogo, noticiarPenaltisDaLiga, pickScorer, power } from './motor.mjs';
 import { NOMES_ALVOS_PENALTI, cobrarPenalti, timeNaDisputa } from './penaltis.mjs';
@@ -182,6 +182,7 @@ export function simularLances(g,min,revisao=false){
     energiaDaSaidaForcada(clubes[e.side],e,atual);
   }
   if(revisao)energiaDaRecomposicao(g,recomposicoes);
+  if(revisao)conciliarAmarelos(g);
 }
 export function mudarTatica(campo,valor){
   const uc=userClub();uc.tatica=Object.assign(taticaUser(uc),{[campo]:valor});

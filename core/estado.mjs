@@ -76,7 +76,7 @@ export function criarJogo(quem,data){
     }
     atribuirPosicoes(c.players);
     const ref=refStrength(c,clubs);
-    c.players.forEach(p=>{p.ovr=rate(p,ref,divOf(c));p.contrato=contratoInicial(p);refreshEconomics(p);p.goals=0;p.listed=false});
+    c.players.forEach(p=>{p.ovr=rate(p,ref,divOf(c));p.contrato=contratoInicial(p);refreshEconomics(p);p.goals=0;p.amar=0;p.listed=false});
     c.formation='4-4-2';c.fin=[];
   }
   // #174: a força do clube é a do elenco (média dos 11 titulares), depois de todos os overalls; a da tabela de 2024 ficou velha.
@@ -94,9 +94,9 @@ export function criarJogo(quem,data){
   return S;
 }
 // notícia: sem clube vai para o técnico da vez; com clube, para o técnico daquele clube (clube da IA: descarta)
-export function addNews(t,clubeId,rodada=S.round){
+export function addNews(t,clubeId,rodada=S.round,dados){
   const alvo=clubeId?tecnicos().filter(x=>x.clubId===clubeId):[tec()];
-  for(const m of alvo){m.news.unshift({r:rodada,t});m.news=m.news.slice(0,40)}
+  for(const m of alvo){m.news.unshift({...dados,r:rodada,t});m.news=m.news.slice(0,40)}
 }
 export function addNewsTodos(t,rodada=S.round){for(const m of tecnicos()){m.news.unshift({r:rodada,t});m.news=m.news.slice(0,40)}}
 // movimento de caixa (padrão: clube do técnico da vez)
