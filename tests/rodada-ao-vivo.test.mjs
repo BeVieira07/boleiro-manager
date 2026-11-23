@@ -491,7 +491,11 @@ test('rodada com copa: o painel ganha a aba da Copa do Brasil, sem placar até o
   r.passo(1);
   j.run('render()');
   assert.match(j.html(), /O resultado da copa aparece quando a rodada termina/);
-  r.passo(92);
+  for (let i = 0; i < 200 && !j.run('ui.vivo.fim'); i++) {
+    r.passo();
+    if (j.run('!!ui.vivo.expulsao')) j.acao('avExpFechar');
+    if (j.run('!!ui.vivo.escolhaPen')) r.agora(() => j.acao('avPenChutar|auto'));
+  }
   j.run('render()');
   assert.doesNotMatch(j.html(), /O resultado da copa aparece/);
   assert.match(j.html(), /class="fase-copa"/);
@@ -504,6 +508,29 @@ test('as telas não mostram undefined, NaN nem [object', () => {
 });
 
 const outraFormacao = j => j.run("userClub().formation==='4-3-3'?'3-5-2':'4-3-3'");
+
+test('a pausa mostra a energia atual em campo e a própria energia de quem está no banco', t => {
+  const j = novo(), caixa = capturarJanela(t);
+  const reserva = j.run(`(() => {
+    const clube = userClub(), p = clube.players.find(p => !getXI(clube).includes(p.id));
+    p.energia = 56;
+    return p.id;
+  })()`);
+  const r = comRelogioManual(j);
+  r.passo(10);
+  j.acao('avPausar');
+  const { titular, agora, depois, reservaDepois } = j.run(`(() => {
+    const v = ui.vivo, side = v.g.h === v.clube.id ? 'h' : 'a', elenco = v.g.escalacoes[side];
+    const titular = elenco.xi[5], p = P[titular];
+    return { titular, agora: Math.round(elenco.energiaInicial[titular] - gastoPorJogo(p, elenco.fad) * v.min / 93),
+      depois: Math.round(p.energia), reservaDepois: Math.round(P['${reserva}'].energia) };
+  })()`);
+  assert.notEqual(agora, depois);
+  assert.notEqual(reservaDepois, 56);
+  assert.match(caixa.innerHTML, new RegExp(`data-acao="avExpSair\\|${titular}"[^>]*energia ${agora}`));
+  assert.match(caixa.innerHTML, new RegExp(`data-acao="avExpEntrar\\|${reserva}"[^>]*>[\\s\\S]*?<span class="exp-energia">Energia 56`));
+  j.run('encerrarVivo()');
+});
 
 test('pausar abre a janela de escalação; continuar aplica o rascunho, fecha e retoma (#170, #314)', t => {
   const j = novo(), r = comRelogioManual(j), caixa = capturarJanela(t), f = outraFormacao(j);

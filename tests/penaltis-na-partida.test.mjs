@@ -57,19 +57,23 @@ test('simulação usa o canto do batedor quando salvo e sorteia pela semente em 
   assert.deepEqual(variados, repetidos);
 });
 
-test('calibração em 20.000 jogos: cerca de 0,2 pênalti por jogo e média de gols estável (#304)', t => {
-  const j = novoJogo(), total = 20000;
-  const { gols, resultados } = j.run(`(() => {
+function medirCalibracao(j, total, seed) {
+  return j.run(`(() => {
     const jogos = S.fixtures.flat(), resultados = { gol: 0, defesa: 0, trave: 0, fora: 0 };
     let gols = 0;
     for (let i = 0; i < ${total}; i++) {
-      S.rng = semente('calibracao #290', i);
+      S.rng = semente(${JSON.stringify(seed)}, i);
       const { h, a } = jogos[i % jogos.length], g = simulate({ h, a });
       gols += g.hg + g.ag;
       for (const e of g.ev) if (e.t === 'penalti') resultados[e.res]++;
     }
     return { gols, resultados };
   })()`);
+}
+
+test('calibração em 20.000 jogos: cerca de 0,2 pênalti por jogo e média de gols estável (#304)', t => {
+  const j = novoJogo(), total = 20000;
+  const { gols, resultados } = medirCalibracao(j, total, 'calibracao #290');
   const n = Object.values(resultados).reduce((a, b) => a + b, 0);
   const proporcoes = Object.fromEntries(Object.entries(resultados).map(([res, total]) => [res, total / n]));
   // Referência de gols por jogo nos mesmos confrontos e sementes: 2,573 em 92d22bf (#304); 2,518 depois da #336, quando
@@ -80,6 +84,18 @@ test('calibração em 20.000 jogos: cerca de 0,2 pênalti por jogo e média de g
   assert.ok(n / total >= 0.18 && n / total <= 0.22);
   assert.ok(proporcoes.gol >= 0.70 && proporcoes.gol <= 0.80);
   assert.ok(Object.values(resultados).every(n => n > 0));
+  assert.ok(Math.abs(depois - antes) <= 0.05);
+});
+
+test('calibração com elencos de energia variada mantém gols e pênaltis por jogo (#340)', t => {
+  const j = novoJogo(), total = 20000;
+  j.run('for (const [i, p] of Object.values(P).entries()) p.energia = 55 + i % 35');
+  const { gols, resultados } = medirCalibracao(j, total, 'calibracao #340');
+  // Mesmos confrontos, sementes e energias antes do desgaste durante a partida.
+  const antes = 2.539, depois = gols / total;
+  const penaltis = Object.values(resultados).reduce((a, b) => a + b, 0) / total;
+  t.diagnostic(`Gols/jogo antes ${antes.toFixed(4)}, depois ${depois.toFixed(4)}. ${penaltis.toFixed(4)} pênaltis/jogo.`);
+  assert.ok(penaltis >= 0.18 && penaltis <= 0.22);
   assert.ok(Math.abs(depois - antes) <= 0.05);
 });
 

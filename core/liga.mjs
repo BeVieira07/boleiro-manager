@@ -75,7 +75,7 @@ export function jogarRodadaLiga(estado, entradas) {
   S.atual = tecnicos()[0].id;
   // #116: nada derivado da semente sai do servidor (a semente da rodada deixava descobrir a da liga testando todas)
   const temporada = S.season, rodada = S.round;
-  const r = jogarRodada();
+  const r = jogarRodada({ cansacoNoJogo: false });
   if (!r.jogos) throw new Error('A rodada não foi jogada: ' + JSON.stringify(r)); // com as correções acima não acontece
   // #132: data de estadual (pré-temporada) fica nos resultados com rodada negativa, sem bater com a liga
   if (r.estadual) return { jogos: r.jogos, temporada, rodada: RODADA_ESTADUAL + r.estadual.dia, virada: null, trocas };

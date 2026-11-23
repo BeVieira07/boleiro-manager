@@ -1,4 +1,4 @@
-import { energiaDaTroca } from './energia.mjs';
+import { acertarEnergiaDaPartida, energiaDaTroca, minutosDaPartida } from './energia.mjs';
 import { P, userClub } from './estado.mjs';
 import { SLOTS, indisponivelNaCopa, slotsDe, unavailable } from './escalacao.mjs';
 import { aplicarLanceAoElenco, escalacaoInicial, escalacaoNoMinuto, saidaForcada } from './lances.mjs';
@@ -75,9 +75,13 @@ export function substituir(g, min, sai, entra, { recalcular = true } = {}) {
   guardarEscalacaoLegada(g, r.lance.side, uc);
   aplicarLanceAoElenco(elenco, r.lance);
   uc.lineup = elenco.xi.filter(Boolean);
-  energiaDaTroca(P[sai], P[entra], min, uc); // #198: a energia acompanha os minutos jogados
+  const antes = g.cansacoNoJogo ? minutosDaPartida(g, r.lance.side) : null;
   (g.trocas || (g.trocas = [])).push({ m: min, clube: uc.id, sai, entra });
   g.ev.push(r.lance);
+  if (antes) {
+    g.ev.sort((a, b) => a.m - b.m);
+    acertarEnergiaDaPartida(g, r.lance.side, antes);
+  } else energiaDaTroca(P[sai], P[entra], min, uc); // #198
   if (recalcular) ressimularDepois(g, min);
   return { ok: true, msg: r.msg };
 }

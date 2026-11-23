@@ -6,6 +6,8 @@ import { performance } from 'node:perf_hooks';
 const raiz = new URL('../core/', import.meta.url);
 const { iniciarLiga, jogarRodadaLiga, erroSeries, aplicarEntrada, acaoMercadoLiga, removerTecnicoLiga } = await import(new URL('liga.mjs', raiz));
 const est = await import(new URL('estado.mjs', raiz)), { usarEstado, clubDo } = est;
+const { jogarRodada } = await import(new URL('motor.mjs', raiz));
+const { energiaDepois } = await import(new URL('energia.mjs', raiz));
 const { DADOS_PADRAO } = await import(new URL('dados-padrao.mjs', raiz));
 (await import(new URL('estadual.mjs', raiz))).ESTADUAIS.ligados = false; // #132: aqui cada chamada é uma rodada da liga
 
@@ -54,6 +56,26 @@ test('mesmo estado e mesmas escolhas dão o mesmo resultado', () => {
   const r1 = JSON.stringify(jogarRodadaLiga(JSON.parse(estado), e)), s1 = JSON.stringify(est.S);
   const r2 = JSON.stringify(jogarRodadaLiga(JSON.parse(estado), e)), s2 = JSON.stringify(est.S);
   assert.equal(r1, r2); assert.equal(s1, s2);
+});
+
+test('liga de um técnico mantém a simulação sem cansaço e desconta energia após o jogo (#340)', () => {
+  const r = iniciarLiga([{ user_id: 'u-ana', nome: 'Ana', club_id: clubesDe('A')[0] }], ['A'], DADOS_PADRAO);
+  assert.ok(r.ok, r.erro);
+  for (const c of est.S.clubs) for (const p of c.players) p.energia = 55;
+  const estado = copia(est.S);
+  const online = jogarRodadaLiga(copia(estado), {});
+  assert.ok(online.jogos.length > 0);
+  assert.ok(online.jogos.every(g => g.cansacoNoJogo === false && !g.escalacoes.h.energiaInicial && !g.escalacoes.a.energiaInicial));
+  const clube = clubDo(est.S.managers['u-ana']);
+  const meu = online.jogos.find(g => [g.h, g.a].includes(clube.id)), side = meu.h === clube.id ? 'h' : 'a';
+  const pid = meu.escalacoes[side].xi.find(id => !meu.ev.some(e => e.side === side && (e.pid === id || e.sai === id)));
+  const titular = est.P[pid];
+  assert.equal(titular.energia, energiaDepois({ ...titular, energia: 55 }, 1));
+  usarEstado(estado);
+  est.reindex();
+  const solo = jogarRodada();
+  assert.ok(solo.jogos.every(g => g.cansacoNoJogo));
+  assert.notDeepEqual(online.jogos.map(g => g.ev), solo.jogos.map(g => g.ev));
 });
 
 test('virada da liga migra a carreira antiga e grava o título da série antes de iniciar a próxima temporada', () => {

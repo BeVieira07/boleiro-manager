@@ -68,7 +68,7 @@ export const minutoDoTempo = m => m <= 45 ? { m, tempo: 1 } : { m: m - 45, tempo
  *  usarem os da rodada, ninguém relê. Mantém placar e o resto do jogo. Sem isso o save passava de 1,3 MB numa temporada (#195). */
 export function limparEventosAntigos(ate = S.round) {
   for (let r = 0; r < ate && r < S.fixtures.length; r++) for (const g of S.fixtures[r]) {
-    delete g.ev; delete g.trocas; delete g.bicho; delete g.escalacoes; delete g.expulsaoAoVivo; delete g.escalacaoLegada; delete g.amarelos;
+    delete g.ev; delete g.trocas; delete g.bicho; delete g.escalacoes; delete g.expulsaoAoVivo; delete g.escalacaoLegada; delete g.amarelos; delete g.cansacoNoJogo;
   }
 }
 

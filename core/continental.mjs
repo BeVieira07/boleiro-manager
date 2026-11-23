@@ -102,7 +102,7 @@ export function dataCont(k) {
   return { tipo: 'final', nome: 'Final' };
 }
 
-const placarCont = (tor, H, A, neutro = false) => jogarPartidaCopa(tor, H, A, { continental: true, neutro });
+const placarCont = (tor, H, A, cansacoNoJogo, neutro = false) => jogarPartidaCopa(tor, H, A, { continental: true, neutro, cansacoNoJogo });
 // #267: disputa de pênaltis com os jogadores em campo, pela semente do confronto
 const penaltis = (tor, H, A, fase) => penaltisSemLances(H, A, semente(S.seed, S.season, tor.id, fase, H.id, A.id));
 
@@ -125,10 +125,10 @@ function eliminar(tor, id, adv, fase) {
   aplicarConfianca(t, [{ t: `Eliminação na ${tor.nome}`, v: clubeCont(adv).strength + 3 <= c.strength ? -1.5 : -0.5 }], 5);
 }
 
-function jogarGrupo(tor, n, d) {
+function jogarGrupo(tor, n, d, cansacoNoJogo) {
   if (n === 0) for (const id of tor.grupos.flat()) premiar(tor, id, 'participação na fase de grupos', 'grupos');
   for (const g of tor.rodadas[n]) {
-    Object.assign(g, placarCont(tor, clubeCont(g.h), clubeCont(g.a)));
+    Object.assign(g, placarCont(tor, clubeCont(g.h), clubeCont(g.a), cansacoNoJogo));
     noticiaJogo(tor, d, g);
   }
   if (n < 5) return;
@@ -141,12 +141,12 @@ function jogarGrupo(tor, n, d) {
     for (const x of t.slice(2)) if (clubById(x.id) && tecDoClube(x.id)) eliminar(tor, x.id, t[0].id, 'fase de grupos');
   });
 }
-function jogarMata(tor, n, volta, d) {
+function jogarMata(tor, n, volta, d, cansacoNoJogo) {
   const fase = tor.fases[n]; if (!fase) return;
   const proxima = ['quartas', 'semi', 'titulo'][n];
   for (const j of fase.jogos) {
     const H = clubeCont(j.h), A = clubeCont(j.a);
-    const g = volta ? placarCont(tor, A, H) : placarCont(tor, H, A);
+    const g = volta ? placarCont(tor, A, H, cansacoNoJogo) : placarCont(tor, H, A, cansacoNoJogo);
     noticiaJogo(tor, d, g);
     if (!volta) { j.ida = placarDaPerna(g, false); continue }
     j.volta = placarDaPerna(g, true);
@@ -161,10 +161,10 @@ function jogarMata(tor, n, volta, d) {
   if (n < 2) tor.fases.push({ jogos: Array.from({ length: fase.jogos.length / 2 }, (_, i) => ({ h: fase.jogos[2 * i].v, a: fase.jogos[2 * i + 1].v, ida: null, volta: null, pen: null, v: null })) });
   else tor.final = { h: fase.jogos[0].v, a: fase.jogos[1].v, hg: null, ag: null, pen: null, v: null };
 }
-function jogarFinal(tor, d) {
+function jogarFinal(tor, d, cansacoNoJogo) {
   const f = tor.final; if (!f) return;
   const H = clubeCont(f.h), A = clubeCont(f.a);
-  Object.assign(f, placarCont(tor, H, A, true)); noticiaJogo(tor, d, f);
+  Object.assign(f, placarCont(tor, H, A, cansacoNoJogo, true)); noticiaJogo(tor, d, f);
   if (f.hg === f.ag) f.pen = penaltis(tor, H, A, 'final');
   f.v = f.hg > f.ag ? f.h : f.ag > f.hg ? f.a : f.pen.v;
   if (!tor.campeao) registrarTitulo(tor.id, tor.nome, f.v);
@@ -178,12 +178,14 @@ function jogarFinal(tor, d) {
 
 /** Joga o que as copas têm na rodada r da liga (chamada por jogarRodada). Devolve os jogos ({h, a}) de clubes do jogo,
  *  para a energia (#136); os estrangeiros não têm energia. */
-export function jogarContinentais(r) {
+export function jogarContinentais(r, cansacoNoJogo = true) {
   const C = S.continentais; if (!C || C.temporada !== S.season) return [];
   const k = C.datas.indexOf(r); if (k < 0) return [];
   const d = dataCont(k), jogos = [];
   for (const tor of C.torneios) {
-    if (d.tipo === 'grupo') jogarGrupo(tor, d.n, d); else if (d.tipo === 'mata') jogarMata(tor, d.n, d.volta, d); else jogarFinal(tor, d);
+    if (d.tipo === 'grupo') jogarGrupo(tor, d.n, d, cansacoNoJogo);
+    else if (d.tipo === 'mata') jogarMata(tor, d.n, d.volta, d, cansacoNoJogo);
+    else jogarFinal(tor, d, cansacoNoJogo);
     jogos.push(...jogosDaDataCont(tor, k));
   }
   return jogos.filter(g => clubById(g.h) || clubById(g.a));

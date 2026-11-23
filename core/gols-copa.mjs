@@ -1,4 +1,5 @@
 import { P, clubById, ehHumano } from './estado.mjs';
+import { energiaDe, energiaNoJogo, fadDe, MINUTOS_JOGO, perdaPorEnergia, TRECHO_CANSACO } from './energia.mjs';
 import { atualizarForma } from './forma.mjs';
 import { escalacaoNoMinuto } from './lances.mjs';
 import { chancesDoJogo, pickScorer, power } from './motor.mjs';
@@ -7,7 +8,7 @@ import { golsSegmento, taticaDe } from './taticas.mjs';
 import { poisson } from './utils.mjs';
 
 const NEUTRA = { estilo: 'equilibrado', modo: 'equilibrado' };
-const forca = c => clubById(c.id) ? power(c) : { att: c.strength, def: c.strength, mid: c.strength, xi: c.players };
+const forca = (c, energia) => clubById(c.id) ? power(c, undefined, energia) : { att: c.strength, def: c.strength, mid: c.strength, xi: c.players };
 
 /** Soma (ou tira, delta -1) um gol de `p` pelo clube `clubeId` na artilharia do torneio. */
 export function creditarGolCopa(tor, clubeId, p, delta = 1) {
@@ -22,17 +23,38 @@ function sortearAutores(tor, clube, candidatos, gols) {
 }
 
 /** Simula uma partida de copa em tempo normal e aplica a forma a partir dos autores e titulares dela. */
-export function jogarPartidaCopa(tor, H, A, { neutro = false, continental = false } = {}) {
+export function jogarPartidaCopa(tor, H, A, { neutro = false, continental = false, cansacoNoJogo = true } = {}) {
   const ph = forca(H), pa = forca(A);
   const ch = chancesDoJogo(ph, pa, neutro);
   const tatica = (c, adv, pc, pv) => continental && !ehHumano(c) ? NEUTRA : taticaDe(c, adv, pc, pv);
-  const chances = golsSegmento(ch.h, ch.a, tatica(H, A, ph, pa), tatica(A, H, pa, ph), 1, 93);
+  const th = tatica(H, A, ph, pa), ta = tatica(A, H, pa, ph);
+  const chances = cansacoNoJogo ? chancesComCansaco(H, A, ph, pa, th, ta, neutro) : null;
+  const total = chances ?? golsSegmento(ch.h, ch.a, th, ta, 1, MINUTOS_JOGO);
   const mandantes = ph.xi.length ? ph.xi : H.players, visitantes = pa.xi.length ? pa.xi : A.players;
-  const hg = mandantes.length ? poisson(chances.h) : 0, ag = visitantes.length ? poisson(chances.a) : 0;
+  const hg = mandantes.length ? poisson(total.h) : 0, ag = visitantes.length ? poisson(total.a) : 0;
   const autores = { h: sortearAutores(tor, H, mandantes, hg), a: sortearAutores(tor, A, visitantes, ag) };
   const g = { h: H.id, a: A.id, hg, ag, autores };
   atualizarForma([g], id => (id === H.id ? ph : pa).xi.map(p => p.id));
   return g;
+}
+
+function chancesComCansaco(H, A, ph, pa, th, ta, neutro) {
+  const desgaste = (c, p, fad) => clubById(c.id) && p.xi.some(jogador =>
+    perdaPorEnergia(energiaNoJogo(jogador, MINUTOS_JOGO, energiaDe(jogador), fad)) > perdaPorEnergia(energiaDe(jogador)));
+  const fh = fadDe(H), fa = fadDe(A);
+  const h = desgaste(H, ph, fh), a = desgaste(A, pa, fa);
+  if (!h && !a) return null;
+  const calcular = (c, fad, min) => forca(c, p => energiaNoJogo(p, min, energiaDe(p), fad));
+  const total = { h: 0, a: 0 };
+  // Nas copas sem lances, soma os gols esperados dos trechos antes de sortear o placar.
+  for (let de = 1; de <= MINUTOS_JOGO; de += TRECHO_CANSACO) {
+    const ate = Math.min(de + TRECHO_CANSACO - 1, MINUTOS_JOGO), meio = (de + ate - 1) / 2;
+    const { h: lh, a: la } = chancesDoJogo(h ? calcular(H, fh, meio) : ph, a ? calcular(A, fa, meio) : pa, neutro);
+    const trecho = golsSegmento(lh, la, th, ta, de, ate);
+    total.h += trecho.h;
+    total.a += trecho.a;
+  }
+  return total;
 }
 
 // Os números e autores de cada perna ficam na ordem dos clubes no confronto.
