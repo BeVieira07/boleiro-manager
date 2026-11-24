@@ -861,7 +861,7 @@ body.em-jogo .avisos{bottom:24px}
 .cab-topo .relogio{margin:0}
 .ult-lance{margin:0;min-height:20px;font-size:13px;color:var(--texto2);display:flex;gap:6px;align-items:center;justify-content:center;text-align:center}
 /* #362: mini campo no cabeçalho do jogo ao vivo */
-.mapa{overflow:hidden;width:100%;max-width:540px;align-self:center;border:1px solid var(--linha);border-radius:var(--r);background:var(--painel)}
+.mapa{overflow:hidden;width:100%;max-width:540px;justify-self:center;align-self:start;border:1px solid var(--linha);border-radius:var(--r);background:var(--painel)}
 .mapa-campo{position:relative;height:152px;overflow:hidden;background:var(--verde-esc)}
 .mapa-campo>svg{display:block}
 .mapa-faixas{fill:var(--verde-claro);opacity:.07}
@@ -1021,7 +1021,12 @@ body.em-jogo .avisos{bottom:24px}
 .estat thead th{background:none;position:static;color:var(--texto2)}
 .estat tbody th{font-size:12px;text-transform:none;letter-spacing:0;color:var(--muted);background:none;position:static;font-weight:500}
 .estat td{font-weight:700;font-variant-numeric:tabular-nums;width:22%}
-@media(min-width:900px){.vivo-cab{grid-template-columns:minmax(0,1.5fr) minmax(220px,1fr)}}
+@media(min-width:900px){
+  .vivo-cab{grid-template-columns:minmax(0,1.5fr) minmax(220px,1fr)}
+  .vivo-cab:has(.mapa){grid-template-rows:auto 1fr}
+  .vivo-cab:has(.mapa) .cab-jogo{grid-row:1/span 2}
+  .vivo-cab:has(.mapa) :is(.mapa,.estat){grid-column:2}
+}
 .rodada-lista{list-style:none;margin:0;padding:0;background:var(--painel);border:1px solid var(--linha);border-radius:var(--r)}
 .linha-jogo{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:2px 10px;align-items:center;padding:8px 12px;border-bottom:1px solid var(--linha2);font-size:14px}
 .linha-jogo:last-child{border-bottom:0}

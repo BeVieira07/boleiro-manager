@@ -497,7 +497,6 @@ function htmlCab(v) {
   const H = clubById(v.g.h), A = clubById(v.g.a), p = placarNoMinuto(v.g, minTela(v)), { marcas } = lances(v);
   const lado = (c, cls) => `<div class="placar-time ${cls}">${crest(c, 'g')}<b>${esc(c.name)}</b></div>`;
   return `<div class="cab-jogo"><div class="cab-topo"><span class="sobretitulo">${esc(competicao(v))}</span><span class="relogio" id="lclk" aria-live="off">${relogio(v)}</span></div>
-    ${htmlMapa(v)}
     <div class="placar">${lado(H, 'casa')}<div class="placar-centro"><div class="placar-num" id="lsc" aria-live="polite">${p.h} x ${p.a}</div></div>${lado(A, 'fora')}</div>
     ${v.g.copa?.ida ? `<p class="muted" id="av-agregado">${esc(textoAgregado(v))}</p>` : ''}
     <div class="vivo-cobranca" id="av-cobranca" role="status" aria-live="polite" aria-atomic="true">${htmlCobrancaAtual(v)}</div>
@@ -506,6 +505,7 @@ function htmlCab(v) {
     <div class="tempo" aria-hidden="true"><div class="tempo-trilho"><div class="tempo-feito" id="lbar" style="width:${Math.min(100, v.min / DURACAO * 100)}%"></div></div><div class="tempo-marcas" id="lmarcas">${marcas}</div>
       <div class="tempo-escala"><span>0'</span><span>45'</span><span>90'</span></div></div>
     <div class="row fim-acoes" id="av-botoes">${botoes(v)}</div></div>
+    ${htmlMapa(v)}
     <table class="estat" id="lest">${htmlEst(v)}</table>`;
 }
 // seu time: lances do jogo, tática, esquema e substituições
