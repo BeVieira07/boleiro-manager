@@ -1,0 +1,7 @@
+player_id,name,last_season,current_club_id,date_of_birth,sub_position,market_value_in_eur
+601,Nicolás Gálvez,2024,101,2002-09-01 00:00:00,Goalkeeper,750000
+602,Néstor Gálvez,2024,101,2001-06-29,Goalkeeper,9000000
+603,"Miguel, ""Miki"" Soto",2024,101,2000-12-01,Left-Back,1450000
+604,Joaquín Molina,2025,202,1997-05-01,Goalkeeper,
+605,Ángel Pérez,2025,202,1999-01-01,Defensive Midfield,2000000
+606,Pablo Mateo,2025,101,2000-01-01,Right-Back,12000000

@@ -29,21 +29,29 @@ Manager de futebol estilo Brasfoot, em JS puro, sem build. Brasileirão Séries 
 | Origem de cada escudo (para conferir) | `data/escudos-fontes.json` |
 | Título do artigo da Wikipédia de cada clube | `data/escudos-wikipedia.json` |
 | Clubes estrangeiros da Libertadores e da Sul-Americana (só da IA, #133 e #134) | `data/continentais-2024.json` (`npm run continentais`: fase de grupos de 2024, a temporada mais nova do plano gratuito) |
+| Importação dos elencos europeus 2025/26 (#354, #356 e #357) | `data/europa-2025.json`, escudos em `img/escudos/eu-<id da API>.png`, ajustes de casamento em `data/europa-casamentos.json` |
 | O que o jogo lê | `core/dados-padrao.mjs` e `core/dados-continentais.mjs` (**gerados** por `npm run dados:padrao`, não editar à mão) |
 
-`data/*-raw.json` é ignorado pelo git.
+`data/*-raw.json` e `data/tmds-*-raw.csv.gz` são ignorados pelo git.
 
 ## Fluxo para mudar dados
 1. Jogadores/times novos: `npm run dados` (ou `dados:b`, `dados:c`, `dados:d`) e `npm run notas`.
 2. Overall à mão: editar `data/overalls-manual.json`.
 3. Escudos: `npm run escudos`.
 4. Mudou a temporada ou o clube trocou de divisão: conferir as listas na Wikipédia (`Campeonato Brasileiro de Futebol de AAAA - Série A/B/C/D`), editar os ids em `data/divisoes-2026.json` e rodar `node scripts/aplicar-divisoes-2026.mjs` (move os clubes entre os 4 JSONs; exige 20 por série e que todo id exista). Clube que não existe nos dados precisa ser baixado pela API antes; sem API, deixar um clube antigo no lugar e registrar em `_divergencias`.
-5. **Sempre** terminar com `npm run dados:padrao` (regenera `core/dados-padrao.mjs`), conferir e commitar.
+5. Para os dados usados no jogo, terminar com `npm run dados:padrao` (regenera os módulos em `core/`), conferir e commitar.
+
+### Elencos europeus
+
+1. Com `API_FOOTBALL_KEY` no `.env`, rode `npm run europa -- --ligas=GB1,GB2,ES1,ES2`. Use `IT1,IT2,FR1,FR2` para Itália e França e `PO1,PO2` para Portugal. Cada liga custa um pedido pela lista e cada clube, um pelo elenco. O script lê `/status`, espera 7 segundos entre pedidos e para com uma margem de 2 pedidos na cota diária. Ao atingir o limite, repita o comando no dia seguinte. O cache `data/europa-2025-raw.json` guarda cada resposta bem-sucedida, e os CSVs compactados do Transfermarkt ficam em `data/tmds-*-raw.csv.gz`.
+2. Confira os avisos de casamento, os jogadores em mais de uma base e os escudos pendentes. Para ajustar manualmente um casamento, use `data/europa-casamentos.json`. Em `clubes`, a chave é `e<id da API>` e o valor é o id do clube no Transfermarkt. Em `jogadores`, a chave é `p<id da API>` e o valor é o id do jogador no Transfermarkt. Repetir o comando aplica os ajustes usando os dados já baixados.
+3. A composição da 1ª divisão usa os clubes do Transfermarkt com `last_season=2025`. Entre a 2ª e a 3ª, vale a lista da API de 2024/25. Posições e valores de mercado vêm do Transfermarkt quando há casamento. Os demais jogadores recebem posição pela camisa e pelo equilíbrio do elenco, e overall pela referência da liga e força estimada do clube.
+4. Rode `npm test` e confira `data/europa-2025.json` e os escudos antes de versionar a saída. A integração com o mercado é a #355.
 
 ## API-Football
 - Conta nova no plano gratuito (100 pedidos por dia, 10 por minuto, temporadas de 2022 a 2024). A chave fica em `API_FOOTBALL_KEY` no `.env` (ignorado pelo git; nunca no repositório).
 - O navegador não importa nem exporta dados nem saves (#52, #187): a tela Dados não existe mais. A única fonte dos dados são os scripts (`npm run dados` etc.) e `npm run dados:padrao`.
-- O host de imagens `media.api-sports.io` está fora do ar (DNS não resolve). Por isso os escudos vêm da Wikipédia.
+- O importador europeu usa a URL `team.logo` da API e avisa quando o escudo não pode ser baixado. Para os dados brasileiros e continentais, a fonte principal dos escudos é a Wikipédia.
 
 ## Escudos
 - `npm run escudos` baixa a imagem principal do artigo `pt.wikipedia.org` de cada clube (mapa em `data/escudos-wikipedia.json`) para `img/escudos/<id>.png`, 128 px. Pula os que já existem; apague o arquivo para baixar de novo.

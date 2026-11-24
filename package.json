@@ -16,6 +16,7 @@
     "posicoes": "node scripts/baixar-posicoes.mjs",
     "notas": "node --env-file=.env scripts/baixar-notas.mjs",
     "continentais": "node --env-file=.env scripts/baixar-continentais.mjs",
+    "europa": "node --env-file=.env scripts/baixar-europa.mjs",
     "overalls": "node scripts/auditar-overalls.mjs"
   }
 }
