@@ -40,7 +40,8 @@ export function penaltisDoJogo(g, rodada) {
   if (g.final === 'volta' && S.estaduais) return penaltiDaFinal(g);
   return null;
 }
-const PASSO_PEN = 15; // ticks do relógio entre duas cobranças
+// #407: intervalo entre duas cobranças em tempo real (~1,2 s), qualquer que seja a velocidade do relógio
+const passoPen = v => Math.max(1, Math.round(1200 / v.msPorMinuto));
 // calculada uma vez, quando o tempo normal acaba (as trocas já não mudam nada)
 function prepararPenaltis(v) {
   if (v.pen === undefined) {
@@ -55,7 +56,7 @@ function prepararPenaltis(v) {
 }
 /* ---------- #293: disputa de pênaltis interativa ---------- */
 function passoDisputa(v) {
-  if (++v.passo % PASSO_PEN) return; // um respiro entre as cobranças
+  if (++v.passo % passoPen(v)) return; // um respiro entre as cobranças
   const d = v.disputa, i = ladoDaVez(d);
   if (i == null) { fecharDisputa(v); terminar(v); return }
   if (d.times[i].id === v.clube.id) {
@@ -152,7 +153,7 @@ function tick(v) {
   if (v.min >= DURACAO) { // disputa de pênaltis (#267)
     if (v.pen === undefined) { fecharTempoNormal(v); return }
     if (v.disputa) { passoDisputa(v); return }
-    if (++v.passo % PASSO_PEN) return;
+    if (++v.passo % passoPen(v)) return;
     v.cob++; pintar(v);
     const cob = v.pen.cob[v.cob - 1]; if (cob) tocar(cob.gol ? 'rede' : 'uhh');
     if (v.cob >= v.pen.cob.length) terminar(v);

@@ -63,3 +63,11 @@ test('o Painel do clube mostra só as categorias de notícias escolhidas', () =>
   assert.equal(j.run("categoriaNoticia('🌱 Ciclano (Atacante) subiu da base.')"), 'base');
   assert.equal(j.run("categoriaNoticia('🎯 Meta da diretoria: Terminar no meio da tabela.')"), 'diretoria');
 });
+
+test('#407: um jogo ao vivo leva cerca de 1 min no lento, 30 s no normal e 10 s no rápido', () => {
+  const j = carregarJogo({ boot: true });
+  const s = j.run('Object.fromEntries(Object.entries(VELOCIDADES).map(([k,ms])=>[k,Math.round(ms*DURACAO/1000)]))');
+  assert.ok(s.lenta >= 50 && s.lenta <= 70, `lenta: ${s.lenta} s`);
+  assert.ok(s.normal >= 25 && s.normal <= 35, `normal: ${s.normal} s`);
+  assert.ok(s.rapida >= 8 && s.rapida <= 15, `rápida: ${s.rapida} s`);
+});
