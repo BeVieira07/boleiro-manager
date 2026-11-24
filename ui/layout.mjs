@@ -6,6 +6,7 @@ import { rotuloRodada } from './temporada/estadual.mjs';
 import { situacaoLiga } from './liga/ligajogo.mjs';
 import { botaoRodada } from './temporada/motor.mjs';
 import { crest } from './partida/partida.mjs';
+import { vivoAtivo } from './partida/aovivo.mjs';
 import { render } from './telas.mjs';
 
 const SECOES = [
@@ -95,9 +96,9 @@ export function barraAcoes(titulo) {
   const vez = ui.liga ? situacaoLiga() : varios ? `<div class="vez">Vez de <b>${esc(tec().nome)}</b> ${tecnicos().map(t => `<span class="pill" title="${t.pronto ? 'confirmou' : 'falta confirmar'}">${t.pronto ? icone('ok', { tam: 12, rotulo: 'confirmou' }) : '…'} ${esc(t.nome)}</span>`).join(' ')}</div>` : '';
   let botoes = '';
   if (ui.view !== 'aovivo') {
-    botoes = fim
-      ? `<button type="button" class="btn" data-acao="proximaTemporada">${icone('trofeu')}${S.seasonClosed === S.season ? 'Iniciar temporada ' + (S.season + 1) : 'Encerrar a temporada ' + S.season}</button>`
-      : `${varios || ui.liga ? '' : '<button type="button" class="btn sec" data-acao="simToEnd">Simular até o fim</button>'}${botaoRodada('btn botao-jogar', `${icone('play', { tam: 16 })}Jogar ${rotuloRodada()}`)}`;
+    botoes = fim && !vivoAtivo() // #368: com o jogo da última rodada aberto, a barra leva de volta a ele antes de encerrar
+      ?`<button type="button" class="btn" data-acao="proximaTemporada">${icone('trofeu')}${S.seasonClosed === S.season ? 'Iniciar temporada ' + (S.season + 1) : 'Encerrar a temporada ' + S.season}</button>`
+      : `${varios || ui.liga || fim ? '' : '<button type="button" class="btn sec" data-acao="simToEnd">Simular até o fim</button>'}${botaoRodada('btn botao-jogar', `${icone('play', { tam: 16 })}Jogar ${rotuloRodada()}`)}`;
   }
   return `<div class="barra-acoes"><div class="barra-titulo"><h1>${esc(titulo)}</h1><dl class="placar-temporada">${placar}</dl>${vez}</div>
     ${botoes ? `<div class="barra-botoes">${botoes}</div>` : ''}</div>`;
