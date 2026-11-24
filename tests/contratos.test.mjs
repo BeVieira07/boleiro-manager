@@ -16,12 +16,19 @@ test('jogo novo: todo jogador tem contrato de 1 a 4 temporadas, e o mesmo jogado
   assert.equal(k.run(`JSON.stringify(userClub().players.map(p=>p.contrato))`), antes);
 });
 
-test('contrato curto vale menos no mercado, e o salário não muda com o prazo', () => {
+test('valor de mercado e salário são iguais com 1, 2, 3 ou 4 temporadas de contrato', () => {
   const j = novo();
-  const r = j.run(`(()=>{const p=userClub().players.find(p=>p.value>2);const v=n=>{p.contrato=n;refreshEconomics(p);return [p.value,p.wage]};return [v(4),v(3),v(2),v(1)]})()`);
-  assert.deepEqual(r[0], r[1], '3 temporadas ou mais: valor cheio');
-  assert.ok(r[2][0] < r[1][0] && r[3][0] < r[2][0], `valor cai com o prazo: ${r.map(x => x[0])}`);
-  assert.equal(new Set(r.map(x => x[1])).size, 1, 'salário igual');
+  const r = j.run(`(() => {
+    const p = userClub().players.find(p => valueOf(p) > 2);
+    const esperado = [valueOf(p), salarioDe(p)];
+    const porPrazo = [1, 2, 3, 4].map(anos => {
+      p.contrato = anos;
+      refreshEconomics(p);
+      return [p.value, p.wage];
+    });
+    return { esperado, porPrazo };
+  })()`);
+  for (const resultado of r.porPrazo) assert.deepEqual(resultado, r.esperado);
 });
 
 test('renovar: o jogador pede aumento, o contrato cresce e a folha sobe', () => {
@@ -112,6 +119,35 @@ test('save antigo sem contratos: recebe o contrato padrão ao carregar e continu
   assert.equal(j.run('JSON.stringify(S.clubs[0].players.map(p=>p.wage))'), salarios, 'os salários não mudam com a migração');
   jogarRodada(j);
   assert.deepEqual(problemasNasTelas(j), []);
+});
+
+test('save da versão 17 restaura o valor cheio e preserva salário e contrato', () => {
+  const j = carregarJogo({ boot: true, continentais: true });
+  j.run(`newGame('${clubeDaSerie(j)}')`);
+  const r = j.run(`(() => {
+    const save = JSON.parse(JSON.stringify(S));
+    save.versao = 17;
+    const clube = save.clubs.find(c => c.base?.length);
+    const estrangeiro = Object.values(save.continentais.estrangeiros)[0];
+    const jogadores = [clube.players[0], clube.base[0], estrangeiro.players[0]];
+    for (const [i, p] of jogadores.entries()) {
+      p.ovr = 70;
+      p.contrato = i === 0 ? 1 : 2;
+      if (i === 0) p.aum = 1.25;
+      p.wage = salarioDe(p);
+      const fator = p.contrato === 1 ? 0.75 : 0.9;
+      p.value = Math.max(0.1, Math.round(valueOf(p) * fator * 10) / 10);
+    }
+    const retrato = p => [p.value, p.wage, p.contrato, p.aum];
+    const antes = jogadores.map(retrato);
+    const esperado = jogadores.map(p => [valueOf(p), p.wage, p.contrato, p.aum]);
+    const migracao = migrarSave(save);
+    return { migracao, versao: S.versao, antes, esperado, depois: jogadores.map(retrato) };
+  })()`);
+  assert.deepEqual(r.migracao, { ok: true });
+  assert.equal(r.versao, j.run('VERSAO_SAVE'));
+  assert.ok(r.antes.every(([valor], i) => valor < r.esperado[i][0]));
+  assert.deepEqual(r.depois, r.esperado);
 });
 
 test('Elenco mostra o contrato e o botão Renovar; o Clube avisa na reta final', () => {

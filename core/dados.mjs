@@ -86,10 +86,9 @@ export function valueOf(p){
   const af=p.age<=21?1.4:p.age<=24?1.2:p.age<=28?1:p.age<=31?0.7:0.4;
   return Math.round(0.3*Math.pow(1.13,p.ovr-50)*af*10)/10 || 0.1;
 }
-// contratos (#49): contrato curto vale menos no mercado; o salário segue o valor cheio, vezes o aumento negociado na renovação (p.aum)
-export const fatorContrato=p=>p.contrato==null||p.contrato>=3?1:p.contrato===2?0.9:0.75;
+// O salário segue o valor de mercado, vezes o aumento negociado na renovação (p.aum).
 export const salarioDe=(p,aum=p.aum||1)=>Math.round(Math.max(0.1,valueOf(p))*0.01*aum*1000)/1000;
-export function refreshEconomics(p){p.value=Math.max(0.1,Math.round(Math.max(0.1,valueOf(p))*fatorContrato(p)*10)/10);p.wage=salarioDe(p)}
+export function refreshEconomics(p){p.value=valueOf(p);p.wage=salarioDe(p)}
 
 /* #47: ids e cores vão para atributos HTML. Dados de fora (aba Dados, save importado) só entram com ids simples,
    e a cor só é usada se for #rgb ou #rrggbb (conferida na hora de desenhar, vale para qualquer origem). */

@@ -8,6 +8,7 @@ import { migrarBase } from './base.mjs';
 import { adicionarTitulo, abrirPassagem, fecharPassagem, garantirCarreira, gerarPropostas } from './carreira.mjs';
 import { migrarContratos } from './contratos.mjs';
 import { COPA } from './copa.mjs';
+import { valueOf } from './dados.mjs';
 import { DADOS_PADRAO } from './dados-padrao.mjs';
 import { migrarDiretoria } from './diretoria.mjs';
 import { DIVS, S, clubDo, migrarTecnicos, reindex, tecnicos, usarEstado } from './estado.mjs';
@@ -46,6 +47,12 @@ export function migrarCarreira(t) {
   if (S.continentais?.temporada === S.season) for (const tor of S.continentais.torneios) incluir(tor.id, tor.nome, tor.campeao);
 }
 
+export function migrarValoresDeMercado(s) {
+  if (Number.isInteger(s.versao) && s.versao >= 18) return;
+  const estrangeiros = Object.values(s.continentais?.estrangeiros ?? {});
+  for (const c of [...s.clubs, ...estrangeiros]) for (const p of [...c.players, ...(c.base || [])]) p.value = valueOf(p);
+}
+
 const MIGRACOES = [
   s => migrarPosicoes(s), // 1: posições detalhadas novas (#23; antes marcado só com posv)
   s => migrarTecnicos(s), // 2: técnicos em S.managers, caixa e finanças no clube (#28)
@@ -69,7 +76,8 @@ const MIGRACOES = [
   s => { // 17: amarelos acumulados durante a temporada (#341)
     const estrangeiros = Object.values(s.continentais?.estrangeiros ?? {});
     for (const c of [...s.clubs, ...estrangeiros]) for (const p of [...c.players, ...(c.base || [])]) p.amar ??= 0;
-  }
+  },
+  migrarValoresDeMercado, // 18: valor de mercado sem desconto pelo prazo do contrato (#350)
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 

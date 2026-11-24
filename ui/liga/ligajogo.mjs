@@ -11,7 +11,7 @@ import { posDSigla } from '../../core/posicoes.mjs';
 import { descrever } from '../../core/propostas.mjs';
 import { taticaUser } from '../../core/taticas.mjs';
 import { esc, money } from '../../core/utils.mjs';
-import { migrarCarreira } from '../../core/versao.mjs';
+import { migrarCarreira, migrarValoresDeMercado } from '../../core/versao.mjs';
 import { avisar, confirmar, pedirValor } from '../avisos.mjs';
 import { clienteLogado, sessaoEncerrada, usuarioAtual } from '../inicio/conta.mjs';
 import { ui } from '../estado.mjs';
@@ -86,6 +86,7 @@ async function carregar(id) {
   }
   usarTecnico(eu);
   migrarCarreira(tec()); // liga antiga: monta a própria carreira enquanto o servidor ainda não migrou o save
+  migrarValoresDeMercado(S); // exibe o valor atualizado enquanto o servidor ainda não migrou o save
   if (meu && !tec().demitido && meu.clube === tec().clubId) {
     const uc = userClub(); uc.formation = meu.formation || uc.formation; uc.tatica = meu.tatica || uc.tatica;
     uc.lineup = meu.lineup.filter(pid => uc.players.some(p => p.id === pid && !unavailable(p))); // quem saiu ou se machucou
