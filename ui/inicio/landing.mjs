@@ -25,7 +25,7 @@ const CAMPO = [
   [['LE', 'Piquerez'], ['ZAG', 'Murilo'], ['ZAG', 'G. Gómez'], ['LD', 'Mayke']],
   [['GOL', 'Weverton']]
 ];
-const PERGUNTAS = [
+const perguntas = () => [
   ['Precisa instalar alguma coisa?', 'Não. O jogo abre no navegador, no computador ou no celular.'],
   ['Onde ficam os meus jogos salvos?', 'No próprio navegador, até 5 jogos. Com uma conta, eles também vão para a nuvem e dá para continuar em outro aparelho. Em Configurações você exporta um save como cópia de segurança.'],
   ['Preciso criar conta?', 'Não para jogar sozinho. A conta só serve para guardar os jogos na nuvem e para as ligas online com amigos.'],
@@ -175,7 +175,7 @@ export function vLanding() {
 
   <section class="lp-secao" id="lp-perguntas" aria-labelledby="lp-perg-t"><div class="lp-largura lp-estreita">
     <p class="lp-sobre">Perguntas</p><h2 id="lp-perg-t">Antes do apito</h2>
-    <div class="lp-perguntas">${PERGUNTAS.map(([p, r]) => `<details><summary>${p}</summary><p>${r}</p></details>`).join('')}</div>
+    <div class="lp-perguntas">${perguntas().map(([p, r]) => `<details><summary>${p}</summary><p>${r}</p></details>`).join('')}</div>
   </div></section>
 
   <section class="lp-final" aria-labelledby="lp-final-t"><div class="lp-largura">

@@ -10,7 +10,7 @@ test('a função da liga importa o core/ do repositório por caminho relativo', 
   const texto = readFileSync(FUNCAO, 'utf8');
   assert.doesNotMatch(texto, /jsdelivr|raw\.githubusercontent/i, 'nada de core/ fixado num commit do GitHub');
   const core = [...texto.matchAll(/from '(\.\.\/\.\.\/\.\.\/core\/[\w.-]+\.mjs)'/g)].map(m => m[1]);
-  assert.deepEqual(core.map(c => c.split('/').pop()).sort(), ['dados-padrao.mjs', 'estado.mjs', 'liga.mjs']);
+  assert.deepEqual(core.map(c => c.split('/').pop()).sort(), ['dados-padrao.mjs', 'estado.mjs', 'europa-liga.mjs', 'liga.mjs']);
   for (const c of core) assert.ok(existsSync(new URL(c, FUNCAO)), `${c} não existe`);
 });
 

@@ -168,7 +168,7 @@ export function makeBid(pid){
   const caixa=userClub().balance;
   pedirValor({titulo:`Proposta por ${p.name}`,texto:`${posDNome(p)}, força ${p.ovr}, do ${seller.name}.\nValor de mercado: ${money(p.value)}${p.contrato!=null?` (contrato: ${p.contrato} temporada${p.contrato>1?'s':''})`:''}. Seu caixa: ${money(caixa)}.`,rotulo:'Quanto oferecer',sufixo:'milhões',valor:p.value.toFixed(1).replace('.',','),ok:'Enviar proposta',
     validar:v=>isNaN(v)||v<=0?'Digite um valor maior que zero, em milhões (ex.: 4,5).':v>caixa?`O caixa só tem ${money(caixa)}.`:''},
-    v=>{if(ui.liga)return mercadoLiga({tipo:'compra',pid,valor:v}); // #35: na liga, a IA responde no servidor
+    v=>{if(ui.liga)return mercadoLiga({tipo:'compra',pid,valor:v}).then(r=>{if(r?.contra) verContraIA(r.contra.id)});
       const r=proporCompra(pid,v);
       if(r.erro){avisar(r.erro,'erro');return}
       save();render();
@@ -178,6 +178,14 @@ export function makeBid(pid){
         const compra=responder(valor);feito(compra,compra.msg);
       },()=>responder());
     });
+}
+export function verContraIA(id) {
+  if (!ui.liga) return;
+  const contra = tec().contraIA, p = contra && P[contra.pid], c = contra && clubeDe(contra.vendedor);
+  if (contra?.id !== id || !p || !c) return;
+  const responder = aceitar => mercadoLiga({ tipo: 'responderContraIA', id, aceitar });
+  confirmar({ titulo: `Contraproposta por ${p.name}`, texto: `${c.name} aceita vender por ${money(contra.valor, 3)}. ${contra.motivo}`,
+    ok: `Aceitar por ${money(contra.valor, 3)}`, cancelar: 'Recusar' }, () => responder(true), () => responder(false));
 }
 // tela
 export const feito=(r,msg,tipo='ok')=>{if(r.erro){avisar(r.erro,'erro');return}save();render();if(msg)avisar(msg,tipo)};

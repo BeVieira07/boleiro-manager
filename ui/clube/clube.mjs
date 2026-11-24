@@ -50,6 +50,12 @@ export function alertas() {
     out.push({ tipo: 'aviso', titulo: `Proposta ${o.emprestimo ? 'de empréstimo ' : ''}por ${p.name}`, texto: o.emprestimo ? `${c.name} quer ele emprestado por 1 ano, com o salário dividido 50/50. Vale até a rodada ${o.until + 1}.` : `${c.name} oferece ${money(o.amount)} (valor de mercado ${money(p.value)}). Vale até a rodada ${o.until + 1}.`,
       botoes: `<button class="btn sm" data-acao="acceptOffer|${o.id}">Aceitar</button><button class="btn sec sm" data-acao="rejectOffer|${o.id}">Recusar</button>` });
   }
+  const contra = tec().contraIA;
+  const alvo = contra && P[contra.pid], vendedor = contra && clubeDe(contra.vendedor);
+  if (alvo && vendedor && alvo.clubId === vendedor.id) {
+    out.push({ tipo: 'aviso', titulo: `Contraproposta por ${alvo.name}`, texto: `${vendedor.name} pede ${money(contra.valor, 3)}.`,
+      acao: `verContraIA|${contra.id}`, rotulo: 'Ver contraproposta' });
+  }
   const fim = uc.players.filter(p => p.contrato === 1 && !loanOf(p.id));
   if (fim.length && S.fixtures.length - S.round <= 10) out.push({ tipo: 'info', titulo: `${fim.length} contrato${fim.length > 1 ? 's acabam' : ' acaba'} ao fim da temporada`, texto: `${fim.slice(0, 4).map(p => p.name).join(', ')}${fim.length > 4 ? ' e outros' : ''}. Sem renovar, saem de graça.`, acao: 'go|elenco', rotulo: 'Ver elenco' });
   for (const l of loansIn(uc).filter(l => loanLeft(l) <= 2))

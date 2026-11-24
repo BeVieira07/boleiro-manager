@@ -7,11 +7,13 @@ import { promoverDaBase, venderDaBase } from './base.mjs';
 import { escolherClube, fecharPassagem, gerarPropostas, pedirDemissao, recusarClubes } from './carreira.mjs';
 import { renovarContrato } from './contratos.mjs';
 import { emprestimoJa, exercerOpcaoCompra, proporEmprestimo } from './emprestimos.mjs';
+import { hidratarEuropaLiga, incorporarEuropaLiga } from './europa-liga.mjs';
+import { clubeDe } from './estrangeiros.mjs';
 import { definirCantos, definirCobradores, unavailable } from './escalacao.mjs';
 import { RODADA_ESTADUAL } from './estadual.mjs';
-import { P, S, addNewsTodos, clubById, clubDo, criarJogo, ehHumano, tec, tecnicos, usarTecnico, userClub } from './estado.mjs';
-import { VERSAO_SAVE_LIGA, migrarSave } from './versao.mjs';
-import { aceitarOferta, alternarEmprestimo, alternarVenda, comprarJa, proporCompra, recusarOferta, venderJa } from './mercado.mjs';
+import { P, S, addNewsTodos, clubById, clubDo, criarJogo, ehHumano, reindex, tec, tecnicos, usarTecnico, userClub } from './estado.mjs';
+import { VERSAO_SAVE, VERSAO_SAVE_LIGA, migrarSave } from './versao.mjs';
+import { aceitarOferta, alternarEmprestimo, alternarVenda, comprarJa, concluirContrapropostaIA, proporCompra, recusarOferta, venderJa } from './mercado.mjs';
 import { autoXI, jogarRodada, titularesPossiveis, validateLineup } from './motor.mjs';
 import { fecharTemporada, iniciarTemporada } from './partida.mjs';
 import { aceitarProposta, cancelarProposta, contraproposta, proporTecnico, recusarProposta } from './propostas.mjs';
@@ -29,7 +31,7 @@ export function erroSeries(series) {
 }
 
 /** Monta o estado da liga. membros: [{user_id, nome, club_id}]. Devolve {erro} ou {ok} (o estado fica em S). */
-export function iniciarLiga(membros, series, dados) {
+export function iniciarLiga(membros, series, dados, catalogo) {
   const e = erroSeries(series); if (e) return { erro: e };
   const clubs = dados.clubs.filter(c => series.includes(c.division));
   if (!membros.length) return { erro: 'A liga não tem técnicos.' };
@@ -38,8 +40,25 @@ export function iniciarLiga(membros, series, dados) {
     if (!clubs.some(c => c.id === m.club_id)) return { erro: `O clube de ${m.nome || 'um técnico'} não é das séries da liga.` };
   }
   criarJogo(membros.map(m => ({ id: m.user_id, nome: m.nome || 'Técnico', clubId: m.club_id })), { ...dados, clubs });
-  S.versao = VERSAO_SAVE_LIGA;
+  if (catalogo) ativarEuropa(catalogo);
+  else S.versao = VERSAO_SAVE_LIGA;
   return { ok: true };
+}
+
+function ativarEuropa(catalogo) {
+  incorporarEuropaLiga(S, catalogo);
+  S.versao = VERSAO_SAVE;
+  reindex();
+}
+
+function prepararEstadoLiga(estado, europa) {
+  const m = migrarSave(estado, { liga: true });
+  if (m.erro) return m;
+  if (estado.europaLiga) {
+    hidratarEuropaLiga(estado, europa?.catalogos.get(estado.europaLiga.catalogo));
+    reindex();
+  } else if (europa?.atual) ativarEuropa(europa.atual);
+  return m;
 }
 
 /** Aplica a escolha de um técnico, conferindo tudo (vem do navegador): 11 jogadores do clube (ou os que dá, #365), disponíveis e sem repetir. */
@@ -56,8 +75,8 @@ export function aplicarEntrada(uc, e) {
 
 /** Joga a rodada atual da liga. entradas: {user_id: linha de liga_entradas}. Quem não confirmou joga com a escalação automática.
  *  Depois da última rodada, fecha a temporada e começa a próxima na mesma chamada. */
-export function jogarRodadaLiga(estado, entradas) {
-  const m = migrarSave(estado, { liga: true }); if (m.erro) throw new Error(m.erro); // liga criada antes de uma mudança no save ganha os campos novos
+export function jogarRodadaLiga(estado, entradas, europa) {
+  const m = prepararEstadoLiga(estado, europa); if (m.erro) throw new Error(m.erro);
   // #37: quem saiu do clube e não escolheu até agora assume a melhor proposta (a liga não espera)
   const trocas = [];
   for (const t of tecnicos()) if (t.demitido && !t.recusouClubes) {
@@ -80,6 +99,7 @@ export function jogarRodadaLiga(estado, entradas) {
   if (!r.jogos) throw new Error('A rodada não foi jogada: ' + JSON.stringify(r)); // com as correções acima não acontece
   // #132: data de estadual (pré-temporada) fica nos resultados com rodada negativa, sem bater com a liga
   if (r.estadual) return { jogos: r.jogos, temporada, rodada: RODADA_ESTADUAL + r.estadual.dia, virada: null, trocas };
+  for (const t of tecnicos()) delete t.contraIA;
   let virada = null;
   if (S.round >= S.fixtures.length) {
     const f = fecharTemporada();
@@ -97,8 +117,32 @@ const daIA = (pid, uc) => !P[pid]?.clubId || P[pid].clubId === uc.id ? invalido 
 const meu = (pid, uc) => P[pid] && P[pid].clubId === uc.id ? null : invalido;
 // #142: só pedir emprestado da lista de um clube da IA; o técnico empresta os dele pondo-os na lista (alternarEmprestimo)
 const emprestimoLiga = (a, uc) => daIA(a.pid, uc) || proporEmprestimo({ pid: a.pid });
+function compraLiga(a, uc) {
+  const erro = daIA(a.pid, uc);
+  if (erro) return erro;
+  const p = P[a.pid], vendedor = p.clubId;
+  const r = proporCompra(p.id, Number(a.valor), { comContraproposta: !!clubeDe(vendedor)?.liga });
+  if (!r.contra) return r;
+  const { valor, motivo } = r.contra;
+  const rodada = p.bidRound, id = `${p.id}_${rodada}`;
+  const contra = { id, pid: p.id, vendedor, rodada, valor, motivo };
+  tec().contraIA = contra;
+  return { ok: false, msg: r.msg, contra };
+}
+
+function responderContraIA(a) {
+  const t = tec(), proposta = t.contraIA;
+  if (!proposta || a.id !== proposta.id || typeof a.aceitar !== 'boolean') return { erro: 'A contraproposta não está mais disponível.' };
+  delete t.contraIA;
+  if (!a.aceitar) return { ok: true, msg: 'Contraproposta recusada.' };
+  const r = concluirContrapropostaIA(proposta);
+  return r.erro ? { ok: false, msg: r.erro } : r;
+}
+
 const MERCADO = {
-  compra: (a, uc) => daIA(a.pid, uc) || proporCompra(a.pid, Number(a.valor), { comContraproposta: false }),
+  compra: compraLiga,
+  ativarEuropa: () => S.europaLiga ? { ok: true } : { erro: 'Catálogo europeu da liga indisponível.' },
+  responderContraIA,
   comprarJa: (a, uc) => daIA(a.pid, uc) || comprarJa(a.pid),
   venderJa: (a, uc) => meu(a.pid, uc) || venderJa(a.pid),
   alternarVenda: (a, uc) => meu(a.pid, uc) || alternarVenda(a.pid),
@@ -125,8 +169,8 @@ const MERCADO = {
 const SO_SEM_CLUBE = new Set(['escolherClube', 'recusarClubes']), SEM_REPASSE = new Set(['escolherClube', 'pedirDemissao', 'recusarClubes']);
 /** Ação de mercado de um técnico (a: {tipo, ...}, vinda do navegador: tudo é conferido). Devolve {erro} (nada muda) ou {ok, msg}
  *  (o estado em S mudou e deve ser gravado; ok=false é proposta recusada). Negócio fechado vira notícia para todos da liga. */
-export function acaoMercadoLiga(estado, eu, a) {
-  const m = migrarSave(estado, { liga: true }); if (m.erro) return m;
+export function acaoMercadoLiga(estado, eu, a, europa) {
+  const m = prepararEstadoLiga(estado, europa); if (m.erro) return m;
   usarTecnico(eu);
   if (!a || !Object.hasOwn(MERCADO, a.tipo)) return { erro: 'Ação de mercado desconhecida.' }; // hasOwn: "constructor" não vale
   const f = MERCADO[a.tipo];
@@ -141,8 +185,8 @@ export function acaoMercadoLiga(estado, eu, a) {
 }
 
 /** Tira um técnico da liga (saiu, ou o dono removeu): o clube dele volta para a IA (#37). Devolve {erro} ou {ok}; o estado fica em S. */
-export function removerTecnicoLiga(estado, userId) {
-  const m = migrarSave(estado, { liga: true }); if (m.erro) return m;
+export function removerTecnicoLiga(estado, userId, europa) {
+  const m = prepararEstadoLiga(estado, europa); if (m.erro) return m;
   const t = S.managers[userId]; if (!t) return { erro: 'Esse técnico não está na liga.' };
   const c = clubDo(t);
   fecharPassagem(t);

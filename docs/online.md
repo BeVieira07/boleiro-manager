@@ -7,6 +7,28 @@ Objetivo: jogar online de duas formas.
 
 Decisões tomadas: **Supabase** (banco Postgres, login, tempo real e funções no servidor) e rodada **quando todos confirmarem**.
 
+## Mercado europeu na liga (#355)
+
+- Após atualizar `data/europa-2025.json`, rode `node scripts/versionar-europa.mjs`. Versione o novo módulo em `core/catalogos-europa/` e o registro da função em `supabase/functions/jogar-rodada/catalogos-europa.mjs`. O gerador registra o SHA-256 da fonte com finais de linha normalizados e calcula a versão a partir do conteúdo gerado. Preserve os módulos anteriores para as ligas em andamento.
+- O Pages publica os arquivos de `core/`. A função importa estaticamente os mesmos módulos e o bundle os leva junto. Ao abrir uma liga, o navegador carrega apenas o módulo da versão gravada. Um catálogo indisponível interrompe a operação com aviso, e a próxima abertura pode tentar carregar a mesma versão.
+- A primeira gravação de uma liga antiga fixa a versão atual. Entrar no mercado também pode iniciar essa migração. O banco guarda `europaLiga` com a versão, as mudanças de ordem de elenco, os saldos e as alterações dos jogadores. A hidratação do servidor usa o estado íntegro. O navegador recebe a projeção de `liga_estado_meu`, com ofertas e contrapropostas restritas ao técnico e potencial em faixas.
+- Para o Revisor, primeiro aplique a migração `20261124230000_liga_europa_projecao.sql` pelo fluxo aprovado. Ela é compatível com ligas gravadas pelo servidor anterior. Depois libere o deploy da função que começa a escrever `europaLiga` e confira o artefato do Pages com os mesmos catálogos. Como o merge da branch principal aciona o deploy automático, a projeção precisa estar aplicada antes de liberar o merge. Mantenha a projeção durante um eventual rollback da função.
+- Em um banco local com as migrações aplicadas, execute `psql -v ON_ERROR_STOP=1 -f supabase/tests/liga_europa.sql`. O teste faz rollback e cobre liga antiga, dois técnicos, ida e retorno de um jogador, gravação pela versão e a projeção dos dados privados.
+
+### Compactação dos saves solo
+
+O arquivo `ui/vendor/fflate.mjs` empacota quatro funções do `fflate@0.8.3` distribuído no npm. A licença MIT está em `ui/vendor/fflate-LICENSE.txt`. A compactação vale para a cópia de saves solo com Europa no navegador. A sincronização envia e baixa o JSON íntegro.
+
+Em uma pasta temporária, com `DESTINO` apontando para a pasta `ui/vendor` do projeto, rode:
+
+```sh
+npm pack fflate@0.8.3
+tar -xf fflate-0.8.3.tgz package/esm/browser.js package/LICENSE
+printf "%s\n" "export { deflateSync, inflateSync, strFromU8, strToU8 } from './package/esm/browser.js';" > fflate-entrada.mjs
+npm exec --yes --package esbuild@0.25.12 -- esbuild fflate-entrada.mjs --bundle --format=esm --platform=browser --minify --outfile="$DESTINO/fflate.mjs" '--banner:js=/*! fflate 0.8.3 (MIT) | https://github.com/101arrowz/fflate | Veja fflate-LICENSE.txt. */'
+cp package/LICENSE "$DESTINO/fflate-LICENSE.txt"
+```
+
 ## Recuperação de senha (#258)
 
 O Supabase envia o link de recuperação com retorno para o mesmo endereço do jogo. Em **Authentication → URL Configuration → Redirect URLs**, inclua os endereços usados em produção e no desenvolvimento, como `https://bevieira07.github.io/boleiro-manager/` e `http://localhost:3000/`. O modelo de e-mail **Reset Password** deve manter o link de confirmação (`{{ .ConfirmationURL }}`).

@@ -84,19 +84,28 @@ function abrirContraproposta(p,seller,uc,pedido){
     const aberta=pendente;
     pendente=false;
     if(valor===undefined)return;
-    if(!aberta||S!==estado||S.atual!==tecnico||userClub()!==uc||rodadaDaProposta()!==rodada||p.bidRound!==rodada||
-      P[p.id]!==p||p.clubId!==seller.id||clubeDe(p.clubId)!==seller||!seller.players.includes(p)||crucial(p,seller)){
+    if(!aberta||S!==estado||S.atual!==tecnico||userClub()!==uc||P[p.id]!==p||clubeDe(p.clubId)!==seller){
       return {erro:'A contraproposta não está mais disponível.'};
     }
-    const erro=podeProporCompra(p.id,{imediata:true});if(erro)return {erro};
-    const atual=precoDaContraproposta(p,seller,precoPedido(p.id)).valor;
-    if(valor!==oferta.valor||valor!==atual)return {erro:'O valor da contraproposta não é mais válido.'};
-    if(uc.balance<atual)return {erro:`Caixa insuficiente para pagar ${money(atual,3)}.`};
-    return fecharCompra(p,seller,uc,atual,3);
+    if(valor!==oferta.valor)return {erro:'O valor da contraproposta não é mais válido.'};
+    return concluirContrapropostaIA({pid:p.id,vendedor:seller.id,rodada,valor});
   }};
 }
 
-// A liga continua com a resposta original. No jogo local, só a recusa pode gerar contraproposta.
+/** Revalida a cotação da IA com o estado atual e conclui a compra em uma única ação. */
+export function concluirContrapropostaIA({pid,vendedor,rodada,valor}){
+  const p=P[pid],seller=clubeDe(vendedor),uc=userClub();
+  if(!seller||p?.clubId!==vendedor||rodadaDaProposta()!==rodada||p.bidRound!==rodada||!seller.players.includes(p)||crucial(p,seller)){
+    return {erro:'A contraproposta não está mais disponível.'};
+  }
+  const erro=podeProporCompra(pid,{imediata:true});if(erro)return {erro};
+  const atual=precoDaContraproposta(p,seller,precoPedido(pid)).valor;
+  if(valor!==atual)return {erro:'O valor da contraproposta não é mais válido.'};
+  if(uc.balance<atual)return {erro:`Caixa insuficiente para pagar ${money(atual,3)}.`};
+  return fecharCompra(p,seller,uc,atual,3);
+}
+
+// Só a recusa pode gerar contraproposta. Na liga essa etapa vale para a negociação com europeus da IA.
 export function proporCompra(pid,amt,{comContraproposta=true}={}){
   const e=podeProporCompra(pid);if(e)return {erro:e};
   const p=P[pid],seller=clubeDe(p.clubId),uc=userClub();

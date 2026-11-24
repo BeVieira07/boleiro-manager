@@ -6,6 +6,15 @@ import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga, removerTecnicoLiga } from '../../../core/liga.mjs';
 import { S } from '../../../core/estado.mjs';
 import { DADOS_PADRAO } from '../../../core/dados-padrao.mjs';
+import { compactarEuropaLiga } from '../../../core/europa-liga.mjs';
+import { catalogosEuropa, catalogoEuropaAtual } from './catalogos-europa.mjs';
+
+const europa = { catalogos: catalogosEuropa, atual: catalogoEuropaAtual };
+// Os catálogos entram no mesmo bundle da função. O motor nunca busca o catálogo pela rede.
+const estadoParaGravar = (estado: { europaLiga?: { catalogo: string } } | null) => {
+  if (!estado) throw new Error('Estado da liga indisponível.');
+  return JSON.parse(JSON.stringify(compactarEuropaLiga(estado, catalogosEuropa.get(estado.europaLiga?.catalogo ?? ''))));
+};
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -19,10 +28,12 @@ const ligaNaoEncontrada = () => erro('Liga não encontrada.', 404);
 // #79: a semente (seed) e o gerador (rng) ficam em liga_segredo, que só o servidor lê; o gatilho do banco os tira do estado
 // gravado, e aqui eles voltam antes de rodar as regras. Sem a tabela ou sem linha (estado antigo), vale o que estiver no estado.
 async function lerEstado(admin: any, ligaId: string) {
-  const [{ data: est }, { data: seg }] = await Promise.all([
-    admin.from('liga_estado').select('estado, versao').eq('liga_id', ligaId).maybeSingle(),
-    admin.from('liga_segredo').select('seed, rng').eq('liga_id', ligaId).maybeSingle()
-  ]);
+  // As duas relações são 1:1 com ligas. A consulta lê o estado, sua versão e o
+  // sorteio na mesma instrução SQL, inclusive quando outra requisição está gravando.
+  const { data, error } = await admin.from('ligas').select('liga_estado(estado, versao), liga_segredo(seed, rng)')
+    .eq('id', ligaId).maybeSingle();
+  if (error) throw error;
+  const est = data?.liga_estado, seg = data?.liga_segredo;
   if (est && seg) { est.estado.seed = Number(seg.seed); est.estado.rng = Number(seg.rng) }
   return est;
 }
@@ -51,10 +62,10 @@ Deno.serve(async (req) => {
       const { data: perfis } = await admin.from('profiles').select('id, nome').in('id', membros.map((m) => m.user_id));
       const nomes = Object.fromEntries((perfis || []).map((p) => [p.id, p.nome]));
       // bloco síncrono: monta o estado e copia para texto antes de qualquer await (o core usa um estado global)
-      const r = iniciarLiga(membros.map((m) => ({ ...m, nome: nomes[m.user_id] })), liga.series, DADOS_PADRAO);
+      const r = iniciarLiga(membros.map((m) => ({ ...m, nome: nomes[m.user_id] })), liga.series, DADOS_PADRAO, europa.atual);
       if (r.erro) return erro(r.erro);
-      const estado = JSON.stringify(S);
-      const { data: ok, error } = await admin.rpc('liga_iniciar', { p_liga: ligaId, p_estado: JSON.parse(estado) });
+      const estado = estadoParaGravar(S);
+      const { data: ok, error } = await admin.rpc('liga_iniciar', { p_liga: ligaId, p_estado: estado });
       if (error) throw error;
       return ok ? resposta({ ok: true, iniciada: true }) : erro('A liga já começou.', 409);
     }
@@ -78,10 +89,10 @@ Deno.serve(async (req) => {
         const faltam = membros.filter((m) => !prontos.has(m.user_id) && !semClube.has(m.user_id)).length;
         if (faltam && !forcar) return resposta({ ok: true, jogada: false, faltam });
         // bloco síncrono: joga e copia o resultado para texto antes do próximo await
-        const r = jogarRodadaLiga(est.estado, Object.fromEntries((entradas || []).map((e) => [e.user_id, e])));
-        const novo = JSON.stringify(S), jogos = JSON.stringify(r.jogos);
+        const r = jogarRodadaLiga(est.estado, Object.fromEntries((entradas || []).map((e) => [e.user_id, e])), europa);
+        const novo = estadoParaGravar(S), jogos = JSON.stringify(r.jogos);
         const { data: ok, error } = await admin.rpc('liga_gravar_rodada', {
-          p_liga: ligaId, p_rodada: l.rodada, p_versao: est.versao, p_estado: JSON.parse(novo),
+          p_liga: ligaId, p_rodada: l.rodada, p_versao: est.versao, p_estado: novo,
           p_temporada: r.temporada, p_rodada_temporada: r.rodada, p_semente: 0 /* #116: nada derivado da semente sai do servidor */, p_jogos: JSON.parse(jogos)
         });
         if (error) throw error;
@@ -104,14 +115,17 @@ Deno.serve(async (req) => {
           if (atual?.rodada !== corpo.rodada) return resposta({ ok: true, jaJogada: true });
         }
         // bloco síncrono, como na rodada
-        const r = acaoMercadoLiga(est.estado, eu, corpo.mercado || {});
+        // A abertura do mercado migra uma liga antiga uma única vez. Um retry que já a
+        // encontre migrada não precisa gravar nem avançar novamente a versão do estado.
+        if (corpo.mercado?.tipo === 'ativarEuropa' && est.estado.europaLiga) return resposta({ ok: true, aceita: true });
+        const r = acaoMercadoLiga(est.estado, eu, corpo.mercado || {}, europa);
         if (r.erro) return erro(r.erro);
-        const novo = JSON.stringify(S);
-        const { data: ok, error } = await admin.rpc('liga_gravar_acao', { p_liga: ligaId, p_versao: est.versao, p_estado: JSON.parse(novo) });
+        const novo = estadoParaGravar(S);
+        const { data: ok, error } = await admin.rpc('liga_gravar_acao', { p_liga: ligaId, p_versao: est.versao, p_estado: novo });
         if (error) throw error;
         if (ok) {
           if (r.clube) await admin.from('liga_membros').update({ club_id: r.clube }).eq('liga_id', ligaId).eq('user_id', eu); // #37: assumiu outro clube
-          return resposta({ ok: true, aceita: r.ok, msg: r.msg || null });
+          return resposta({ ok: true, aceita: r.ok, msg: r.msg || null, ...(r.contra ? { contra: r.contra } : {}) });
         }
       }
       return erro('A liga mudou ao mesmo tempo. Tente de novo.', 409);
@@ -135,9 +149,9 @@ Deno.serve(async (req) => {
           const est = await lerEstado(admin, ligaId);
           if (!est) return ligaNaoEncontrada();
           // bloco síncrono, como na rodada
-          const r = removerTecnicoLiga(est.estado, alvo);
-          if (r.erro) return erro(r.erro);
-          p_estado = JSON.parse(JSON.stringify(S)); p_versao = est.versao;
+          const r = removerTecnicoLiga(est.estado, alvo, europa);
+          if ('erro' in r && r.erro) return erro(r.erro);
+          p_estado = estadoParaGravar(S); p_versao = est.versao;
         }
         const { data: ok, error } = await admin.rpc('liga_remover_membro', { p_liga: ligaId, p_user: alvo, p_versao, p_estado });
         if (error) throw error;

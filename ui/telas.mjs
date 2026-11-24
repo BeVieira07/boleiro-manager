@@ -24,7 +24,7 @@ import { comCatalogoEuropa } from './inicio/catalogo-europa.mjs';
 import { icone } from './icones.mjs';
 import { TITULOS, barraAcoes, lateral } from './layout.mjs';
 import { vLigas, vLobby } from './liga/liga.mjs';
-import { bloqueadoNaLiga, vLigaJogo } from './liga/ligajogo.mjs';
+import { ativarMercadoEuropeuLiga, bloqueadoNaLiga, vLigaJogo } from './liga/ligajogo.mjs';
 import { vMercado } from './clube/mercado.mjs';
 import { botaoRodada } from './temporada/motor.mjs';
 import { crest, newSeason, seasonEnd } from './partida/partida.mjs';
@@ -36,6 +36,7 @@ import { vTecnico } from './clube/tecnico.mjs';
 // #65: ao trocar de tela, o foco vai para o conteúdo (teclado e leitor de tela começam pelo título)
 export function go(v){
   ui.view=v;ui.maisAberto=false;telaDesenhada=null;render();window.scrollTo(0,0);const a=document.getElementById('app');if(a&&a.focus)a.focus({preventScroll:true});
+  if(ui.view==='mercado'&&ui.liga)return ativarMercadoEuropeuLiga();
   if(ui.view==='mercado'&&S&&!S.europa&&!ui.liga)return comCatalogoEuropa(catalogo=>{
     inicializarEuropa(S,catalogo);
     if(S.europa){save();render()}

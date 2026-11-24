@@ -87,9 +87,9 @@ export const VERSAO_SAVE_LIGA = MIGRACOES.findLastIndex(migracao => migracao !==
 /** Põe o save em S e o leva até a versão atual. Devolve {erro} (save de versão mais nova; S fica vazio) ou {ok}. */
 export function migrarSave(s, { catalogoEuropa, liga = false } = {}) {
   const v = Number.isInteger(s.versao) ? s.versao : 0;
-  const versao = liga ? VERSAO_SAVE_LIGA : VERSAO_SAVE;
+  const versao = liga && !s.europaLiga ? VERSAO_SAVE_LIGA : VERSAO_SAVE;
   if (v > VERSAO_SAVE) { usarEstado(null); return { erro: 'Este save é de uma versão mais nova do jogo. Atualize a página (Ctrl+F5) e tente de novo.' } }
-  if (liga && s.europa) { usarEstado(null); return { erro: 'O mercado europeu pertence às campanhas locais.' } }
+  if (liga && s.europa && !s.europaLiga) { usarEstado(null); return { erro: 'Use o estado da liga com amigos.' } }
   usarEstado(s);
   for (let i = v; i < versao; i++) MIGRACOES[i](s, catalogoEuropa);
   // O slot único pode ter sido migrado na abertura do site, antes de carregar o catálogo.

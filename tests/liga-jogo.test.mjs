@@ -10,6 +10,8 @@ const conta = await import(new URL('ui/inicio/conta.mjs', raiz));
 const { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga, removerTecnicoLiga } = await import(new URL('core/liga.mjs', raiz));
 const est = await import(new URL('core/estado.mjs', raiz)); // est.S: o S muda a cada usarEstado
 const { DADOS_PADRAO } = await import(new URL('core/dados-padrao.mjs', raiz));
+const { compactarEuropaLiga } = await import(new URL('core/europa-liga.mjs', raiz));
+const { catalogosEuropa, catalogoEuropaAtual } = await import(new URL('supabase/functions/jogar-rodada/catalogos-europa.mjs', raiz));
 
 // confirmar() chama o callback async sem esperar: deixa as promessas terminarem
 const esperar = (ms = 0) => new Promise(r => setTimeout(r, ms));
@@ -23,6 +25,7 @@ function servidorFalso(clubes) {
     membros: [{ user_id: 'a', club_id: clubes[0], nome: 'Ana' }, { user_id: 'b', club_id: clubes[1], nome: 'Bia' }],
     estado: null, entradas: [], resultados: [], ouvintes: [], cargas: 0, chamadas: []
   };
+  const persistir = () => copia(compactarEuropaLiga(est.S, srv.europa?.catalogos.get(est.S.europaLiga?.catalogo)));
   const apagarLiga = () => Object.assign(srv, { liga: null, membros: [], estado: null, entradas: [], resultados: [] });
   // tempo real: avisa os canais assinados
   srv.emitir = (table, novo) => srv.ouvintes.filter(o => o.table === table).forEach(o => o.cb({ new: copia(novo) }));
@@ -39,23 +42,24 @@ function servidorFalso(clubes) {
     if (acao === 'sair' || acao === 'remover') { // #37, como liga_remover_membro
       const alvo = acao === 'sair' ? uid : membro;
       if (acao === 'remover' && L.dono_id !== uid) return { erro: 'Só o dono remove membros.' };
-      if (L.status === 'andamento') { const r = removerTecnicoLiga(copia(srv.estado), alvo); if (r.erro) return r; srv.estado = copia(est.S); L.versao++ }
+      if (L.status === 'andamento') { const r = removerTecnicoLiga(copia(srv.estado), alvo, srv.europa); if (r.erro) return r; srv.estado = persistir(); L.versao++ }
       srv.membros = srv.membros.filter(m => m.user_id !== alvo);
       if (L.dono_id === alvo) L.dono_id = srv.membros[0]?.user_id;
       if (srv.membros.length) srv.emitir('ligas', L); else apagarLiga();
       return { ok: true, saiu: alvo };
     }
     if (acao === 'mercado') { // #35
-      const r = acaoMercadoLiga(copia(srv.estado), uid, mercado || {});
+      if (mercado?.tipo === 'ativarEuropa' && srv.estado.europaLiga) return { ok: true, aceita: true };
+      const r = acaoMercadoLiga(copia(srv.estado), uid, mercado || {}, srv.europa);
       if (r.erro) return r;
-      srv.estado = copia(est.S); L.versao++;
+      srv.estado = persistir(); L.versao++;
       srv.emitir('ligas', L);
-      return { ok: true, aceita: r.ok, msg: r.msg || null };
+      return { ok: true, aceita: r.ok, msg: r.msg || null, contra: r.contra };
     }
     if (acao === 'iniciar') {
       if (L.dono_id !== uid) return { erro: 'Só o dono começa a liga.' };
-      assert.ok(iniciarLiga(srv.membros, L.series, DADOS_PADRAO).ok);
-      srv.estado = copia(est.S); Object.assign(L, { status: 'andamento', rodada: 0, versao: 1 });
+      assert.ok(iniciarLiga(srv.membros, L.series, DADOS_PADRAO, srv.europa?.atual).ok);
+      srv.estado = persistir(); Object.assign(L, { status: 'andamento', rodada: 0, versao: 1 });
       srv.emitir('ligas', L); // como o banco: a mudança de status chega pelo tempo real (#235)
       return { ok: true, iniciada: true };
     }
@@ -63,8 +67,8 @@ function servidorFalso(clubes) {
     const ents = srv.entradas.filter(e => e.rodada === L.rodada);
     const faltam = srv.membros.filter(m => !srv.estado.managers[m.user_id].demitido && !ents.some(e => e.user_id === m.user_id && e.pronto)).length;
     if (faltam && !forcar) return { ok: true, jogada: false, faltam };
-    const r = jogarRodadaLiga(copia(srv.estado), Object.fromEntries(ents.map(e => [e.user_id, e])));
-    srv.estado = copia(est.S);
+    const r = jogarRodadaLiga(copia(srv.estado), Object.fromEntries(ents.map(e => [e.user_id, e])), srv.europa);
+    srv.estado = persistir();
     srv.resultados.push({ temporada: r.temporada, rodada: r.rodada, jogos: copia(r.jogos) });
     srv.entradas.forEach(e => { e.pronto = false }); srv.membros.forEach(m => { m.pronto_rodada = null });
     L.rodada++; L.versao++;
@@ -149,6 +153,42 @@ test('recusar clubes na liga espera outra confirmação e abre novas propostas a
   assert.equal(srv.estado.managers.a.demitido, true);
   assert.ok(srv.estado.managers.a.propostasClube.length);
   assert.match(j.html(), /Recusar todas/);
+});
+
+test('abertura e filtros da Europa na liga antiga, oferta recebida e volta ao solo no mesmo cliente', async () => {
+  const j = carregarJogo({ boot: true });
+  const srv = servidorFalso([clubeDaSerie(j, 'A', 0), clubeDaSerie(j, 'A', 1)]);
+  await como(srv, 'a');
+  await srv.cliente('a').functions.invoke('jogar-rodada', { body: { acao: 'iniciar' } });
+  await j.acao('entrarNaLiga|L1');
+  assert.ok(!j.run('S.europa'));
+  srv.europa = { atual: catalogoEuropaAtual, catalogos: catalogosEuropa };
+  await j.acao('go|mercado');
+  assert.ok(!srv.estado.europa && srv.estado.europaLiga);
+  j.acao('filtrarMercado|pais', 'Inglaterra');
+  j.acao('filtrarMercado|liga', 'GB1');
+  assert.match(j.html(), /Inglaterra · Premier League/);
+  assert.ok(j.run('corpoMercado().total') > 0);
+
+  const p = srv.estado.clubs.find(c => c.id === srv.membros[0].club_id).players[0];
+  const clube = Object.values(catalogoEuropaAtual.europa.clubes).find(c => c.players.length < 39 && c.balance > 5);
+  srv.estado.managers.a.offers.push({ id: 'europeia', pid: p.id, from: clube.id, amount: 5, until: 3 });
+  const versao = srv.liga.versao;
+  const reabrir = async () => { await j.acao('entrarNaLiga|L1'); assert.equal(j.run('ui.liga.versao'), srv.liga.versao); };
+  await reabrir();
+  assert.match(j.html(), new RegExp('acceptOffer\\|europeia'));
+  await j.acao('acceptOffer|europeia');
+  assert.equal(srv.liga.versao, versao + 1);
+  assert.equal(j.run(`P[${JSON.stringify(p.id)}].clubId`), clube.id);
+  assert.ok(srv.estado.europaLiga.jogadores.some(jog => jog.id === p.id && jog.pot === p.pot));
+
+  j.acao('voltarMenu');
+  j.acao('novoJogo');
+  j.acao('newGame|' + clubeDaSerie(j));
+  assert.ok(!j.run('ui.liga || S.europaLiga'));
+  await reabrir();
+  assert.equal(j.run(`P[${JSON.stringify(p.id)}].clubId`), clube.id);
+  j.acao('voltarMenu');
 });
 
 test('dono começa a liga, confirmações chegam em tempo real e a rodada é jogada quando todos confirmam', async () => {

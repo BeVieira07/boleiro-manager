@@ -1,6 +1,7 @@
 // #31: saves na nuvem, com um Supabase falso (tabela `saves` em memória, compartilhada entre "computadores")
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { carregarJogo, clubeDaSerie, jogarRodada } from './jogo.mjs';
 
 const conta = await import(new URL('../ui/inicio/conta.mjs', import.meta.url));
@@ -63,6 +64,24 @@ test('save criado num computador aparece e abre em outro com a mesma conta', asy
   assert.equal(pc2.run('ui.view'), 'clube');
   jogarRodada(pc2, 1);
   assert.equal(pc2.run('indiceSaves().list.length'), 1);
+});
+
+test('save solo com Europa sobe íntegro e reabre na nuvem com cópia local compactada', async () => {
+  const srv = servidorFalso(), pc1 = carregarJogo({ boot: true });
+  await logar(srv);
+  const catalogo = readFileSync(new URL('../data/europa-2025.json', import.meta.url), 'utf8');
+  pc1.run(`criarJogo('${clubeDaSerie(pc1)}', getData(), ${catalogo});salvarJogo()`);
+  const id = pc1.run('S.saveId');
+  assert.match(pc1.ls['brasfoot_save_v2_' + id], /^deflate1:/);
+  await nuvem.enviarPendentes();
+  const europa = srv.linhas['u1/' + id]?.estado.europa;
+  assert.ok(Object.keys(europa.clubes).length);
+  const pc2 = carregarJogo({ boot: true });
+  await logar(srv);
+  await pc2.acao('abrirDaNuvem|' + id);
+  assert.deepEqual(pc2.run('S.europa'), europa);
+  assert.match(pc2.ls['brasfoot_save_v2_' + id], /^deflate1:/);
+  assert.ok(!pc2.run('ui.liga'));
 });
 
 test('sem internet: salva no navegador e envia quando a internet volta', async () => {

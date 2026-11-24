@@ -5,6 +5,7 @@
    quem confirmou e quando a rodada foi jogada; aí o estado novo é baixado e o seu jogo aparece como replay.
    Nada da liga vai para os saves locais nem da nuvem. */
 import { definirCantos, definirCobradores, unavailable } from '../../core/escalacao.mjs';
+import { hidratarEuropaLiga } from '../../core/europa-liga.mjs';
 import { DIVS, P, S, clubById, clubDo, divOf, reindex, table, tec, tecnicos, usarEstado, usarTecnico, userClub } from '../../core/estado.mjs';
 import { autoXI, validateLineup } from '../../core/motor.mjs';
 import { posDSigla } from '../../core/posicoes.mjs';
@@ -14,6 +15,7 @@ import { esc, money } from '../../core/utils.mjs';
 import { migrarCarreira, migrarValoresDeMercado } from '../../core/versao.mjs';
 import { avisar, confirmar, pedirValor } from '../avisos.mjs';
 import { clienteLogado, sessaoEncerrada, usuarioAtual } from '../inicio/conta.mjs';
+import { carregarCatalogoDaLiga } from '../inicio/catalogo-europa.mjs';
 import { ui } from '../estado.mjs';
 import { icone } from '../icones.mjs';
 import { closeModal, crest, openModal } from '../partida/partida.mjs';
@@ -25,7 +27,7 @@ import { rotuloRodada } from '../temporada/estadual.mjs';
 import { RODADA_ESTADUAL } from '../../core/estadual.mjs';
 
 export const FUNCAO = 'jogar-rodada';
-let canal = null;
+let canal = null, entrada = 0;
 
 /** Chama a função do servidor; erros viram aviso. */
 async function chamarFuncao(corpo) {
@@ -61,18 +63,31 @@ export function comecarLiga(id) {
 
 async function carregar(id) {
   const c = clienteLogado(), eu = usuarioAtual() && usuarioAtual().id;
+  if (!c || !eu) return false;
+  const origem = entrada, tela = ui.view;
   const recarregando = ui.liga?.id === id;
   const [l, e, en] = await Promise.all([
     c.from('ligas').select('id, nome, dono_id, status, rodada, versao').eq('id', id).maybeSingle(),
     c.rpc('liga_estado_meu', { p_liga: id }), // #121: o estado sem o que é privado dos outros técnicos
     c.from('liga_membros').select('user_id, pronto_rodada').eq('liga_id', id) // #78: a escalação dos outros não é lida, só quem confirmou
   ]);
-  if (recarregando && ui.liga?.id !== id) return false;
+  if (entrada !== origem || (recarregando && ui.liga?.id !== id)) return false;
   if (!l.error && !l.data) {
     if (!ui.liga?.saindo) await voltarDaLiga();
     return false;
   }
   if (l.error || e.error || !e.data) { avisar('Não foi possível abrir a liga.', 'erro'); return false }
+  if (e.data.europaLiga) {
+    try {
+      const catalogo = await carregarCatalogoDaLiga(e.data.europaLiga.catalogo);
+      hidratarEuropaLiga(e.data, catalogo, { publico: true });
+    } catch {
+      if (entrada === origem) avisar('Não foi possível carregar o catálogo europeu desta liga. Tente abrir novamente.', 'erro');
+      return false;
+    }
+  }
+  if (entrada !== origem || (!recarregando && ui.view !== tela)
+    || (ui.liga?.id === id && ui.liga.versao > l.data.versao)) return false;
   // a escalação, a tática e os ajustes de pênalti ainda não confirmados só existem aqui
   const uc0 = ui.liga && ui.liga.id === id && S && S.managers[eu] && !S.managers[eu].demitido && clubDo(S.managers[eu]);
   const meu = uc0 && { clube: uc0.id, lineup: uc0.lineup || [], formation: uc0.formation, tatica: uc0.tatica,
@@ -103,6 +118,7 @@ async function carregar(id) {
 /** Abre a liga em andamento nas telas do jogo. */
 export async function entrarNaLiga(id) {
   if (!clienteLogado()) { avisar('Entre na sua conta para jogar a liga.'); return }
+  entrada++;
   if (!(await carregar(id))) return;
   assinar(id);
   go('clube');
@@ -129,7 +145,7 @@ export function sairDaLiga() {
   const c = clienteLogado();
   if (canal && c) c.removeChannel(canal);
   clearTimeout(recarga.timer); recarga.timer = null;
-  canal = null; ui.liga = null;
+  canal = null; ui.liga = null; entrada++;
 }
 
 export async function voltarDaLiga(mensagem = 'Esta liga não está mais disponível.', tipo = 'aviso') {
@@ -153,9 +169,21 @@ function agendarRecarga(versao) {
 export async function mercadoLiga(acao, msgOk) {
   const L = ui.liga; if (!L) return;
   const r = await chamarFuncao({ liga: L.id, acao: 'mercado', mercado: acao });
-  if (!r) return;
+  if (!r || ui.liga?.id !== L.id) return;
   if (await carregar(L.id)) render();
+  if (ui.liga?.id !== L.id) return;
   const msg = r.msg || msgOk; if (msg) avisar(msg, r.aceita === false ? 'info' : 'ok');
+  return r;
+}
+
+let ativandoEuropa;
+export function ativarMercadoEuropeuLiga() {
+  const L = ui.liga;
+  if (!L || S.europaLiga || ativandoEuropa === L.id || tec().demitido) return;
+  ativandoEuropa = L.id;
+  return mercadoLiga({ tipo: 'ativarEuropa' }).finally(() => {
+    if (ativandoEuropa === L.id) ativandoEuropa = null;
+  });
 }
 
 let recusando = false;

@@ -91,6 +91,7 @@ export function janelaIA() {
   const europeus = clubesEuropeus();
   if (europeus.length) {
     const negocios = negociarNaJanela(europeus, de => europeus.filter(c => c !== de));
+    if (S.europaLiga) S.europaLiga.listasAtualizadas = true;
     compras.push(...negocios.compras);
     emprestimos.push(...negocios.emprestimos);
     propostas.push(...proporNaJanela(europeus, true));
