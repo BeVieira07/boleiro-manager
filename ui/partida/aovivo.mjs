@@ -258,8 +258,8 @@ export function avPular() {
   pararSons(); // #344: pular para o fim é sem som
   v.cobranca = null; v.filaCobrancas = []; v.escolhaPen = null;
   pintarCobranca(v);
-  if (v.disputa) fecharDisputa(v);
-  if (prepararPenaltis(v)) v.cob = v.pen.cob.length;
+  // #369: a disputa pode nascer agora, em prepararPenaltis (pulo antes do fim do tempo normal); fecha depois de prepará-la
+  if (prepararPenaltis(v)) { if (v.disputa) fecharDisputa(v); v.cob = v.pen.cob.length }
   terminar(v);
 }
 /** Pausa ou continua o relógio (#170). #314: no seu jogo, pausar abre a janela de escalação; continuar a fecha.
