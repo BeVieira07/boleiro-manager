@@ -3,7 +3,7 @@ import { DIVS, S, divOf, table, usarEstado } from '../../core/estado.mjs';
 import { esc } from '../../core/utils.mjs';
 import { getData, save, ui } from '../estado.mjs';
 import { onlineConfigurado, painelConta, usuarioAtual } from './conta.mjs';
-import { agendarEnvio, apagarNaNuvem, liberarEspaco, pendente, savesNuvem } from './nuvem.mjs';
+import { agendarEnvio, apagarNaNuvem, deOutraConta, liberarEspaco, pendente, savesNuvem } from './nuvem.mjs';
 import { icone } from '../icones.mjs';
 import { crest } from '../partida/partida.mjs';
 import { go, render } from '../telas.mjs';
@@ -44,7 +44,8 @@ export function salvarJogo(){
     salvarJogo.avisou=true;return false;
   }
   const antes=idx.list.find(x=>x.id===S.saveId); // mantém x.nuvem: a versão da nuvem em que esta cópia se baseia (#31)
-  idx.list=[{...resumoSave(S),...(antes&&antes.nuvem?{nuvem:antes.nuvem}:{})},...idx.list.filter(x=>x.id!==S.saveId)];idx.cur=S.saveId;
+  const conta=antes?antes.conta:usuarioAtual()?.id; // #372: de qual conta é o save (o novo, de quem está logado)
+  idx.list=[{...resumoSave(S),...(antes&&antes.nuvem?{nuvem:antes.nuvem}:{}),...(conta?{conta}:{})},...idx.list.filter(x=>x.id!==S.saveId)];idx.cur=S.saveId;
   store.set(SAVES_KEY,idx);agendarEnvio();return true;
 }
 export const MAX_NUVEM=10; // #119: o mesmo limite do banco (gatilho privado.limitar_saves)
@@ -87,6 +88,7 @@ export function vMenu(){
   const nuvem=(x,soNaNuvem)=>{
     if(soNaNuvem)return `<span class="nuvem-status">${icone('nuvem',{tam:14})} só na nuvem</span>`;
     if(!eu)return '';
+    if(nv&&deOutraConta(x))return `<span class="nuvem-status muted">${icone('nuvem',{tam:14})} de outra conta, só neste navegador</span>`; // #372
     const n=naNuvem(x.id);
     if(n&&t(n.atualizado_em)>t(x.data))return `<span class="nuvem-status bad">${icone('nuvem',{tam:14})} versão mais nova na nuvem (${quando(n.atualizado_em)})</span>`;
     return pendente(x)?`<span class="nuvem-status muted">${icone('relogio',{tam:14})} aguardando envio para a nuvem</span>`:`<span class="nuvem-status ok">${icone('nuvem',{tam:14})} salvo na nuvem</span>`;

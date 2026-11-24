@@ -10,11 +10,15 @@ import { render } from '../telas.mjs';
 import { store } from '../utils.mjs';
 import { avisar } from '../avisos.mjs';
 
-const nuvem = { lista: null, enviando: null, timer: null, avisouLimite: false };
+const nuvem = { lista: null, dono: null, enviando: null, timer: null, avisouLimite: false };
 const LIMITE = /jogos salvos na nuvem/; // mensagem do gatilho privado.limitar_saves (#119)
+const eu = () => usuarioAtual()?.id;
 /** Saves da conta na nuvem: [{id, resumo, atualizado_em}] (sem o estado), ou null se ainda não carregou / deslogado. */
-export const savesNuvem = () => (usuarioAtual() ? nuvem.lista : null);
-export const pendente = x => x.nuvem !== x.data;
+export const savesNuvem = () => (usuarioAtual() && nuvem.dono === eu() ? nuvem.lista : null);
+/** #372: save de outra conta que usou este navegador (`x.conta`). Os enviados antes do campo contam como meus só se estão na minha nuvem.
+ *  Save de outra conta não é enviado para a minha nem apagado para liberar espaço. */
+export const deOutraConta = x => x.conta ? x.conta !== eu() : !!x.nuvem && !(savesNuvem() || []).some(n => n.id === x.id);
+export const pendente = x => !deOutraConta(x) && x.nuvem !== x.data;
 const t = d => Date.parse(d) || 0;
 /** A versão mais nova da nuvem fica onde está; a cópia local ganha outro id (e vira um save à parte). */
 function virarCopia(r, estado) {
@@ -55,7 +59,7 @@ export function enviarPendentes() {
       const { data: naNuvem, error: e } = await c.from('saves').select('atualizado_em').eq('id', r.id).maybeSingle();
       if (e) throw e;
       if (naNuvem && t(naNuvem.atualizado_em) > t(r.nuvem)) ({ r, estado } = virarCopia(r, estado));
-      const { nuvem: _n, ...resumo } = r;
+      const { nuvem: _n, conta: _c, ...resumo } = r;
       const { error } = await c.from('saves').upsert(
         { id: r.id, user_id: usuarioAtual().id, resumo, estado, atualizado_em: r.data }, { onConflict: 'user_id,id' });
       if (error && LIMITE.test(error.message)) { // #119: a conta chegou ao limite; o save continua no navegador, pendente
@@ -64,7 +68,7 @@ export function enviarPendentes() {
       }
       if (error) throw error;
       const idx = indiceSaves(), x = idx.list.find(y => y.id === r.id);
-      if (x && x.data === r.data) { x.nuvem = r.data; store.set(SAVES_KEY, idx) } // se salvou de novo no meio, segue pendente
+      if (x && x.data === r.data) { x.nuvem = r.data; x.conta = eu(); store.set(SAVES_KEY, idx) } // se salvou de novo no meio, segue pendente
       const n = (nuvem.lista || []).find(y => y.id === r.id), linha = { id: r.id, resumo, atualizado_em: r.data };
       if (nuvem.lista) n ? Object.assign(n, linha) : nuvem.lista.push(linha);
     }
@@ -79,7 +83,7 @@ export async function carregarNuvem() {
   if (!c) { nuvem.lista = null; return }
   const { data, error } = await c.from('saves').select('id, resumo, atualizado_em').order('atualizado_em', { ascending: false });
   if (error) { console.error(error); return }
-  nuvem.lista = data;
+  nuvem.lista = data; nuvem.dono = eu();
 }
 
 /** Ao entrar na conta, ao abrir o jogo ou quando a internet volta: envia o que falta e atualiza a lista. */
@@ -93,7 +97,7 @@ export async function sincronizar() {
 /** Sem espaço no navegador e logado: apaga as cópias locais dos saves que já estão na nuvem (menos o atual). */
 export function liberarEspaco() {
   if (!clienteLogado()) return false;
-  const idx = indiceSaves(), sai = idx.list.filter(x => !pendente(x) && x.id !== (S && S.saveId));
+  const idx = indiceSaves(), sai = idx.list.filter(x => !pendente(x) && !deOutraConta(x) && x.id !== (S && S.saveId));
   if (!sai.length) return false;
   for (const x of sai) store.del(SAVE_PREFIX + x.id);
   idx.list = idx.list.filter(x => !sai.includes(x));
@@ -113,7 +117,7 @@ export async function abrirDaNuvem(id) {
     avisar('Não há espaço no navegador para abrir este save. Exclua um jogo salvo e tente de novo.'); return;
   }
   const idx = indiceSaves();
-  idx.list = [{ ...data.resumo, id, data: data_, nuvem: data_ }, ...idx.list.filter(x => x.id !== id)];
+  idx.list = [{ ...data.resumo, id, data: data_, nuvem: data_, conta: eu() }, ...idx.list.filter(x => x.id !== id)];
   store.set(SAVES_KEY, idx);
   abrirSave(id);
 }

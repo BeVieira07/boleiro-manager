@@ -220,3 +220,25 @@ test('limite de saves na conta: o save além do limite fica no navegador, com av
   assert.equal(j.run(`(()=>{const i=indiceSaves();for(let k=0;k<MAX_NUVEM;k++)i.list.push({id:'x'+k});store.set(SAVES_KEY,i);return podeCriarSave()})()`), false);
   assert.ok(j.alertas.some(a => /10 jogos salvos na sua conta/.test(a)));
 });
+
+test('#372: com outra conta no mesmo navegador, os saves da primeira não sobem, não aparecem como salvos e não são apagados', async () => {
+  const srv = servidorFalso(), BIA = { id: 'u2', email: 'bia@exemplo.com' };
+  const pc = carregarJogo({ boot: true });
+  await logar(srv);
+  pc.run(`novoJogo();newGame('${clubeDaSerie(pc)}')`);
+  jogarRodada(pc, 1);
+  await nuvem.sincronizar();
+  const id = pc.run('S.saveId');
+  assert.ok(srv.linhas['u1/' + id], 'foi para a nuvem da Ana');
+  jogarRodada(pc, 1); // a Ana joga mais e o save fica pendente
+  pc.run('voltarMenu()');
+
+  await logar(srv, BIA);
+  await nuvem.sincronizar();
+  assert.equal(Object.keys(srv.linhas).filter(k => k.startsWith('u2/')).length, 0, 'nada subiu para a Bia');
+  pc.run('render()');
+  assert.doesNotMatch(pc.html(), /salvo na nuvem|aguardando envio/);
+  assert.match(pc.html(), /de outra conta/);
+  assert.equal(nuvem.liberarEspaco(), false);
+  assert.ok(pc.ls['brasfoot_save_v2_' + id], 'o save da Ana continua no navegador');
+});
