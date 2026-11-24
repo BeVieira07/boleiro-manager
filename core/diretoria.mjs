@@ -33,8 +33,9 @@ export function fatoresFinanceiros(uc,meta){
 export function metaDe(uc){
   const d=divOf(uc),ds=divisions(),di=ds.indexOf(d),n=S.clubs.filter(c=>divOf(c)===d).length;
   const esp=1+S.clubs.filter(c=>divOf(c)===d&&c.strength>uc.strength).length; // posição esperada pela força
-  const mv=hasTwoDivs()?MOVE_N():4,top=di===0?6:mv,bottom=!hasTwoDivs()?4:di===ds.length-1?0:mv;
-  const texto=esp<=2?'Lutar pelo título':esp<=top?(di===0?'Vaga na Libertadores':`Acesso à ${DIVS[ds[di-1]]}`):bottom&&esp>n-bottom?'Evitar o rebaixamento':'Terminar no meio da tabela';
+  // #382: Libertadores só na Série A; a série mais alta de uma liga sem a A não tem vaga nem acesso, só título
+  const mv=hasTwoDivs()?MOVE_N():4,top=di===0?(d==='A'?6:2):mv,bottom=!hasTwoDivs()?4:di===ds.length-1?0:mv;
+  const texto=esp<=2?'Lutar pelo título':esp<=top?(d==='A'?'Vaga na Libertadores':`Acesso à ${DIVS[ds[di-1]]}`):bottom&&esp>n-bottom?'Evitar o rebaixamento':'Terminar no meio da tabela';
   return {texto,alvo:esp<=2?3:esp<=top?top:bottom&&esp>n-bottom?n-bottom:Math.min(n,esp+1)}; // alvo: pior posição aceita
 }
 export function definirMeta(t=tec()){t.meta=metaDe(clubDo(t))}

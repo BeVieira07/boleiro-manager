@@ -122,7 +122,7 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
     addFin(`Cota de TV — rodada ${S.round+1}`,tvQuota(divOf(uc)),uc);
     if(mine&&mine.h===uc.id){
       const pos=table(divOf(uc)).findIndex(x=>x.id===uc.id);
-      const bonus=pos<4?1.3:pos<10?1.1:1;
+      const bonus=S.round===0?1:pos<4?1.3:pos<10?1.1:1; // #381: sem tabela ainda, a ordem seria a alfabética
       addFin(`Bilheteria vs ${clubById(mine.a).name}`,Math.round(bilheteriaBase(uc)*bonus*100)/100,uc);
     }
     const wages=wageBill(uc);

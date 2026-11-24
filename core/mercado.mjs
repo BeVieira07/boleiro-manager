@@ -110,6 +110,8 @@ export function proporCompra(pid,amt,{comContraproposta=true}={}){
     ?`${seller.name} recusou: ${p.name} é peça importante e o clube precisa de reposição na posição.`
     :`${seller.name} recusou: não pode ficar sem reposição na posição.`};
   if(!muitoBaixa&&rnd()<prob)return fecharCompra(p,seller,uc,amt);
+  // #377: se a contraproposta não passaria do lance, o clube aceita o lance (antes pedia menos do que recusou)
+  if(comContraproposta&&!muitoBaixa&&!entreMelhores(p,seller)&&precoDaContraproposta(p,seller,pedido).valor<=amt)return fecharCompra(p,seller,uc,amt);
   addNews(`❌ ${seller.name} recusou ${money(amt)} por ${p.name}.`);
   if(muitoBaixa)return {ok:false,msg:`${seller.name} recusou: proposta muito baixa.`};
   const msg=`${seller.name} recusou a proposta.`;
@@ -134,8 +136,9 @@ export function aceitarOferta(oid){
   const o=tec().offers.find(x=>x.id===oid);if(!o)return {erro:'Proposta não encontrada.'};const p=P[o.pid],b=clubById(o.from);
   const e=emprestado(o.pid);if(e)return e;
   if(userClub().players.length<=16)return {erro:'Seu elenco ficaria pequeno demais (mínimo 16).'};
+  // #376: a vaga vale para venda e empréstimo (a oferta dura 3 rodadas, e o clube pode ter enchido o elenco)
+  if(b.players.length>=32){recusarOferta(oid);return {erro:`${b.name} ficou sem vaga no elenco e desistiu ${o.emprestimo?'do empréstimo':'da proposta'}.`}}
   if(o.emprestimo){ // #142: proposta de empréstimo da IA por um jogador da lista do técnico
-    if(b.players.length>=32){recusarOferta(oid);return {erro:`${b.name} ficou sem vaga no elenco e desistiu do empréstimo.`}}
     recusarOferta(oid);startLoan({pid:p.id,from:userClub().id,to:b.id,fim:UM_ANO()});return {ok:true};
   }
   if(!ehHumano(b)&&b.balance<o.amount){recusarOferta(oid);return {erro:`${b.name} gastou o caixa em outros negócios e desistiu da proposta.`}}

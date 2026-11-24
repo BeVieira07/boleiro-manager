@@ -109,3 +109,18 @@ test('sem ninguém disponível da posição, a vaga ainda é preenchida por quem
   assert.notEqual(r.le, 'LE', 'alguém de outra posição cobre a lateral');
   assert.equal(r.lesionado, false);
 });
+
+test('#378: com 10 titulares, tocar num reserva o põe na vaga livre sem mexer nos outros', () => {
+  const j = carregarJogo({ boot: true });
+  j.run(`newGame('${clubeDaSerie(j)}');go('escalacao')`);
+  const r = j.run(`(()=>{const uc=userClub();uc.lineup=autoXI(uc);const saiu=uc.lineup[3];uc.lineup=uc.lineup.filter(id=>id!==saiu);
+    const antes=slotLayout(uc).map(s=>s.id),vaga=antes.indexOf(null);
+    const res=uc.players.find(p=>!uc.lineup.includes(p.id)&&p.id!==saiu&&p.pos!=='G'&&!unavailable(p));return {antes,vaga,res:res.id}})()`);
+  assert.ok(r.vaga >= 0);
+  j.acao(`clickEsc|${r.res}`);
+  const depois = j.run('slotLayout(userClub()).map(s=>s.id)');
+  assert.equal(j.run('getXI(userClub()).length'), 11);
+  assert.equal(depois[r.vaga], r.res);
+  assert.deepEqual(depois.filter((_, i) => i !== r.vaga), r.antes.filter((_, i) => i !== r.vaga));
+  assert.equal(j.run('ui.selEsc'), null);
+});

@@ -5,7 +5,7 @@ import { energiaDe } from '../../core/energia.mjs';
 import { definirCantos, definirCobradores, definirFormacao, slotLayout, trocarNaEscalacao, unavailable } from '../../core/escalacao.mjs';
 import { forcaPenalti, NOMES_ALVOS_PENALTI, timeNaDisputa } from '../../core/penaltis.mjs';
 import { P, userClub } from '../../core/estado.mjs';
-import { power } from '../../core/motor.mjs';
+import { getXI, power, titularesPossiveis } from '../../core/motor.mjs';
 import { POSD, ovrNaPosicao, penalidadePosicao, posDSigla } from '../../core/posicoes.mjs';
 import { FORMS, PORD, esc } from '../../core/utils.mjs';
 import { barra, chip, energiaBarra, ovrChip } from '../componentes.mjs';
@@ -55,7 +55,12 @@ function quadroPenaltis(uc) {
 }
 export function setFormation(f) { definirFormacao(f); ui.selEsc = null; save(); render() }
 export function clickEsc(pid) {
-  const uc = userClub();
+  const uc = userClub(), xi = getXI(uc), p = P[pid];
+  // #378: com vaga livre, tocar num reserva disponível o escala sem mexer nos outros (goleiro só se não houver outro em campo)
+  if (ui.selEsc == null && !xi.includes(pid) && !unavailable(p) && xi.length < titularesPossiveis(uc) && !(p.pos === 'G' && xi.some(id => P[id].pos === 'G'))) {
+    const vagas = slotLayout(uc).map(s => s.id); vagas[vagas.indexOf(null)] = pid; // entra na vaga livre, os outros ficam onde estão
+    uc.lineup = vagas.filter(Boolean); save(); render(); return;
+  }
   if (ui.selEsc == null || ui.selEsc === pid) { ui.selEsc = ui.selEsc === pid ? null : pid; render(); return }
   const a = ui.selEsc, b = pid; ui.selEsc = null;
   const L = slotLayout(uc).map(s => s.id).filter(Boolean);

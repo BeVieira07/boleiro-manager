@@ -11,7 +11,7 @@ import { COPA } from './copa.mjs';
 import { valueOf } from './dados.mjs';
 import { DADOS_PADRAO } from './dados-padrao.mjs';
 import { migrarDiretoria } from './diretoria.mjs';
-import { DIVS, S, clubDo, migrarTecnicos, reindex, tecnicos, usarEstado } from './estado.mjs';
+import { DIVS, S, clubDo, divOf, migrarTecnicos, reindex, startBalance, tecnicos, usarEstado } from './estado.mjs';
 import { limparEventosAntigos } from './aovivo.mjs';
 import { prepararEstrangeiro } from './estrangeiros.mjs';
 import { migrarPenaltis } from './penaltis.mjs';
@@ -78,6 +78,7 @@ const MIGRACOES = [
     for (const c of [...s.clubs, ...estrangeiros]) for (const p of [...c.players, ...(c.base || [])]) p.amar ??= 0;
   },
   migrarValoresDeMercado, // 18: valor de mercado sem desconto pelo prazo do contrato (#350)
+  s => { for (const c of s.clubs) if (c.balance == null) c.balance = startBalance(divOf(c), c.strength) }, // 19: caixa dos clubes da IA em saves de antes da #28 (#373)
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 
