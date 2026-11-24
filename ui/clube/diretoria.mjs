@@ -7,6 +7,7 @@ import { save, ui } from '../estado.mjs';
 import { mercadoLiga, recusarClubesLiga } from '../liga/ligajogo.mjs';
 import { confirmarVez, playRound } from '../temporada/motor.mjs';
 import { crest } from '../partida/partida.mjs';
+import { encerrarVivo } from '../partida/aovivo.mjs';
 import { go } from '../telas.mjs';
 
 /** O técnico saiu do clube (demitido ou a pedido): vai para as propostas. */
@@ -40,6 +41,7 @@ export function pedirDemissaoUI() {
   confirmar({ titulo: 'Pedir demissão?', texto: `Você deixa o ${clubDo(tec()).name} e escolhe entre os clubes interessados. Não dá para voltar atrás.`, ok: 'Pedir demissão', perigo: true }, async () => {
     if (ui.liga) { await mercadoLiga({ tipo: 'pedirDemissao' }); if (tec().demitido) go('carreira'); return }
     const r = pedirDemissao(); if (r.erro) { avisar(r.erro, 'erro'); return }
+    encerrarVivo(); // #370: o jogo ao vivo do clube que você deixou não fica aberto
     save(); go('carreira');
   });
 }

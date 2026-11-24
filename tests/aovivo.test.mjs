@@ -22,7 +22,7 @@ test('mudar a tática ao vivo refaz só os gols depois do minuto atual', () => {
   j.run(`newGame('${clubeDaSerie(j)}')`);
   j.run(`const g={h:userClub().id,a:S.clubs.find(c=>c.id!==userClub().id).id,hg:2,ag:1,ev:[{m:10,t:'gol',side:'h',name:'A'},{m:70,t:'gol',side:'a',name:'B'},{m:80,t:'gol',side:'h',name:'C'}]};globalThis.__g=g;ui.tvAoVivo={g,min:()=>50}`);
   const outro = j.run(`Object.keys(MODOS).find(k=>k!==taticaUser(userClub()).modo)`);
-  j.acao(`tvLiveChip|modo|${outro}`);
+  j.run(`mudarTatica('modo','${outro}');ressimularDepois(__g,50)`);
   assert.equal(j.run('taticaUser(userClub()).modo'), outro);
   const ev = j.run('__g.ev');
   assert.deepEqual(ev.filter(e => e.m <= 50).map(e => e.name), ['A'], 'o que já aconteceu fica');

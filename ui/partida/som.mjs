@@ -169,7 +169,6 @@ const SONS = {
   uhh: (som, t0, vol) => torcida(som, t0, vol, { dur: 1.1, ataque: 0.08, vogal: 'u', de: 1.1, ate: 0.85, nivel: 0.8, brilho: 900 }),
   rede
 };
-export const NOMES_SONS = Object.keys(SONS);
 
 /* ---------- controles ---------- */
 /** Botão da tela ao vivo: liga ou desliga o som. */

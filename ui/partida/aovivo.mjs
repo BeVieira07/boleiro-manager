@@ -99,7 +99,7 @@ export function iniciarReplaysDaRodada(games, copa, done, opcoes = {}) {
 export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round - 1, estadual = null, proximo = null, aoTerminar = null, minuto = null } = {}) {
   encerrarVivo();
   const uc = userClub();
-  const v = ui.vivo = { g: meu, jogos, rodada, done, replay, min: minuto ?? 0, fim: false, aba: 'meu', div: divOf(uc), comp: 'liga', sel: null, sig: '',
+  const v = ui.vivo = { g: meu, jogos, rodada, done, replay, min: minuto ?? 0, fim: false, aba: 'meu', div: divOf(uc), comp: 'liga', sig: '',
     S, clube: uc, xi0: [...(uc.lineup || [])], f0: uc.formation, timer: null, // xi0/f0: trocas e formação valem só neste jogo
     estadual, uf: meu.uf || null, proximo, aoTerminar, cobranca: null, filaCobrancas: [], msPorMinuto: VELOCIDADES[prefs().velocidade] || 55 };
   if (minuto != null && meu.ev.some(e => ['troca', 'formacao', 'posicao'].includes(e.t) && e.m <= minuto && meu[e.side] === uc.id)) {
@@ -162,7 +162,6 @@ function tick(v) {
   sonsDoMinuto(v);
   v.filaCobrancas = v.g.ev.filter(e => e.m === v.min && e.t === 'penalti');
   const saidas = v.replay ? [] : v.g.ev.filter(e => e.m === v.min && v.g[e.side] === v.clube.id && saidaForcada(e));
-  if (saidas.length) v.sel = null;
   const vermelhos = saidas.filter(e => e.t === 'vermelho');
   // #314: no revezamento, abre para o técnico da vez, que é o dono do clube mostrado no ao vivo
   if (vermelhos.length && !ui.liga) v.vermelhosPendentes = vermelhos;
@@ -246,20 +245,14 @@ export function avAba(a) { if (ui.vivo && ABAS[a]) { ui.vivo.aba = a; render() }
 export function avDiv(d) { if (ui.vivo) { ui.vivo.div = d; paineis(ui.vivo) } }
 export function avComp(c) { if (ui.vivo) { ui.vivo.comp = c; paineis(ui.vivo) } }
 export function avUf(uf) { if (ui.vivo) { ui.vivo.uf = uf; paineis(ui.vivo) } }
-export function avSair(id) { const v = ui.vivo; if (!v || v.fim || v.replay || pausaExpulsao(v) || v.min >= DURACAO) return; v.sel = v.sel === id ? null : id; controles(v) }
-export function avEntrar(id) {
-  const v = ui.vivo; if (!v || v.fim || v.replay || pausaExpulsao(v) || !v.sel || v.min >= DURACAO) return;
-  aplicar(v, substituir(v.g, v.min, v.sel, id));
-}
-export function avFormacao(f) { const v = ui.vivo; if (!v || v.fim || v.replay || pausaExpulsao(v) || v.min >= DURACAO) return; aplicar(v, mudarFormacaoAoVivo(v.g, v.min, f)) }
 export function avPular() {
   const v = ui.vivo; if (!v || v.fim || pausaExpulsao(v)) return;
   v.min = DURACAO; v.pausado = false; v.pulou = true;
   pararSons(); // #344: pular para o fim é sem som
   v.cobranca = null; v.filaCobrancas = []; v.escolhaPen = null;
   pintarCobranca(v);
-  if (v.disputa) fecharDisputa(v);
-  if (prepararPenaltis(v)) v.cob = v.pen.cob.length;
+  // #369: a disputa pode nascer agora, em prepararPenaltis (pulo antes do fim do tempo normal); fecha depois de prepará-la
+  if (prepararPenaltis(v)) { if (v.disputa) fecharDisputa(v); v.cob = v.pen.cob.length }
   terminar(v);
 }
 /** Pausa ou continua o relógio (#170). #314: no seu jogo, pausar abre a janela de escalação; continuar a fecha.
@@ -269,7 +262,7 @@ export function avPausar() {
   if (v.expulsao?.tipo === 'pausa' && !v.expulsao.leitura) { avExpConfirmar(); return }
   if (pausaExpulsao(v) || v.expulsao?.leitura) return; // com o aviso da expulsão aberto, primeiro feche o aviso
   if (!v.pausado && podeMexer(v)) {
-    v.expulsao = novaPausa(v); v.sel = null;
+    v.expulsao = novaPausa(v);
     pintar(v); pintarBotoes(v);
     mostrarJanelaExpulsao(v, avExpConfirmar);
     return;
@@ -287,10 +280,6 @@ if (globalThis.document && document.addEventListener) document.addEventListener(
   ev.preventDefault(); avPausar();
 });
 export function avContinuar() { const v = ui.vivo; if (!v) return; const { done } = v; encerrarVivo(); done() }
-function aplicar(v, r) {
-  if (r.erro) { avisar(r.erro, 'erro'); return }
-  v.sel = null; v.alterou = true; v.xi1 = [...v.clube.lineup]; v.f1 = v.clube.formation; save(); avisar(r.msg); pintar(v); controles(v); paineis(v);
-}
 
 function pintarAvisoExpulsao(v) {
   const aviso = el('av-exp-resumo'); if (aviso) aviso.innerHTML = resumoExpulsao(v);

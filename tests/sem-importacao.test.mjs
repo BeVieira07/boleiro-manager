@@ -34,3 +34,10 @@ test('excluir um jogo salvo continua pela lista de saves do menu', () => {
   assert.equal(j.run('indiceSaves().list.length'), 0);
   assert.match(j.html(), /Nenhum jogo salvo ainda/);
 });
+
+test('#380: a landing não promete exportar save', () => {
+  const j = carregarJogo({ boot: true });
+  j.run("ui.view='landing';render()");
+  assert.match(j.html(), /Onde ficam os meus jogos salvos/);
+  assert.doesNotMatch(j.html(), /export/i);
+});

@@ -56,7 +56,7 @@ function linha(p, xi) {
     <td class="n c-valor"><span class="rot">Valor </span>${money(p.value)}</td>
     <td class="n c-sal"><span class="rot">Salário </span>${money(p.wage)}</td>
     <td class="c-contr"><span class="rot">Contrato: </span>${contratoTxt(p)}</td>
-    <td class="c-acoes"><div class="acoes">${botaoFicha(p)}${podeRenovar(p) ? `<button class="btn sec sm" data-acao="renovar|${p.id}">Renovar</button>` : ''}${acoes}${loanBtn(p, 'out')}</div></td></tr>`;
+    <td class="c-acoes"><div class="acoes">${botaoFicha(p)}${podeRenovar(p) ? `<button class="btn sec sm" data-acao="renovar|${p.id}">Renovar</button>` : ''}${acoes}${loanBtn(p)}</div></td></tr>`;
 }
 
 export function corpoElenco(lista = filtrar(userClub().players, ui.ef), titulares = getXI(userClub())) {

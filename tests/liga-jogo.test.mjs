@@ -201,7 +201,7 @@ test('dono começa a liga, confirmações chegam em tempo real e a rodada é jog
   assert.match(j.html(), /Jogos da rodada/, 'o painel do campeonato funciona no replay');
   assert.match(j.html(), /Classificação provisória/);
   assert.doesNotMatch(j.html(), /data-acao="(avSair|avEntrar|avFormacao)[|]/, 'trocas e formação ficam bloqueadas na liga');
-  assert.equal(j.run('avSair(userClub().lineup[0]),ui.vivo.sel'), null, 'o bloqueio vale também fora do botão');
+  assert.equal(j.run('avPausar(),!!ui.vivo.expulsao'), false, 'pausar o replay não abre a janela de trocas');
   j.run('avContinuar()'); // no navegador, o "Continuar" do replay mostra a rodada
   assert.match(j.html(), /Confirmar rodada 2/);
   assert.ok(!Object.keys(j.ls).some(k => k.startsWith('brasfoot_save_v2_')), 'a liga não vira save local');

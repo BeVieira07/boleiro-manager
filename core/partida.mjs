@@ -6,7 +6,7 @@ import { criarCopa } from './copa.mjs';
 import { ferias } from './energia.mjs';
 import { criarEstaduais } from './estadual.mjs';
 import { todosEstrangeiros } from './estrangeiros.mjs';
-import { fakePlayer, refreshEconomics } from './dados.mjs';
+import { fakePlayer, forcaDoElenco, refreshEconomics } from './dados.mjs';
 import { confiancaFimTemporada, confiancaNovaTemporada } from './diretoria.mjs';
 import { DIVS, MOVE_N, P, S, addFin, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, hasTwoDivs, makeAllFixtures, reindex, seasonPrize, table, tecnicos, topScorers, userClub } from './estado.mjs';
 import { autoXI, concluirRodadaCopa, getXI } from './motor.mjs';
@@ -57,13 +57,14 @@ export function iniciarTemporada(){
       p.age++;
       const d=p.age<=21?ri(1,4):p.age<=24?ri(0,3):p.age<=29?ri(-1,1):p.age<=32?ri(-2,0):ri(-4,-1);
       p.ovr=clamp(d>0?Math.max(p.ovr,Math.min(p.ovr+d,tetoOvr(p))):p.ovr+d,40,95);p.oT=p.ovr;p.goals=0; // sobe só até o potencial (#50); oT: o teto da forma conta depois da idade (#44)
-      if(p.age>=37){addNews(`👋 ${p.name} se aposentou.`,c.id);continue}
+      if(p.age>=37){addNews(`👋 ${p.name} se aposentou.`,c.id);S.loans=(S.loans||[]).filter(l=>l.pid!==p.id);continue} // #367: sem empréstimo pendurado
       refreshEconomics(p);keep.push(p);
     }
     c.players=keep;ensureSquad(c);
   }
   virarBase(); // #50: a base dos clubes com técnico
   ferias(); // #136: energia cheia na nova temporada
+  for(const c of S.clubs)c.strength=forcaDoElenco(c); // #374: meta, bilheteria e Copa pela força do elenco de agora, não a do jogo novo
   S.season++;S.round=0;S.fixtures=makeAllFixtures(S.clubs);
   reindex();criarCopa();criarEstaduais();criarContinentais(vagas);
   processLoans(); // #142: empréstimo de 1 ano feito na rodada 0 volta agora

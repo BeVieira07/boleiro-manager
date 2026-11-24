@@ -116,7 +116,8 @@ export function cancelarDesfalque(g,e){
   if(e.t==='lesao')P[e.pid].inj=0;
   else suspenderPorVermelho(P[e.pid],0);
   for(const t of tecnicos().filter(t=>t.clubId===g[e.side])){
-    const i=t.news.findIndex(n=>n.r===S.round-1&&n.t===noticiaDe(e));
+    // #383: no estadual (pré-temporada) a rodada não avança, e a notícia fica com r === S.round
+    const i=t.news.findIndex(n=>(n.r===S.round-1||n.r===S.round)&&n.t===noticiaDe(e));
     if(i>=0)t.news.splice(i,1);
   }
 }
@@ -142,13 +143,14 @@ export function reslot(ids,f,manterVagas=false,semGoleiro=false){
 // melhor time para a formação, já na ordem das vagas; evita indisponíveis
 export function autoSlotXI(club,f){
   const slots=slotsDe(f||club.formation||'4-4-2');
-  const pool=club.players.filter(p=>!unavailable(p)),jog=[...(pool.length>=11?pool:club.players)];
+  // #365: só disponíveis e goleiro só no gol; com menos de 11 disponíveis o time entra com menos (antes a rodada travava)
+  const jog=club.players.filter(p=>!unavailable(p));
   const out=[];
   for(const s of slots){
     // #336: primeiro quem é da posição; de fora só se não houver ninguém dela (ex.: craque de atacante não vira lateral)
     const daPosicao=jog.some(p=>posDSigla(p)===s);
     let best=-1,bv=-1;
-    jog.forEach((p,k)=>{if(daPosicao&&posDSigla(p)!==s)return;const v=ovrNaPosicao(p,s)*fatorEnergia(p);if(v>bv){bv=v;best=k}});
+    jog.forEach((p,k)=>{if(daPosicao&&posDSigla(p)!==s||s!=='GOL'&&p.pos==='G')return;const v=ovrNaPosicao(p,s)*fatorEnergia(p);if(v>bv){bv=v;best=k}});
     if(best>=0)out.push(jog.splice(best,1)[0].id);
   }
   return out;

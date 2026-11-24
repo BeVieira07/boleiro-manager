@@ -12,7 +12,7 @@ import { jogosContinentais, tabelasContinental, vLibertadores, vSulamericana } f
 import { jogosCopa, vCopa } from './temporada/copa.mjs';
 import { jogosEstadual, proximoEstadual, rotuloRodada, tabelasEstadual, vEstadual } from './temporada/estadual.mjs';
 import { barra, chip, seletorCompeticao, stat, tag } from './componentes.mjs';
-import { vAoVivo } from './partida/aovivo.mjs';
+import { encerrarVivo, vAoVivo, vivoAtivo } from './partida/aovivo.mjs';
 import { vArt } from './temporada/artilharia.mjs';
 import { vBase } from './clube/base.mjs';
 import { vElenco } from './clube/elenco.mjs';
@@ -45,7 +45,7 @@ let telaDesenhada=null;
 export function render(){
   if(!S&&!['inicio','landing','ligas','lobby','config'].includes(ui.view))ui.view='menu';
   if(S&&!TITULOS[ui.view])ui.view='clube';
-  if(S&&tec()&&tec().demitido&&!['carreira','tecnico','config'].includes(ui.view))ui.view='carreira'; // #37: sem clube, primeiro escolher o novo
+  if(S&&tec()&&tec().demitido&&!['carreira','tecnico','config'].includes(ui.view)&&!(ui.view==='aovivo'&&vivoAtivo()))ui.view='carreira'; // #37: sem clube, primeiro escolher o novo; #370: depois de ver o jogo da rodada em que foi demitido
   const mesma=telaDesenhada===ui.view;
   const areas=mesma?[...document.querySelectorAll(ROLAVEIS)]:[];
   const rol=areas.map(e=>[e.scrollLeft||0,e.scrollTop||0]),pag=mesma?[window.scrollX||0,window.scrollY||0]:null;
@@ -218,6 +218,6 @@ export function vFin() {
     ${resumoDespesas(fin)}</div></div>`;
 }
 
-export function verRodadaJogos(n){ui.jogosRound=+n;render()}
+export function verRodadaJogos(n){ui.jogosRound=+n===Math.max(0,Math.min(S.round,S.fixtures.length-1))?null:+n;render()} // #379: na rodada atual, volta a acompanhar as próximas
 export function verDivisao(d){ui.vDiv=d;render()}
-export function proximaTemporada(){if(bloqueadoNaLiga())return;S.seasonClosed===S.season?newSeason():seasonEnd()}
+export function proximaTemporada(){if(bloqueadoNaLiga())return;encerrarVivo();S.seasonClosed===S.season?newSeason():seasonEnd()} // #368: o jogo ao vivo da temporada não passa para a próxima

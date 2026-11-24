@@ -12,7 +12,7 @@ import { RODADA_ESTADUAL } from './estadual.mjs';
 import { P, S, addNewsTodos, clubById, clubDo, criarJogo, ehHumano, tec, tecnicos, usarTecnico, userClub } from './estado.mjs';
 import { migrarSave } from './versao.mjs';
 import { aceitarOferta, alternarEmprestimo, alternarVenda, comprarJa, proporCompra, recusarOferta, venderJa } from './mercado.mjs';
-import { autoXI, jogarRodada, validateLineup } from './motor.mjs';
+import { autoXI, jogarRodada, titularesPossiveis, validateLineup } from './motor.mjs';
 import { fecharTemporada, iniciarTemporada } from './partida.mjs';
 import { aceitarProposta, cancelarProposta, contraproposta, proporTecnico, recusarProposta } from './propostas.mjs';
 import { ESTILOS, MODOS } from './taticas.mjs';
@@ -41,12 +41,12 @@ export function iniciarLiga(membros, series, dados) {
   return { ok: true };
 }
 
-/** Aplica a escolha de um técnico, conferindo tudo (vem do navegador): 11 jogadores do clube, disponíveis e sem repetir. */
+/** Aplica a escolha de um técnico, conferindo tudo (vem do navegador): 11 jogadores do clube (ou os que dá, #365), disponíveis e sem repetir. */
 export function aplicarEntrada(uc, e) {
   if (FORMS[e.formacao]) uc.formation = e.formacao;
   const ids = Array.isArray(e.escalacao && e.escalacao.lineup) ? e.escalacao.lineup : [];
   const doClube = new Set(uc.players.map(p => p.id));
-  const ok = ids.length === 11 && new Set(ids).size === 11 && ids.every(id => doClube.has(id) && !unavailable(uc.players.find(p => p.id === id)));
+  const n = titularesPossiveis(uc), ok = ids.length === n && new Set(ids).size === n && ids.every(id => doClube.has(id) && !unavailable(uc.players.find(p => p.id === id)));
   uc.lineup = ok ? [...ids] : autoXI(uc);
   uc.tatica = { estilo: ESTILOS[e.estilo] ? e.estilo : 'equilibrado', modo: MODOS[e.modo] ? e.modo : 'equilibrado' };
   definirCobradores(e.escalacao && e.escalacao.cobradores, uc); // #288: ids conferidos (só do próprio elenco)

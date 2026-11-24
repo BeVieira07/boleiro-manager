@@ -192,3 +192,17 @@ test('no Mercado a janela exibe Aceitar e Recusar, e Esc encerra a contrapropost
     assert.equal(j.run(`${pDe(pid)}.clubId`), resposta === 'sim' ? j.run('userClub().id') : cid);
   }
 });
+
+test('#377: a contraproposta nunca fica abaixo do lance recusado', () => {
+  const j = carregarJogo();
+  j.run(`criarJogo('${clubeDaSerie(j)}', getData())`);
+  const r = j.run(`(()=>{userClub().balance=500;let testados=0;const ruins=[];
+    for(const c of S.clubs.filter(c=>!ehHumano(c)))for(const p of c.players){
+      const top=[...c.players].sort((a,b)=>b.ovr-a.ovr).slice(0,3).includes(p),rep=c.players.filter(x=>x.pos===p.pos).length>(p.pos==='G'?2:3);
+      if(top||!rep||p.value<2||testados>=40)continue;
+      const lance=Math.round(precoPedido(p.id)*1.2*10)/10,x=proporCompra(p.id,lance);testados++;
+      if(x.contra&&x.contra.valor<=lance)ruins.push(p.name+': lance '+lance+', contraproposta '+x.contra.valor);
+    }return {testados,ruins}})()`);
+  assert.equal(r.testados, 40);
+  assert.deepEqual(r.ruins, []);
+});
