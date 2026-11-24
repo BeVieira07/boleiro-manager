@@ -12,7 +12,7 @@ import { jogosContinentais, tabelasContinental, vLibertadores, vSulamericana } f
 import { jogosCopa, vCopa } from './temporada/copa.mjs';
 import { jogosEstadual, proximoEstadual, rotuloRodada, tabelasEstadual, vEstadual } from './temporada/estadual.mjs';
 import { barra, chip, seletorCompeticao, stat, tag } from './componentes.mjs';
-import { vAoVivo } from './partida/aovivo.mjs';
+import { encerrarVivo, vAoVivo } from './partida/aovivo.mjs';
 import { vArt } from './temporada/artilharia.mjs';
 import { vBase } from './clube/base.mjs';
 import { vElenco } from './clube/elenco.mjs';
@@ -220,4 +220,4 @@ export function vFin() {
 
 export function verRodadaJogos(n){ui.jogosRound=+n===Math.max(0,Math.min(S.round,S.fixtures.length-1))?null:+n;render()} // #379: na rodada atual, volta a acompanhar as próximas
 export function verDivisao(d){ui.vDiv=d;render()}
-export function proximaTemporada(){if(bloqueadoNaLiga())return;S.seasonClosed===S.season?newSeason():seasonEnd()}
+export function proximaTemporada(){if(bloqueadoNaLiga())return;encerrarVivo();S.seasonClosed===S.season?newSeason():seasonEnd()} // #368: o jogo ao vivo da temporada não passa para a próxima
