@@ -27,7 +27,7 @@ const CAMPO = [
 ];
 const PERGUNTAS = [
   ['Precisa instalar alguma coisa?', 'Não. O jogo abre no navegador, no computador ou no celular.'],
-  ['Onde ficam os meus jogos salvos?', 'No próprio navegador, até 5 jogos. Com uma conta, eles também vão para a nuvem e dá para continuar em outro aparelho. Em Configurações você exporta um save como cópia de segurança.'],
+  ['Onde ficam os meus jogos salvos?', 'No próprio navegador, até 5 jogos. Com uma conta, eles também vão para a nuvem e dá para continuar em outro aparelho.'],
   ['Preciso criar conta?', 'Não para jogar sozinho. A conta só serve para guardar os jogos na nuvem e para as ligas online com amigos.'],
   ['Os jogadores são de verdade?', 'Os elencos vêm do Brasileirão 2024, e o overall de cada jogador sai das notas da temporada real. O jogo é um projeto independente, sem ligação com a CBF, os clubes ou os jogadores.'],
   ['Quantas pessoas podem jogar juntas?', `No mesmo computador, até ${MAX_TECNICOS} técnicos, um por clube. Na liga online, até 20, cada um no seu aparelho.`]
