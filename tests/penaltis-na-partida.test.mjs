@@ -162,7 +162,7 @@ test('mudar a tática aos 45 mantém cobranças já feitas e refaz lances, artil
     const noticiaAntes = news();
     iniciarVivo([g], g, () => {}, { minuto: 45 });
     S.rng = semente('nova tatica #290', 3);
-    tvLive('modo', 'defensivo');
+    mudarTatica('modo', 'defensivo'); ressimularDepois(g, ui.tvAoVivo.min());
     encerrarVivo();
     const lances = ev => ev.filter(e => e.t === 'penalti' || e.t === 'gol');
     const eventosDepois = lances(g.ev), eventosAntes = lances(antes);

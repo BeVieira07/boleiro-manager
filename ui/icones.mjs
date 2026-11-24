@@ -57,4 +57,3 @@ export function icone(nome, { tam = 18, rotulo = '', classe = '' } = {}) {
   const a11y = rotulo ? `role="img" aria-label="${esc(rotulo)}"` : 'aria-hidden="true" focusable="false"';
   return `<svg class="icone ${classe}" width="${tam}" height="${tam}" viewBox="0 0 24 24" ${cheio ? 'fill="currentColor" stroke="none"' : 'fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"'} ${a11y}><path d="${d}"/></svg>`;
 }
-export const ICONES = Object.keys(PATHS);

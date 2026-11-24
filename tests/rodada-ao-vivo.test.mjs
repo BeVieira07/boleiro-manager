@@ -310,25 +310,22 @@ test('mensagens de reserva indisponível, goleiro e 6ª troca aparecem na regiã
   assert.equal(j.run('trocasDe(ui.vivo.g).length'), 5);
 });
 
-test('com o goleiro expulso, a janela e os controles normais aceitam goleiro por jogador de linha', () => {
-  for (const naJanela of [true, false]) {
-    const j = novo(), r = jogoComExpulsao(j, { goleiro: true });
-    r.passo();
-    const { sai, entra } = j.run(`(() => {
-      const v = ui.vivo, { xi } = elencoParaTrocas(v.g, v.min);
-      return { sai: xi[1], entra: banco(v.g, v.min).find(x => !x.motivo && x.p.pos === 'G').p.id };
-    })()`);
-    if (!naJanela) j.acao('avExpFechar');
-    const acao = naJanela ? 'avExp' : 'av';
-    j.acao(`${acao}Sair|${sai}`);
-    j.acao(`${acao}Entrar|${entra}`);
-    if (naJanela) j.acao('avExpConfirmar');
-    const xi = j.run("escalacaoNoMinuto(ui.vivo.g, 'h', 63).xi");
-    assert.equal(xi[0], entra);
-    assert.equal(xi[1], null);
-    assert.equal(xi.filter(Boolean).length, 10);
-    assert.equal(j.run('trocasDe(ui.vivo.g).length'), 1);
-  }
+// #384: os controles de troca fora da janela (avSair/avEntrar) saíram na limpeza; desde a #314 as trocas são só pela janela
+test('com o goleiro expulso, a janela aceita goleiro por jogador de linha', () => {
+  const j = novo(), r = jogoComExpulsao(j, { goleiro: true });
+  r.passo();
+  const { sai, entra } = j.run(`(() => {
+    const v = ui.vivo, { xi } = elencoParaTrocas(v.g, v.min);
+    return { sai: xi[1], entra: banco(v.g, v.min).find(x => !x.motivo && x.p.pos === 'G').p.id };
+  })()`);
+  j.acao(`avExpSair|${sai}`);
+  j.acao(`avExpEntrar|${entra}`);
+  j.acao('avExpConfirmar');
+  const xi = j.run("escalacaoNoMinuto(ui.vivo.g, 'h', 63).xi");
+  assert.equal(xi[0], entra);
+  assert.equal(xi[1], null);
+  assert.equal(xi.filter(Boolean).length, 10);
+  assert.equal(j.run('trocasDe(ui.vivo.g).length'), 1);
 });
 
 test('a formação mantém o gol vazio e a troca de goleiro funciona numa escalação legada', () => {
@@ -342,8 +339,7 @@ test('a formação mantém o gol vazio e a troca de goleiro funciona numa escala
     const v = ui.vivo;
     return { sai: elencoParaTrocas(v.g, v.min).xi[1], entra: banco(v.g, v.min).find(x => !x.motivo && x.p.pos === 'G').p.id };
   })()`);
-  j.acao(`avSair|${sai}`);
-  j.acao(`avEntrar|${entra}`);
+  j.acao('avPausar'); j.acao(`avExpSair|${sai}`); j.acao(`avExpEntrar|${entra}`); j.acao('avExpConfirmar');
   const xi = j.run("escalacaoNoMinuto(ui.vivo.g, 'h', 63).xi");
   assert.equal(xi[0], entra);
   assert.equal(xi[1], null);
@@ -459,10 +455,12 @@ test('trocas e formação valem só neste jogo: no fim o time volta à escalaç�
   const j = novo();
   const antes = j.run('JSON.stringify([userClub().lineup,userClub().formation])');
   const r = comRelogioManual(j);
-  j.acao(`avSair|${j.run('getXI(userClub()).find(id=>P[id].pos===\'A\')')}`);
+  j.acao('avPausar'); // #384: trocas e formação pela janela de pausa, como na tela
+  j.acao(`avExpSair|${j.run('getXI(userClub()).find(id=>P[id].pos===\'A\')')}`);
   const entra = j.run('banco(ui.vivo.g).find(b=>!b.motivo&&b.p.pos===\'A\')&&banco(ui.vivo.g).find(b=>!b.motivo&&b.p.pos===\'A\').p.id');
-  if (entra) j.acao(`avEntrar|${entra}`); else j.run('mudarFormacaoAoVivo(ui.vivo.g,5,"3-5-2")');
-  j.acao('avFormacao|' + j.run('userClub().formation===\'5-3-2\'?\'4-3-3\':\'5-3-2\''));
+  if (entra) j.acao(`avExpEntrar|${entra}`);
+  j.acao('avExpTatica|form|' + j.run('userClub().formation===\'5-3-2\'?\'4-3-3\':\'5-3-2\''));
+  j.acao('avExpConfirmar');
   assert.notEqual(j.run('JSON.stringify([userClub().lineup,userClub().formation])'), antes, 'durante o jogo o time mudou');
   jogarTempoNormal(j, r);
   assert.equal(j.run('JSON.stringify([userClub().lineup,userClub().formation])'), antes);
