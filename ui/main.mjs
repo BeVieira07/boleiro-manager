@@ -46,10 +46,17 @@ export function executar(spec, extra = []) {
   return f(...args, ...extra);
 }
 
+// #375: o botão da rodada é redesenhado no mesmo lugar, e o segundo clique de um duplo clique jogaria outra rodada
+const SEM_REPETIR = new Set(['playRound', 'confirmarVez']), REPETIR_MS = 400;
+let ultimoClique = { acao: null, t: 0 };
 export function ligarEventos(doc = document) {
   doc.addEventListener('click', ev => {
     const el = ev.target.closest && ev.target.closest('[data-acao]');
-    if (el) executar(el.dataset.acao);
+    if (!el) return;
+    const acao = el.dataset.acao, agora = Date.now();
+    if (SEM_REPETIR.has(acao.split('|')[0]) && ultimoClique.acao === acao && agora - ultimoClique.t < REPETIR_MS) return;
+    ultimoClique = { acao, t: agora };
+    executar(acao);
   });
   doc.addEventListener('keydown', avisos.teclaModal); // #64: Esc fecha o modal, Tab fica dentro dele
   doc.addEventListener('keydown', layout.teclaOpcoes);
