@@ -129,7 +129,8 @@ export function vLanding() {
   <header class="lp-topo"><div class="lp-largura">
     <span class="lp-marca" role="img" aria-label="Boleiro Manager"><img src="img/figma/marca-jogo.svg" alt="" width="34" height="34"><span aria-hidden="true"><b>Boleiro</b><small>Manager</small></span></span>
     <nav class="lp-links" aria-label="Seções"><a href="#lp-jogo">O jogo</a><a href="#lp-clubes">Clubes</a><a href="#lp-amigos">Com amigos</a><a href="#lp-perguntas">Perguntas</a></nav>
-    <button type="button" class="btn sec lp-topo-jogar" data-acao="go|menu">Jogar agora</button>
+    <div class="lp-topo-acoes"><button type="button" class="btn sec" data-acao="go|menu">Jogar agora</button>
+    ${onlineConfigurado() && !usuarioAtual() ? '<button type="button" class="btn" data-acao="abrirCadastro">Criar conta</button>' : ''}</div>
   </div></header>
 
   <section class="lp-heroi" aria-labelledby="lp-titulo"><div class="lp-largura lp-heroi-grade">

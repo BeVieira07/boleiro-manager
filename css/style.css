@@ -1132,7 +1132,8 @@ body.em-jogo .avisos{bottom:24px}
 .lp-links{display:flex;gap:var(--e5)}
 .lp-links a{color:var(--texto);text-decoration:none;font:700 15px/1 var(--f-titulo);letter-spacing:.08em;text-transform:uppercase;padding:12px 0}
 .lp-links a:hover{color:var(--verde)}
-.lp-topo-jogar{margin-left:auto}
+.lp-topo-acoes{display:flex;gap:var(--e2);margin-left:auto}
+.lp-topo-acoes .btn{white-space:nowrap}
 .lp-jogar{display:inline-flex;align-items:center;gap:var(--e3);min-height:56px;padding:0 34px;border:0;cursor:pointer;
   background:linear-gradient(#49db89,var(--verde));color:var(--tinta-verde);font:italic 800 22px/1 var(--f-titulo);text-transform:uppercase;
   clip-path:polygon(4% 0,100% 0,96% 100%,0 100%);box-shadow:0 8px 28px rgb(47 191 113 / .25)}
@@ -1221,6 +1222,8 @@ body.em-jogo .avisos{bottom:24px}
   .lp-heroi-grade,.lp-duas,.lp-escalacao,.lp-modos{grid-template-columns:minmax(0,1fr)}
 }
 @media(max-width:599px){
+  .lp-topo .lp-marca>span{display:none}
+  .lp-topo .lp-largura{gap:var(--e3)}
   .lp-jogar,.lp-ver{width:100%;justify-content:center}
   .lp-itens li{gap:var(--e3)}
   .lp-tela-abas span:not(.on):not(.lp-tela-marca){display:none}

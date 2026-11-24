@@ -5,7 +5,7 @@ import { esc } from '../../core/utils.mjs';
 import { SUPABASE_URL, SUPABASE_ANON_KEY } from '../config.mjs';
 import { avisar } from '../avisos.mjs';
 import { icone } from '../icones.mjs';
-import { render } from '../telas.mjs';
+import { go, render } from '../telas.mjs';
 
 // supabase-js vem de CDN (o jogo não tem build); versão fixa
 export const SUPABASE_JS = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
@@ -115,6 +115,13 @@ export function trocarVistaConta() {
   acesso.cadastro = !acesso.cadastro;
   render();
   document.getElementById(acesso.cadastro ? 'nomeNovaConta' : 'emailConta')?.focus();
+}
+
+/** #363: "Criar conta" da landing: abre o menu já no cadastro, com o foco no primeiro campo. */
+export function abrirCadastro() {
+  acesso.cadastro = true;
+  go('menu');
+  document.getElementById('nomeNovaConta')?.focus();
 }
 
 // as mensagens do Supabase vêm em inglês
