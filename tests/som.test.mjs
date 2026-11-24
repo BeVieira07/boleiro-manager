@@ -1,7 +1,23 @@
 // #344: sons da partida ao vivo (gols, apitos, expulsões, pênaltis), volume nas Configurações
 import { mock, test } from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync, readFileSync, statSync } from 'node:fs';
 import { carregarJogo, clubeDaSerie } from './jogo.mjs';
+import { ARQUIVOS_SONS } from '../ui/partida/som.mjs';
+
+test('gravações da torcida: existem, são leves, têm origem CC0 registrada e o site publica sons/ (#346)', () => {
+  const raiz = new URL('..', import.meta.url), fontes = readFileSync(new URL('sons/FONTES.md', raiz), 'utf8');
+  assert.equal(ARQUIVOS_SONS.length, 3);
+  let total = 0;
+  for (const arq of ARQUIVOS_SONS) {
+    assert.ok(existsSync(new URL(arq, raiz)), arq);
+    total += statSync(new URL(arq, raiz)).size;
+    assert.ok(fontes.includes('`' + arq.replace('sons/', '') + '`'), `${arq} sem origem em FONTES.md`);
+  }
+  assert.ok(total < 400 * 1024, `os sons pesam ${Math.round(total / 1024)} KB`);
+  assert.match(fontes, /CC0 1\.0/);
+  assert.match(readFileSync(new URL('.github/workflows/pages.yml', raiz), 'utf8'), /\bcp -r (?:\S+ )*sons (?:\S+ )*_site\//);
+});
 
 const novo = () => { const j = carregarJogo({ boot: true }); j.run(`newGame('${clubeDaSerie(j)}')`); j.run('S.estaduais=null'); return j };
 
