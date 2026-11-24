@@ -162,6 +162,23 @@ test('Entrar e Criar conta são vistas separadas e preservam o e-mail nas duas d
   assert.doesNotMatch(j.html(), /id="nomeNovaConta"|data-acao="criarConta"/);
 });
 
+test('landing: "Criar conta" abre o cadastro no menu e some sem online ou com conta conectada (#363)', async () => {
+  const botao = /<button[^>]*data-acao="abrirCadastro">Criar conta/;
+  conta.configurarConta({ url: '', chave: '', cliente: null });
+  assert.doesNotMatch(carregarJogo({ boot: true, landing: true }).html(), botao, 'sem online configurado');
+  const f = clienteFalso();
+  conta.configurarConta({ url: 'https://exemplo.supabase.co', chave: 'chave-publica', cliente: f });
+  const j = carregarJogo({ boot: true, landing: true });
+  await conta.iniciarConta(() => j.run('render()'));
+  assert.match(j.html(), botao);
+  j.acao('abrirCadastro');
+  assert.equal(j.run('ui.view'), 'menu');
+  assert.match(j.html(), /id="nomeNovaConta"/);
+  await f.ouvinte('SIGNED_IN', { user: { id: 'u1', email: 'ana@exemplo.com' } }); await espera();
+  j.run("go('landing')");
+  assert.doesNotMatch(j.html(), botao, 'com conta conectada');
+});
+
 test('criar conta com nome, e-mail e senha: valida, manda o nome para o perfil e avisa em português (#238, #269)', async () => {
   const f = clienteFalso();
   conta.configurarConta({ url: 'https://exemplo.supabase.co', chave: 'chave-publica', cliente: f });
