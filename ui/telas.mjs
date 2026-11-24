@@ -218,6 +218,6 @@ export function vFin() {
     ${resumoDespesas(fin)}</div></div>`;
 }
 
-export function verRodadaJogos(n){ui.jogosRound=+n;render()}
+export function verRodadaJogos(n){ui.jogosRound=+n===Math.max(0,Math.min(S.round,S.fixtures.length-1))?null:+n;render()} // #379: na rodada atual, volta a acompanhar as próximas
 export function verDivisao(d){ui.vDiv=d;render()}
 export function proximaTemporada(){if(bloqueadoNaLiga())return;S.seasonClosed===S.season?newSeason():seasonEnd()}

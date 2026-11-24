@@ -65,7 +65,7 @@ export function abrirSave(id){
   const m=migrarSave(s);if(m.erro){avisar(m.erro,'erro');return}
   S.saveId=id;
   const idx=indiceSaves();idx.cur=id;store.set(SAVES_KEY,idx);
-  ui.selEsc=null;ui.vDiv=null;go('clube');
+  ui.selEsc=null;ui.vDiv=null;ui.jogosRound=null;go('clube');
 }
 export function excluirSave(id){
   const e=indiceSaves().list.find(x=>x.id===id)||(savesNuvem()||[]).find(x=>x.id===id)?.resumo;
@@ -75,7 +75,7 @@ export function excluirSave(id){
   });
 }
 export function apagarSave(id){const idx=indiceSaves();store.del(SAVE_PREFIX+id);idx.list=idx.list.filter(x=>x.id!==id);if(idx.cur===id)idx.cur=null;store.set(SAVES_KEY,idx)}
-export function voltarMenu(){if(ui.liga)sairDaLiga();else if(S)salvarJogo();usarEstado(null);go('menu')}
+export function voltarMenu(){if(ui.liga)sairDaLiga();else if(S)salvarJogo();usarEstado(null);ui.jogosRound=null;go('menu')}
 export function novoJogo(){if(podeCriarSave()){usarEstado(null);ui.escolhaClube={serie:'',busca:'',ordem:'forca',id:''};go('inicio')}}
 /* ---------- tela inicial (#104, maquete do front): continuar, começar algo novo e jogos salvos ---------- */
 export function vMenu(){
