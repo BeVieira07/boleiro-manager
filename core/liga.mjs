@@ -97,7 +97,7 @@ const meu = (pid, uc) => P[pid] && P[pid].clubId === uc.id ? null : invalido;
 // #142: só pedir emprestado da lista de um clube da IA; o técnico empresta os dele pondo-os na lista (alternarEmprestimo)
 const emprestimoLiga = (a, uc) => daIA(a.pid, uc) || proporEmprestimo({ pid: a.pid });
 const MERCADO = {
-  compra: (a, uc) => daIA(a.pid, uc) || proporCompra(a.pid, Number(a.valor)),
+  compra: (a, uc) => daIA(a.pid, uc) || proporCompra(a.pid, Number(a.valor), { comContraproposta: false }),
   comprarJa: (a, uc) => daIA(a.pid, uc) || comprarJa(a.pid),
   venderJa: (a, uc) => meu(a.pid, uc) || venderJa(a.pid),
   alternarVenda: (a, uc) => meu(a.pid, uc) || alternarVenda(a.pid),

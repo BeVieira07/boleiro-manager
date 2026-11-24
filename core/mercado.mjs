@@ -1,9 +1,13 @@
+import { estrelasPot } from './base.mjs';
 import { novoContrato } from './contratos.mjs';
-import { UM_ANO, loanOf, startLoan } from './emprestimos.mjs';
-import { clubeDe } from './estrangeiros.mjs';
-import { P, S, addFin, addNews, clubById, ehHumano, tec, tecnicos, userClub } from './estado.mjs';
+import { UM_ANO, loanOf, startLoan, wageBill } from './emprestimos.mjs';
+import { clubeDe, ehEstrangeiro } from './estrangeiros.mjs';
+import { MOVE_N, P, S, addFin, addNews, clubById, divOf, divisions, ehHumano, table, tec, tecnicos, userClub } from './estado.mjs';
+import { FORMA_LIM } from './forma.mjs';
+import { ehJanela, sobrasDoElenco } from './mercadoIA.mjs';
+import { autoXI } from './motor.mjs';
 import { ensureSquad } from './partida.mjs';
-import { money, pick, rnd } from './utils.mjs';
+import { clamp, money, pick, rnd } from './utils.mjs';
 
 /* ================= transferências ================= */
 // emprestimo: ida ou volta de empréstimo, que não mexe no contrato com o clube dono (#49)
@@ -15,41 +19,107 @@ export function movePlayer(p,to,emprestimo=false){
   ensureSquad(from);
 }
 // regra: pode fazer proposta por este jogador agora? (texto do erro ou null)
+const rodadaDaProposta=()=>S.round+'_'+S.season;
 export function podeProporCompra(pid,{imediata=false}={}){
-  const p=P[pid],seller=clubeDe(p.clubId),uc=userClub();
+  const p=P[pid],seller=p&&clubeDe(p.clubId),uc=userClub();
+  if(!seller||!uc||seller.id===uc.id)return 'Jogador inválido para esta ação.';
+  if(ehHumano(seller))return 'O clube é de outro técnico: faça uma proposta a ele.';
   if(loanOf(pid))return `${p.name} está emprestado ao ${seller.name}: o contrato é com o clube de origem.`; // #117
-  if(!imediata&&p.bidRound===S.round+'_'+S.season)return `${seller.name} não quer negociar ${p.name} de novo nesta rodada.`;
+  if(!imediata&&p.bidRound===rodadaDaProposta())return `${seller.name} não quer negociar ${p.name} de novo nesta rodada.`;
   if(uc.players.length>=32)return 'Seu elenco já tem 32 jogadores. Venda alguém antes.';
   return null;
 }
+const entreMelhores=(p,seller)=>[...seller.players].sort((a,b)=>b.ovr-a.ovr).slice(0,3).includes(p);
 export function precoPedido(pid){
   const p=P[pid],seller=clubeDe(p.clubId);
-  const best=[...seller.players].sort((a,b)=>b.ovr-a.ovr).slice(0,3).includes(p);
-  return Math.round(p.value*(best?1.3:1)*(p.listed?0.9:1)*10)/10;
+  return Math.round(p.value*(entreMelhores(p,seller)?1.3:1)*(p.listed?0.9:1)*10)/10;
 }
 const semReposicao=(p,seller)=>seller.players.filter(x=>x.pos===p.pos).length<=(p.pos==='G'?2:3);
-function fecharCompra(p,seller,uc,amt){
+const crucial=(p,seller)=>semReposicao(p,seller)||entreMelhores(p,seller);
+function fecharCompra(p,seller,uc,amt,casas=1){
   addFin(`Compra de ${p.name} (${seller.name})`,-amt);caixaIA(seller,amt);movePlayer(p,uc);
-  addNews(`✅ Contratado: ${p.name} por ${money(amt)}.`);return {ok:true,msg:`Negócio fechado! ${p.name} é do ${uc.name}.`};
+  addNews(`✅ Contratado: ${p.name} por ${money(amt,casas)}.`);return {ok:true,msg:`Negócio fechado! ${p.name} é do ${uc.name}.`};
 }
-// regra: proposta de compra a um clube da IA. Devolve {erro} ou {ok, msg}.
-export function proporCompra(pid,amt){
-  const p=P[pid],seller=clubeDe(p.clubId),uc=userClub();
+
+function precoDaContraproposta(p,seller,pedido){
+  const fatores=[];
+  const forma=p.forma??0;
+  const formaAlta=FORMA_LIM/2;
+  if(forma>=formaAlta){
+    const fase=clamp((forma-formaAlta)/(FORMA_LIM-formaAlta),0,1);
+    fatores.push([0.15+0.05*fase,`${p.name} está em grande fase.`]);
+  }else if(forma<=-formaAlta)fatores.push([-0.10,`${p.name} está em má fase.`]);
+
+  if(autoXI(seller).includes(p.id))fatores.push([0.10,`${p.name} é titular.`]);
+  else if(sobrasDoElenco(seller).includes(p))fatores.push([-0.10,`${p.name} tem poucas chances no time.`]);
+  if(p.age<=21&&estrelasPot(p)>=4)fatores.push([0.10,`${p.name} é jovem e tem alto potencial.`]);
+  if(p.age>=32)fatores.push([-0.10,`${p.name} está entre os veteranos do elenco.`]);
+
+  if(seller.balance<0)fatores.push([-0.15,`${seller.name} precisa de caixa.`]);
+  else if(seller.balance<wageBill(seller))fatores.push([-0.10,`${seller.name} está com o caixa apertado.`]);
+
+  if(S.round>0&&!ehEstrangeiro(seller)){
+    const div=divOf(seller), ds=divisions(), classificacao=table(div);
+    const pos=classificacao.findIndex(t=>t.id===seller.id)+1;
+    const zona=ds.length===1?4:div===ds.at(-1)?0:MOVE_N();
+    if(pos>0&&pos<=4)fatores.push([0.10,`${seller.name} está entre os quatro primeiros da série.`]);
+    else if(pos>0&&pos>classificacao.length-zona){
+      fatores.push([seller.balance<=0?-0.05:0.05,`${seller.name} está na zona de rebaixamento.`]);
+    }
+  }
+  if(S.round>0&&ehJanela(S.round))fatores.push([0.05,'A janela do meio da temporada está aberta.']);
+
+  const total=fatores.reduce((valor,[taxa])=>valor*(1+taxa),pedido);
+  const valor=clamp(Math.round(total*1000)/1000,0.9*p.value,1.5*p.value);
+  const principal=fatores.reduce((maior,fator)=>Math.abs(fator[0])>Math.abs(maior[0])?fator:maior,[0,`${seller.name} aceita negociar ${p.name}.`]);
+  return {valor,motivo:principal[1]};
+}
+
+function abrirContraproposta(p,seller,uc,pedido){
+  const oferta=precoDaContraproposta(p,seller,pedido);
+  const estado=S, tecnico=S.atual, rodada=p.bidRound;
+  let pendente=true;
+  // Só a janela recebe a função que pode responder. Nenhuma oferta entra no save.
+  return {...oferta,responder(valor){
+    const aberta=pendente;
+    pendente=false;
+    if(valor===undefined)return;
+    if(!aberta||S!==estado||S.atual!==tecnico||userClub()!==uc||rodadaDaProposta()!==rodada||p.bidRound!==rodada||
+      P[p.id]!==p||p.clubId!==seller.id||clubeDe(p.clubId)!==seller||!seller.players.includes(p)||crucial(p,seller)){
+      return {erro:'A contraproposta não está mais disponível.'};
+    }
+    const erro=podeProporCompra(p.id,{imediata:true});if(erro)return {erro};
+    const atual=precoDaContraproposta(p,seller,precoPedido(p.id)).valor;
+    if(valor!==oferta.valor||valor!==atual)return {erro:'O valor da contraproposta não é mais válido.'};
+    if(uc.balance<atual)return {erro:`Caixa insuficiente para pagar ${money(atual,3)}.`};
+    return fecharCompra(p,seller,uc,atual,3);
+  }};
+}
+
+// A liga continua com a resposta original. No jogo local, só a recusa pode gerar contraproposta.
+export function proporCompra(pid,amt,{comContraproposta=true}={}){
   const e=podeProporCompra(pid);if(e)return {erro:e};
+  const p=P[pid],seller=clubeDe(p.clubId),uc=userClub();
   if(!(amt>0))return {erro:'Valor inválido.'};
   if(amt>uc.balance)return {erro:'Caixa insuficiente.'};
-  p.bidRound=S.round+'_'+S.season;
-  const need=precoPedido(pid);
-  const prob=amt>=need*1.25?1:amt>=need?0.65:amt>=need*0.85?0.2:0;
-  if(semReposicao(p,seller))return {ok:false,msg:`${seller.name} recusou: não pode ficar sem reposição na posição.`};
-  if(rnd()<prob)return fecharCompra(p,seller,uc,amt);
-  addNews(`❌ ${seller.name} recusou ${money(amt)} por ${p.name}.`);return {ok:false,msg:`${seller.name} recusou a proposta.`};
+  p.bidRound=rodadaDaProposta();
+  const pedido=precoPedido(pid);
+  const muitoBaixa=comContraproposta&&amt<Math.round(pedido*0.6*100)/100;
+  const prob=amt>=pedido*1.25?1:amt>=pedido?0.65:amt>=pedido*0.85?0.2:0;
+  if(!muitoBaixa&&semReposicao(p,seller))return {ok:false,msg:comContraproposta
+    ?`${seller.name} recusou: ${p.name} é peça importante e o clube precisa de reposição na posição.`
+    :`${seller.name} recusou: não pode ficar sem reposição na posição.`};
+  if(!muitoBaixa&&rnd()<prob)return fecharCompra(p,seller,uc,amt);
+  addNews(`❌ ${seller.name} recusou ${money(amt)} por ${p.name}.`);
+  if(muitoBaixa)return {ok:false,msg:`${seller.name} recusou: proposta muito baixa.`};
+  const msg=`${seller.name} recusou a proposta.`;
+  if(!comContraproposta)return {ok:false,msg};
+  if(entreMelhores(p,seller))return {ok:false,msg:`${seller.name} recusou: ${p.name} é peça importante do clube.`};
+  return {ok:false,msg,contra:abrirContraproposta(p,seller,uc,pedido)};
 }
 export function comprarJa(pid){
-  const p=P[pid],seller=p&&clubeDe(p.clubId),uc=userClub();
-  if(!seller||seller.id===uc.id)return {erro:'Jogador inválido para esta ação.'};
-  if(ehHumano(seller))return {erro:'O clube é de outro técnico: faça uma proposta a ele.'};
   const e=podeProporCompra(pid,{imediata:true});if(e)return {erro:e};
+  const p=P[pid],seller=clubeDe(p.clubId),uc=userClub();
   if(!p.listed)return {erro:`${seller.name} não pôs ${p.name} à venda.`};
   const amt=precoPedido(pid);
   if(uc.balance<amt)return {erro:`Caixa insuficiente para pagar ${money(amt)}.`};

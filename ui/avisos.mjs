@@ -68,7 +68,7 @@ export function teclaModal(ev) {
 }
 
 /* ---------- diálogo de confirmação e de valor ---------- */
-const dlg = { sim: null, nao: null, enviar: null, validar: null };
+let dlg = {};
 function abrirDialogo(html) {
   const d = el('dialogo');
   if (!real(d)) return;
@@ -83,17 +83,19 @@ export function confirmar({ titulo = 'Confirmar', texto, ok = 'Confirmar', cance
   if (dispensavel && !prefs().confirmar) { aoConfirmar && aoConfirmar(); return }
   if (avisosTeste.ouvir) avisosTeste.ouvir(texto);
   if (avisosTeste.autoConfirmar) { aoConfirmar && aoConfirmar(); return }
-  dlg.sim = aoConfirmar; dlg.nao = aoCancelar;
+  dlg.nao?.();
+  dlg = { sim: aoConfirmar, nao: aoCancelar };
   abrirDialogo(`<h2 id="dlgTitulo">${perigo ? icone('alerta', { tam: 22 }) : ''}${esc(titulo)}</h2><p id="dlgTexto">${esc(texto)}</p>
     <div class="dialogo-acoes"><button type="button" class="btn fantasma" data-acao="responderDialogo|nao">${esc(cancelar)}</button>
     <button type="button" class="btn${perigo ? ' perigo' : ''}" data-principal data-acao="responderDialogo|sim">${esc(ok)}</button></div>`);
 }
-export function responderDialogo(r) { const f = r === 'sim' ? dlg.sim : dlg.nao; dlg.sim = dlg.nao = dlg.enviar = dlg.validar = null; fecharDialogo(); f && f() }
+export function responderDialogo(r) { const f = r === 'sim' ? dlg.sim : dlg.nao; dlg = {}; fecharDialogo(); f && f() }
 
 /** `validar(v)` devolve a mensagem de erro, ou nada se o valor serve. */
 export function pedirValor({ titulo, texto, rotulo, valor = '', sufixo = '', ok = 'Enviar', validar }, aoEnviar) {
   if (avisosTeste.ouvir) avisosTeste.ouvir(texto);
-  dlg.enviar = aoEnviar; dlg.validar = validar;
+  dlg.nao?.();
+  dlg = { enviar: aoEnviar, validar };
   abrirDialogo(`<h2 id="dlgTitulo">${esc(titulo)}</h2><p id="dlgTexto" class="pre">${esc(texto)}</p>
     <label class="campo-valor" for="dlgValor">${esc(rotulo)}<span class="row"><input id="dlgValor" inputmode="decimal" autocomplete="off" value="${esc(valor)}" aria-describedby="dlgErro">${sufixo ? `<span class="muted">${esc(sufixo)}</span>` : ''}</span></label>
     <p id="dlgErro" class="erro-campo" role="alert"></p>
@@ -102,7 +104,8 @@ export function pedirValor({ titulo, texto, rotulo, valor = '', sufixo = '', ok 
 }
 export const lerNumero = s => parseFloat(String(s ?? '').trim().replace(',', '.')); // aceita 4,5 e 4.5
 export function enviarValorDialogo() {
+  if (!dlg.enviar) return;
   const campo = el('dlgValor'), v = lerNumero(campo && campo.value), erro = dlg.validar ? dlg.validar(v) : (isNaN(v) ? 'Digite um número.' : '');
   if (erro) { const e = el('dlgErro'); if (e) e.textContent = erro; if (campo && campo.setAttribute) { campo.setAttribute('aria-invalid', 'true'); campo.focus() } return }
-  const f = dlg.enviar; dlg.sim = dlg.nao = dlg.enviar = dlg.validar = null; fecharDialogo(); f && f(v);
+  const f = dlg.enviar; dlg = {}; fecharDialogo(); f(v);
 }
