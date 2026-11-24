@@ -860,6 +860,35 @@ body.em-jogo .avisos{bottom:24px}
 .cab-topo{display:flex;justify-content:space-between;align-items:baseline;gap:var(--e2);flex-wrap:wrap}
 .cab-topo .relogio{margin:0}
 .ult-lance{margin:0;min-height:20px;font-size:13px;color:var(--texto2);display:flex;gap:6px;align-items:center;justify-content:center;text-align:center}
+/* #362: mini campo no cabeçalho do jogo ao vivo */
+.mapa{overflow:hidden;width:100%;max-width:540px;align-self:center;border:1px solid var(--linha);border-radius:var(--r);background:var(--painel)}
+.mapa-campo{position:relative;height:152px;overflow:hidden;background:var(--verde-esc)}
+.mapa-campo>svg{display:block}
+.mapa-faixas{fill:var(--verde-claro);opacity:.07}
+.mapa-linhas,.mapa-marcas{fill:none;stroke:var(--verde-claro);opacity:.55}
+.mapa-linhas>*,.mapa-marcas{vector-effect:non-scaling-stroke;stroke-width:1}
+.mapa-marcas{stroke-linecap:round;stroke-width:3}
+.mapa-movimento{position:absolute;inset:7.627% 4.545%;pointer-events:none}
+.mapa-bola{position:absolute;inset:0;transition:transform 560ms ease-in-out}
+.mapa[data-fixo="true"] .mapa-bola{transition:none}
+.mapa-bola>.icone{position:absolute;top:0;left:0;transform:translate(-50%,-56%);border-radius:50%;padding:1px;
+  color:var(--bg);background:var(--texto);box-shadow:2px 3px 2px rgb(0 0 0 / .45)}
+.mapa-rodape{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,1fr);gap:var(--e2);align-items:center;
+  min-height:25px;padding:0 var(--e2);color:var(--texto);font-size:11px;line-height:1.1}
+.mapa-time,.mapa-etiqueta{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mapa-time{display:flex;align-items:center;gap:var(--e1);font-weight:600}
+.mapa-time::before{content:"";width:9px;height:9px;flex:none;border-radius:var(--r-pill);border:1px solid var(--texto);background:var(--mapa-cor)}
+.mapa-mandante{--mapa-cor:var(--mapa-h);grid-column:1;grid-row:1}
+.mapa-visitante{--mapa-cor:var(--mapa-a);grid-column:3;grid-row:1}
+.mapa[data-tempo="2"] .mapa-mandante{grid-column:3}
+.mapa[data-tempo="2"] .mapa-visitante{grid-column:1}
+.mapa-visitante,.mapa[data-tempo="2"] .mapa-mandante{flex-direction:row-reverse}
+.mapa[data-tempo="2"] .mapa-visitante{flex-direction:row}
+.mapa-etiqueta{grid-column:2;grid-row:1;text-align:center;font-weight:700}
+@media(max-width:799px){
+  .mapa-campo{height:92px}
+  body:has(.exp-camada:not([hidden])) .vivo-cab .mapa{visibility:hidden}
+}
 /* disputa de pênaltis ao vivo (#267): placar e as cobranças na ordem, com o resultado escrito */
 .penaltis:empty{display:none}
 .penaltis h2{margin:0 0 var(--e2);text-align:center}
