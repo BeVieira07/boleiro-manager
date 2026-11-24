@@ -129,6 +129,75 @@ test('importação europeia estima os pedidos sem lista e não grava respostas d
   }
 });
 
+test('Ligue 2 usa os clubes do calendário oficial e retoma a busca de promovidos pelo cache', async t => {
+  const { raiz, estado } = ambiente(t);
+  const dir = join(raiz, 'data');
+  const cache = join(dir, 'europa-2025-raw.json');
+  const clube = (id, name) => ({ team: { id, name, country: 'France' } });
+  const equipes = ids => ({ response: ids.map(id => clube(id, `Clube ${id}`)) });
+  const elencos = Object.fromEntries([82, 87, 90, 93, 99, 101, 104, 110, 433, 1063, 1297, 1299, 1301, 1304, 1305, 3012]
+    .map(id => [id, {}]));
+  const chamadas = [];
+  const pausas = [];
+  const nancy = clube(102, 'Nancy');
+  const leMans = clube(1298, 'Le Mans');
+  const respostas = {
+    '/teams?league=61&season=2024': equipes([82, 93, 1063]),
+    '/teams?league=62&season=2024': equipes([87, 88, 90, 97, 98, 99, 101, 104, 110, 433, 1297, 1299, 1301, 1304, 1305, 3012, 3200]),
+    '/teams?id=102': { response: [nancy] },
+    '/teams?id=1298': { response: [leMans] }
+  };
+  const rodar = () => importarEuropa({ raiz, ligas: ['FR2'], chave: 'fixture', informar: () => {},
+    esperar: async ms => pausas.push(ms), baixar: async url => {
+      const { pathname, search } = new URL(url);
+      if (pathname === '/status') return Response.json({ response: { requests: estado.cota } });
+      const pedido = pathname + search;
+      chamadas.push(pedido);
+      assert.ok(respostas[pedido], pedido);
+      return Response.json(respostas[pedido]);
+    } });
+  // Ambas as listas cabem no orçamento; a primeira busca ocupa o último pedido disponível.
+  estado.cota.current = 95;
+  assert.deepEqual(await rodar(), { pedidos: 3, faltam: 19 });
+  assert.deepEqual(chamadas, ['/teams?league=61&season=2024', '/teams?league=62&season=2024', '/teams?id=102']);
+  assert.deepEqual(pausas, [7000, 7000, 7000]);
+  const raw = JSON.parse(readFileSync(cache));
+  assert.deepEqual(raw.timesExtras, { 102: nancy.team });
+  writeFileSync(cache, JSON.stringify({ ...raw, elencos }));
+
+  estado.cota.current = 97;
+  chamadas.length = 0;
+  assert.deepEqual(await rodar(), { pedidos: 1, faltam: 2 });
+  assert.deepEqual(chamadas, ['/teams?id=1298']);
+  assert.deepEqual(JSON.parse(readFileSync(cache)).timesExtras, { 102: nancy.team, 1298: leMans.team });
+  assert.equal(existsSync(join(dir, 'europa-2025.json')), false);
+});
+
 test('elencos europeus publicados têm ids válidos, posições do jogo, goleiro e pelo menos 18 jogadores', {
   skip: !existsSync(arquivoReal) && 'elencos reais ainda não importados'
 }, () => validarFormato(JSON.parse(readFileSync(arquivoReal)), 18));
+
+test('Itália e França publicam os 76 clubes dos calendários de 2025/26 com escudos PNG', () => {
+  const { clubs, fontes } = JSON.parse(readFileSync(arquivoReal));
+  const esperados = {
+    IT1: ['AC Milan', 'AS Roma', 'Atalanta', 'Bologna', 'Cagliari', 'Como', 'Cremonese', 'Fiorentina', 'Genoa',
+      'Hellas Verona', 'Inter', 'Juventus', 'Lazio', 'Lecce', 'Napoli', 'Parma', 'Pisa', 'Sassuolo', 'Torino', 'Udinese'],
+    IT2: ['Avellino', 'Bari', 'Carrarese', 'Catanzaro', 'Cesena', 'Empoli', 'Frosinone', 'Juve Stabia', 'Mantova',
+      'Modena', 'Monza', 'Padova', 'Palermo', 'Pescara', 'Reggiana', 'Sampdoria', 'Spezia', 'Sudtirol', 'Venezia', 'Virtus Entella'],
+    FR1: ['Angers', 'Auxerre', 'Le Havre', 'Lens', 'Lille', 'Lorient', 'Lyon', 'Marseille', 'Metz', 'Monaco', 'Nantes',
+      'Nice', 'Paris FC', 'Paris Saint Germain', 'Rennes', 'Stade Brestois 29', 'Strasbourg', 'Toulouse'],
+    FR2: ['Amiens', 'Annecy', 'Bastia', 'Boulogne', 'Clermont Foot', 'Dunkerque', 'Estac Troyes', 'Grenoble',
+      'Guingamp', 'Laval', 'Le Mans', 'Montpellier', 'Nancy', 'PAU', 'RED Star FC 93', 'Reims', 'Rodez', 'Saint Etienne']
+  };
+  assert.match(fontes.composicao, /calendários oficiais de 2025\/26/);
+  for (const [liga, nomes] of Object.entries(esperados)) {
+    const equipes = clubs.filter(c => c.liga === liga);
+    assert.deepEqual(equipes.map(c => c.name).sort(), nomes.sort(), liga);
+    for (const c of equipes) {
+      const escudo = readFileSync(new URL(`../${c.logo}`, import.meta.url));
+      assert.ok(escudo.subarray(0, 8).equals(png.subarray(0, 8)), c.logo);
+      assert.equal(escudo.toString('ascii', 12, 16), 'IHDR', c.logo);
+      assert.ok(escudo.readUInt32BE(16) > 0 && escudo.readUInt32BE(20) > 0, c.logo);
+    }
+  }
+});
