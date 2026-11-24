@@ -226,6 +226,17 @@ function idadeEm(nascimento, data) {
     Number(data.slice(5, 10) < nascimento.slice(5, 10));
 }
 
+// Os elencos da API são mais novos que o dataset (transferências depois de julho de 2026): sem par no clube, procura o
+// jogador no dataset inteiro, pelo nome e com a idade batendo (diferença de até 1 ano), só quando há um candidato único.
+function casaJogadorEmQualquerClube(p, indice, data) {
+  if (!(p.age > 0)) return null;
+  const tokens = nomeNormal(p.name).split(' ').filter(t => t.length > 1);
+  const sobrenome = tokens.at(-1);
+  if (!sobrenome) return null;
+  const j = casaJogador(p, indice.get(sobrenome) || [], data);
+  return j && Math.abs(p.age - idadeEm(j.date_of_birth, data)) <= 1 ? j : null;
+}
+
 function casaJogador(p, candidatos, data) {
   const nome = nomeNormal(p.name);
   const tokens = nome.split(' ');
@@ -244,13 +255,17 @@ function casaJogador(p, candidatos, data) {
 function montarClubes(raw, times, clubesTm, jogadoresTm, ajustes, informar) {
   const casamentos = casarClubes(times, clubesTm.map(c => ({ ...c, tokens: nomeClube(c.name) })), ajustes.clubes || {}, informar);
   const porId = new Map(jogadoresTm.map(j => [j.player_id, j]));
-  const porClube = new Map();
+  const porClube = new Map(), porSobrenome = new Map();
   const registros = new Map();
   for (const j of jogadoresTm) {
     if (Number(j.last_season) < TEMPORADA_API) continue;
     if (!porClube.has(j.current_club_id)) porClube.set(j.current_club_id, []);
     const nome = nomeNormal(j.name);
-    porClube.get(j.current_club_id).push({ ...j, nome, tokens: nome.split(' ') });
+    const registro = { ...j, nome, tokens: nome.split(' ') };
+    porClube.get(j.current_club_id).push(registro);
+    const sobrenome = registro.tokens.at(-1);
+    if (!porSobrenome.has(sobrenome)) porSobrenome.set(sobrenome, []);
+    porSobrenome.get(sobrenome).push(registro);
   }
 
   const clubs = times.map(({ team, liga: origem }) => {
@@ -264,10 +279,13 @@ function montarClubes(raw, times, clubesTm, jogadoresTm, ajustes, informar) {
     const elenco = raw.elencos[team.id].response.find(x => x.team.id === team.id);
     const players = [];
     for (const p of elenco.players) {
-      if (!idApi(p.id) || !p.name) throw new Error(`Jogador sem id válido ou nome: ${team.name}.`);
+      // A API às vezes traz um jogador sem id (ex.: id 0 num juvenil): sem id não dá para casar nem salvar
+      if (!idApi(p.id) || !p.name) { informar(`Jogador sem id válido ou nome, ignorado: ${p.name || '?'} (${team.name}).`); continue; }
       const pid = `p${p.id}`;
       const manual = ajustes.jogadores?.[pid];
-      const j = manual == null ? casaJogador(p, porClube.get(tm?.club_id) || [], data) : porId.get(String(manual));
+      const j = manual == null
+        ? casaJogador(p, porClube.get(tm?.club_id) || [], data) || casaJogadorEmQualquerClube(p, porSobrenome, data)
+        : porId.get(String(manual));
       if (manual != null && !j) throw new Error(`Jogador Transfermarkt ${manual} não encontrado para ${pid} (${p.name}).`);
       const detalhe = TM[j?.sub_position];
       const pd = POS_SIMPLES[detalhe] || detalhe;

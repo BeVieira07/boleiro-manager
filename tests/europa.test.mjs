@@ -101,7 +101,8 @@ test('importação europeia para na margem diária, retoma do cache e classifica
   assert.equal(lateral.pd, 'LE');
   assert.equal(atacante.number, null);
   assert.equal(atacante.vm, undefined);
-  assert.deepEqual(promovido.players.map(p => [p.pd, p.vm]), [['GOL', undefined], ['MEI', 2], ['LD', undefined]]);
+  // Pablo Mateo está noutro clube no dataset (transferido depois): casa pelo nome e pela idade no dataset inteiro
+  assert.deepEqual(promovido.players.map(p => [p.pd, p.vm]), [['GOL', undefined], ['MEI', 2], ['LD', 12]]);
   assert.ok(avisos.some(msg => msg.includes('p9203') && msg.includes('brasileirao-2024')));
   for (const arq of ['eu-920.png', 'eu-930.png']) assert.deepEqual(readFileSync(join(raiz, 'img', 'escudos', arq)), png);
 
