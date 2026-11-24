@@ -47,8 +47,8 @@ export function pararSons() {
 /* #346: a torcida é gravada (CC0, origem em sons/FONTES.md); o som sintetizado fica de reserva enquanto o arquivo não
    carregou ou se ele falhar. `ini` pula os quadros extras do corte; `queda` é o fade-out do fim. */
 const GRAVACOES = {
-  golFavor: { arq: 'sons/gol.mp3', ini: 0.05, ganho: 1.05, queda: 1.4 },
-  golContra: { arq: 'sons/gol-contra.mp3', ini: 0.05, ganho: 1.2, queda: 1.2 },
+  golFavor: { arq: 'sons/gol.mp3', ini: 0.05, ganho: 1.05, queda: 0.9 },
+  golContra: { arq: 'sons/gol-contra.mp3', ini: 0.05, ganho: 1.2, queda: 0.8 },
   uhh: { arq: 'sons/uhh.mp3', ini: 0.066, ganho: 1, queda: 0.7 }
 };
 export const ARQUIVOS_SONS = Object.values(GRAVACOES).map(g => g.arq);
