@@ -13,7 +13,7 @@ import { registrarTitulo } from './carreira.mjs';
 import { DADOS_CONTINENTAIS } from './dados-continentais.mjs';
 import { aplicarConfianca } from './diretoria.mjs';
 import { S, addFin, addNews, addNewsTodos, bilheteriaBase, clubById, divOf, ehHumano, reindex, table, tecDoClube } from './estado.mjs';
-import { prepararEstrangeiro } from './estrangeiros.mjs';
+import { clubesEuropeus, prepararEstrangeiro } from './estrangeiros.mjs';
 import { jogarPartidaCopa, jogoDaPerna, noticiaAutores, penaltisSemLances, placarDaPerna } from './gols-copa.mjs';
 import { nosPenaltis } from './penaltis.mjs';
 import { premioPorDivisao } from './premiacoes.mjs';
@@ -58,7 +58,7 @@ export function criarContinentais(vagas) {
   if (!CONTINENTAIS.ligados || !vagas || R < DATAS + 1) { S.continentais = null; return }
   const estrangeiros = {}, torneios = [];
   // quem já joga no Brasil (comprado ou emprestado) não volta ao elenco estrangeiro; cada jogador existe uma vez só
-  const vistos = new Set(S.clubs.flatMap(c => [...c.players, ...(c.base || [])].map(p => p.id)));
+  const vistos = new Set([...S.clubs, ...clubesEuropeus()].flatMap(c => [...c.players, ...(c.base || [])].map(p => p.id)));
   // clube estrangeiro com jogador emprestado fora fica no jogo (mesmo sem a edição nova) para o jogador voltar a ele
   const antigos = S.continentais ? S.continentais.estrangeiros : {};
   for (const id of Object.keys(antigos)) if ((S.loans || []).some(l => l.from === id)) estrangeiros[id] = antigos[id];

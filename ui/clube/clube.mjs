@@ -7,6 +7,7 @@ import { faixaConf, receitaEsperada } from '../../core/diretoria.mjs';
 import { loanLeft, loanOf, loansIn, wageBill } from '../../core/emprestimos.mjs';
 import { slotLayout, unavailable } from '../../core/escalacao.mjs';
 import { DIVS, P, S, clubById, divOf, table, tec, userClub } from '../../core/estado.mjs';
+import { clubeDe } from '../../core/estrangeiros.mjs';
 import { penalidadePosicao } from '../../core/posicoes.mjs';
 import { ESTILOS, MODOS, taticaUser } from '../../core/taticas.mjs';
 import { esc, money } from '../../core/utils.mjs';
@@ -44,8 +45,9 @@ export function alertas() {
   const cans = cansados(xi, P);
   if (cans.length) out.push({ tipo: 'aviso', titulo: `${cans.length} titular${cans.length > 1 ? 'es' : ''} cansado${cans.length > 1 ? 's' : ''}`, texto: cans.map(p => `${p.name} (${Math.round(energiaDe(p))})`).join(', ') + '. Com pouca energia rendem menos e se lesionam mais.', acao: 'go|escalacao', rotulo: 'Poupar' });
   for (const o of tec().offers.filter(o => P[o.pid] && P[o.pid].clubId === me)) {
-    const p = P[o.pid];
-    out.push({ tipo: 'aviso', titulo: `Proposta ${o.emprestimo ? 'de empréstimo ' : ''}por ${p.name}`, texto: o.emprestimo ? `${clubById(o.from).name} quer ele emprestado por 1 ano, com o salário dividido 50/50. Vale até a rodada ${o.until + 1}.` : `${clubById(o.from).name} oferece ${money(o.amount)} (valor de mercado ${money(p.value)}). Vale até a rodada ${o.until + 1}.`,
+    const p = P[o.pid], c = clubeDe(o.from);
+    if (!c) continue;
+    out.push({ tipo: 'aviso', titulo: `Proposta ${o.emprestimo ? 'de empréstimo ' : ''}por ${p.name}`, texto: o.emprestimo ? `${c.name} quer ele emprestado por 1 ano, com o salário dividido 50/50. Vale até a rodada ${o.until + 1}.` : `${c.name} oferece ${money(o.amount)} (valor de mercado ${money(p.value)}). Vale até a rodada ${o.until + 1}.`,
       botoes: `<button class="btn sm" data-acao="acceptOffer|${o.id}">Aceitar</button><button class="btn sec sm" data-acao="rejectOffer|${o.id}">Recusar</button>` });
   }
   const fim = uc.players.filter(p => p.contrato === 1 && !loanOf(p.id));

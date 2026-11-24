@@ -4,6 +4,7 @@ import { vCarreira } from './clube/diretoria.mjs';
 import { vConfig } from './inicio/configuracoes.mjs';
 import { wageBill } from '../core/emprestimos.mjs';
 import { escalarMelhores } from '../core/escalacao.mjs';
+import { inicializarEuropa } from '../core/estrangeiros.mjs';
 import { DIVS, MOVE_N, S, clubById, divOf, divisions, hasTwoDivs, table, tec, tvQuota, userClub } from '../core/estado.mjs';
 import { clamp, esc, money } from '../core/utils.mjs';
 import { formaRecente, vClube } from './clube/clube.mjs';
@@ -19,6 +20,7 @@ import { vElenco } from './clube/elenco.mjs';
 import { vEscalacao } from './clube/escalacao.mjs';
 import { chaveJogoAtual, save, ui } from './estado.mjs';
 import { vInicio } from './inicio/escolha.mjs';
+import { comCatalogoEuropa } from './inicio/catalogo-europa.mjs';
 import { icone } from './icones.mjs';
 import { TITULOS, barraAcoes, lateral } from './layout.mjs';
 import { vLigas, vLobby } from './liga/liga.mjs';
@@ -32,7 +34,13 @@ import { vTecnico } from './clube/tecnico.mjs';
 
 /* ================= telas ================= */
 // #65: ao trocar de tela, o foco vai para o conteúdo (teclado e leitor de tela começam pelo título)
-export function go(v){ui.view=v;ui.maisAberto=false;telaDesenhada=null;render();window.scrollTo(0,0);const a=document.getElementById('app');if(a&&a.focus)a.focus({preventScroll:true})}
+export function go(v){
+  ui.view=v;ui.maisAberto=false;telaDesenhada=null;render();window.scrollTo(0,0);const a=document.getElementById('app');if(a&&a.focus)a.focus({preventScroll:true});
+  if(ui.view==='mercado'&&S&&!S.europa&&!ui.liga)return comCatalogoEuropa(catalogo=>{
+    inicializarEuropa(S,catalogo);
+    if(S.europa){save();render()}
+  });
+}
 export const curDiv=()=>ui.vDiv&&divisions().includes(ui.vDiv)?ui.vDiv:divOf(userClub());
 export const inDiv=(g,d)=>divOf(clubById(g.h))===d;
 export function divTabs(){

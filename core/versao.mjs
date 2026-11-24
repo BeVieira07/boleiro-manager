@@ -13,7 +13,7 @@ import { DADOS_PADRAO } from './dados-padrao.mjs';
 import { migrarDiretoria } from './diretoria.mjs';
 import { DIVS, S, clubDo, migrarTecnicos, reindex, tecnicos, usarEstado } from './estado.mjs';
 import { limparEventosAntigos } from './aovivo.mjs';
-import { prepararEstrangeiro } from './estrangeiros.mjs';
+import { inicializarEuropa, prepararEstrangeiro } from './estrangeiros.mjs';
 import { migrarPenaltis } from './penaltis.mjs';
 import { migrarPosicoes, simplificarPosicoes } from './posicoes.mjs';
 import { novaSemente } from './utils.mjs';
@@ -78,16 +78,23 @@ const MIGRACOES = [
     for (const c of [...s.clubs, ...estrangeiros]) for (const p of [...c.players, ...(c.base || [])]) p.amar ??= 0;
   },
   migrarValoresDeMercado, // 18: valor de mercado sem desconto pelo prazo do contrato (#350)
+  inicializarEuropa, // 19: mercado europeu nas campanhas locais que recebem o catálogo (#355)
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
+// A migração exclusiva de campanha local não eleva a versão persistida da liga.
+export const VERSAO_SAVE_LIGA = MIGRACOES.findLastIndex(migracao => migracao !== inicializarEuropa) + 1;
 
 /** Põe o save em S e o leva até a versão atual. Devolve {erro} (save de versão mais nova; S fica vazio) ou {ok}. */
-export function migrarSave(s) {
+export function migrarSave(s, { catalogoEuropa, liga = false } = {}) {
   const v = Number.isInteger(s.versao) ? s.versao : 0;
+  const versao = liga ? VERSAO_SAVE_LIGA : VERSAO_SAVE;
   if (v > VERSAO_SAVE) { usarEstado(null); return { erro: 'Este save é de uma versão mais nova do jogo. Atualize a página (Ctrl+F5) e tente de novo.' } }
+  if (liga && s.europa) { usarEstado(null); return { erro: 'O mercado europeu pertence às campanhas locais.' } }
   usarEstado(s);
-  for (let i = v; i < VERSAO_SAVE; i++) MIGRACOES[i](s);
-  s.versao = VERSAO_SAVE;
+  for (let i = v; i < versao; i++) MIGRACOES[i](s, catalogoEuropa);
+  // O slot único pode ter sido migrado na abertura do site, antes de carregar o catálogo.
+  if (v === versao && !liga) inicializarEuropa(s, catalogoEuropa);
+  s.versao = versao;
   reindex();
   return { ok: true };
 }

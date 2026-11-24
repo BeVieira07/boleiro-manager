@@ -60,15 +60,15 @@ export function loanCheck(p,lender,borrower){
   return null;
 }
 export function startLoan(l){
-  const p=P[l.pid];movePlayer(p,clubById(l.to),true); // movePlayer garante o elenco mínimo de quem cedeu
+  const p=P[l.pid],to=clubeDe(l.to);movePlayer(p,to,true); // movePlayer garante o elenco mínimo de quem cedeu
   loans().push(l);
-  const msg=`🤝 ${p.name} emprestado do ${clubeDe(l.from).name} ao ${clubById(l.to).name} ${fimTxt(l)}.`;
+  const msg=`🤝 ${p.name} emprestado do ${clubeDe(l.from).name} ao ${to.name} ${fimTxt(l)}.`;
   addNews(msg,l.from);addNews(msg,l.to); // para os técnicos dos dois clubes (clube da IA: descarta)
 }
 export function endLoan(l,back){ // back: devolve ao clube de origem
   S.loans=loans().filter(x=>x!==l);
   const p=P[l.pid];if(!p||!back)return;
-  const from=clubeDe(l.from),to=clubById(l.to);
+  const from=clubeDe(l.from),to=clubeDe(l.to);
   movePlayer(p,from,true);ensureSquad(to);
   const msg=`🔙 ${p.name} voltou ao ${from.name} (fim do empréstimo).`;addNews(msg,from.id);if(to.id!==from.id)addNews(msg,to.id);
 }
@@ -78,7 +78,7 @@ export function processLoans(){
     if(!acabou(l))continue;
     const p=P[l.pid];
     if(l.buy&&p&&ehHumano(l.from)&&!ehHumano(l.to)&&rnd()<0.4){ // clube de IA exerce a opção de compra (só empréstimos de antes da #142)
-      addFin(`Opção de compra de ${p.name} (${clubById(l.to).name})`,l.buy,clubById(l.from));addNewsTodos(`💰 ${clubById(l.to).name} exerceu a opção de compra de ${p.name} por ${money(l.buy)}.`); // transferência com a IA: todos veem (#35)
+      addFin(`Opção de compra de ${p.name} (${clubeDe(l.to).name})`,l.buy,clubById(l.from));addNewsTodos(`💰 ${clubeDe(l.to).name} exerceu a opção de compra de ${p.name} por ${money(l.buy)}.`); // transferência com a IA: todos veem (#35)
       S.loans=loans().filter(x=>x!==l);novoContrato(p);continue;
     }
     endLoan(l,true);

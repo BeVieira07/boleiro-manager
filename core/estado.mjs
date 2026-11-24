@@ -6,6 +6,7 @@ import { criarCopa } from './copa.mjs';
 import { criarEstaduais } from './estadual.mjs';
 import { SQUAD_MIN, SQUAD_SHAPE, fakePlayer, forcaDoElenco, rate, refStrength, refreshEconomics } from './dados.mjs';
 import { migrarDiretoria } from './diretoria.mjs';
+import { inicializarEuropa, todosEstrangeiros } from './estrangeiros.mjs';
 import { autoXI } from './motor.mjs';
 import { atribuirPosicoes, converterPosicoesAntigas, simplificarPosicoes } from './posicoes.mjs';
 import { hashStr, money, mulberry32, novaSemente, shuffle } from './utils.mjs';
@@ -38,7 +39,7 @@ export function usarEstado(s){S=s} // único jeito de trocar o jogo atual de for
 // índice de jogadores; as migrações de saves antigos ficam em core/versao.mjs (#46)
 export function reindex(){
   P={};for(const c of S.clubs)for(const p of c.players){p.clubId=c.id;P[p.id]=p}
-  if(S.continentais)for(const c of Object.values(S.continentais.estrangeiros))for(const p of c.players)if(!P[p.id]){p.clubId=c.id;P[p.id]=p} // #172: os dos clubes estrangeiros também estão no mercado
+  for(const c of todosEstrangeiros())for(const p of c.players)if(!P[p.id]){p.clubId=c.id;P[p.id]=p}
 }
 /* ================= divisões ================= */
 export const DIVS={A:'Série A',B:'Série B',C:'Série C',D:'Série D'};
@@ -61,7 +62,7 @@ export const MOVE_N=()=>Math.min(4,...divisions().map(d=>S.clubs.filter(c=>divOf
 
 // regra: monta a campanha nova a partir dos dados (sem tela nem armazenamento).
 // `quem` é o id do clube (um técnico, o solo) ou uma lista [{id, nome, clubId}] (vários técnicos).
-export function criarJogo(quem,data){
+export function criarJogo(quem,data,catalogoEuropa){
   const lista=Array.isArray(quem)?quem:[{id:'local',nome:'Você',clubId:quem}];
   if(!lista.length||new Set(lista.map(t=>t.clubId)).size!==lista.length)throw new Error('Cada técnico precisa de um clube diferente.');
   const clubs=JSON.parse(JSON.stringify(data.clubs));
@@ -89,6 +90,7 @@ export function criarJogo(quem,data){
   for(const c of S.clubs)c.balance=startBalance(divOf(c),c.strength); // clubes da IA também têm caixa
   darPotencial(S.clubs);
   reindex();criarBases();criarCopa();criarEstaduais();criarContinentais(vagasBrasileiras()); // #133: na 1ª temporada, os mais fortes da Série A
+  inicializarEuropa(S,catalogoEuropa);
   for(const t of tecnicos()){const uc=clubDo(t);abrirPassagem(t);uc.lineup=autoXI(uc);addNews(`${lista.length>1?t.nome+', você':'Você'} assumiu o comando do ${uc.name}! Caixa inicial: ${money(uc.balance)}.`,uc.id)}
   migrarDiretoria(S);
   return S;
@@ -144,4 +146,7 @@ export function table(div){
   return ordenarTabela(T);
 }
 
-export function topScorers(n=20,div){return Object.values(P).filter(p=>p.goals>0&&(!div||divOf(clubById(p.clubId))===div)).sort((a,b)=>b.goals-a.goals||b.ovr-a.ovr).slice(0,n)}
+export function topScorers(n=20,div){
+  const clubes=new Set(S.clubs.filter(c=>!div||divOf(c)===div).map(c=>c.id));
+  return Object.values(P).filter(p=>p.goals>0&&clubes.has(p.clubId)).sort((a,b)=>b.goals-a.goals||b.ovr-a.ovr).slice(0,n);
+}

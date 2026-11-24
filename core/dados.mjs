@@ -82,12 +82,14 @@ export function forcaDoElenco(c){
   const xi=[...por('G').slice(0,1),...por('D').slice(0,4),...por('M').slice(0,4),...por('A').slice(0,2)];
   return xi.length?Math.round(xi.reduce((s,x)=>s+x,0)/xi.length):c.strength;
 }
-export function valueOf(p){
+function valorBase(p){
   const af=p.age<=21?1.4:p.age<=24?1.2:p.age<=28?1:p.age<=31?0.7:0.4;
   return Math.round(0.3*Math.pow(1.13,p.ovr-50)*af*10)/10 || 0.1;
 }
+export const valueOf=p=>p.fatorMercado==null?valorBase(p):Math.max(0.1,Math.round(valorBase(p)*p.fatorMercado*10)/10);
 // O salário segue o valor de mercado, vezes o aumento negociado na renovação (p.aum).
-export const salarioDe=(p,aum=p.aum||1)=>Math.round(Math.max(0.1,valueOf(p))*0.01*aum*1000)/1000;
+// A cotação do passe europeu não altera a escala salarial das campanhas brasileiras.
+export const salarioDe=(p,aum=p.aum||1)=>Math.round(Math.max(0.1,valorBase(p))*0.01*aum*1000)/1000;
 export function refreshEconomics(p){p.value=valueOf(p);p.wage=salarioDe(p)}
 
 /* #47: ids e cores vão para atributos HTML. Dados de fora (aba Dados, save importado) só entram com ids simples,

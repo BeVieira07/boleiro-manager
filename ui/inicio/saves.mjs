@@ -1,4 +1,4 @@
-import { migrarSave } from '../../core/versao.mjs';
+import { VERSAO_SAVE, migrarSave } from '../../core/versao.mjs';
 import { DIVS, S, divOf, table, usarEstado } from '../../core/estado.mjs';
 import { esc } from '../../core/utils.mjs';
 import { getData, save, ui } from '../estado.mjs';
@@ -10,11 +10,14 @@ import { go, render } from '../telas.mjs';
 import { SAVE_KEY, store } from '../utils.mjs';
 import { avisar, confirmar } from '../avisos.mjs';
 import { sairDaLiga } from '../liga/ligajogo.mjs';
+import { comCatalogoEuropa } from './catalogo-europa.mjs';
 
 /* ================= jogos salvos e tela inicial (#21) =================
    Cada campanha fica em localStorage[SAVE_PREFIX+id]; SAVES_KEY guarda o índice {cur, list:[resumo]}.
    S.saveId diz em qual save o jogo atual é gravado. O save antigo de slot único (SAVE_KEY) é migrado na primeira abertura. */
-export const SAVES_KEY='brasfoot_saves_v2', SAVE_PREFIX='brasfoot_save_v2_', MAX_SAVES=5; // cada save ocupa de 650 mil a 900 mil caracteres (#195); o navegador costuma dar uns 5 milhões por site
+export const SAVES_KEY='brasfoot_saves_v2', SAVE_PREFIX='brasfoot_save_v2_', MAX_SAVES=5;
+// Os elencos europeus ficam inteiros no save, compactado só no navegador para caber na mesma cota.
+export const gravarEstadoLocal=(id,estado)=>store.set(SAVE_PREFIX+id,estado,!!estado.europa);
 export const indiceSaves=()=>{const i=store.get(SAVES_KEY);return i&&Array.isArray(i.list)?i:{cur:null,list:[]}};
 export function resumoSave(s){
   const ts=s.managers?Object.values(s.managers):[],t=ts.find(x=>x.id===s.atual);
@@ -39,7 +42,7 @@ export function salvarJogo(){
   const idx=indiceSaves();
   if(!S.saveId)S.saveId=Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36); // id do save não é regra do jogo
   const estado=estadoAoSalvar();
-  if(!store.set(SAVE_PREFIX+S.saveId,estado)&&!(liberarEspaco()&&store.set(SAVE_PREFIX+S.saveId,estado))){
+  if(!gravarEstadoLocal(S.saveId,estado)&&!(liberarEspaco()&&gravarEstadoLocal(S.saveId,estado))){
     if(!salvarJogo.avisou)avisar('Não há espaço para salvar no navegador. Exclua um jogo salvo na tela inicial (ou exporte e apague algum).');
     salvarJogo.avisou=true;return false;
   }
@@ -60,12 +63,20 @@ export function migrarSaveAntigo(){
   if(ok)store.del(SAVE_KEY);
 }
 export function abrirSave(id){
-  const s=store.get(SAVE_PREFIX+id);
+  let s=store.get(SAVE_PREFIX+id);
   if(!s||!Array.isArray(s.clubs)){avisar('Este save não pôde ser lido.','erro');return}
-  const m=migrarSave(s);if(m.erro){avisar(m.erro,'erro');return}
-  S.saveId=id;
-  const idx=indiceSaves();idx.cur=id;store.set(SAVES_KEY,idx);
-  ui.selEsc=null;ui.vDiv=null;go('clube');
+  const abrir=catalogo=>{
+    const tinhaEuropa=!!s.europa;
+    const m=migrarSave(s,{catalogoEuropa:catalogo});if(m.erro){avisar(m.erro,'erro');return}
+    S.saveId=id;
+    const idx=indiceSaves();idx.cur=id;store.set(SAVES_KEY,idx);
+    ui.selEsc=null;ui.vDiv=null;go('clube');
+    if(!tinhaEuropa&&S.europa)salvarJogo();
+  };
+  return s.europa||s.versao>VERSAO_SAVE?abrir():comCatalogoEuropa(catalogo=>{
+    s=store.get(SAVE_PREFIX+id);
+    if(s&&Array.isArray(s.clubs))abrir(catalogo);
+  });
 }
 export function excluirSave(id){
   const e=indiceSaves().list.find(x=>x.id===id)||(savesNuvem()||[]).find(x=>x.id===id)?.resumo;

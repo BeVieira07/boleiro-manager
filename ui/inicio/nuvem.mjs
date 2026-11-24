@@ -5,7 +5,7 @@
 import { S } from '../../core/estado.mjs';
 import { clienteLogado, usuarioAtual } from './conta.mjs';
 import { ui } from '../estado.mjs';
-import { SAVES_KEY, SAVE_PREFIX, abrirSave, indiceSaves } from './saves.mjs';
+import { SAVES_KEY, SAVE_PREFIX, abrirSave, gravarEstadoLocal, indiceSaves } from './saves.mjs';
 import { render } from '../telas.mjs';
 import { store } from '../utils.mjs';
 import { avisar } from '../avisos.mjs';
@@ -19,8 +19,9 @@ const t = d => Date.parse(d) || 0;
 /** A versão mais nova da nuvem fica onde está; a cópia local ganha outro id (e vira um save à parte). */
 function virarCopia(r, estado) {
   const id = Date.now().toString(36) + Math.floor(Math.random() * 1e4).toString(36), idx = indiceSaves();
+  if (!gravarEstadoLocal(id, { ...estado, saveId: id })) throw new Error('Sem espaço para criar cópia local.');
   estado.saveId = id; // se for o jogo aberto (S), ele passa a gravar no save novo
-  store.set(SAVE_PREFIX + id, estado); store.del(SAVE_PREFIX + r.id);
+  store.del(SAVE_PREFIX + r.id);
   const x = idx.list.find(y => y.id === r.id), novo = { ...x, id };
   delete novo.nuvem;
   idx.list = idx.list.map(y => (y === x ? novo : y));
@@ -109,13 +110,13 @@ export async function abrirDaNuvem(id) {
   const { data, error } = await c.from('saves').select('resumo, estado, atualizado_em').eq('id', id).maybeSingle();
   if (error || !data) { avisar('Não foi possível baixar o save da nuvem' + (error ? ': ' + error.message : '.'), 'erro'); return }
   const data_ = data.resumo.data || data.atualizado_em;
-  if (!store.set(SAVE_PREFIX + id, data.estado) && !(liberarEspaco() && store.set(SAVE_PREFIX + id, data.estado))) {
+  if (!gravarEstadoLocal(id, data.estado) && !(liberarEspaco() && gravarEstadoLocal(id, data.estado))) {
     avisar('Não há espaço no navegador para abrir este save. Exclua um jogo salvo e tente de novo.'); return;
   }
   const idx = indiceSaves();
   idx.list = [{ ...data.resumo, id, data: data_, nuvem: data_ }, ...idx.list.filter(x => x.id !== id)];
   store.set(SAVES_KEY, idx);
-  abrirSave(id);
+  return abrirSave(id);
 }
 
 /** Apaga o save da nuvem também (senão ele volta na próxima lista). */

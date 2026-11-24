@@ -4,7 +4,7 @@ import { UM_ANO, loanOf, startLoan, wageBill } from './emprestimos.mjs';
 import { clubeDe, ehEstrangeiro } from './estrangeiros.mjs';
 import { MOVE_N, P, S, addFin, addNews, clubById, divOf, divisions, ehHumano, table, tec, tecnicos, userClub } from './estado.mjs';
 import { FORMA_LIM } from './forma.mjs';
-import { ehJanela, sobrasDoElenco } from './mercadoIA.mjs';
+import { ehJanela, limiteElencoIA, sobrasDoElenco } from './mercadoIA.mjs';
 import { autoXI } from './motor.mjs';
 import { ensureSquad } from './partida.mjs';
 import { clamp, money, pick, rnd } from './utils.mjs';
@@ -131,13 +131,15 @@ const caixaIA=(c,v)=>{if(!ehHumano(c)&&c.balance!=null)c.balance=Math.round((c.b
 // regras de venda: devolvem {erro} ou {ok}. Emprestado não se vende: o contrato é com o clube de origem (#117)
 const emprestado=pid=>loanOf(pid)?{erro:`${P[pid].name} está emprestado: só o clube de origem pode negociá-lo.`}:null;
 export function aceitarOferta(oid){
-  const o=tec().offers.find(x=>x.id===oid);if(!o)return {erro:'Proposta não encontrada.'};const p=P[o.pid],b=clubById(o.from);
+  const o=tec().offers.find(x=>x.id===oid);if(!o)return {erro:'Proposta não encontrada.'};const p=P[o.pid],b=clubeDe(o.from);
+  if(!b||!p||p.clubId!==userClub().id){recusarOferta(oid);return {erro:'A proposta não está mais disponível.'}}
   const e=emprestado(o.pid);if(e)return e;
   if(userClub().players.length<=16)return {erro:'Seu elenco ficaria pequeno demais (mínimo 16).'};
   if(o.emprestimo){ // #142: proposta de empréstimo da IA por um jogador da lista do técnico
-    if(b.players.length>=32){recusarOferta(oid);return {erro:`${b.name} ficou sem vaga no elenco e desistiu do empréstimo.`}}
+    if(b.players.length>=limiteElencoIA(b)){recusarOferta(oid);return {erro:`${b.name} ficou sem vaga no elenco e desistiu do empréstimo.`}}
     recusarOferta(oid);startLoan({pid:p.id,from:userClub().id,to:b.id,fim:UM_ANO()});return {ok:true};
   }
+  if(b.liga&&b.players.length>=limiteElencoIA(b)){recusarOferta(oid);return {erro:`${b.name} ficou sem vaga no elenco e desistiu da proposta.`}}
   if(!ehHumano(b)&&b.balance<o.amount){recusarOferta(oid);return {erro:`${b.name} gastou o caixa em outros negócios e desistiu da proposta.`}}
   addFin(`Venda de ${p.name} (${b.name})`,o.amount);caixaIA(b,-o.amount);movePlayer(p,b);
   addNews(`💰 ${p.name} vendido ao ${b.name} por ${money(o.amount)}.`);return {ok:true};

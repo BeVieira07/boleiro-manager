@@ -4,6 +4,7 @@ import { S, criarJogo } from '../core/estado.mjs';
 import { podeCriarSave, salvarJogo } from './inicio/saves.mjs';
 import { go, render } from './telas.mjs';
 import { avisar } from './avisos.mjs';
+import { comCatalogoEuropa } from './inicio/catalogo-europa.mjs';
 
 // estado só da tela (não vai para o save)
 export const ui={view:'clube',lastRound:null,selEsc:null,vDiv:null,jogosRound:null,mf:{grupo:'',q:'',max:'',club:'',liga:'',aba:'todos',ord:'ovr',dir:-1},ef:{grupo:'',q:'',ord:'pos',dir:1},tvAoVivo:null,vivo:null,artComp:{},classifComp:{},artSo:false,novos:[],liga:null}; // liga: jogando uma liga online (#34)
@@ -18,7 +19,8 @@ export function newGame(clubId){
     const t=ui.novos.find(x=>!x.clubId);if(!t){avisar('Todos os técnicos já escolheram o clube. Clique em Começar.');return}
     t.clubId=clubId;render();return;
   }
-  if(!podeCriarSave())return;criarJogo(clubId,getData());save();go('clube');
+  if(!podeCriarSave())return;
+  return comCatalogoEuropa(catalogo=>{criarJogo(clubId,getData(),catalogo);save();go('clube')});
 }
 // vários técnicos no mesmo computador (#29)
 export const MAX_TECNICOS=4;
@@ -35,6 +37,9 @@ export function comecarComTecnicos(){
   if(ui.novos.length<2){avisar('Adicione pelo menos 2 técnicos.');return}
   const sem=ui.novos.find(t=>!t.clubId);if(sem){avisar(`Escolha o clube de ${sem.nome}.`);return}
   if(!podeCriarSave())return;
-  criarJogo(ui.novos.map((t,i)=>({id:'t'+(i+1),nome:t.nome,clubId:t.clubId})),getData());
-  ui.novos=[];save();go('clube');
+  const tecnicos=ui.novos.map((t,i)=>({id:'t'+(i+1),nome:t.nome,clubId:t.clubId}));
+  return comCatalogoEuropa(catalogo=>{
+    criarJogo(tecnicos,getData(),catalogo);
+    ui.novos=[];save();go('clube');
+  });
 }

@@ -10,7 +10,7 @@ import { emprestimoJa, exercerOpcaoCompra, proporEmprestimo } from './emprestimo
 import { definirCantos, definirCobradores, unavailable } from './escalacao.mjs';
 import { RODADA_ESTADUAL } from './estadual.mjs';
 import { P, S, addNewsTodos, clubById, clubDo, criarJogo, ehHumano, tec, tecnicos, usarTecnico, userClub } from './estado.mjs';
-import { migrarSave } from './versao.mjs';
+import { VERSAO_SAVE_LIGA, migrarSave } from './versao.mjs';
 import { aceitarOferta, alternarEmprestimo, alternarVenda, comprarJa, proporCompra, recusarOferta, venderJa } from './mercado.mjs';
 import { autoXI, jogarRodada, titularesPossiveis, validateLineup } from './motor.mjs';
 import { fecharTemporada, iniciarTemporada } from './partida.mjs';
@@ -38,6 +38,7 @@ export function iniciarLiga(membros, series, dados) {
     if (!clubs.some(c => c.id === m.club_id)) return { erro: `O clube de ${m.nome || 'um técnico'} não é das séries da liga.` };
   }
   criarJogo(membros.map(m => ({ id: m.user_id, nome: m.nome || 'Técnico', clubId: m.club_id })), { ...dados, clubs });
+  S.versao = VERSAO_SAVE_LIGA;
   return { ok: true };
 }
 
@@ -56,7 +57,7 @@ export function aplicarEntrada(uc, e) {
 /** Joga a rodada atual da liga. entradas: {user_id: linha de liga_entradas}. Quem não confirmou joga com a escalação automática.
  *  Depois da última rodada, fecha a temporada e começa a próxima na mesma chamada. */
 export function jogarRodadaLiga(estado, entradas) {
-  const m = migrarSave(estado); if (m.erro) throw new Error(m.erro); // liga criada antes de uma mudança no save ganha os campos novos
+  const m = migrarSave(estado, { liga: true }); if (m.erro) throw new Error(m.erro); // liga criada antes de uma mudança no save ganha os campos novos
   // #37: quem saiu do clube e não escolheu até agora assume a melhor proposta (a liga não espera)
   const trocas = [];
   for (const t of tecnicos()) if (t.demitido && !t.recusouClubes) {
@@ -125,7 +126,7 @@ const SO_SEM_CLUBE = new Set(['escolherClube', 'recusarClubes']), SEM_REPASSE = 
 /** Ação de mercado de um técnico (a: {tipo, ...}, vinda do navegador: tudo é conferido). Devolve {erro} (nada muda) ou {ok, msg}
  *  (o estado em S mudou e deve ser gravado; ok=false é proposta recusada). Negócio fechado vira notícia para todos da liga. */
 export function acaoMercadoLiga(estado, eu, a) {
-  const m = migrarSave(estado); if (m.erro) return m;
+  const m = migrarSave(estado, { liga: true }); if (m.erro) return m;
   usarTecnico(eu);
   if (!a || !Object.hasOwn(MERCADO, a.tipo)) return { erro: 'Ação de mercado desconhecida.' }; // hasOwn: "constructor" não vale
   const f = MERCADO[a.tipo];
@@ -141,7 +142,7 @@ export function acaoMercadoLiga(estado, eu, a) {
 
 /** Tira um técnico da liga (saiu, ou o dono removeu): o clube dele volta para a IA (#37). Devolve {erro} ou {ok}; o estado fica em S. */
 export function removerTecnicoLiga(estado, userId) {
-  const m = migrarSave(estado); if (m.erro) return m;
+  const m = migrarSave(estado, { liga: true }); if (m.erro) return m;
   const t = S.managers[userId]; if (!t) return { erro: 'Esse técnico não está na liga.' };
   const c = clubDo(t);
   fecharPassagem(t);

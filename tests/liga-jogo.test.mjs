@@ -295,7 +295,7 @@ test('liga antiga exibe o valor de mercado cheio ao abrir e migra o estado no se
     assert.equal(srv.estado.versao, 17);
 
     await j.acao(`quickSell|${p.id}`); await esperar();
-    assert.equal(srv.estado.versao, j.run('VERSAO_SAVE'));
+    assert.equal(srv.estado.versao, j.run('VERSAO_SAVE_LIGA'));
     const vendedor = srv.estado.clubs.find(c => c.id === clube.id);
     assert.equal(vendedor.fin[0].amount, Math.round(valorCheio * 0.7 * 10) / 10);
   } finally { j.run('sairDaLiga()') }

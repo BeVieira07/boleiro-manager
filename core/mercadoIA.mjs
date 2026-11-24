@@ -7,7 +7,8 @@
    4. Propostas espontâneas: um clube da IA oferece por um destaque do técnico, mesmo sem ele estar à venda.
    Busca curta (poucos candidatos por clube) e no máximo MAX_NEGOCIOS por janela: o tempo fica previsível. */
 import { loanOf, loans } from './emprestimos.mjs';
-import { S, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, ehHumano, tecnicos } from './estado.mjs';
+import { clubeDe, clubesEuropeus } from './estrangeiros.mjs';
+import { S, addNews, addNewsTodos, clubDo, divOf, divisions, ehHumano, tecnicos } from './estado.mjs';
 import { movePlayer } from './mercado.mjs';
 import { money, rnd, shuffle } from './utils.mjs';
 
@@ -35,15 +36,17 @@ function marcarSobras(ia) {
 // clubes da mesma série ou de uma vizinha
 const vizinhos = (ia, c) => { const ds = divisions(), d = ds.indexOf(divOf(c)); return ia.filter(o => o !== c && Math.abs(ds.indexOf(divOf(o)) - d) <= 1) };
 
-/** Abre a janela da IA. Devolve {compras, emprestimos, propostas} (listas dos negócios feitos). */
-export function janelaIA() {
-  const ia = S.clubs.filter(c => !ehHumano(c)), compras = [], emprestimos = [], propostas = [];
+export const limiteElencoIA = c => c.liga ? 40 : ELENCO_MAX;
+const temVaga = c => c.players.length < limiteElencoIA(c);
+
+function negociarNaJanela(ia, candidatos) {
+  const compras = [], emprestimos = [];
   marcarSobras(ia);
   for (const p of ia.flatMap(c => c.players.filter(x => x.listed)).sort((a, b) => b.ovr - a.ovr)) {
     if (compras.length >= MAX_NEGOCIOS - MAX_EMPRESTIMOS) break; // vagas reservadas para os empréstimos
-    const de = clubById(p.clubId); if (de.players.length <= ELENCO_MIN) continue;
+    const de = clubeDe(p.clubId); if (de.players.length <= ELENCO_MIN) continue;
     const preco = Math.round(p.value * (0.9 + rnd() * 0.2) * 10) / 10;
-    const para = shuffle(vizinhos(ia, de)).slice(0, BUSCA).find(c => c.players.length < ELENCO_MAX && c.balance >= preco && p.ovr >= pior(c, p.pos) + 2);
+    const para = shuffle(candidatos(de)).slice(0, BUSCA).find(c => temVaga(c) && c.balance >= preco && p.ovr >= pior(c, p.pos) + 2);
     if (!para) continue;
     de.balance = arred(de.balance + preco); para.balance = arred(para.balance - preco);
     movePlayer(p, para); compras.push({ p, de, para, preco });
@@ -51,24 +54,46 @@ export function janelaIA() {
   const ate = Math.min(S.round + Math.floor(S.fixtures.length / 2), S.fixtures.length);
   for (const p of shuffle(ia.flatMap(c => c.players.filter(x => x.emprestar)))) { // sem preferência pela ordem dos clubes
     if (emprestimos.length >= MAX_EMPRESTIMOS || compras.length + emprestimos.length >= MAX_NEGOCIOS) break;
-    const de = clubById(p.clubId); if (de.players.length <= ELENCO_MIN) continue;
-    const para = shuffle(ia.filter(c => c !== de && c.strength < de.strength)).slice(0, BUSCA).find(c => c.players.length < ELENCO_MAX && p.ovr >= pior(c, p.pos));
+    const de = clubeDe(p.clubId); if (de.players.length <= ELENCO_MIN) continue;
+    const para = shuffle(ia.filter(c => c !== de && c.strength < de.strength)).slice(0, BUSCA).find(c => temVaga(c) && p.ovr >= pior(c, p.pos));
     if (!para) continue;
     // sem startLoan: a notícia de cada empréstimo iria para o técnico da vez
     movePlayer(p, para, true); loans().push({ pid: p.id, from: de.id, to: para.id, until: ate, payer: 'to', buy: null });
     emprestimos.push({ p, de, para });
   }
+  return { compras, emprestimos };
+}
+
+function proporNaJanela(ia, europeus = false) {
+  const propostas = [];
   for (const t of tecnicos()) {
     if (t.demitido || rnd() >= 0.6) continue;
     const uc = clubDo(t), nota = p => p.ovr + 3 * (p.forma || 0);
     const alvo = uc.players.filter(p => !p.listed && !loanOf(p.id)).sort((a, b) => nota(b) - nota(a))[Math.floor(rnd() * 3)];
     if (!alvo || uc.players.length <= ELENCO_MIN) continue;
-    const valor = Math.round(alvo.value * (1.05 + rnd() * 0.35) * 10) / 10;
-    const quem = shuffle(ia.filter(c => c.balance >= valor && c.players.length < ELENCO_MAX)).slice(0, BUSCA).find(c => alvo.ovr >= pior(c, alvo.pos));
+    const valor = Math.round(alvo.value * ((europeus ? 1.25 : 1.05) + rnd() * 0.35) * 10) / 10;
+    const quem = shuffle(ia.filter(c => c.balance >= valor && temVaga(c)
+      && (!europeus || alvo.ovr + 3 >= pior(c, alvo.pos)))).slice(0, BUSCA)
+      .find(c => europeus || alvo.ovr >= pior(c, alvo.pos));
     if (!quem) continue;
-    t.offers.push({ id: `e${S.season}_${S.round}_${alvo.id}`, pid: alvo.id, from: quem.id, amount: valor, until: S.round + 3 });
+    t.offers.push({ id: `${europeus ? 'eu' : 'e'}${S.season}_${S.round}_${alvo.id}`, pid: alvo.id, from: quem.id, amount: valor, until: S.round + 3 });
     addNews(`💼 ${quem.name} quer ${alvo.name} e ofereceu ${money(valor)}, mesmo sem ele estar à venda. Responda no painel do clube.`, uc.id);
     propostas.push({ p: alvo, de: quem, valor });
+  }
+  return propostas;
+}
+
+/** Abre a janela da IA. Devolve {compras, emprestimos, propostas} (listas dos negócios feitos). */
+export function janelaIA() {
+  const ia = S.clubs.filter(c => !ehHumano(c));
+  const { compras, emprestimos } = negociarNaJanela(ia, de => vizinhos(ia, de));
+  const propostas = proporNaJanela(ia);
+  const europeus = clubesEuropeus();
+  if (europeus.length) {
+    const negocios = negociarNaJanela(europeus, de => europeus.filter(c => c !== de));
+    compras.push(...negocios.compras);
+    emprestimos.push(...negocios.emprestimos);
+    propostas.push(...proporNaJanela(europeus, true));
   }
   // uma notícia por janela, com os maiores negócios (uma por negócio tiraria as outras notícias da lista de 40)
   if (compras.length || emprestimos.length) {

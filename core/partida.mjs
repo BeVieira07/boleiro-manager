@@ -75,7 +75,9 @@ export function ensureSquad(c){
   const r=rnd;let i=c.players.length+100;
   for(const [pos,n] of Object.entries({G:2,D:5,M:5,A:3})){
     while(c.players.filter(p=>p.pos===pos).length<n){
-      const p=fakePlayer(c.id,i++,c.strength,pos,r,[17,19]);p.ovr=clamp(c.strength-10+ri(-4,6),40,85);
+      let p;
+      do{p=fakePlayer(c.id,i++,c.strength,pos,r,[17,19])}while(P[p.id]);
+      p.ovr=clamp(c.strength-10+ri(-4,6),40,85);
       p.goals=0;p.listed=false;p.contrato=CONTRATO_NOVO;p.pot=potInicial(p);refreshEconomics(p);p.clubId=c.id;c.players.push(p);P[p.id]=p;
       addNews(`🌱 ${p.name} (${POSD[p.pd].nome}) subiu da base.`,c.id);
     }
