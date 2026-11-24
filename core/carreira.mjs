@@ -96,6 +96,7 @@ export function tetoDeNivel(t) {
 }
 // clube em crise: metade de baixo da tabela, ou bem abaixo do que a força dele promete
 function emCrise(c) {
+  if (!S.round) return false; // #381: tabela zerada é ordem alfabética, não crise
   const d = divOf(c), T = table(d), pos = T.findIndex(x => x.id === c.id) + 1;
   const esperado = 1 + S.clubs.filter(o => divOf(o) === d && o.strength > c.strength).length;
   return pos > T.length / 2 || pos > esperado + 2;
