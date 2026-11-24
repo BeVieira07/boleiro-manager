@@ -8,7 +8,7 @@ import { store } from '../utils.mjs';
 
 export const PREFS_KEY = 'boleiro_prefs';
 // milissegundos por minuto de jogo ao vivo
-export const VELOCIDADES = { lenta: 110, normal: 55, rapida: 22 };
+export const VELOCIDADES = { lenta: 600, normal: 300, rapida: 120 }; // #407: um jogo de 93 minutos leva ~1 min, ~30 s e ~11 s
 export const CATEGORIAS = { mercado: 'Mercado e contratos', lesoes: 'Lesões e suspensões', base: 'Categorias de base', forma: 'Forma dos jogadores', diretoria: 'Diretoria e finanças', outros: 'Outras (campeonato, aposentadorias…)' };
 const PADRAO = { velocidade: 'normal', aoVivo: 'sempre', mapa: true, penaltisInterativos: true, som: true, volume: 70, confirmar: true, noticias: Object.fromEntries(Object.keys(CATEGORIAS).map(k => [k, true])) };
 
@@ -50,7 +50,7 @@ export function vConfig() {
   return `${S ? '' : '<h1>Configurações</h1>'}<div class="config">
   <section class="card"><h2 class="t3">Jogo ao vivo</h2>
    <div class="config-campo"><label for="cfgVelocidade">Velocidade</label>
-    <select id="cfgVelocidade" data-mudar="mudarPref|velocidade">${opcoes([['lenta', 'Lenta'], ['normal', 'Normal'], ['rapida', 'Rápida']], p.velocidade)}</select></div>
+    <select id="cfgVelocidade" data-mudar="mudarPref|velocidade">${opcoes([['lenta', 'Lenta (cerca de 1 min por jogo)'], ['normal', 'Normal (cerca de 30 s por jogo)'], ['rapida', 'Rápida (cerca de 10 s por jogo)']], p.velocidade)}</select></div>
    <div class="config-campo"><label for="cfgAoVivo">Ver os jogos do seu clube ao vivo</label>
     <select id="cfgAoVivo" data-mudar="mudarPref|aoVivo">${opcoes([['sempre', 'Sempre'], ['decisivos', 'Só os decisivos'], ['nunca', 'Nunca (direto para o resultado)']], p.aoVivo)}</select>
     <p class="muted">Decisivos: Copa do Brasil, jogos contra um dos 4 primeiros ou nas 5 últimas rodadas. Vale também para o replay da liga.</p></div>

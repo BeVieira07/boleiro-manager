@@ -103,13 +103,17 @@ test('rodada ao vivo: depois do tempo normal as cobranças aparecem uma a uma, s
   const j = voltaEmpatada();
   j.acao('mudarPref|penaltisInterativos', 'on', { target: { type: 'checkbox', checked: false } }); // disputa automática (a interativa tem teste próprio, #293)
   j.run(`(()=>{const p=S.copa.pendente,g=p.jogos[0];iniciarVivo(p.jogos,g,()=>{},{rodada:p.rodada,minuto:92})})()`);
-  // retomado no minuto 92: um tique leva ao 93 e abre a disputa; depois, uma cobrança a cada 15 tiques
+  // retomado no minuto 92: um tique leva ao 93 e abre a disputa; depois, uma cobrança a cada ~1,2 s (#407)
   const tique = () => j.run('ui.vivo.timer && ui.vivo.timer._onTimeout ? ui.vivo.timer._onTimeout() : null');
   tique();
   assert.equal(j.run('ui.vivo.min'), 93);
   assert.equal(j.run('ui.vivo.fim'), false, 'empatado no fim do tempo normal: a disputa começa');
   assert.ok(j.run('ui.vivo.pen.cob.length') >= 6);
-  for (let k = 0; k < 15; k++) tique();
+  const porCobranca = j.run('Math.round(1200/ui.vivo.msPorMinuto)');
+  assert.equal(porCobranca * j.run('ui.vivo.msPorMinuto'), 1200, 'o intervalo entre cobranças é em tempo, não em tiques');
+  for (let k = 0; k < porCobranca - 1; k++) tique();
+  assert.equal(j.run('ui.vivo.cob'), 0, 'ainda não deu o tempo da primeira');
+  tique();
   assert.equal(j.run('ui.vivo.cob'), 1, 'uma cobrança por vez');
   j.run('render()');
   assert.match(j.html(), /Pênaltis: \S+ \d x \d \S+/);
