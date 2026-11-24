@@ -159,7 +159,7 @@ export function makeBid(pid){
       save();render();
       if(!r.contra){avisar(r.msg,r.ok?'ok':'info');return}
       const {valor,motivo,responder}=r.contra;
-      confirmar({titulo:`Contraproposta por ${p.name}`,texto:motivo,ok:`Aceitar por ${money(valor,3)}`,cancelar:'Recusar'},()=>{
+      confirmar({titulo:`Contraproposta por ${p.name}`,texto:`${seller.name} recusou ${money(v)}, mas aceita vender por ${money(valor,3)}. ${motivo}`,ok:`Aceitar por ${money(valor,3)}`,cancelar:'Recusar'},()=>{
         const compra=responder(valor);feito(compra,compra.msg);
       },()=>responder());
     });
