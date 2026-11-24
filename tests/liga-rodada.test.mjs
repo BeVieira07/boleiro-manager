@@ -150,6 +150,14 @@ test('mercado da liga: mesmo estado e mesma proposta dão a mesma resposta (reca
   if (!JSON.parse(r1).ok) assert.match(de_novo.erro, /de novo nesta rodada/, 'recusada: não dá para tentar de novo na mesma rodada');
 });
 
+test('mercado da liga: recusa uma proposta abaixo do preço sem enviar contraproposta', () => {
+  const s = comVaga(JSON.parse(novaLiga(['A']))), p = jogadorDaIA(s);
+  const r = acaoMercadoLiga(s, 'u-ana', { tipo: 'compra', pid: p.id, valor: p.value * 0.7 });
+  assert.equal(r.ok, false);
+  assert.match(r.msg, /recusou a proposta/);
+  assert.equal(r.contra, undefined);
+});
+
 test('mercado da liga: negócio fechado vira notícia para todos e o dinheiro sai do caixa', () => {
   const s = comVaga(JSON.parse(novaLiga(['A']))), p = jogadorDaIA(s);
   const ana = s.clubs.find(c => c.id === s.managers['u-ana'].clubId); ana.balance = 1000;

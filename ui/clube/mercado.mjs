@@ -154,7 +154,15 @@ export function makeBid(pid){
   pedirValor({titulo:`Proposta por ${p.name}`,texto:`${posDNome(p)}, força ${p.ovr}, do ${seller.name}.\nValor de mercado: ${money(p.value)}${p.contrato!=null?` (contrato: ${p.contrato} temporada${p.contrato>1?'s':''})`:''}. Seu caixa: ${money(caixa)}.`,rotulo:'Quanto oferecer',sufixo:'milhões',valor:p.value.toFixed(1).replace('.',','),ok:'Enviar proposta',
     validar:v=>isNaN(v)||v<=0?'Digite um valor maior que zero, em milhões (ex.: 4,5).':v>caixa?`O caixa só tem ${money(caixa)}.`:''},
     v=>{if(ui.liga)return mercadoLiga({tipo:'compra',pid,valor:v}); // #35: na liga, a IA responde no servidor
-      const r=proporCompra(pid,v);avisar(r.erro||r.msg,r.erro?'erro':'ok');save();render()});
+      const r=proporCompra(pid,v);
+      if(r.erro){avisar(r.erro,'erro');return}
+      save();render();
+      if(!r.contra){avisar(r.msg,r.ok?'ok':'info');return}
+      const {valor,motivo,responder}=r.contra;
+      confirmar({titulo:`Contraproposta por ${p.name}`,texto:`${seller.name} recusou ${money(v)}, mas aceita vender por ${money(valor,3)}. ${motivo}`,ok:`Aceitar por ${money(valor,3)}`,cancelar:'Recusar'},()=>{
+        const compra=responder(valor);feito(compra,compra.msg);
+      },()=>responder());
+    });
 }
 // tela
 export const feito=(r,msg,tipo='ok')=>{if(r.erro){avisar(r.erro,'erro');return}save();render();if(msg)avisar(msg,tipo)};

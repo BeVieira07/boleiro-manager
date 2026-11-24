@@ -21,11 +21,12 @@ const disponiveis = (c, pos) => c.players.filter(p => p.pos === pos && !loanOf(p
 const pior = (c, pos) => disponiveis(c, pos).map(p => p.ovr).sort((a, b) => b - a)[TITULARES[pos] - 1] ?? 0;
 
 const POR_CLUBE = 2; // à venda e para empréstimo, cada um, por clube e janela
+// Sobras: além dos titulares e dos reservas imediatos em cada posição do 4-4-2.
+export const sobrasDoElenco = c => Object.keys(TITULARES).flatMap(pos => disponiveis(c, pos).sort((a, b) => b.ovr - a.ovr).slice(TITULARES[pos] * 2));
 function marcarSobras(ia) {
   for (const c of ia) {
     for (const p of c.players) { p.listed = false; delete p.emprestar }
-    // sobras: além de titular e reserva imediato em cada posição
-    const sobras = Object.keys(TITULARES).flatMap(pos => disponiveis(c, pos).sort((a, b) => b.ovr - a.ovr).slice(TITULARES[pos] * 2));
+    const sobras = sobrasDoElenco(c);
     const jovens = sobras.filter(p => p.age <= 21), outros = sobras.filter(p => p.age > 21).sort((a, b) => b.age - a.age); // veteranos primeiro
     for (const p of shuffle(jovens).slice(0, POR_CLUBE)) if (rnd() < 0.6) p.emprestar = true;
     for (const p of outros.slice(0, POR_CLUBE + 1)) if (rnd() < 0.6) p.listed = true;
