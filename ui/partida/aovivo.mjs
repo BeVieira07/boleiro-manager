@@ -22,7 +22,8 @@ import { jogosCopa } from '../temporada/copa.mjs';
 import { save, ui } from '../estado.mjs';
 import { mostrarJanelaExpulsao, novaPausa, novoAvisoExpulsao, ocultarJanelaExpulsao, resumoExpulsao, validarRascunhoExpulsao } from './expulsao.mjs';
 import { icone } from '../icones.mjs';
-import { DURACAO, EVENTO, crest, itemEvento, marcador, textoEvento } from './partida.mjs';
+import { htmlMapa, limparMapa, pintarMapa } from './mapa.mjs';
+import { DURACAO, EVENTO, crest, itemEvento, marcador, minTela, textoEvento } from './partida.mjs';
 import { DURACAO_COBRANCA, htmlCobranca } from './penalti-animacao.mjs';
 import { pararSons, prepararSons, tocar, volumeSom } from './som.mjs';
 import { go, render } from '../telas.mjs';
@@ -100,7 +101,7 @@ export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round
   const uc = userClub();
   const v = ui.vivo = { g: meu, jogos, rodada, done, replay, min: minuto ?? 0, fim: false, aba: 'meu', div: divOf(uc), comp: 'liga', sig: '',
     S, clube: uc, xi0: [...(uc.lineup || [])], f0: uc.formation, timer: null, // xi0/f0: trocas e formação valem só neste jogo
-    estadual, uf: meu.uf || null, proximo, aoTerminar, cobranca: null, filaCobrancas: [] };
+    estadual, uf: meu.uf || null, proximo, aoTerminar, cobranca: null, filaCobrancas: [], msPorMinuto: VELOCIDADES[prefs().velocidade] || 55 };
   if (minuto != null && meu.ev.some(e => ['troca', 'formacao', 'posicao'].includes(e.t) && e.m <= minuto && meu[e.side] === uc.id)) {
     const elenco = elencoParaTrocas(meu, minuto);
     v.alterou = true; v.xi1 = elenco.xi.filter(Boolean); v.f1 = elenco.form;
@@ -109,7 +110,7 @@ export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round
   ui.tvAoVivo = replay ? null : { g: meu, min: () => v.min };
   prepararSons(); // #346: as gravações da torcida só são baixadas quando há jogo ao vivo
   go('aovivo');
-  v.timer = setInterval(() => tick(v), VELOCIDADES[prefs().velocidade] || 55); // #106
+  v.timer = setInterval(() => tick(v), v.msPorMinuto); // #106
   v.timer.unref && v.timer.unref();
 }
 /** Larga o jogo ao vivo (se houver) sem chamar o "Continuar": o time volta à escalação de antes das trocas. */
@@ -117,6 +118,7 @@ export function encerrarVivo() {
   const v = ui.vivo; if (!v) return;
   if (v.expulsao) ocultarJanelaExpulsao();
   pararSons();
+  limparMapa(v);
   clearInterval(v.timer); restaurar(v); ui.vivo = null; ui.tvAoVivo = null;
 }
 /** Devolve o time de antes das trocas, a não ser que a escalação já tenha sido mexida depois delas (aí vale a nova). */
@@ -127,8 +129,6 @@ function restaurar(v) {
   uc.lineup = v.xi0; uc.formation = v.f0; save();
 }
 
-// enquanto a cobrança é animada, a tela fica no minuto anterior: placar, lances e tabela só mudam depois do chute
-const minTela = v => v.cobranca ? Math.min(DURACAO, v.cobranca.lance.m - 1) : v.escolhaPen?.lance ? v.escolhaPen.lance.m - 1 : v.min;
 const pausaExpulsao = v => v.expulsao && !v.expulsao.leitura;
 function abrirExpulsaoPendente(v) {
   v.expulsao = novoAvisoExpulsao(v, v.vermelhosPendentes);
@@ -247,7 +247,7 @@ export function avComp(c) { if (ui.vivo) { ui.vivo.comp = c; paineis(ui.vivo) } 
 export function avUf(uf) { if (ui.vivo) { ui.vivo.uf = uf; paineis(ui.vivo) } }
 export function avPular() {
   const v = ui.vivo; if (!v || v.fim || pausaExpulsao(v)) return;
-  v.min = DURACAO; v.pausado = false;
+  v.min = DURACAO; v.pausado = false; v.pulou = true;
   pararSons(); // #344: pular para o fim é sem som
   v.cobranca = null; v.filaCobrancas = []; v.escolhaPen = null;
   pintarCobranca(v);
@@ -268,6 +268,7 @@ export function avPausar() {
     return;
   }
   v.pausado = !v.pausado;
+  pintarMapa(v);
   const b = el('av-botoes'); if (b) b.innerHTML = botoes(v);
   const c = el('lclk'); if (c) c.textContent = relogio(v);
   const p = el('lpausa'); if (p && p.focus) p.focus();
@@ -317,6 +318,7 @@ export function avExpFechar() {
   if (v.expulsao.leitura) {
     v.expulsao = null;
     ocultarJanelaExpulsao();
+    pintarMapa(v);
   } else retomarDepoisDaExpulsao(v);
 }
 
@@ -357,6 +359,7 @@ export function avExpReabrir() {
   const v = ui.vivo;
   if (!v?.avisoExpulsao || v.fim || v.expulsao) return;
   v.expulsao = v.avisoExpulsao;
+  pintarMapa(v);
   mostrarJanelaExpulsao(v, avExpFechar);
 }
 
@@ -391,6 +394,7 @@ function htmlCobrancaAtual(v) {
 function pintarCobranca(v) {
   const c = el('av-cobranca');
   if (c) c.innerHTML = htmlCobrancaAtual(v);
+  pintarMapa(v);
 }
 // #267: placar da disputa e as cobranças já batidas, na ordem
 function htmlPenaltis(v) {
@@ -422,6 +426,7 @@ function lances(v) {
 }
 /** Atualiza o que anda com o relógio: placar, relógio, barra e lances; e os painéis do campeonato se algum placar mudou. */
 function pintar(v) {
+  pintarMapa(v);
   const p = placarNoMinuto(v.g, minTela(v)), n = el('lsc'), { feed, marcas } = lances(v);
   if (n) {
     const txt = `${p.h} x ${p.a}`;
@@ -500,6 +505,7 @@ function htmlCab(v) {
     <div class="tempo" aria-hidden="true"><div class="tempo-trilho"><div class="tempo-feito" id="lbar" style="width:${Math.min(100, v.min / DURACAO * 100)}%"></div></div><div class="tempo-marcas" id="lmarcas">${marcas}</div>
       <div class="tempo-escala"><span>0'</span><span>45'</span><span>90'</span></div></div>
     <div class="row fim-acoes" id="av-botoes">${botoes(v)}</div></div>
+    ${htmlMapa(v)}
     <table class="estat" id="lest">${htmlEst(v)}</table>`;
 }
 // seu time: lances do jogo, tática, esquema e substituições
