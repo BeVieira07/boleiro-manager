@@ -60,7 +60,7 @@ export function simToEnd(){
       const err=validateLineup();if(err){userClub().lineup=autoXI(userClub())}
       playRound(false);
     }
-    ui.view='tabela';render();seasonEnd();if(tec().demitido)demissao();
+    ui.view='tabela';render();if(S.round>=S.fixtures.length)seasonEnd();if(tec().demitido)demissao(); // #366: demitido no meio, a temporada continua
   });
 }
 
