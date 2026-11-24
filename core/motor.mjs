@@ -68,9 +68,15 @@ export function simulate(g,{clubeAoVivo,cansacoNoJogo=true}={}){
 }
 
 /* ================= rodada ================= */
+/** #365: quantos titulares dá para escalar: 11, ou menos quando faltam jogadores de linha disponíveis (goleiro, só um). */
+export function titularesPossiveis(uc){
+  const disp=uc.players.filter(p=>!unavailable(p)),linha=disp.filter(p=>p.pos!=='G').length;
+  return Math.min(11,linha+(disp.length>linha?1:0));
+}
 export function validateLineup(uc=userClub()){
-  const xi=getXI(uc);
-  if(xi.length!==11)return `Sua escalação tem ${xi.length} jogadores. Escolha exatamente 11 titulares.`;
+  const xi=getXI(uc),n=titularesPossiveis(uc);
+  if(xi.length!==n)return n===11?`Sua escalação tem ${xi.length} jogadores. Escolha exatamente 11 titulares.`
+    :`Sua escalação tem ${xi.length} jogadores. Com os disponíveis, escolha ${n} titulares.`;
   // #295: com todos os goleiros lesionados ou suspensos, um jogador de linha vai para o gol (senão a rodada travava)
   const gols=xi.filter(id=>P[id].pos==='G').length,temGoleiro=uc.players.some(p=>p.pos==='G'&&!unavailable(p));
   if(gols>1||(gols===0&&temGoleiro))return 'Escale exatamente 1 goleiro.';
