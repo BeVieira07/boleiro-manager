@@ -667,10 +667,10 @@ body.em-jogo .avisos{bottom:24px}
   .exp-pausa .exp-titulo h2{font-size:34px}
   .exp-pausa .exp-titulo span{font-size:17px}
   /* botão de pausa do ao vivo */
-  .av-mexer:not([aria-pressed="true"]){flex:1;border-color:var(--ouro);background:var(--ouro-esc);color:var(--ouro-claro);font:700 15px/1 var(--f-titulo);letter-spacing:.06em;text-transform:uppercase}
+  .av-mexer:not([aria-pressed="true"]){flex:1;min-width:0;white-space:normal;border-color:var(--ouro);background:var(--ouro-esc);color:var(--ouro-claro);font:700 15px/1 var(--f-titulo);letter-spacing:.06em;text-transform:uppercase}
   .av-mexer .av-rot-largo{display:none}
   .av-mexer .av-rot-celular{display:inline}
-  .av-pular{flex:none;width:52px;padding-inline:0;justify-content:center}
+  .av-pular,.av-som{flex:none;width:52px;padding-inline:0;justify-content:center}
   .av-pular-texto{position:absolute;width:1px;height:1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
   .exp-grade{gap:var(--e3);padding:var(--e3) var(--e4)}
   .exp-contagem{font-size:16px}

@@ -24,6 +24,7 @@ import { mostrarJanelaExpulsao, novaPausa, novoAvisoExpulsao, ocultarJanelaExpul
 import { icone } from '../icones.mjs';
 import { DURACAO, EVENTO, crest, itemEvento, marcador, textoEvento } from './partida.mjs';
 import { DURACAO_COBRANCA, htmlCobranca } from './penalti-animacao.mjs';
+import { pararSons, tocar, volumeSom } from './som.mjs';
 import { go, render } from '../telas.mjs';
 
 const ABAS = { meu: 'Meu jogo', rodada: 'Rodada', classif: 'Classificação' };
@@ -114,6 +115,7 @@ export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round
 export function encerrarVivo() {
   const v = ui.vivo; if (!v) return;
   if (v.expulsao) ocultarJanelaExpulsao();
+  pararSons();
   clearInterval(v.timer); restaurar(v); ui.vivo = null; ui.tvAoVivo = null;
 }
 /** Devolve o time de antes das trocas, a não ser que a escalação já tenha sido mexida depois delas (aí vale a nova). */
@@ -151,10 +153,12 @@ function tick(v) {
     if (v.disputa) { passoDisputa(v); return }
     if (++v.passo % PASSO_PEN) return;
     v.cob++; pintar(v);
+    const cob = v.pen.cob[v.cob - 1]; if (cob) tocar(cob.gol ? 'rede' : 'uhh');
     if (v.cob >= v.pen.cob.length) terminar(v);
     return;
   }
   v.min++;
+  sonsDoMinuto(v);
   v.filaCobrancas = v.g.ev.filter(e => e.m === v.min && e.t === 'penalti');
   const saidas = v.replay ? [] : v.g.ev.filter(e => e.m === v.min && v.g[e.side] === v.clube.id && saidaForcada(e));
   if (saidas.length) v.sel = null;
@@ -167,8 +171,29 @@ function tick(v) {
   if (saidas.length) controles(v);
   if (v.min >= DURACAO && !v.cobranca && !v.escolhaPen) fecharTempoNormal(v);
 }
+/** #344: apitos do jogo, gols (a favor ou contra) e expulsões do minuto que acabou de passar. Gol de pênalti soa na cobrança. */
+function sonsDoMinuto(v) {
+  const m = v.min;
+  if (m === 1) tocar('inicio');
+  if (m === 45) tocar('intervalo');
+  if (m === DURACAO) tocar('fim');
+  for (const e of v.g.ev) {
+    if (e.m !== m) continue;
+    if (e.t === 'gol' && !e.pen) tocar(v.g[e.side] === v.clube.id ? 'golFavor' : 'golContra');
+    else if (e.t === 'vermelho') tocar('expulsao');
+  }
+}
+// #344: a bola chega ao gol a um terço da animação (cob-faisca e cob-rede no CSS)
+const IMPACTO = DURACAO_COBRANCA * 0.33 / 1000;
+function sonsDaCobranca(v, lance) {
+  const gol = lance.res ? lance.res === 'gol' : !!lance.gol;
+  if (!gol) { tocar('uhh', IMPACTO); return }
+  tocar('rede', IMPACTO);
+  tocar(v.g[lance.side] === v.clube.id ? 'golFavor' : 'golContra', IMPACTO + 0.12);
+}
 function mostrarCobranca(v) {
   const lance = v.filaCobrancas.shift();
+  tocar('apitoPenalti');
   // #292: pênalti do seu time no ao vivo (fora do replay da liga): o relógio para e você escolhe; o do adversário, só assiste
   if (!v.replay && v.g[lance.side] === v.clube.id) {
     const emCampo = (escalacaoNoMinuto(v.g, lance.side, lance.m)?.xi || []).filter(Boolean);
@@ -181,6 +206,7 @@ function mostrarCobranca(v) {
 }
 function animarCobranca(v, lance) {
   v.cobranca = { lance, inicio: performance.now() };
+  sonsDaCobranca(v, lance);
   pintarCobranca(v);
 }
 /** #292: troca o batedor escolhido (select). */
@@ -228,6 +254,7 @@ export function avFormacao(f) { const v = ui.vivo; if (!v || v.fim || v.replay |
 export function avPular() {
   const v = ui.vivo; if (!v || v.fim || pausaExpulsao(v)) return;
   v.min = DURACAO; v.pausado = false;
+  pararSons(); // #344: pular para o fim é sem som
   v.cobranca = null; v.filaCobrancas = []; v.escolhaPen = null;
   pintarCobranca(v);
   if (v.disputa) fecharDisputa(v);
@@ -448,7 +475,8 @@ const botoes = v => v.fim
   ? `<button class="btn" id="ldone" data-acao="avContinuar">${v.proximo ? `Ir para a ${v.proximo}` : 'Continuar'}</button>`
   : `<button class="btn${v.pausado ? '' : ' sec'}${podeMexer(v) ? ' av-mexer' : ''}" id="lpausa" data-acao="avPausar" aria-pressed="${!!v.pausado}">${icone(v.pausado ? 'play' : 'pausa', { tam: 16 })}${v.pausado ? 'Continuar'
     : podeMexer(v) ? '<span class="av-rot-largo">Pausar</span><span class="av-rot-celular">Pausar e mexer no time</span>' : 'Pausar'}</button>
-    <button class="btn sec av-pular" id="lskip" data-acao="avPular" aria-label="Pular para o fim">${icone('avancar', { tam: 16 })}<span class="av-pular-texto">Pular para o fim</span></button>`;
+    <button class="btn sec av-pular" id="lskip" data-acao="avPular" aria-label="Pular para o fim">${icone('avancar', { tam: 16 })}<span class="av-pular-texto">Pular para o fim</span></button>
+    <button class="btn sec av-som" id="lsom" data-acao="alternarSom" aria-pressed="${volumeSom() > 0}" aria-label="Som da partida" title="${volumeSom() > 0 ? 'Desligar o som' : 'Ligar o som'}">${icone(volumeSom() > 0 ? 'som' : 'mudo', { tam: 16 })}</button>`;
 // #314: pausar abre a janela de escalação (fora do replay, da cobrança de pênalti e da disputa)
 const podeMexer = v => !v.replay && !v.cobranca && !v.escolhaPen && v.min < DURACAO;
 

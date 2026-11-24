@@ -29,12 +29,13 @@ import * as nuvem from './inicio/nuvem.mjs';
 import * as partida from './partida/partida.mjs';
 import * as posicoes from './clube/posicoes.mjs';
 import * as saves from './inicio/saves.mjs';
+import * as som from './partida/som.mjs';
 import * as taticas from './clube/taticas.mjs';
 import * as telas from './telas.mjs';
 import * as utils from './utils.mjs';
 
 export const acoes = Object.fromEntries(
-  [aovivo, artilharia, avisos, base, configuracoes, conta, diretoria, elenco, emprestimos, escolha, escalacao, estado, expulsao, fichaJogador, forma, landing, layout, liga, ligajogo, mercado, motor, nuvem, partida, posicoes, saves, taticas, telas, utils]
+  [aovivo, artilharia, avisos, base, configuracoes, conta, diretoria, elenco, emprestimos, escolha, escalacao, estado, expulsao, fichaJogador, forma, landing, layout, liga, ligajogo, mercado, motor, nuvem, partida, posicoes, saves, som, taticas, telas, utils]
     .flatMap(m => Object.entries(m)).filter(([, f]) => typeof f === 'function'));
 
 /** Executa a ação descrita em data-acao / data-mudar. */

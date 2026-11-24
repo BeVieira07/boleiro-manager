@@ -45,7 +45,9 @@ const PATHS = {
   liga: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8M23 21v-2a4 4 0 00-3-3.87',
   fogo: 'M12 3s5 4 5 9a5 5 0 01-10 0c0-2 1-3 1-3s0 2 2 2c0-4 2-8 2-8z',
   lixo: 'M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13',
-  copiar: 'M9 9h11v11H9zM5 15H4V4h11v1'
+  copiar: 'M9 9h11v11H9zM5 15H4V4h11v1',
+  som: 'M4 9h4l5-4v14l-5-4H4zM16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11', // #344
+  mudo: 'M4 9h4l5-4v14l-5-4H4zM17 9l5 6M22 9l-5 6'
 };
 // ícones cheios (fill) em vez de traço
 const CHEIOS = new Set(['play', 'avancar', 'cartao']);
