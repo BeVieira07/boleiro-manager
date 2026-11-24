@@ -134,8 +134,9 @@ export function aceitarOferta(oid){
   const o=tec().offers.find(x=>x.id===oid);if(!o)return {erro:'Proposta não encontrada.'};const p=P[o.pid],b=clubById(o.from);
   const e=emprestado(o.pid);if(e)return e;
   if(userClub().players.length<=16)return {erro:'Seu elenco ficaria pequeno demais (mínimo 16).'};
+  // #376: a vaga vale para venda e empréstimo (a oferta dura 3 rodadas, e o clube pode ter enchido o elenco)
+  if(b.players.length>=32){recusarOferta(oid);return {erro:`${b.name} ficou sem vaga no elenco e desistiu ${o.emprestimo?'do empréstimo':'da proposta'}.`}}
   if(o.emprestimo){ // #142: proposta de empréstimo da IA por um jogador da lista do técnico
-    if(b.players.length>=32){recusarOferta(oid);return {erro:`${b.name} ficou sem vaga no elenco e desistiu do empréstimo.`}}
     recusarOferta(oid);startLoan({pid:p.id,from:userClub().id,to:b.id,fim:UM_ANO()});return {ok:true};
   }
   if(!ehHumano(b)&&b.balance<o.amount){recusarOferta(oid);return {erro:`${b.name} gastou o caixa em outros negócios e desistiu da proposta.`}}
