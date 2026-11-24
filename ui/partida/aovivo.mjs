@@ -24,7 +24,7 @@ import { mostrarJanelaExpulsao, novaPausa, novoAvisoExpulsao, ocultarJanelaExpul
 import { icone } from '../icones.mjs';
 import { DURACAO, EVENTO, crest, itemEvento, marcador, textoEvento } from './partida.mjs';
 import { DURACAO_COBRANCA, htmlCobranca } from './penalti-animacao.mjs';
-import { pararSons, tocar, volumeSom } from './som.mjs';
+import { pararSons, prepararSons, tocar, volumeSom } from './som.mjs';
 import { go, render } from '../telas.mjs';
 
 const ABAS = { meu: 'Meu jogo', rodada: 'Rodada', classif: 'Classificação' };
@@ -107,6 +107,7 @@ export function iniciarVivo(jogos, meu, done, { replay = false, rodada = S.round
     uc.lineup = [...v.xi1]; uc.formation = v.f1;
   }
   ui.tvAoVivo = replay ? null : { g: meu, min: () => v.min };
+  prepararSons(); // #346: as gravações da torcida só são baixadas quando há jogo ao vivo
   go('aovivo');
   v.timer = setInterval(() => tick(v), VELOCIDADES[prefs().velocidade] || 55); // #106
   v.timer.unref && v.timer.unref();

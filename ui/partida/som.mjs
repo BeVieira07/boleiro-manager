@@ -1,5 +1,5 @@
-/* ================= sons da partida ao vivo (#344) =================
-   Tudo sintetizado no navegador (Web Audio API), sem arquivos: apitos (oscilador com trinado de apito de árbitro), torcida
+/* ================= sons da partida ao vivo (#344, #346) =================
+   Torcida gravada (#346, abaixo de GRAVACOES); o resto sintetizado no navegador (Web Audio API): apitos (oscilador com trinado de apito de árbitro), torcida
    (ruído filtrado com "vozes" em formante de vogal) e a rede. Para não pesar: um AudioContext só, criado no primeiro som
    (depois de um clique, como o navegador exige), um buffer de ruído reaproveitado, nós que existem só enquanto o som toca
    e no máximo MAX_SONS ao mesmo tempo. Sem Web Audio (testes em Node, navegador antigo) nada toca e nada quebra. */
@@ -44,6 +44,27 @@ export function pararSons() {
   if (saida) { saida.disconnect(); novaSaida() }
 }
 
+/* #346: a torcida é gravada (CC0, origem em sons/FONTES.md); o som sintetizado fica de reserva enquanto o arquivo não
+   carregou ou se ele falhar. `ini` pula os quadros extras do corte; `queda` é o fade-out do fim. */
+const GRAVACOES = {
+  golFavor: { arq: 'sons/gol.mp3', ini: 0.05, ganho: 1.05, queda: 1.4 },
+  golContra: { arq: 'sons/gol-contra.mp3', ini: 0.05, ganho: 1.2, queda: 1.2 },
+  uhh: { arq: 'sons/uhh.mp3', ini: 0.066, ganho: 1, queda: 0.7 }
+};
+export const ARQUIVOS_SONS = Object.values(GRAVACOES).map(g => g.arq);
+const gravados = {}; // nome -> AudioBuffer, null (falhou) ou a Promise do carregamento
+
+/** Baixa e decodifica as gravações uma vez (chamada quando o jogo ao vivo começa, não ao abrir o site). */
+export function prepararSons() {
+  if (!volumeSom() || typeof fetch !== 'function') return;
+  const c = contexto(); if (!c) return;
+  for (const [nome, { arq }] of Object.entries(GRAVACOES)) {
+    if (nome in gravados) continue;
+    gravados[nome] = fetch(arq).then(r => r.ok ? r.arrayBuffer() : Promise.reject(new Error(arq)))
+      .then(b => c.decodeAudioData(b)).then(buf => { gravados[nome] = buf }, () => { gravados[nome] = null });
+  }
+}
+
 /** Toca o som `nome` daqui a `atraso` segundos, no volume das Configurações. */
 export function tocar(nome, atraso = 0) {
   const vol = volumeSom();
@@ -54,9 +75,20 @@ export function tocar(nome, atraso = 0) {
   const t0 = c.currentTime + atraso + 0.02;
   tocando = tocando.filter(s => s.fim > c.currentTime);
   if (tocando.length >= MAX_SONS) return;
-  const som = { fim: t0, fontes: [] };
-  try { SONS[nome](som, t0, vol * vol) } catch { return } // volume em curva: o meio do controle soa como metade
+  const som = { fim: t0, fontes: [] }, buf = gravados[nome];
+  if (GRAVACOES[nome] && !(nome in gravados)) prepararSons();
+  try { // volume em curva: o meio do controle soa como metade
+    if (buf && typeof buf.duration === 'number') gravacao(som, t0, vol * vol, buf, GRAVACOES[nome]);
+    else SONS[nome](som, t0, vol * vol);
+  } catch { return }
   tocando.push(som);
+}
+
+function gravacao(som, t0, vol, buf, { ini, ganho, queda }) {
+  const dur = Math.max(0.2, buf.duration - ini);
+  const g = envelope(t0, ganho * vol, 0.02, Math.max(0, dur - queda - 0.02), queda);
+  const s = ctx.createBufferSource(); s.buffer = buf; s.connect(g);
+  s.start(t0, ini); s.stop(t0 + dur); som.fontes.push(s); som.fim = Math.max(som.fim, t0 + dur);
 }
 
 /* ---------- blocos ---------- */
