@@ -1,8 +1,7 @@
 /* ================= contratos (#49) =================
    p.contrato = temporadas que faltam, contando a atual (1 = acaba ao fim desta temporada). p.aum = aumento negociado na
    renovação (multiplica o salário de mercado; some numa transferência). Empréstimo não mexe no contrato do clube dono.
-   Contrato curto vale menos no mercado (fatorContrato, em core/dados.mjs). Jogador sem o campo (estado de antes da #49)
-   recebe contratoInicial. */
+   O valor de mercado depende do overall e da idade. Jogador sem o campo (estado de antes da #49) recebe contratoInicial. */
 import { refreshEconomics, salarioDe } from './dados.mjs';
 import { loanOf } from './emprestimos.mjs';
 import { P, S, addNews, clubById, ehHumano, userClub } from './estado.mjs';

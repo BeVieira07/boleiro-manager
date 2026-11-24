@@ -275,6 +275,32 @@ test('cada membro vê a própria carreira ao abrir uma liga antiga', async () =>
   }
 });
 
+test('liga antiga exibe o valor de mercado cheio ao abrir e migra o estado no servidor na próxima ação', async () => {
+  const j = carregarJogo({ boot: true });
+  const srv = servidorFalso([clubeDaSerie(j, 'A', 0), clubeDaSerie(j, 'A', 1)]);
+  await como(srv, 'a');
+  await j.acao('comecarLiga|L1'); await esperar();
+  const clube = srv.estado.clubs.find(c => c.id === srv.membros[0].club_id);
+  const p = clube.players[0], valorCheio = p.value;
+  p.contrato = 1;
+  const descontado = Math.max(0.1, Math.round(valorCheio * 0.75 * 10) / 10);
+  assert.ok(descontado < valorCheio);
+  p.value = descontado;
+  srv.estado.versao = 17;
+
+  try {
+    await j.acao('entrarNaLiga|L1');
+    assert.equal(est.P[p.id].value, valorCheio);
+    assert.equal(p.value, descontado);
+    assert.equal(srv.estado.versao, 17);
+
+    await j.acao(`quickSell|${p.id}`); await esperar();
+    assert.equal(srv.estado.versao, j.run('VERSAO_SAVE'));
+    const vendedor = srv.estado.clubs.find(c => c.id === clube.id);
+    assert.equal(vendedor.fin[0].amount, Math.round(valorCheio * 0.7 * 10) / 10);
+  } finally { j.run('sairDaLiga()') }
+});
+
 test('mercado da liga: a venda é feita no servidor, todos recebem o estado novo e a escalação não confirmada fica', async () => {
   const j0 = carregarJogo();
   const srv = servidorFalso([clubeDaSerie(j0, 'A', 0), clubeDaSerie(j0, 'A', 1)]);
