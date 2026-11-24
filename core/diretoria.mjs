@@ -52,11 +52,13 @@ export function atualizarConfianca(t,jogo){
   add(`Posição (${pos}º) contra a meta (${t.meta.alvo}º)`,clamp((t.meta.alvo-pos)*0.3,-2,2)*Math.min(1,S.round/8)); // pesa pouco nas primeiras rodadas
   for(const f of fatoresFinanceiros(uc,t.meta))add(f.t,f.v);
   if(t.copaFat){add(t.copaFat.t,t.copaFat.v);delete t.copaFat} // Copa do Brasil (#51): classificação, eliminação ou título nesta rodada
-  aplicarConfianca(t,fat,6);
+  aplicarConfianca(t,fat,6,true);
 }
-export function aplicarConfianca(t,fat,lim){
+// rodada: conta para a demissão (#371: copa continental e estadual mexem na confiança, mas não contam outra rodada)
+export function aplicarConfianca(t,fat,lim,rodada=false){
   const d=clamp(fat.reduce((s,f)=>s+f.v,0),-lim,lim);
   t.conf=clamp(Math.round((t.conf+d)*10)/10,0,100);t.confFat=fat;
+  if(!rodada)return;
   t.confBaixa=t.conf<=DEMISSAO_NIVEL?(t.confBaixa||0)+1:0;
   if(t.confBaixa>=DEMISSAO_RODADAS&&!t.demitido)sairDoClube(t,'demitido'); // #37: continua no jogo, com propostas de outros clubes
 }
@@ -65,7 +67,7 @@ export function confiancaFimTemporada(t,pos){
   const dif=t.meta.alvo-pos,ok=dif>=0;
   const fat=[{t:`Fim de temporada: ${pos}º (meta: ${t.meta.texto})`,v:ok?Math.min(15,5+dif*2):Math.max(-20,dif*3)}];
   if(clubDo(t).balance<0)fat.push({t:'Fechou a temporada com caixa negativo',v:-5}); // meta financeira (#48), já com a premiação
-  aplicarConfianca(t,fat,20);
+  aplicarConfianca(t,fat,20,true);
 }
 // confiança volta a meia distância do neutro a cada temporada
 export function confiancaNovaTemporada(t){t.conf=Math.round((t.conf+CONF_INICIO)/2);t.confBaixa=0;definirMeta(t);addNews(`🎯 Meta da diretoria: ${t.meta.texto}.`,t.clubId)}
