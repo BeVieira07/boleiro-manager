@@ -50,7 +50,7 @@ Os nomes antigos (`--panel`, `--accent`, `--danger`…) apontam para os novos e 
 
 | Módulo | O que tem |
 |---|---|
-| `ui/layout.mjs` | menu lateral (barra inferior no celular) e barra de ações do topo (#58) |
+| `ui/layout.mjs` | navegação: barra lateral com todas as telas a partir de 1280 px (`.nav-lateral`, #360); abaixo disso, seções no alto com abas (barra inferior no celular); e a barra de ações do topo (#58) |
 | `ui/clube/clube.mjs` | painel do clube (#59) |
 | `ui/clube/elenco.mjs`, `ui/clube/jogadores.mjs` | tabela do Elenco; filtros, busca e ordenação reaproveitados pelo Mercado (#60) |
 | `ui/clube/base.mjs`, `css/temporada-figma.css` | aba Base do grupo Time, com resumo de vagas e chegada de jovens, lista e ações de promoção e venda (#270) |

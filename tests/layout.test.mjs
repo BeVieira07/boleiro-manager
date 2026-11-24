@@ -22,7 +22,8 @@ test('o HUD agrupa as telas em seções, marca a aba atual e mantém as opções
   for (const t of ['clube', 'elenco', 'jogos', 'mercado'])
     assert.match(menu, new RegExp(`data-acao="go\\|${t}"`), t);
   assert.match(menu, /data-acao="voltarMenu"/, 'sair para a tela inicial');
-  assert.deepEqual([...menu.matchAll(/data-acao="go\|(\w+)" aria-current="page"/g)].map(m => m[1]), ['mercado']);
+  const semLateral = menu.replace(/<nav class="nav-lateral"[^]*?<\/nav>/, ''); // #360: a lista da barra lateral tem o próprio teste
+  assert.deepEqual([...semLateral.matchAll(/data-acao="go\|(\w+)" aria-current="page"/g)].map(m => m[1]), ['mercado']);
   assert.match(menu, /aria-controls="navResto"/);
   j.run('alternarMais()');
   assert.match(j.run('lateral()'), /aria-expanded="true"/);
