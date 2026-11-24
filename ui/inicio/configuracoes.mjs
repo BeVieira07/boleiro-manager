@@ -10,7 +10,7 @@ export const PREFS_KEY = 'boleiro_prefs';
 // milissegundos por minuto de jogo ao vivo
 export const VELOCIDADES = { lenta: 110, normal: 55, rapida: 22 };
 export const CATEGORIAS = { mercado: 'Mercado e contratos', lesoes: 'Lesões e suspensões', base: 'Categorias de base', forma: 'Forma dos jogadores', diretoria: 'Diretoria e finanças', outros: 'Outras (campeonato, aposentadorias…)' };
-const PADRAO = { velocidade: 'normal', aoVivo: 'sempre', penaltisInterativos: true, confirmar: true, noticias: Object.fromEntries(Object.keys(CATEGORIAS).map(k => [k, true])) };
+const PADRAO = { velocidade: 'normal', aoVivo: 'sempre', penaltisInterativos: true, som: true, volume: 70, confirmar: true, noticias: Object.fromEntries(Object.keys(CATEGORIAS).map(k => [k, true])) };
 
 export function prefs() {
   const p = store.get(PREFS_KEY) || {};
@@ -56,6 +56,13 @@ export function vConfig() {
     <p class="muted">Decisivos: Copa do Brasil, jogos contra um dos 4 primeiros ou nas 5 últimas rodadas. Vale também para o replay da liga.</p></div>
    ${marca('penaltisInterativos', 'Disputa de pênaltis interativa: você escolhe o batedor e o canto das cobranças do seu time (#293)', p.penaltisInterativos)}
    <p class="muted">Desligada, a disputa é automática. Na liga online ela é sempre automática.</p>
+  </section>
+  <section class="card"><h2 class="t3">Som</h2>
+   ${marca('som', 'Sons da partida ao vivo: apitos, gols, expulsões e pênaltis', p.som)}
+   <div class="config-campo"><label for="cfgVolume">Volume</label>
+    <input id="cfgVolume" type="range" min="0" max="100" step="5" value="${Number(p.volume) || 0}" data-mudar="mudarVolume"${p.som ? '' : ' disabled'}>
+    <output for="cfgVolume">${Number(p.volume) || 0}%</output></div>
+   <p class="muted">Ao soltar o controle toca um apito de amostra. No jogo ao vivo, o botão de som liga e desliga na hora.</p>
   </section>
   <section class="card"><h2 class="t3">Confirmações</h2>
    ${marca('confirmar', 'Pedir confirmação na venda rápida, na venda de jovens da base e ao simular até o fim', p.confirmar)}
