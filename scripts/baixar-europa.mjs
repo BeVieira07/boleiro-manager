@@ -26,6 +26,27 @@ const LIGAS = {
   PO1: { api: 94, nome: 'Liga Portugal', pais: 'Portugal', clubes: 18, centro: 68 },
   PO2: { api: 95, nome: 'Liga Portugal 2', pais: 'Portugal', clubes: 18, centro: 60 }
 };
+// Calendários oficiais de 2025/26 e ids da API-Football. Extras vieram da terceira divisão.
+const COMPOSICOES = {
+  IT1: {
+    fonte: 'https://img.legaseriea.it/vimages/68542726/259%20-%20anticipi%20e%20posticipi%20Serie%20A%20Enilive%2025-26%20%281-3%5E%29.pdf',
+    ids: [487, 488, 489, 490, 492, 494, 495, 496, 497, 499, 500, 502, 503, 504, 505, 520, 523, 801, 867, 895]
+  },
+  IT2: {
+    fonte: 'https://www.legab.it/news/pescara-cesena-e-lopening-day-serie-bkt-2025-26',
+    ids: [498, 508, 509, 511, 512, 515, 517, 522, 863, 880, 899, 1578, 1579, 1581, 1687, 1693],
+    extras: [525, 527, 528, 870] // Pescara, Virtus Entella, Avellino, Padova
+  },
+  FR1: {
+    fonte: 'https://www.lfp.fr/assets/L1_MD_DNCG_2526_CALENDRIER_CLAIR_107b3d08b0.pdf',
+    ids: [77, 79, 80, 81, 83, 84, 85, 91, 94, 95, 96, 97, 106, 108, 111, 112, 114, 116]
+  },
+  FR2: {
+    fonte: 'https://www.lfp.fr/assets/L2_BKT_DNCG_2526_CALENDRIER_CLAIR_0f599a9d36.pdf',
+    ids: [82, 87, 90, 93, 99, 101, 104, 110, 433, 1063, 1297, 1299, 1301, 1304, 1305, 3012],
+    extras: [102, 1298] // Nancy, Le Mans. Boulogne já consta na lista da API.
+  }
+};
 const FONTES = {
   clubes: `API-Football /teams, temporada ${TEMPORADA_API}`,
   elencos: 'API-Football /players/squads, elencos da data da consulta',
@@ -137,7 +158,9 @@ async function coletar(raw, ligas, { baixar, chave, esperar, informar, hoje, sal
     return api(path);
   }
 
-  for (const liga of ligas) {
+  const listas = [...new Set(ligas.flatMap(liga => COMPOSICOES[liga]
+    ? [`${liga.slice(0, 2)}1`, `${liga.slice(0, 2)}2`] : [liga]))];
+  for (const liga of listas) {
     if (raw.times[liga] || pedidos >= orcamento) continue;
     informar(`Consultando clubes de ${liga} (${TEMPORADA_API})…`);
     const dados = await pedir(`/teams?league=${LIGAS[liga].api}&season=${TEMPORADA_API}`);
@@ -149,7 +172,35 @@ async function coletar(raw, ligas, { baixar, chave, esperar, informar, hoje, sal
     salvarRaw();
   }
 
-  const times = listarTimes(raw, ligas);
+  const times = listarTimes(raw, ligas.filter(liga => !COMPOSICOES[liga]));
+  const timesBase = new Map(listarTimes(raw, listas).map(({ team }) => [team.id, team]));
+  raw.timesExtras ??= {};
+  const timesExtras = new Map(Object.values(raw.timesExtras).map(team => [team.id, team]));
+  let faltamBuscas = 0;
+  let faltamClubes = 0;
+  for (const liga of ligas.filter(id => COMPOSICOES[id])) {
+    const { ids, extras = [] } = COMPOSICOES[liga];
+    const temListas = [`${liga.slice(0, 2)}1`, `${liga.slice(0, 2)}2`].every(id => raw.times[id]);
+    const clubes = ids.map(id => timesBase.get(id)).filter(Boolean);
+    if (temListas && clubes.length !== ids.length) {
+      throw new Error(`Clubes de ${liga} ausentes nas listas da API: ${ids.filter(id => !timesBase.has(id)).join(', ')}.`);
+    }
+    for (const id of extras) {
+      let team = timesBase.get(id) ?? timesExtras.get(id);
+      if (!team && pedidos < orcamento) {
+        informar(`Consultando clube e${id} (${liga} 2025/26)…`);
+        const dados = await pedir(`/teams?id=${id}`);
+        team = dados.response?.find(item => item.team?.id === id && item.team.name)?.team;
+        if (!team) throw new Error(`Clube e${id} de ${liga} ausente na API.`);
+        raw.timesExtras[id] = team;
+        salvarRaw();
+      }
+      if (team) clubes.push(team);
+      else faltamBuscas++;
+    }
+    faltamClubes += LIGAS[liga].clubes - clubes.length;
+    times.push(...clubes.map(team => ({ team, liga })));
+  }
   for (const [i, { team }] of times.entries()) {
     if (raw.elencos[team.id] || pedidos >= orcamento) continue;
     informar(`(${i + 1}/${times.length}) Consultando elenco de ${team.name}…`);
@@ -161,9 +212,11 @@ async function coletar(raw, ligas, { baixar, chave, esperar, informar, hoje, sal
     salvarRaw();
   }
 
-  const naoListadas = ligas.filter(liga => !raw.times[liga]);
+  const naoListadas = listas.filter(liga => !raw.times[liga]);
+  const clubesEmListasPendentes = naoListadas.filter(liga => !COMPOSICOES[liga])
+    .reduce((n, liga) => n + LIGAS[liga].clubes, 0);
   const faltam = times.filter(({ team }) => !raw.elencos[team.id]).length +
-    naoListadas.reduce((n, liga) => n + 1 + LIGAS[liga].clubes, 0);
+    faltamBuscas + faltamClubes + naoListadas.length + clubesEmListasPendentes;
   if (faltam) {
     const estimativa = naoListadas.length ? ' aproximadamente' : '';
     const pendencia = faltam === 1 ? 'falta 1 pedido' : `faltam${estimativa} ${faltam} pedidos`;
@@ -271,8 +324,9 @@ function montarClubes(raw, times, clubesTm, jogadoresTm, ajustes, informar) {
   const clubs = times.map(({ team, liga: origem }) => {
     const tm = casamentos.get(team.id);
     const primeira = `${origem.slice(0, 2)}1`;
-    const liga = tm?.domestic_competition_id === primeira && Number(tm.last_season) === TEMPORADA_TM
-      ? primeira : `${origem.slice(0, 2)}2`;
+    const noTopo = tm?.domestic_competition_id === primeira && Number(tm.last_season) === TEMPORADA_TM;
+    const ligaEstimativa = noTopo ? primeira : `${origem.slice(0, 2)}2`;
+    const liga = COMPOSICOES[origem] ? origem : ligaEstimativa;
     if (liga !== origem) informar(`Composição 2025/26: ${team.name} (${origem} → ${liga}).`);
     const id = `e${team.id}`;
     const data = raw.datasElencos[team.id];
@@ -384,6 +438,7 @@ export async function importarEuropa({ ligas, chave, raiz = '.', baixar = fetch,
   let clubesSemPar = 0;
   for (const pais of new Set(codigos.map(id => id.slice(0, 2)))) {
     const primeira = `${pais}1`;
+    if (COMPOSICOES[primeira]) continue;
     const topo = clubesTm.filter(c => c.domestic_competition_id === primeira && Number(c.last_season) === TEMPORADA_TM);
     if (!topo.length) throw new Error(`Transfermarkt sem clubes de ${primeira} em 2025/26.`);
     if (codigos.includes(primeira) && codigos.includes(`${pais}2`)) {
@@ -398,12 +453,17 @@ export async function importarEuropa({ ligas, chave, raiz = '.', baixar = fetch,
   const anterior = lerJson(saida, { ligas: [], clubs: [] });
   const ids = new Set(importados.map(c => c.id));
   const jogadoresNovos = new Set(importados.flatMap(c => c.players.map(p => p.id)));
-  const clubesAnteriores = anterior.clubs.filter(c => !ids.has(c.id)).map(c => ({ ...c, players: c.players.filter(p => {
-    if (!jogadoresNovos.has(p.id)) return true;
-    informar(`Jogador repetido na Europa: ${p.id} ${p.name} (retirado de ${c.id} e mantido no lote atual).`);
-    return false;
-  }) }));
-  for (const c of clubesAnteriores) c.strength = forcaDoElenco(c);
+  const ligasVerificadas = codigos.filter(liga => COMPOSICOES[liga]);
+  const clubesAnteriores = anterior.clubs.filter(c => !ids.has(c.id) && !ligasVerificadas.includes(c.liga)).map(c => {
+    const players = c.players.filter(p => {
+      if (!jogadoresNovos.has(p.id)) return true;
+      informar(`Jogador repetido na Europa: ${p.id} ${p.name} (retirado de ${c.id} e mantido no lote atual).`);
+      return false;
+    });
+    if (players.length === c.players.length) return c;
+    const clube = { ...c, players };
+    return { ...clube, strength: forcaDoElenco(clube) };
+  });
   const clubs = [...clubesAnteriores, ...importados].sort((a, b) => a.liga.localeCompare(b.liga) || a.name.localeCompare(b.name, 'pt-BR'));
   const erro = erroIds(clubs);
   if (erro) throw new Error(erro);
@@ -419,9 +479,16 @@ export async function importarEuropa({ ligas, chave, raiz = '.', baixar = fetch,
   const ligasSaida = Object.entries(LIGAS).filter(([id]) => presentes.has(id)).map(([id, { nome, pais }]) => (
     { id, nome, pais, divisao: Number(id.at(-1)) }
   ));
-  const dados = { temporada: '2025/26', fontes: FONTES, ligas: ligasSaida, clubs };
+  const fontesOficiais = ligasSaida.filter(liga => COMPOSICOES[liga.id]).map(liga => `${liga.nome} (${COMPOSICOES[liga.id].fonte})`);
+  const composicao = fontesOficiais.length
+    ? `Os calendários oficiais de 2025/26 definem os clubes de ${fontesOficiais.join(', ')}. Para as demais ligas, vale o critério original. ${FONTES.composicao}`
+    : FONTES.composicao;
+  const fontes = { ...FONTES, composicao };
+  if (fontesOficiais.length) fontes.clubes += ' e consulta individual dos promovidos ausentes nas listas.';
+  if (presentes.has('FR2')) fontes.escudos += '. Escudo do Pau FC convertido de JPEG para PNG.';
+  const dados = { temporada: '2025/26', fontes, ligas: ligasSaida, clubs };
   salvar(saida, `${JSON.stringify(dados, null, 2)}\n`);
-  informar(`data/europa-2025.json: ${clubs.length} clubes. Entre a 2ª e a 3ª divisão, mantida a composição de 2024/25.`);
+  informar(`data/europa-2025.json: ${clubs.length} clubes. ${composicao}`);
   const falhasEscudos = await baixarEscudos(times, raiz, baixar, informar);
   if (falhasEscudos) informar(`${falhasEscudos} escudos pendentes. Rode o mesmo comando para tentar novamente.`);
   return { dados, pedidos, faltam, falhasEscudos, elencosInvalidos, clubesSemPar };
