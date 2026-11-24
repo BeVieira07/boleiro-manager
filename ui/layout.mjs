@@ -14,6 +14,10 @@ const SECOES = [
   { rotulo: 'Temporada', icone: 'trofeu', abas: [['jogos', 'Jogos'], ['tabela', 'Classificação'], ['competicoes', 'Competições'], ['artilharia', 'Artilharia']] },
   { rotulo: 'Mercado', icone: 'mercado', tela: 'mercado' }
 ];
+// #360: no computador, todas as telas numa lista só, na barra lateral (no celular ficam as seções e as abas)
+const TELAS_LATERAL = [['clube', 'Clube', 'clube'], ['elenco', 'Elenco', 'elenco'], ['escalacao', 'Escalação', 'escalacao'],
+  ['base', 'Base', 'subir'], ['jogos', 'Jogos', 'jogos'], ['tabela', 'Classificação', 'tabela'], ['competicoes', 'Competições', 'trofeu'],
+  ['artilharia', 'Artilharia', 'artilharia'], ['mercado', 'Mercado', 'mercado'], ['financas', 'Finanças', 'financas'], ['tecnico', 'Carreira', 'escudo']];
 const ABA_POR_TELA = {
   copa: 'competicoes', estadual: 'competicoes', libertadores: 'competicoes', sulamericana: 'competicoes',
   rodada: 'jogos', aovivo: 'jogos', carreira: 'clube'
@@ -43,9 +47,12 @@ export function lateral() {
     <span class="nav-secao">${secao.rotulo}</span>
     ${secao.abas.map(([id, rotulo]) => `<button type="button" data-acao="go|${id}"${tela === id ? ' aria-current="page"' : ''}>${rotulo}</button>`).join('')}
   </nav>` : '';
+  const lista = TELAS_LATERAL.map(([id, rotulo, ic]) =>
+    `<button type="button" class="nav-item" data-acao="go|${id}"${tela === id ? ' aria-current="page"' : ''}>${icone(ic)}<span>${rotulo}</span></button>`).join('');
   return `<div class="hud">
     ${marca()}
     <nav class="nav" aria-label="Seções do jogo">${secoes}</nav>
+    <nav class="nav-lateral" aria-label="Telas do jogo">${lista}</nav>
     <div class="clube-cartao" role="group" aria-label="${esc(uc.name)}, ${DIVS[divOf(uc)] || ''}, temporada ${S.season}">${crest(uc, 'm')}<div><b>${esc(uc.name)}</b><span class="muted">${DIVS[divOf(uc)] || ''} · ${S.season}</span></div></div>
     <button type="button" id="opcoes-jogo" class="btn fantasma icone-so nav-mais" data-acao="alternarMais" aria-label="Opções" aria-expanded="${!!ui.maisAberto}" aria-controls="navResto">${icone('menu')}</button>
     <div class="nav-resto" id="navResto" role="group" aria-labelledby="opcoes-jogo"${ui.maisAberto ? '' : ' hidden'}>

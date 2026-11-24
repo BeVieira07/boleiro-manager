@@ -1246,3 +1246,28 @@ body.em-jogo .avisos{bottom:24px}
   .lp-album{grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--e2)}
   .lp-aba small{display:none}
 }
+/* #360: no computador (a partir de 1280 px; abaixo disso fica a barra no alto), a navegação vira uma barra lateral fixa à esquerda (marca, todas as telas, opções e o clube);
+   no celular continua a barra de baixo com as seções e as abas no alto. */
+.nav-lateral{display:none}
+@media(min-width:1280px){
+  body.em-jogo .casca{display:grid;grid-template-columns:236px minmax(0,1fr);align-items:start}
+  body.em-jogo .lateral{position:sticky;top:0;height:100dvh;border-right:1px solid var(--linha2);background:var(--lateral)}
+  body.em-jogo .hud{flex-direction:column;align-items:stretch;gap:var(--e2);height:100%;min-height:0;padding:18px 14px 14px;border:0;background:none;overflow-y:auto}
+  body.em-jogo .hud .marca{padding:0 6px 10px}
+  body.em-jogo .hud>.nav,body.em-jogo .nav-abas,body.em-jogo .nav-mais{display:none}
+  body.em-jogo .nav-lateral{display:flex;flex-direction:column;gap:2px}
+  .nav-lateral .nav-item{gap:12px;min-height:38px;padding:6px 12px;font:600 15px/1.2 var(--f-texto);letter-spacing:0;text-transform:none}
+  .nav-lateral .nav-item .icone{flex:none}
+  .nav-lateral .nav-item[aria-current]{background:linear-gradient(180deg,#49db89,var(--verde));color:var(--tinta-verde);font-weight:700}
+  body.em-jogo .nav-resto,body.em-jogo .nav-resto[hidden]{position:static;display:flex;flex-direction:column;gap:2px;margin-top:auto;padding:12px 0 0;border:0;border-top:1px solid var(--linha2);border-radius:0;background:none;box-shadow:none;max-height:none;overflow:visible}
+  body.em-jogo .nav-resto .nav-item{min-height:32px;padding:4px 12px;font-size:13px;color:var(--muted)}
+  body.em-jogo .nav-resto .nav-item.nav-perigo{color:var(--perigo-claro)}
+  body.em-jogo .clube-cartao{order:10;padding:10px 12px;border-left:1px solid var(--linha);border-radius:var(--r)}
+  body.em-jogo .clube-cartao b{max-width:none}
+}
+/* #360: com a barra lateral sobra menos largura; no Elenco o nome não quebra no meio e os botões descem para uma 2ª linha */
+@media(min-width:1280px) and (max-width:1599px){
+  body.em-jogo .tabela-elenco .c-nome{min-width:150px}
+  body.em-jogo .tabela-elenco td.c-acoes{white-space:normal}
+  body.em-jogo .tabela-elenco .acoes{flex-wrap:wrap;max-width:250px;margin-left:auto}
+}
