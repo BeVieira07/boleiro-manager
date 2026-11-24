@@ -116,7 +116,8 @@ export function cancelarDesfalque(g,e){
   if(e.t==='lesao')P[e.pid].inj=0;
   else suspenderPorVermelho(P[e.pid],0);
   for(const t of tecnicos().filter(t=>t.clubId===g[e.side])){
-    const i=t.news.findIndex(n=>n.r===S.round-1&&n.t===noticiaDe(e));
+    // #383: no estadual (pré-temporada) a rodada não avança, e a notícia fica com r === S.round
+    const i=t.news.findIndex(n=>(n.r===S.round-1||n.r===S.round)&&n.t===noticiaDe(e));
     if(i>=0)t.news.splice(i,1);
   }
 }
