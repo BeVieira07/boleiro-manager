@@ -1,6 +1,9 @@
 node_modules/
 .env
 data/*-raw.json
+data/tmds-*-raw.csv.gz
+data/.europa-*.tmp
+img/escudos/.europa-*.tmp
 save-*.json
 .DS_Store
 supabase/.temp/

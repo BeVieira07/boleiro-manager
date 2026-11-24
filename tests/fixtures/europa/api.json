@@ -1,0 +1,38 @@
+{
+  "/teams?league=140&season=2024": {
+    "errors": [], "results": 1,
+    "response": [{
+      "team": { "id": 920, "name": "Atletico San Pedro", "code": "ASP", "country": "Spain", "logo": "https://media.api-sports.io/football/teams/920.png" },
+      "venue": { "id": 3, "name": "Estadio San Pedro" }
+    }]
+  },
+  "/teams?league=141&season=2024": {
+    "errors": [], "results": 1,
+    "response": [{
+      "team": { "id": 930, "name": "Villa del Rio", "code": null, "country": "Spain", "logo": "https://media.api-sports.io/football/teams/930.png" },
+      "venue": { "id": 4, "name": "Estadio del Río" }
+    }]
+  },
+  "/players/squads?team=920": {
+    "errors": [], "results": 1,
+    "response": [{
+      "team": { "id": 920, "name": "Atletico San Pedro", "logo": "https://media.api-sports.io/football/teams/920.png" },
+      "players": [
+        { "id": 9201, "name": "N. Gálvez", "age": 23, "number": 30, "position": "Goalkeeper", "photo": "https://media.api-sports.io/football/players/9201.png" },
+        { "id": 9202, "name": "Miki Soto", "age": 25, "number": 3, "position": "Defender" },
+        { "id": 9203, "name": "Diego Alonso", "age": 25, "number": null, "position": "Attacker" }
+      ]
+    }]
+  },
+  "/players/squads?team=930": {
+    "errors": {}, "results": 1,
+    "response": [{
+      "team": { "id": 930, "name": "Villa del Rio", "logo": "https://media.api-sports.io/football/teams/930.png" },
+      "players": [
+        { "id": 9301, "name": "J. Molina", "age": 29, "number": 1, "position": "Goalkeeper" },
+        { "id": 9302, "name": "K. Díaz", "age": 27, "number": 9, "position": "Attacker" },
+        { "id": 9303, "name": "Pablo Mateo", "age": 26, "number": 2, "position": "Defender" }
+      ]
+    }]
+  }
+}
