@@ -110,6 +110,8 @@ export function proporCompra(pid,amt,{comContraproposta=true}={}){
     ?`${seller.name} recusou: ${p.name} é peça importante e o clube precisa de reposição na posição.`
     :`${seller.name} recusou: não pode ficar sem reposição na posição.`};
   if(!muitoBaixa&&rnd()<prob)return fecharCompra(p,seller,uc,amt);
+  // #377: se a contraproposta não passaria do lance, o clube aceita o lance (antes pedia menos do que recusou)
+  if(comContraproposta&&!muitoBaixa&&!entreMelhores(p,seller)&&precoDaContraproposta(p,seller,pedido).valor<=amt)return fecharCompra(p,seller,uc,amt);
   addNews(`❌ ${seller.name} recusou ${money(amt)} por ${p.name}.`);
   if(muitoBaixa)return {ok:false,msg:`${seller.name} recusou: proposta muito baixa.`};
   const msg=`${seller.name} recusou a proposta.`;
