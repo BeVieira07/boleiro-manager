@@ -6,7 +6,7 @@ import { criarCopa } from './copa.mjs';
 import { ferias } from './energia.mjs';
 import { criarEstaduais } from './estadual.mjs';
 import { todosEstrangeiros } from './estrangeiros.mjs';
-import { fakePlayer, refreshEconomics } from './dados.mjs';
+import { fakePlayer, forcaDoElenco, refreshEconomics } from './dados.mjs';
 import { confiancaFimTemporada, confiancaNovaTemporada } from './diretoria.mjs';
 import { DIVS, MOVE_N, P, S, addFin, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, hasTwoDivs, makeAllFixtures, reindex, seasonPrize, table, tecnicos, topScorers, userClub } from './estado.mjs';
 import { autoXI, concluirRodadaCopa, getXI } from './motor.mjs';
@@ -64,6 +64,7 @@ export function iniciarTemporada(){
   }
   virarBase(); // #50: a base dos clubes com técnico
   ferias(); // #136: energia cheia na nova temporada
+  for(const c of S.clubs)c.strength=forcaDoElenco(c); // #374: meta, bilheteria e Copa pela força do elenco de agora, não a do jogo novo
   S.season++;S.round=0;S.fixtures=makeAllFixtures(S.clubs);
   reindex();criarCopa();criarEstaduais();criarContinentais(vagas);
   processLoans(); // #142: empréstimo de 1 ano feito na rodada 0 volta agora
