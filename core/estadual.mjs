@@ -96,7 +96,6 @@ export function jogosDaData(tor, d) {
   const perna = d === E.datas - 2 ? 'ida' : d === E.datas - 1 ? 'volta' : null; if (!perna) return [];
   if (f.jogo && f.jogo.final === perna) return [f.jogo]; // jogada e ainda não concluída (#230)
   return [{ ...jogoDaPerna(f, perna === 'volta'), final: perna }];
-  return [];
 }
 /** Nome da data d de um torneio: "Rodada 3", "Final (ida)"... ou '' se ele não joga nela. */
 export function nomeData(tor, d) {

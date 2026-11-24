@@ -14,11 +14,10 @@ export function loanTag(p){
   const incoming=l.to===p.clubId,c=clubeDe(incoming?l.from:l.to);
   return ` <span class="pill" title="Salário: ${salarioTxt(l)}">${incoming?'emprestado de':'emprestado a'} ${esc(c.name)} · ${fimTxt(l)}</span>`;
 }
-/* #142: 'in' = pedir emprestado da lista de um clube da IA (Mercado); 'out' = pôr ou tirar da sua lista de empréstimo (Elenco). */
-export function loanBtn(p,mode){
+/* #142: pôr ou tirar da sua lista de empréstimo (Elenco). Pedir emprestado da IA fica no Mercado (loanForm). */
+export function loanBtn(p){
   if(loanOf(p.id))return '';
-  if(mode==='out')return `<button class="btn sm ${p.emprestar?'perigo':'sec'}" data-acao="toggleEmprestimo|${p.id}" aria-pressed="${!!p.emprestar}">${p.emprestar?'Para empréstimo':'Pôr para empréstimo'}</button>`;
-  return p.emprestar?`<button class="btn sec sm" data-acao="loanForm|${p.id}|in">Empréstimo</button>`:'';
+  return `<button class="btn sm ${p.emprestar?'perigo':'sec'}" data-acao="toggleEmprestimo|${p.id}" aria-pressed="${!!p.emprestar}">${p.emprestar?'Para empréstimo':'Pôr para empréstimo'}</button>`;
 }
 /** Pedir emprestado um jogador da lista de um clube da IA (#142): 1 ano, salário dividido, sem opção de compra. */
 export function loanForm(pid){confirmarEmprestimo(pid,false)}

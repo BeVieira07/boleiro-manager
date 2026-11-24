@@ -27,7 +27,7 @@ test('a ida abre depois do Brasileirão e confirma o placar revisto sem creditar
   j.run(`ui.vivo.min=40; const e=escalacaoNoMinuto(ui.vivo.g,'h',40);
     const sai=e.xi.find(id=>id&&P[id].pos!=='G');
     const entra=banco(ui.vivo.g,40).find(x=>!x.motivo&&x.p.pos!=='G').p.id;
-    avSair(sai);avEntrar(entra);avFormacao('4-3-3');tvLiveChip('modo','ofensivo');`);
+    avPausar();avExpSair(sai);avExpEntrar(entra);avExpTatica('form','4-3-3');avExpTatica('modo','ofensivo');avExpConfirmar();`);
   assert.equal(j.run('ui.vivo.g.trocas.length'), 1);
   assert.deepEqual(j.run('Object.values(P).map(p=>p.goals)'), golsDaLiga);
   assert.deepEqual(j.run('S.copa.gols'), {});
@@ -51,7 +51,7 @@ test('a volta retomada de um save decide nos pênaltis e encerra a final só uma
   assert.match(j.html(), /Copa do Brasil · Final \(volta\)/);
   assert.match(j.html(), /Placar agregado: 0 x 0/);
   const rodada = j.run('S.round'), saveId = j.run('S.saveId');
-  j.run(`ui.vivo.min=34;avFormacao('3-5-2');ui.vivo.g.ev=ui.vivo.g.ev.filter(e=>e.t!=='gol');ui.vivo.g.hg=0;ui.vivo.g.ag=0;save()`);
+  j.run(`ui.vivo.min=34;avPausar();avExpTatica('form','3-5-2');avExpConfirmar();ui.vivo.g.ev=ui.vivo.g.ev.filter(e=>e.t!=='gol');ui.vivo.g.hg=0;ui.vivo.g.ag=0;save()`);
   j.acao(`abrirSave|${saveId}`);
   j.acao('retomarCopa');
   assert.equal(j.run('ui.vivo.min'), 34);
