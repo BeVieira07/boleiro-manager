@@ -21,7 +21,7 @@ export function novoContrato(p, anos = p.age >= 32 ? 2 : CONTRATO_NOVO) { p.cont
 /** O que o jogador pede para renovar: {erro} ou {anos, aumento (0.15 = 15%), fator, salario (novo, por rodada), chance de aceitar}. */
 export function pedidoRenovacao(pid) {
   const p = P[pid], c = p && clubById(p.clubId);
-  if (!p || p.contrato == null) return { erro: 'Jogador sem contrato para renovar.' };
+  if (!p || !c || p.contrato == null) return { erro: 'Jogador sem contrato para renovar.' }; // sem clube no jogo (estrangeiro): não renova (#411)
   if (loanOf(p.id)) return { erro: `${p.name} está emprestado: o contrato é com o clube de origem.` };
   if (p.contrato > RENOVA_ATE) return { erro: `${p.name} ainda tem ${p.contrato} temporadas de contrato.` };
   const top = [...c.players].sort((a, b) => b.ovr - a.ovr), onze = top.slice(0, 11), media = onze.reduce((s, x) => s + x.ovr, 0) / onze.length;

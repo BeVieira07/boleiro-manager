@@ -144,4 +144,5 @@ export function table(div){
   return ordenarTabela(T);
 }
 
-export function topScorers(n=20,div){return Object.values(P).filter(p=>p.goals>0&&(!div||divOf(clubById(p.clubId))===div)).sort((a,b)=>b.goals-a.goals||b.ovr-a.ovr).slice(0,n)}
+// só jogador de clube do jogo (S.clubs): o estrangeiro emprestado que voltou ao clube de origem não tem clube aqui (#411)
+export function topScorers(n=20,div){return Object.values(P).filter(p=>{if(!(p.goals>0))return false;const c=clubById(p.clubId);return !!c&&(!div||divOf(c)===div)}).sort((a,b)=>b.goals-a.goals||b.ovr-a.ovr).slice(0,n)}
