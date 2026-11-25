@@ -157,3 +157,44 @@ test('liga: promover e vender da base passam pelo servidor e só valem para a ba
   assert.equal(acaoMercadoLiga(s, 'local', { tipo: 'promoverBase', pid: meu.base[0].id }).ok, true);
   assert.equal(acaoMercadoLiga(s, 'local', { tipo: 'venderBase', pid: meu.base[0].id }).ok, true);
 });
+
+// #414: quem assume outro clube encontra a base dele
+test('assumir outro clube: a base já existe, com sorteio fixo, sem jovens a mais e sem gastar o sorteio da rodada', () => {
+  const j = novo();
+  const antigo = j.run('userClub().id');
+  j.run('pedirDemissao()');
+  const ids = j.run('tec().propostasClube'), id = ids[0];
+  assert.equal(j.run(`clubById('${id}').base`), undefined, 'clube da IA não tem base antes');
+  const rng = j.run('JSON.stringify(S.rng)');
+  assert.equal(j.run(`escolherClube('${id}').ok`), true);
+  assert.equal(j.run('JSON.stringify(S.rng)'), rng, 'o sorteio da rodada não foi gasto');
+  const base = j.run('JSON.stringify(userClub().base.map(p=>p.id))');
+  assert.equal(j.run('userClub().base.length'), 4);
+  // mesmo sorteio fixo de criarBases (clube e temporada)
+  const ref = j.run(`(()=>{const c={...clubById('${id}')};delete c.base;gerarBase(c,mulberry32(hashStr(c.id+'|base|'+S.season)));return JSON.stringify(c.base.map(p=>p.id))})()`);
+  assert.equal(base, ref);
+  // ir e voltar na mesma temporada: nada novo, nem repetido com promovido/vendido
+  const promovido = j.run('userClub().base[0].id');
+  assert.equal(j.run(`promoverDaBase('${promovido}').ok`), true);
+  j.run('pedirDemissao()');
+  j.run(`tec().propostasClube=['${antigo}']`); // o clube que acabou de deixar ainda conta como vínculo
+  assert.equal(j.run(`escolherClube('${antigo}').ok`), true);
+  j.run('pedirDemissao()');
+  j.run(`tec().propostasClube=['${id}']`);
+  assert.equal(j.run(`escolherClube('${id}').ok`), true);
+  assert.equal(j.run('userClub().base.length'), 3, 'quem foi promovido não volta como jovem novo');
+  assert.equal(j.run(`userClub().base.some(p=>p.id==='${promovido}')`), false);
+  assert.equal(j.run(`S.clubs.flatMap(c=>c.players.concat(c.base||[])).filter(p=>p.id==='${promovido}').length`), 1);
+});
+
+test('assumir clube que já tem base não dá jovens a mais; a notícia da virada aponta para a aba Base', () => {
+  const j = novo();
+  j.run('pedirDemissao()');
+  const id = j.run('tec().propostasClube[0]');
+  j.run(`clubById('${id}').base=[]`);
+  j.run(`escolherClube('${id}')`);
+  assert.equal(j.run('userClub().base.length'), 0);
+  j.run('virarBase()');
+  assert.ok(j.run(`tec().news.some(n=>/Veja na aba Base\./.test(n.t))`));
+  assert.ok(!j.run(`tec().news.some(n=>/Veja em Elenco/.test(n.t))`));
+});

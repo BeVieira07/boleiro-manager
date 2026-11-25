@@ -50,11 +50,13 @@ export function virarBase() {
       if (p.age > BASE_IDADE_MAX) addNews(`🚪 ${p.name} passou da idade da base e foi dispensado.`, c.id); else fica.push(p);
     }
     c.base = fica; gerarBase(c);
-    addNews(`🌱 Novos jovens chegaram à base. Veja em Elenco.`, c.id);
+    addNews(`🌱 Novos jovens chegaram à base. Veja na aba Base.`, c.id);
   }
 }
 /** Base no começo do jogo (ou num save antigo): sorteio fixo por clube e temporada. */
-export function criarBases() { for (const t of tecnicos()) { const c = clubById(t.clubId); if (c && !c.base) gerarBase(c, mulberry32(hashStr(c.id + '|base|' + S.season))) } }
+/** Garante a base de um clube (#414): sorteio fixo, sem gastar o da rodada. Quem já tem base não ganha jovens a mais. */
+export function garantirBase(c) { if (c && !c.base) gerarBase(c, mulberry32(hashStr(c.id + '|base|' + S.season))) }
+export function criarBases() { for (const t of tecnicos()) garantirBase(clubById(t.clubId)) }
 export function migrarBase(s) { darPotencial(s.clubs); criarBases() }
 
 const daBase = id => (userClub().base || []).find(p => p.id === id);
