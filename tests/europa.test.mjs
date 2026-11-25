@@ -201,3 +201,26 @@ test('Itália e França publicam os 76 clubes dos calendários de 2025/26 com es
     }
   }
 });
+
+test('#357: Portugal publica os 36 clubes de 2025/26, e quem está no elenco do principal e do B fica no B', () => {
+  const { clubs, fontes } = JSON.parse(readFileSync(arquivoReal));
+  const esperados = {
+    PO1: ['AVS', 'Alverca', 'Arouca', 'Benfica', 'Casa Pia', 'Estoril', 'Estrela', 'FC Porto', 'Famalicao', 'GIL Vicente',
+      'Moreirense', 'Nacional', 'Rio Ave', 'SC Braga', 'Santa Clara', 'Sporting CP', 'Tondela', 'Vitória SC'],
+    PO2: ['Academico Viseu', 'Benfica B', 'Chaves', 'FC Porto B', 'Farense', 'Feirense', 'Felgueiras 1932', 'Leixoes',
+      'Lusitânia Lourosa', 'Maritimo', 'Oliveirense', 'Pacos Ferreira', 'Penafiel', 'Portimonense', 'Sporting CP B', 'Torreense', 'União de Leiria', 'Vizela']
+  };
+  assert.match(fontes.composicao, /Liga Portugal 2/);
+  for (const [liga, nomes] of Object.entries(esperados)) {
+    const equipes = clubs.filter(c => c.liga === liga);
+    assert.deepEqual(equipes.map(c => c.name).sort(), nomes.sort(), liga);
+    for (const c of equipes) {
+      const escudo = readFileSync(new URL(`../${c.logo}`, import.meta.url));
+      assert.ok(escudo.subarray(0, 8).equals(png.subarray(0, 8)) && escudo.toString('ascii', 12, 16) === 'IHDR', c.logo);
+    }
+  }
+  const clube = nome => clubs.find(c => c.name === nome);
+  for (const b of ['Benfica B', 'FC Porto B', 'Sporting CP B']) assert.ok(clube(b).players.some(p => p.pd === 'GOL'), `${b} tem goleiro`);
+  assert.ok(clube('FC Porto B').players.some(p => p.id === 'p180235'), 'Gabriel Veron, nos dois elencos da API, fica no Porto B');
+  assert.ok(clube('FC Porto').players.length >= 25 && clube('Benfica').players.length >= 25, 'os principais continuam com elenco cheio');
+});
