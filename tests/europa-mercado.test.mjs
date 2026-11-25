@@ -82,3 +82,16 @@ test('liga com amigos: o servidor compra da Europa e o estado da liga não carre
   assert.equal(r.europeus, 198);
   assert.ok(r.tamanho < 900000, `estado da liga: ${r.tamanho}`);
 });
+
+test('europeu emprestado que fez gol e voltou fica fora da artilharia e do resumo da temporada (#411)', () => {
+  const j = novo();
+  const pid = j.run(`(()=>{const p=clubesEuropa().find(c=>c.liga==='FR2').players[18];p.emprestar=true;return emprestimoJa(p.id).ok&&p.id})()`);
+  assert.ok(pid);
+  j.run(`P['${pid}'].goals=99`);
+  assert.equal(j.run('topScorers(1)[0].id'), pid, 'emprestado, ele é o artilheiro');
+  j.run(`endLoan(loanOf('${pid}'),true)`);
+  assert.equal(j.run(`topScorers(1000).some(p=>p.id==='${pid}')`), false);
+  assert.deepEqual(problemasNasTelas(j, ['competicoes', 'artilharia']), []);
+  j.run('S.round=S.fixtures.length;S.seasonClosed=0;fecharTemporada()');
+  assert.ok(!j.run('S.history[0].scorer').includes('(99)'));
+});
