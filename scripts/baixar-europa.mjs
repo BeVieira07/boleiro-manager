@@ -45,6 +45,16 @@ const COMPOSICOES = {
     fonte: 'https://www.lfp.fr/assets/L2_BKT_DNCG_2526_CALENDRIER_CLAIR_0f599a9d36.pdf',
     ids: [82, 87, 90, 93, 99, 101, 104, 110, 433, 1063, 1297, 1299, 1301, 1304, 1305, 3012],
     extras: [102, 1298] // Nancy, Le Mans. Boulogne já consta na lista da API.
+  },
+  // #357: tabelas de 2025/26. Tondela e Alverca subiram; Farense caiu; Boavista foi para o distrital e Mafra para a Liga 3.
+  PO1: {
+    fonte: 'https://en.wikipedia.org/wiki/2025%E2%80%9326_Primeira_Liga',
+    ids: [211, 212, 215, 217, 218, 224, 225, 226, 227, 228, 230, 240, 242, 762, 4716, 4724, 15130, 21595]
+  },
+  PO2: {
+    fonte: 'https://en.wikipedia.org/wiki/2025%E2%80%9326_Liga_Portugal_2',
+    ids: [213, 214, 216, 223, 229, 231, 233, 234, 235, 238, 243, 244, 810, 4662, 4744, 4799],
+    extras: [761, 6358] // Sporting CP B e Lusitânia Lourosa, da Liga 3
   }
 };
 const FONTES = {
@@ -354,12 +364,13 @@ function montarClubes(raw, times, clubesTm, jogadoresTm, ajustes, informar) {
       const valor = Number(j?.market_value_in_eur);
       if (Number.isFinite(valor) && valor > 0) jogador.vm = valor / 1e6;
 
-      // Um id da API pode aparecer em dois elencos. Preferir o clube confirmado pelo Transfermarkt.
+      // Um id da API pode aparecer em dois elencos. Preferir o clube confirmado pelo Transfermarkt; sem confirmação dos dois lados,
+      // o time B (#357: o Transfermarkt só tem as primeiras divisões, então quem está no elenco do B e do principal joga no B)
       const anterior = registros.get(pid);
       const confirmado = Boolean(tm && j?.current_club_id === tm.club_id);
       if (anterior) {
         informar(`Jogador repetido na Europa: ${pid} ${p.name} (${anterior.clube} e ${id}).`);
-        if (!confirmado || anterior.confirmado) continue;
+        if (anterior.confirmado || !(confirmado || / B$/.test(team.name))) continue;
         anterior.players.splice(anterior.players.indexOf(anterior.jogador), 1);
       }
       registros.set(pid, { clube: id, confirmado, players, jogador });
