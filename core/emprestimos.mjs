@@ -51,8 +51,8 @@ export const emprestimoJa=pid=>proporEmprestimo({pid},true);
 export function loanCheck(p,lender,borrower){
   if(loanOf(p.id))return `${p.name} já está emprestado.`;
   if(borrower.players.length>=32)return `${borrower.name} já tem 32 jogadores.`;
-  if(ehHumano(lender)&&lender.players.length<=16)return 'Seu elenco ficaria pequeno demais (mínimo 16).';
   if(ehHumano(lender)){const m=saidaAbaixoDoMinimo(lender,p);if(m)return m} // #410
+  if(ehHumano(lender)&&lender.players.length<=16)return 'Seu elenco ficaria pequeno demais (mínimo 16).';
   if(!ehHumano(lender)){
     if(p.bidRound===S.round+'_'+S.season)return `${lender.name} não quer negociar ${p.name} de novo nesta rodada.`;
     p.bidRound=S.round+'_'+S.season;

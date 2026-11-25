@@ -156,3 +156,15 @@ test('proposta de clube europeu respeita o mínimo, e goleiro emprestado da Euro
   assert.equal(r.gs, 2);
   assert.equal(r.fim, r.antes[0] - 1);
 });
+
+test('com 16 jogadores no mínimo da posição, a mensagem é a da posição, não a dos 16', () => {
+  const j = novo();
+  const r = j.run(`(()=>{const uc=userClub();
+    uc.players=Object.entries({G:2,D:5,M:5,A:4}).flatMap(([pos,n])=>uc.players.filter(p=>p.pos===pos).slice(0,n));
+    const p=uc.players.find(x=>x.pos==='G'),b=S.clubs.find(c=>!ehHumano(c));
+    tec().offers.push({id:'o16',pid:p.id,from:b.id,amount:1,until:S.round+3});
+    return {n:uc.players.length,v:venderJa(p.id).erro,o:aceitarOferta('o16').erro,l:loanCheck(p,uc,b),fim:uc.players.length}})()`);
+  assert.equal(r.n, 16);
+  for (const e of [r.v, r.o, r.l]) assert.match(e, /precisa manter pelo menos 2 goleiros/);
+  assert.equal(r.fim, 16);
+});

@@ -138,8 +138,8 @@ const emprestado=pid=>loanOf(pid)?{erro:`${P[pid].name} está emprestado: só o 
 export function aceitarOferta(oid){
   const o=tec().offers.find(x=>x.id===oid);if(!o)return {erro:'Proposta não encontrada.'};const p=P[o.pid],b=clubeDe(o.from); // #355: a proposta pode ser de um clube europeu
   const e=emprestado(o.pid);if(e)return e;
+  const m=saidaAbaixoDoMinimo(userClub(),p);if(m)return {erro:m}; // #410: vale para venda e empréstimo; antes dos 16, que esconderia a posição
   if(userClub().players.length<=16)return {erro:'Seu elenco ficaria pequeno demais (mínimo 16).'};
-  const m=saidaAbaixoDoMinimo(userClub(),p);if(m)return {erro:m}; // #410: vale para venda e empréstimo
   // #376: a vaga vale para venda e empréstimo (a oferta dura 3 rodadas, e o clube pode ter enchido o elenco)
   if(b.players.length>=32){recusarOferta(oid);return {erro:`${b.name} ficou sem vaga no elenco e desistiu ${o.emprestimo?'do empréstimo':'da proposta'}.`}}
   if(o.emprestimo){ // #142: proposta de empréstimo da IA por um jogador da lista do técnico
@@ -154,8 +154,8 @@ export const valorVendaRapida=pid=>Math.round(P[pid].value*0.7*10)/10;
 export function venderJa(pid){
   const e=emprestado(pid);if(e)return e;
   const p=P[pid],uc=userClub();
-  if(uc.players.length<=16)return {erro:'Seu elenco ficaria pequeno demais (mínimo 16).'};
   const m=saidaAbaixoDoMinimo(uc,p);if(m)return {erro:m}; // #410
+  if(uc.players.length<=16)return {erro:'Seu elenco ficaria pequeno demais (mínimo 16).'};
   const amt=valorVendaRapida(pid),vagas=S.clubs.filter(c=>!ehHumano(c)&&c.players.length<32),comCaixa=vagas.filter(c=>c.balance>=amt);
   const b=pick(comCaixa.length?comCaixa:vagas); // venda rápida sempre sai; quem tem caixa paga (#103)
   addFin(`Venda de ${p.name} (${b.name})`,amt);if(b.balance>=amt)caixaIA(b,-amt);movePlayer(p,b);addNews(`💰 ${p.name} vendido ao ${b.name} por ${money(amt)}.`);return {ok:true};
