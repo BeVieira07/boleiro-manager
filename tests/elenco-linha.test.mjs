@@ -20,7 +20,7 @@ test('os botões de um jogador ficam juntos numa única .acoes, com os rótulos 
   j.run(`newGame('${clubeDaSerie(j)}')`);
   j.run('userClub().players[0].contrato=1'); // pede renovação
   j.run('go("elenco")');
-  const linha = j.html().split('<tr class="').find(l => l.includes('Renovar'));
+  const linha = j.html().split('<tr class="').slice(1).find(l => l.includes('Renovar')); // slice: o aviso de contratos (#426) também tem "Renovar todos"
   assert.ok(linha, 'achou uma linha com renovação');
   const acoes = linha.match(/<div class="acoes">([\s\S]*?)<\/div><\/td>/)[1];
   for (const rotulo of ['Renovar', 'Pôr à venda', 'Vender já', 'Pôr para empréstimo']) assert.ok(acoes.includes(rotulo), `${rotulo} na mesma .acoes`);

@@ -1264,3 +1264,4 @@ body.em-jogo .avisos{bottom:24px}
 .comp-historia dd{margin:0;min-width:0}
 .comp-historia ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
 @media(min-width:1000px){.comp-corpo{grid-template-columns:minmax(0,1fr) minmax(300px,360px)}}
+.elenco-contratos{margin-bottom:var(--e4)}

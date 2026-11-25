@@ -179,3 +179,46 @@ test('liga: renovar pelo servidor confere o dono do jogador', async () => {
   const r = acaoMercadoLiga(s, 'local', { tipo: 'renovar', pid: meu.id });
   assert.equal(typeof r.ok, 'boolean');
 });
+
+// #426: aviso dos contratos que acabam e renovar todos de uma vez
+test('renovar todos: propõe a cada renovável, resume quem renovou e quem recusou, e quem recusou espera a rodada', () => {
+  const j = novo();
+  const r = j.run(`(()=>{const uc=userClub();uc.balance=500;for(const p of uc.players)p.contrato=3;
+    const alvo=uc.players.slice(0,6);alvo.forEach((p,i)=>p.contrato=i<4?1:2);
+    const antes=renovaveis().map(p=>p.id),r=renovarTodos();
+    return {antes,alvo:alvo.map(p=>p.id),r:{ok:r.ok,msg:r.msg,renovaram:r.renovaram.length,recusaram:r.recusaram.length},
+      depois:renovaveis().map(p=>p.id),contratos:alvo.map(p=>p.contrato),de_novo:renovarTodos()}})()`);
+  assert.deepEqual(r.antes.sort(), r.alvo.sort(), 'só quem tem até 2 temporadas');
+  assert.equal(r.r.renovaram + r.r.recusaram, 6);
+  assert.ok(r.r.renovaram > 0);
+  assert.match(r.r.msg, /\d+ renova(u|ram)/);
+  assert.ok(r.contratos.filter(c => c > 2).length === r.r.renovaram, 'quem renovou ganhou temporadas');
+  assert.deepEqual(r.depois, [], 'renovados saem da lista, e quem recusou só conversa na próxima rodada');
+  assert.match(r.de_novo.erro, /Nenhum contrato para renovar agora/);
+});
+
+test('o Elenco avisa os contratos que acabam e o botão renova todos de uma vez', () => {
+  const j = novo();
+  j.run(`(()=>{for(const p of userClub().players)p.contrato=3;userClub().players[0].contrato=1;userClub().players[1].contrato=2;globalThis.nome=userClub().players[0].name;go('elenco')})()`);
+  let h = j.html();
+  assert.match(h, /<b>1 contrato acaba ao fim desta temporada<\/b>/);
+  assert.ok(h.includes(j.run('globalThis.nome')));
+  assert.match(h, /data-acao="renovarTodosUI">Renovar todos \(2\)<\/button>/);
+  j.acao('renovarTodosUI');
+  assert.match(j.alertas.at(-1), /renova|recus/);
+  assert.equal(j.run('renovaveis().length'), 0);
+  h = j.html();
+  assert.doesNotMatch(h, /Renovar todos/);
+  j.run('for(const p of userClub().players)p.contrato=3;render()');
+  assert.doesNotMatch(j.html(), /elenco-contratos/, 'sem contrato curto, sem aviso');
+  assert.deepEqual(problemasNasTelas(j, ['elenco']), []);
+});
+
+test('na liga online, renovar todos é uma ação do mercado (sorteada no servidor)', () => {
+  const j = carregarJogo();
+  const r = j.run(`(()=>{iniciarLiga([{user_id:'u1',nome:'Ana',club_id:getData().clubs.find(c=>c.division==='A').id}],['A'],DADOS_PADRAO);
+    for(const p of userClub().players)p.contrato=3;userClub().players[0].contrato=1;
+    const r=acaoMercadoLiga(JSON.parse(JSON.stringify(S)),'u1',{tipo:'renovarTodos'});return {r,contrato:userClub().players[0].contrato,renRound:userClub().players[0].renRound}})()`);
+  assert.equal(r.r.erro, undefined);
+  assert.ok(r.contrato > 1 || r.renRound, 'renovou ou recusou');
+});
