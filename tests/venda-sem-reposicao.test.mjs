@@ -19,8 +19,7 @@ test('venderJa recusa a saída abaixo do mínimo, diz a posição e não muda na
   assert.equal(prepararMinimo(j, 'G'), 2);
   const r = j.run(`(()=>{const uc=userClub(),p=uc.players.find(x=>x.pos==='G');globalThis.antes=[uc.players.length,uc.balance];
     return venderJa(p.id)})()`);
-  assert.match(r.erro, /goleiros/);
-  assert.match(r.erro, /mínimo é 2/);
+  assert.match(r.erro, /precisa manter pelo menos 2 goleiros/);
   assert.deepEqual(j.run('[userClub().players.length,userClub().balance]'), j.run('globalThis.antes'));
 });
 
@@ -98,4 +97,41 @@ test('aceitarProposta entre técnicos recusa a saída abaixo do mínimo e não m
   assert.equal(r.fim, r.n);
   assert.equal(r.gsFim, 2);
   assert.equal(r.props, 1);
+});
+
+// brecha: emprestado ao clube não conta para o mínimo, senão o fim do empréstimo repõe de graça quem foi vendido
+const comEmprestados = j => j.run(`(()=>{const uc=userClub();
+  uc.players=uc.players.filter(p=>p.pos!=='G'||uc.players.filter(x=>x.pos==='G').indexOf(p)<2); // 2 goleiros próprios
+  for(const ia of S.clubs.filter(c=>!ehHumano(c)).slice(0,3)){const g=ia.players.find(p=>p.pos==='G');
+    movePlayer(g,uc,true);loans().push({pid:g.id,from:ia.id,to:uc.id,until:99,payer:'to',buy:null})}
+  return uc.players.filter(p=>p.pos==='G').length})()`);
+
+test('emprestado ao clube não conta: venda, oferta e proposta entre técnicos são recusadas', () => {
+  const j = novo();
+  assert.equal(comEmprestados(j), 5);
+  const r = j.run(`(()=>{const uc=userClub(),p=uc.players.find(x=>x.pos==='G'&&!loanOf(x.id)),b=S.clubs.find(c=>!ehHumano(c));b.balance=999;
+    tec().offers.push({id:'o1',pid:p.id,from:b.id,amount:2,until:S.round+3});
+    const n=uc.players.length;
+    return {v:venderJa(p.id),o:aceitarOferta('o1'),l:loanCheck(p,uc,b),n,fim:uc.players.length}})()`);
+  for (const e of [r.v.erro, r.o.erro, r.l]) { assert.match(e, /precisa manter pelo menos 2 goleiros\. Jogadores emprestados não contam/); }
+  assert.equal(r.fim, r.n);
+});
+
+test('proposta entre técnicos também ignora o emprestado; e o fim do empréstimo não cria jogador', () => {
+  const j = carregarJogo();
+  const a = clubeDaSerie(j, 'A', 2), b = clubeDaSerie(j, 'B', 4);
+  j.run(`criarJogo([{id:'ana',nome:'Ana',clubId:'${a}'},{id:'bia',nome:'Bia',clubId:'${b}'}],getData())`);
+  const r = j.run(`(()=>{const ca=clubById('${a}'),cb=clubById('${b}');cb.balance=999;
+    ca.players=ca.players.filter(p=>p.pos!=='G'||ca.players.filter(x=>x.pos==='G').indexOf(p)<2);
+    const g0=ca.players.find(p=>p.pos==='G');
+    for(const ia of S.clubs.filter(c=>!ehHumano(c)).slice(0,2)){const g=ia.players.find(p=>p.pos==='G');
+      movePlayer(g,ca,true);loans().push({pid:g.id,from:ia.id,to:ca.id,until:99,payer:'to',buy:null})}
+    S.propostas=[{id:'pp1',de:'bia',para:'ana',pid:g0.id,negocio:'transferencia',valor:1,r:0}];usarTecnico('ana');
+    const e=aceitarProposta('pp1');
+    const total=ca.players.length;
+    for(const l of [...loans()])endLoan(l,true); // fim dos empréstimos
+    return {e,gs:ca.players.filter(p=>p.pos==='G').length,total,fim:ca.players.length,perdidos:total-ca.players.length}})()`);
+  assert.match(r.e.erro, /emprestados não contam/);
+  assert.equal(r.gs, 2);
+  assert.equal(r.fim, r.total - 2); // só saíram os 2 emprestados, nada foi criado
 });

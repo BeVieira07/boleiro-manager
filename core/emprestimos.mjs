@@ -61,7 +61,7 @@ export function loanCheck(p,lender,borrower){
   return null;
 }
 export function startLoan(l){
-  const p=P[l.pid];movePlayer(p,clubById(l.to),true); // movePlayer garante o elenco mínimo de quem cedeu
+  const p=P[l.pid];movePlayer(p,clubById(l.to),true); // movePlayer só completa o elenco de quem cedeu se for clube da IA; o do técnico já foi barrado por saidaAbaixoDoMinimo
   loans().push(l);
   const msg=`🤝 ${p.name} emprestado do ${clubeDe(l.from).name} ao ${clubById(l.to).name} ${fimTxt(l)}.`;
   addNews(msg,l.from);addNews(msg,l.to); // para os técnicos dos dois clubes (clube da IA: descarta)
