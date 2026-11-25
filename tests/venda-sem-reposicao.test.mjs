@@ -135,3 +135,24 @@ test('proposta entre técnicos também ignora o emprestado; e o fim do emprésti
   assert.equal(r.gs, 2);
   assert.equal(r.fim, r.total - 2); // só saíram os 2 emprestados, nada foi criado
 });
+
+// #355: a mesma regra com os clubes europeus
+test('proposta de clube europeu respeita o mínimo, e goleiro emprestado da Europa não conta', () => {
+  const j = carregarJogo({ boot: true, europa: true });
+  j.run(`newGame('${clubeDaSerie(j)}')`);
+  const r = j.run(`(()=>{const uc=userClub();
+    uc.players=uc.players.filter(p=>p.pos!=='G'||uc.players.filter(x=>x.pos==='G').indexOf(p)<2);
+    const eu=clubesEuropa()[0],emp=eu.players.find(p=>p.pos==='G');
+    startLoan({pid:emp.id,from:eu.id,to:uc.id,fim:UM_ANO()});
+    const p=uc.players.find(x=>x.pos==='G'&&!loanOf(x.id)),b=clubesEuropa()[1];
+    tec().offers.push({id:'eu1',pid:p.id,from:b.id,amount:5,until:S.round+3});
+    const antes=[uc.players.length,uc.balance,b.players.length];
+    const e=aceitarOferta('eu1');
+    const depois=[uc.players.length,uc.balance,b.players.length];
+    endLoan(loanOf(emp.id),true);
+    return {e,antes,depois,gs:uc.players.filter(x=>x.pos==='G').length,fim:uc.players.length}})()`);
+  assert.match(r.e.erro, /pelo menos 2 goleiros\. Jogadores emprestados não contam/);
+  assert.deepEqual(r.depois, r.antes);
+  assert.equal(r.gs, 2);
+  assert.equal(r.fim, r.antes[0] - 1);
+});
