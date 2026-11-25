@@ -54,7 +54,7 @@ test('a Copa exibe na tela e na notícia o mesmo prêmio de título creditado pa
     const r = j.run(`(()=>{
     const c=userClub(),adv=S.clubs.find(x=>x!==c),jogo={h:c.id,a:adv.id,ida:{h:20,a:0}};
     S.copa={datas:[0,1],fases:[{jogos:[jogo]}],campeao:null,gols:{},temporada:S.season};
-    const exibido=vCopa();
+    const exibido=conteudoCopa();
     jogarCopa(1);
     return {exibido,noticia:tec().news.find(n=>n.t.includes('Premiação:')).t,
       credito:c.fin.find(f=>f.desc==='Copa do Brasil: título').amount,premio:premioCopa(1,divOf(c)),texto:money(premioCopa(1,divOf(c)),3)};
@@ -92,7 +92,7 @@ test('estadual, Libertadores e liga creditam o valor exibido em uma mesma tempor
     const estadual=premioEstadual('campeao',div), continental=premioContinental('libertadores','grupos',div);
     tor.final={h:c.id,a:adv,ida:{h:20,a:0},jogo:{h:adv,a:c.id,hg:0,ag:0,final:'volta',ev:[]}};
     S.estaduais={temporada:S.season,datas:2,dia:2,pendente:1,torneios:[{...tor,rodadas:[]}]};
-    const telas=[vEstadual().includes(money(estadual,3)),vLibertadores().includes(money(continental,3))];
+    const telas=[conteudoEstadual(S.estaduais.torneios[0]).includes(money(estadual,3)),conteudoTorneio('libertadores').includes(money(continental,3))];
     jogarPreTemporada();
     jogarContinentais(S.continentais.datas[0]);
     const liga=fecharTemporada().prize;

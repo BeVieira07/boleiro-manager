@@ -2,7 +2,6 @@
 import { TORNEIOS, agregadoCont, clubeCont, dataCont, jogosDaDataCont, premioContinental, tabelaGrupoCont, torneioContDe } from '../../core/continental.mjs';
 import { S, divOf, tec } from '../../core/estado.mjs';
 import { esc, money } from '../../core/utils.mjs';
-import { artilhariaDoTorneio } from './artilharia.mjs';
 import { crest, detalhePenaltis } from '../partida/partida.mjs';
 
 const C = () => S.continentais && S.continentais.temporada === S.season ? S.continentais : null;
@@ -23,7 +22,7 @@ export function jogosContinentais(r) {
   const me = tec().clubId, d = dataCont(k);
   return c.torneios.map(tor => {
     const gs = jogosDaDataCont(tor, k); if (!gs.length) return '';
-    return `<section class="fase-copa"><div class="card-topo"><h2 class="t3">${esc(tor.nome)} · ${esc(d.nome)}</h2><button class="btn fantasma sm" data-acao="go|${tor.id}">Ver a ${esc(tor.nome)}</button></div>
+    return `<section class="fase-copa"><div class="card-topo"><h2 class="t3">${esc(tor.nome)} · ${esc(d.nome)}</h2><button class="btn fantasma sm" data-acao="verCompeticao|${tor.id}">Ver a ${esc(tor.nome)}</button></div>
       <ul class="jogos">${meusPrimeiro(gs, me).map(g => jogo(g, me, detalhePenaltis(g.pen, clubeCont(g.h), clubeCont(g.a)))).join('')}</ul></section>`;
   }).join('');
 }
@@ -36,25 +35,17 @@ function semVaga(cfg) {
     : 'Seu clube não se classificou. Vão os 7 seguintes da Série A, depois das vagas da Libertadores.';
 }
 
-const FASES = ['Oitavas', 'Quartas', 'Semifinal']; // nome curto da fase do mata-mata, na ordem de tor.fases
+// próximo jogo do seu clube na copa, para o próximo compromisso do técnico (#102; #409)
 const cartaoDe = cfg => ({
-  id: cfg.id, nome: cfg.nome, tela: cfg.id,
+  id: cfg.id, nome: cfg.nome,
   cartao() {
-    const tor = doTorneio(cfg.id), me = tec().clubId, base = { sigla: cfg.id.slice(0, 3).toUpperCase(), tom: cfg.id === 'sulamericana' ? 'ok' : '' };
-    if (!tor || !torneioContDe(me, cfg.id)) return { ...base, fora: semVaga(cfg) };
-    const k = proximaData(), g = tor.grupos.find(x => x.includes(me)), pos = tabelaGrupoCont(tor, g).findIndex(t => t.id === me) + 1, fase = tor.fases[tor.fases.length - 1];
-    const vivo = tor.final ? tor.final.h === me || tor.final.a === me : fase ? fase.jogos.some(j => (j.h === me || j.a === me) && (!j.v || j.v === me)) : true;
-    const [fas, destaque, status] = tor.campeao === me ? ['Encerrada', 'Campeão', ['Título conquistado', 'ok']]
-      : tor.campeao ? ['Encerrada', 'Encerrada', ['Eliminado', 'erro']]
-      : tor.final || fase ? ['Mata-mata', tor.final ? 'Final' : FASES[tor.fases.length - 1], vivo ? ['Na disputa', 'ok'] : ['Eliminado', 'erro']]
-      : [`Fase de grupos · Grupo ${'ABCDEFGH'[tor.grupos.indexOf(g)]}`, `${pos}º de ${g.length}`, pos <= 2 ? ['Classificando (2 passam)', 'ok'] : ['Fora da classificação', 'erro']];
+    const tor = doTorneio(cfg.id), me = tec().clubId, k = tor && !tor.campeao && torneioContDe(me, cfg.id) ? proximaData() : null;
     let proximo = null;
-    for (let j = k; k != null && !tor.campeao && j < S.continentais.datas.length && !proximo; j++) {
+    for (let j = k; k != null && j < S.continentais.datas.length && !proximo; j++) {
       const x = jogosDaDataCont(tor, j).find(y => (y.h === me || y.a === me) && y.hg == null);
       if (x) proximo = { rot: 'Rod.', n: S.continentais.datas[j] + 1, h: x.h, a: x.a, nomeAdv: clubeCont(x.h === me ? x.a : x.h).name, perna: dataCont(j).volta === undefined ? '' : dataCont(j).volta ? 'volta' : 'ida', ordem: S.continentais.datas[j] + 1 };
     }
-    return { ...base, fase: fas, destaque, status, proximo, botao: tor.final || fase ? 'Chaveamento' : 'Grupo',
-      semProximo: tor.campeao ? 'Competição encerrada' : !vivo ? 'Seu clube foi eliminado' : 'Aguardando a próxima fase' };
+    return { proximo };
   }
 });
 /** Cartões da aba Competições (#102). */
@@ -84,16 +75,15 @@ function mataMata(tor, me) {
       return jogo({ h: j.h, a: j.a, hg: j.ida ? t.h : null, ag: j.ida ? t.a : null }, me, det) }).join('')}</ul></section>`));
   return sec.reverse().join('');
 }
-function vTorneio(id) {
-  const cfg = TORNEIOS.find(t => t.id === id), tor = doTorneio(id), me = tec().clubId, voltar = '<p><button class="btn fantasma sm" data-acao="go|competicoes">← Competições</button></p>';
-  if (!tor) return `${voltar}<section class="card"><h2 class="t3">${esc(cfg.nome)}</h2><p class="muted">${semVaga(cfg)}</p></section>`;
+/** #409: grupos e mata-mata da Libertadores ou da Sul-Americana, na página Competições. */
+export function conteudoTorneio(id) {
+  const cfg = TORNEIOS.find(t => t.id === id), tor = doTorneio(id), me = tec().clubId;
+  if (!tor) return `<section class="card"><h2 class="t3">${esc(cfg.nome)}</h2><p class="muted">${semVaga(cfg)}</p></section>`;
   const premio = etapa => money(premioContinental(id, etapa, divOf(clubeCont(me))), 3);
   const premios = !tor.campeao && torneioContDe(me, id)
     ? `Prêmios para seu clube por etapa: ${premio('grupos')} pela fase de grupos, ${premio('oitavas')} pelas oitavas, ${premio('quartas')} pelas quartas, ${premio('semi')} pela semifinal e ${premio('titulo')} pelo título.` : '';
-  return `${voltar}<p class="muted resumo">32 clubes em 8 grupos de 4 (ida e volta); os dois primeiros de cada grupo vão às oitavas. Mata-mata em ida e volta e final em jogo único, junto com as rodadas do Brasileirão.
+  return `<p class="muted resumo">32 clubes em 8 grupos de 4 (ida e volta); os dois primeiros de cada grupo vão às oitavas. Mata-mata em ida e volta e final em jogo único, junto com as rodadas do Brasileirão.
     ${premios}
     ${tor.campeao ? `Campeão: <b>${esc(clubeCont(tor.campeao).name)}</b>.` : ''}</p>
-    ${mataMata(tor, me)}${tabelasContinental(tor, me)}${artilhariaDoTorneio(tor, id)}`;
+    ${mataMata(tor, me)}${tabelasContinental(tor, me)}`;
 }
-export const vLibertadores = () => vTorneio('libertadores');
-export const vSulamericana = () => vTorneio('sulamericana');

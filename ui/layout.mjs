@@ -12,19 +12,18 @@ import { render } from './telas.mjs';
 const SECOES = [
   { rotulo: 'Clube', icone: 'clube', abas: [['clube', 'Painel'], ['financas', 'Finanças'], ['tecnico', 'Carreira']] },
   { rotulo: 'Time', icone: 'elenco', abas: [['elenco', 'Elenco'], ['escalacao', 'Escalação'], ['base', 'Base']] },
-  { rotulo: 'Temporada', icone: 'trofeu', abas: [['jogos', 'Jogos'], ['tabela', 'Classificação'], ['competicoes', 'Competições'], ['artilharia', 'Artilharia']] },
+  { rotulo: 'Temporada', icone: 'trofeu', abas: [['jogos', 'Jogos'], ['competicoes', 'Competições']] },
   { rotulo: 'Mercado', icone: 'mercado', tela: 'mercado' }
 ];
 // #360: no computador, todas as telas numa lista só, na barra lateral (no celular ficam as seções e as abas)
 const TELAS_LATERAL = [['clube', 'Clube', 'clube'], ['elenco', 'Elenco', 'elenco'], ['escalacao', 'Escalação', 'escalacao'],
-  ['base', 'Base', 'subir'], ['jogos', 'Jogos', 'jogos'], ['tabela', 'Classificação', 'tabela'], ['competicoes', 'Competições', 'trofeu'],
-  ['artilharia', 'Artilharia', 'artilharia'], ['mercado', 'Mercado', 'mercado'], ['financas', 'Finanças', 'financas'], ['tecnico', 'Carreira', 'escudo']];
+  ['base', 'Base', 'subir'], ['jogos', 'Jogos', 'jogos'], ['competicoes', 'Competições', 'trofeu'],
+  ['mercado', 'Mercado', 'mercado'], ['financas', 'Finanças', 'financas'], ['tecnico', 'Carreira', 'escudo']];
 const ABA_POR_TELA = {
-  copa: 'competicoes', estadual: 'competicoes', libertadores: 'competicoes', sulamericana: 'competicoes',
   rodada: 'jogos', aovivo: 'jogos', carreira: 'clube'
 };
 
-export const TITULOS = { liga: 'Liga', clube: 'Painel do clube', elenco: 'Elenco', escalacao: 'Escalação', base: 'Base', jogos: 'Jogos', tabela: 'Classificação', competicoes: 'Competições', copa: 'Copa do Brasil', libertadores: 'Libertadores', sulamericana: 'Sul-Americana', estadual: 'Estadual', artilharia: 'Artilharia', mercado: 'Mercado', financas: 'Finanças', tecnico: 'Carreira', config: 'Configurações', carreira: 'Propostas de clubes', rodada: 'Resultados da rodada', aovivo: 'Rodada ao vivo' };
+export const TITULOS = { liga: 'Liga', clube: 'Painel do clube', elenco: 'Elenco', escalacao: 'Escalação', base: 'Base', jogos: 'Jogos', competicoes: 'Competições', mercado: 'Mercado', financas: 'Finanças', tecnico: 'Carreira', config: 'Configurações', carreira: 'Propostas de clubes', rodada: 'Resultados da rodada', aovivo: 'Rodada ao vivo' };
 
 function marca() {
   return '<div class="marca" role="img" aria-label="Boleiro Manager"><img src="img/figma/marca-jogo.svg" alt="" width="34" height="34"><div aria-hidden="true"><span class="marca-nome">Boleiro</span><span class="marca-sub">Manager</span></div></div>';

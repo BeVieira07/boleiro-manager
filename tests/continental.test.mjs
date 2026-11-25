@@ -65,19 +65,20 @@ test('na temporada seguinte, a Libertadores leva os 6 primeiros da Série A e o 
 test('telas: cartões em Competições, jogos da rodada e o clube fora das copas', () => {
   const j = novo();
   const datas = JSON.parse(j.run('JSON.stringify(S.continentais.datas)'));
-  j.run(`go('competicoes')`);
-  assert.match(j.html(), /Libertadores/); assert.match(j.html(), /Sul-Americana/);
-  assert.match(j.html(), /Rod\. \d+ · x /);
+  j.acao('compAba|internacional'); // #409: as duas copas ficam na aba Internacional de Competições
+  assert.match(j.html(), /<option value="libertadores"[^>]*>Libertadores/); assert.match(j.html(), /<option value="sulamericana"[^>]*>Sul-Americana/);
+  assert.match(j.html(), /<tr class="me">/, 'o clube aparece no grupo da copa que disputa');
   j.run(`go('jogos')`); j.acao(`verRodadaJogos|${datas[0]}`);
   assert.match(j.html(), /Libertadores · Fase de grupos, rodada 1/);
   assert.match(j.html(), /Sul-Americana · Fase de grupos, rodada 1/);
   // clube da Série D: fora das duas
   const k = carregarJogo({ boot: true, continentais: true }); k.run(`newGame(getData().clubs.find(c=>c.division==='D').id)`);
-  k.run(`go('competicoes')`);
-  assert.match(k.html(), /não se classificou/);
+  k.acao('compAba|internacional');
+  assert.doesNotMatch(k.html(), /<tr class="me">/);
   // save de antes da #133: sem copas até a próxima temporada
   k.run('S.continentais=null;go("libertadores")');
-  assert.match(k.html(), /começam na próxima/);
+  assert.equal(k.run('ui.view'), 'competicoes');
+  assert.match(k.html(), /disabled title="Não há copas sul-americanas nesta temporada.">Internacional/);
   assert.deepEqual(problemasNasTelas(k, ['competicoes', 'libertadores', 'jogos']), []);
 });
 

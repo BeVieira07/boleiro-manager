@@ -7,17 +7,16 @@ import { escalarMelhores } from '../core/escalacao.mjs';
 import { DIVS, MOVE_N, S, clubById, divOf, divisions, hasTwoDivs, table, tec, tvQuota, userClub } from '../core/estado.mjs';
 import { clamp, esc, money } from '../core/utils.mjs';
 import { formaRecente, vClube } from './clube/clube.mjs';
-import { proximoCompromisso, vCompeticoes } from './temporada/competicoes.mjs';
-import { jogosContinentais, tabelasContinental, vLibertadores, vSulamericana } from './temporada/continental.mjs';
-import { jogosCopa, vCopa } from './temporada/copa.mjs';
-import { jogosEstadual, proximoEstadual, rotuloRodada, tabelasEstadual, vEstadual } from './temporada/estadual.mjs';
-import { barra, chip, seletorCompeticao, stat, tag } from './componentes.mjs';
+import { proximoCompromisso, telaDeCompeticao, vCompeticoes, verCompeticao } from './temporada/competicoes.mjs';
+import { jogosContinentais } from './temporada/continental.mjs';
+import { jogosCopa } from './temporada/copa.mjs';
+import { jogosEstadual, proximoEstadual, rotuloRodada } from './temporada/estadual.mjs';
+import { barra, chip, stat, tag } from './componentes.mjs';
 import { encerrarVivo, vAoVivo, vivoAtivo } from './partida/aovivo.mjs';
-import { vArt } from './temporada/artilharia.mjs';
 import { vBase } from './clube/base.mjs';
 import { vElenco } from './clube/elenco.mjs';
 import { vEscalacao } from './clube/escalacao.mjs';
-import { chaveJogoAtual, save, ui } from './estado.mjs';
+import { save, ui } from './estado.mjs';
 import { vInicio } from './inicio/escolha.mjs';
 import { icone } from './icones.mjs';
 import { TITULOS, barraAcoes, lateral } from './layout.mjs';
@@ -44,6 +43,7 @@ const ROLAVEIS='.tabela-rolavel,.tw,.nav-resto';
 let telaDesenhada=null;
 export function render(){
   if(!S&&!['inicio','landing','ligas','lobby','config'].includes(ui.view))ui.view='menu';
+  if(S&&telaDeCompeticao(ui.view))ui.view='competicoes'; // #409: Classificação, Artilharia e as telas de cada copa viraram a página Competições
   if(S&&!TITULOS[ui.view])ui.view='clube';
   if(S&&tec()&&tec().demitido&&!['carreira','tecnico','config'].includes(ui.view)&&!(ui.view==='aovivo'&&vivoAtivo()))ui.view='carreira'; // #37: sem clube, primeiro escolher o novo; #370: depois de ver o jogo da rodada em que foi demitido
   const mesma=telaDesenhada===ui.view;
@@ -55,7 +55,7 @@ export function render(){
   const selecao=typeof at?.selectionStart==='number'?[at.selectionStart,at.selectionEnd]:null;
   document.body.classList.toggle('em-jogo',!!S);
   document.getElementById('lateral').innerHTML=lateral();
-  const V={menu:vMenu,landing:vLanding,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,base:vBase,tabela:vTabela,competicoes:vCompeticoes,copa:vCopa,libertadores:vLibertadores,sulamericana:vSulamericana,estadual:vEstadual,jogos:vJogos,artilharia:vArt,mercado:vMercado,financas:vFin,tecnico:vTecnico,rodada:vRodada,aovivo:vAoVivo,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
+  const V={menu:vMenu,landing:vLanding,inicio:vInicio,clube:vClube,elenco:vElenco,escalacao:vEscalacao,base:vBase,competicoes:vCompeticoes,jogos:vJogos,mercado:vMercado,financas:vFin,tecnico:vTecnico,rodada:vRodada,aovivo:vAoVivo,ligas:vLigas,lobby:vLobby,liga:vLigaJogo,config:vConfig,carreira:vCarreira};
   const topo=S?barraAcoes(TITULOS[ui.view]):['menu','inicio','landing'].includes(ui.view)?'':`<div class="topo-simples"><button class="btn fantasma" data-acao="go|menu">${icone('voltar')}Tela inicial</button></div>`;
   document.getElementById('app').innerHTML=topo+V[ui.view]();
   if(pag){
@@ -83,7 +83,7 @@ export function jogoCard(g,me){
     <span class="jogo-placar">${feito?`${g.hg}<span aria-hidden="true"> x </span><span class="sr"> a </span>${g.ag}`:'<span class="muted">x</span>'}</span>
     <span class="jogo-time fora ${v(g.ag,g.hg)}">${crest(A)} <span>${esc(A.name)}</span></span></li>`;
 }
-const listaJogos=(gs,me)=>gs.length?`<ul class="jogos">${[...gs].sort((a,b)=>(b.h===me||b.a===me)-(a.h===me||a.a===me)).map(g=>jogoCard(g,me)).join('')}</ul>`:'<p class="muted">Nenhum jogo nesta série.</p>';
+export const listaJogos=(gs,me)=>gs.length?`<ul class="jogos">${[...gs].sort((a,b)=>(b.h===me||b.a===me)-(a.h===me||a.a===me)).map(g=>jogoCard(g,me)).join('')}</ul>`:'<p class="muted">Nenhum jogo nesta série.</p>';
 function cartaoProximoJogo() {
   const p = proximoCompromisso();
   if (!p) return '<section class="card figma-jogo-seguinte"><h2 class="t3">Próximo jogo do clube</h2><p class="muted">Nenhum jogo agendado.</p></section>';
@@ -119,7 +119,7 @@ export function zonas(d){
   const two=hasTwoDivs(),mv=two?MOVE_N():4,ds=divisions(),di=ds.indexOf(d),last=di===ds.length-1,top=di===0?6:mv,bottom=!two?4:last?0:mv;
   return {top,bottom,nomeTop:di===0?'Libertadores (G6)':`Acesso à ${DIVS[ds[di-1]]} (G${mv})`,nomeBottom:bottom?`Rebaixamento${two?' para a '+DIVS[ds[di+1]]:''} (Z${bottom})`:''};
 }
-function legendaLiga(d) {
+export function legendaLiga(d) {
   const { bottom, nomeTop, nomeBottom } = zonas(d);
   return `<div class="legenda"><span><i class="zona-cor lib" aria-hidden="true"></i>${esc(nomeTop)}</span>
     ${bottom ? `<span><i class="zona-cor z4" aria-hidden="true"></i>${esc(nomeBottom)}</span>` : ''}</div>`;
@@ -131,7 +131,7 @@ function formaNaTabela(id) {
   return jogos.length ? `<span class="figma-forma">${jogos.map(j => `<span class="bola-forma ${j.res}" title="${nomes[j.res]} contra ${esc(j.adv.name)}"><span aria-hidden="true">${j.res}</span><span class="sr">${nomes[j.res]} contra ${esc(j.adv.name)}</span></span>`).join('')}</span>` : '—';
 }
 
-function tabelaLiga(d, me) {
+export function tabelaLiga(d, me) {
   const T = table(d), { top, bottom, nomeTop, nomeBottom } = zonas(d), total = S.fixtures.length;
   const zona = i => i < top ? ['zona-lib', nomeTop] : bottom && i >= T.length - bottom ? ['zona-z4', nomeBottom] : ['', ''];
   const rodada = total ? `Rodada ${Math.min(S.round + 1, total)} de ${total}` : 'Sem jogos agendados';
@@ -153,29 +153,7 @@ function tabelaLiga(d, me) {
     }).join('')}</tbody></table></div></section>`;
 }
 
-export function verClassificacao(id) {
-  ui.classifComp[chaveJogoAtual()] = id;
-  render();
-}
-
-export function vTabela() {
-  const me = tec().clubId;
-  const torneiosDaTemporada = estado => estado?.temporada === S.season ? estado.torneios.filter(t => t.grupos.length) : [];
-  const grupos = [
-    ['Liga', divisions().map(id => ({ id, nome: DIVS[id], tabela: () => tabelaLiga(id, me) }))],
-    ['Estaduais', torneiosDaTemporada(S.estaduais).map(t => ({ id: 'estadual-' + t.uf, nome: t.nome, tabela: () => tabelasEstadual(t, me) }))],
-    ['Continentais', torneiosDaTemporada(S.continentais).map(t => ({ id: t.id, nome: t.nome, tabela: () => tabelasContinental(t, me) }))]
-  ].filter(([, competicoes]) => competicoes.length);
-  const opcoes = grupos.flatMap(([, competicoes]) => competicoes);
-  const atual = opcoes.find(c => c.id === ui.classifComp[chaveJogoAtual()]) || opcoes.find(c => c.id === divOf(userClub()));
-  const liga = divisions().includes(atual.id);
-  return `<div class="figma-classificacao"><div class="figma-classificacao-controles classif-filtros">
-    <div class="art-selects">${seletorCompeticao('classifCompeticao', 'verClassificacao', grupos, atual.id)}</div>
-    ${liga ? legendaLiga(atual.id) : ''}
-  </div>
-  ${liga ? '' : `<div class="art-titulo"><h2>${esc(atual.nome)} ${S.season}</h2><span class="muted">Fase de grupos</span></div>`}
-  ${atual.tabela()}</div>`;
-}
+export const verClassificacao = id => verCompeticao(id); // #409
 
 /* ---------- finanças ---------- */
 function resumoDespesas(lancamentos) {

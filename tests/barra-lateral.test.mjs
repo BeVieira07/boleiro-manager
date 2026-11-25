@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { carregarJogo, clubeDaSerie } from './jogo.mjs';
 
-const TELAS = ['clube', 'elenco', 'escalacao', 'base', 'jogos', 'tabela', 'competicoes', 'artilharia', 'mercado', 'financas', 'tecnico'];
+const TELAS = ['clube', 'elenco', 'escalacao', 'base', 'jogos', 'competicoes', 'mercado', 'financas', 'tecnico'];
 const lista = html => html.split('class="nav-lateral"')[1]?.split('</nav>')[0];
 
 test('barra lateral: todas as telas, a atual com aria-current, e cada botão abre a sua tela', () => {
@@ -18,7 +18,7 @@ test('barra lateral: todas as telas, a atual com aria-current, e cada botão abr
     assert.deepEqual([...lateral.matchAll(/data-acao="go\|(\w+)"/g)].map(m => m[1]), TELAS);
     assert.deepEqual([...lateral.matchAll(/data-acao="go\|(\w+)" aria-current="page"/g)].map(m => m[1]), [tela]);
   }
-  j.acao('go|copa'); // telas de dentro de uma seção marcam o item dela
+  j.acao('go|copa'); // #409: a tela antiga da copa abre Competições, que fica marcada
   assert.match(lista(j.run('lateral()')), /go\|competicoes" aria-current="page"/);
 });
 

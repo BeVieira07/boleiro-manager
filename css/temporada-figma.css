@@ -1,5 +1,5 @@
 /* Finanças e telas da temporada e do mercado. A base compartilhada fornece cores e fontes. */
-.figma-financas-corpo, .figma-artilharia .art-corpo {
+.figma-financas-corpo {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   align-items: start;
@@ -71,7 +71,7 @@
 
 .figma-despesas li b { flex: none; color: var(--texto2); font-size: 12px; }
 
-.figma-rodada-controles, .figma-classificacao-controles, .figma-art-controles {
+.figma-rodada-controles {
   display: flex;
   align-items: end;
   justify-content: space-between;
@@ -80,8 +80,7 @@
   margin-bottom: var(--e5);
 }
 
-.figma-rodada-controles .navega-rodada, .figma-rodada-controles .abas,
-.figma-classificacao-controles .legenda, .figma-art-controles .art-titulo { margin: 0; }
+.figma-rodada-controles .navega-rodada, .figma-rodada-controles .abas { margin: 0; }
 .figma-rodada-controles .navega-rodada > b {
   font: 700 26px/1 var(--f-titulo);
   text-transform: uppercase;
@@ -109,11 +108,6 @@
 .figma-confronto .club:first-child { justify-self: end; }
 .figma-versus { font: 700 30px/1 var(--f-titulo); color: var(--muted); }
 
-.figma-classificacao-controles .art-campo, .figma-art-controles .art-campo {
-  min-width: min(100%, 15rem);
-  max-width: 100%;
-}
-
 .figma-tabela-liga > .card-topo { justify-content: space-between; gap: var(--e2); padding-bottom: var(--e3); }
 .figma-tabela-liga h2 { margin: 0; color: var(--ouro); font-size: 20px; text-transform: uppercase; }
 .figma-tabela-liga :is(th, td):first-child { padding-left: var(--e4); width: 1%; }
@@ -140,21 +134,8 @@
 }
 .figma-estatisticas { display: none; }
 
-.figma-competicoes .prox-jogos {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
-  list-style: none;
-  padding: 0;
-}
-.figma-competicoes .comp-linha { min-height: 91px; }
-.figma-competicoes .comp-nome h3 { margin: 0; font-size: 16px; }
-.figma-competicoes .comp-acoes > .btn { min-height: 40px; }
+.figma-tabela-liga .tw { position: relative; }
 
-.figma-artilharia .podio-card { min-height: 140px; }
-.figma-tabela-liga .tw, .figma-artilharia .art-ranking .tw { position: relative; }
-.figma-artilharia .art-ranking table { min-width: 520px; }
-.figma-artilharia .art-ranking :is(th, td):first-child { padding-left: 18px; }
-.figma-artilharia .art-ranking :is(th, td):last-child { padding-right: 18px; }
-.figma-artilharia .art-gols b { color: var(--verde-claro); }
 
 .figma-mercado .mer-abas, .figma-mercado .mer-filtros { margin-bottom: var(--e5); }
 .figma-mercado .mer-pos { flex-direction: row; flex-wrap: wrap; align-items: center; gap: var(--e3); }
@@ -190,7 +171,6 @@
   .figma-financas .stats, .figma-mercado .mer-stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .figma-financas-corpo { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
   .figma-jogos .jogos { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .figma-artilharia .art-corpo { grid-template-columns: minmax(0, 5fr) minmax(215px, 2fr); }
 }
 
 @media (max-width: 799px) {

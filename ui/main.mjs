@@ -5,9 +5,9 @@
 // `nome` precisa ser uma função exportada por algum módulo de ui/.
 import { usarEstado } from '../core/estado.mjs';
 import * as aovivo from './partida/aovivo.mjs';
-import * as artilharia from './temporada/artilharia.mjs';
 import * as avisos from './avisos.mjs';
 import * as base from './clube/base.mjs';
+import * as competicoes from './temporada/competicoes.mjs';
 import * as configuracoes from './inicio/configuracoes.mjs';
 import * as conta from './inicio/conta.mjs';
 import * as diretoria from './clube/diretoria.mjs';
@@ -35,7 +35,7 @@ import * as telas from './telas.mjs';
 import * as utils from './utils.mjs';
 
 export const acoes = Object.fromEntries(
-  [aovivo, artilharia, avisos, base, configuracoes, conta, diretoria, elenco, emprestimos, escolha, escalacao, estado, expulsao, fichaJogador, forma, landing, layout, liga, ligajogo, mercado, motor, nuvem, partida, posicoes, saves, som, taticas, telas, utils]
+  [aovivo, avisos, base, competicoes, configuracoes, conta, diretoria, elenco, emprestimos, escolha, escalacao, estado, expulsao, fichaJogador, forma, landing, layout, liga, ligajogo, mercado, motor, nuvem, partida, posicoes, saves, som, taticas, telas, utils]
     .flatMap(m => Object.entries(m)).filter(([, f]) => typeof f === 'function'));
 
 /** Executa a ação descrita em data-acao / data-mudar. */

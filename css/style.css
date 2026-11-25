@@ -773,43 +773,16 @@ body.em-jogo .avisos{bottom:24px}
 .conta-recuperar .conta-form{margin-top:8px}
 .campo-rotulo{font-size:12px;font-weight:600;color:var(--muted)}
 .conta-erro{margin:0;max-width:420px}
-.sobretitulo,.secao-titulo{margin:0 0 6px;font:600 13px/1.3 var(--f-texto);letter-spacing:.1em;text-transform:uppercase;color:var(--ouro)}
+.sobretitulo{margin:0 0 6px;font:600 13px/1.3 var(--f-texto);letter-spacing:.1em;text-transform:uppercase;color:var(--ouro)}
 .texto2{color:var(--texto2)}
 .nuvem-status{display:inline-flex;align-items:center;gap:6px;font-size:12px}
 /* #175: painel de Competições */
-.secao-titulo.fora{color:var(--muted)}
-.prox-jogos{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));margin-bottom:var(--e5)}
-.prox-jogo{display:flex;align-items:center;gap:var(--e3);background:var(--painel);border:1px solid var(--linha);border-radius:var(--r-lg);padding:var(--e3) var(--e4);min-width:0}
-.prox-jogo.primeiro{border:2px solid var(--verde)}
-.prox-jogo>div{display:flex;flex-direction:column;align-items:flex-start;gap:6px;min-width:0}
-.prox-rod{display:flex;flex-direction:column;align-items:center;justify-content:center;width:56px;height:56px;flex:none;background:var(--bg);border-radius:var(--r)}
-.prox-rod small{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.prox-rod b{font:700 28px/1 var(--f-titulo)}
-.comp-bloco{padding:0;margin-bottom:var(--e5)}
-.comp-linha{display:grid;grid-template-columns:44px minmax(0,1.3fr) minmax(0,1fr) minmax(0,1.2fr) auto;align-items:center;gap:var(--e4);padding:var(--e4) var(--e5)}
-.comp-linha+.comp-linha{border-top:1px solid var(--linha)}
 .sigla{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;border-radius:var(--r);font-size:12px;font-weight:800;background:var(--painel2);color:var(--texto2)}
 .sigla.erro{background:var(--perigo-esc);color:var(--perigo-claro)}
 .sigla.info{background:#13283f;color:#cfe4ff}
 .sigla.aviso{background:var(--ouro-esc);color:var(--ouro-claro)}
 .sigla.ok{background:var(--verde-esc);color:var(--verde-claro)}
-.comp-nome{display:flex;flex-direction:column;gap:2px;min-width:0}
-.comp-nome b{font-size:16px}
-.comp-situacao{display:flex;flex-direction:column;align-items:flex-start;gap:6px}
-.destaque-num{font:700 28px/1 var(--f-titulo)}
-.comp-proximo{display:flex;flex-direction:column;gap:2px}
 .rotulo{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.comp-acoes{display:flex;gap:var(--e2);justify-content:flex-end}
-.comp-acoes .icone{margin-left:6px}
-.comp-foras{display:flex;flex-direction:column;gap:var(--e3)}
-.comp-fora{display:grid;grid-template-columns:44px minmax(0,1fr) auto;align-items:center;gap:var(--e4);padding:var(--e4) var(--e5);border:1px dashed var(--linha2);border-radius:var(--r-lg)}
-@media(max-width:899px){
-.comp-linha{grid-template-columns:44px minmax(0,1fr);row-gap:var(--e3)}
-.comp-linha>:nth-child(n+3){grid-column:1/-1}
-.comp-acoes{justify-content:flex-start;flex-wrap:wrap}
-.comp-fora{grid-template-columns:44px minmax(0,1fr)}
-.comp-fora>.btn{grid-column:1/-1;justify-self:start}
-}
 .cartoes-acao{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
 .saves{list-style:none;margin:0;padding:0;background:var(--painel);border:1px solid var(--linha);border-radius:var(--r-lg);overflow:hidden}
 .save-linha{display:flex;align-items:center;gap:var(--e4);padding:14px 18px;flex-wrap:wrap}
@@ -1070,42 +1043,8 @@ body.em-jogo .avisos{bottom:24px}
 }
 @media(min-width:800px) and (max-width:1499px){.mercado .c-sal,.mercado thead th:nth-child(7){display:none}}
 /* ---- Artilharia (#184) ---- */
-.art-selects{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:var(--e4)}
-.art-selects .art-campo,.art-selects select{min-width:0}
-.classif-filtros .art-selects{max-width:24rem}
 .art-campo{display:flex;flex-direction:column;gap:6px;min-width:170px}
 .art-campo label,.art-rotulo{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
-.art-titulo{display:flex;flex-wrap:wrap;align-items:baseline;gap:var(--e3);margin:var(--e5) 0 var(--e3)}
-.art-titulo h2{margin:0;font-family:var(--f-titulo);font-size:28px}
-.podio{display:grid;gap:14px;grid-template-columns:repeat(3,minmax(0,1fr));margin-bottom:var(--e4)}
-.podio-card{background:var(--painel);border:1px solid var(--linha);border-radius:var(--r-lg);padding:var(--e4) 18px;display:flex;flex-direction:column;gap:var(--e3)}
-.podio-card.meu{border-color:var(--verde)}
-.podio-topo{display:flex;justify-content:space-between;align-items:center}
-.podio-gols{display:flex;align-items:baseline;gap:6px;color:var(--muted)}
-.podio-gols b{font-family:var(--f-titulo);font-size:44px;line-height:1;color:var(--texto)}
-.podio-info{display:flex;align-items:center;gap:var(--e3);min-width:0}
-.podio-info>div{display:flex;flex-direction:column;min-width:0}
-.podio-info .muted{font-size:13px}
-.medalha{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;border-radius:50%;font-family:var(--f-titulo);font-weight:700;font-size:18px;color:#10151a}
-.medalha.ouro{background:#f1c84b}
-.medalha.prata{background:#c5ccd3}
-.medalha.bronze{background:#d4924f}
-.art-corpo{display:grid;gap:14px;grid-template-columns:minmax(0,1fr);align-items:start}
-.art-ranking{padding:0}
-.art-topo{display:flex;justify-content:space-between;align-items:center;gap:var(--e3);flex-wrap:wrap;padding:var(--e4) 18px var(--e3)}
-.art-topo h3,.art-topo .t3{margin:0;color:var(--ouro);text-transform:uppercase;letter-spacing:.08em;font-size:15px}
-.art-sub{display:block;font-size:12px;color:var(--muted)}
-.art-gols{display:inline-flex;align-items:center;gap:10px;justify-content:flex-end}
-.art-gols .barra{width:48px}
-.art-lado h3,.art-lado .t3{margin:0 0 var(--e3);color:var(--ouro);text-transform:uppercase;letter-spacing:.08em;font-size:15px}
-.art-seus{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--e2)}
-.art-seus li{display:flex;justify-content:space-between;align-items:center;gap:var(--e3);background:var(--painel2);border-radius:var(--r);padding:10px 14px}
-.art-seus li>div{display:flex;flex-direction:column;min-width:0}
-.art-seus .muted{font-size:12px}
-.art-n{font-family:var(--f-titulo);font-size:24px}
-@media(min-width:900px){.art-corpo{grid-template-columns:minmax(0,1fr) 300px}}
-@media(max-width:700px){.podio{grid-template-columns:minmax(0,1fr)}.art-titulo h2{font-size:24px}}
-
 /* Ficha do jogador */
 .ficha-clube{display:flex;align-items:center;flex-wrap:wrap;gap:var(--e2)}
 .ficha-dados{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,8rem),1fr));gap:var(--e2);margin:var(--e3) 0}
@@ -1308,3 +1247,20 @@ body.em-jogo .avisos{bottom:24px}
   body.em-jogo .tabela-elenco td.c-acoes{white-space:normal}
   body.em-jogo .tabela-elenco .acoes{flex-wrap:wrap;max-width:250px;margin-left:auto}
 }
+/* ---- Competições (#409): abas (Nacional, Internacional, Estadual) e seletor; tabela ou chaveamento à esquerda; artilheiros, fase e história (ou rodadas) à direita ---- */
+.comp-pagina{display:flex;flex-direction:column;gap:var(--e4)}
+.comp-pagina>.art-campo{max-width:24rem}
+.comp-corpo{display:grid;gap:var(--e4);grid-template-columns:minmax(0,1fr);align-items:start}
+.comp-principal,.comp-lado{display:flex;flex-direction:column;gap:var(--e3);min-width:0}
+.comp-quadro{padding:0}
+.comp-quadro .t3{margin:0;color:var(--ouro);text-transform:uppercase;letter-spacing:.08em;font-size:14px}
+.comp-quadro>.t3{padding:var(--e3) var(--e4)}
+.comp-quadro td .club>span{min-width:0}
+.comp-quadro .navega-rodada{padding:var(--e3) var(--e4)}
+.comp-quadro>p{margin:0;padding:var(--e4)}
+.comp-historia dl{margin:0;padding:0 var(--e4) var(--e4);display:flex;flex-direction:column;gap:var(--e3)}
+.comp-historia dl>div{display:grid;grid-template-columns:8.5rem minmax(0,1fr);gap:var(--e3)}
+.comp-historia dt{color:var(--muted);font-size:13px}
+.comp-historia dd{margin:0;min-width:0}
+.comp-historia ol{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+@media(min-width:1000px){.comp-corpo{grid-template-columns:minmax(0,1fr) minmax(300px,360px)}}

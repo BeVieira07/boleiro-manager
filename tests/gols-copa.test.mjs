@@ -70,23 +70,16 @@ test('save anterior preserva os placares e gols da liga ao iniciar os registros 
   assert.deepEqual(resultados, { gols: 7, placar: { h: 2, a: 1 }, copas: true });
 });
 
-test('copa e estadual mostram seus artilheiros e abrem o ranking da competição', () => {
+test('copa e estadual mostram seus artilheiros em Competições', () => {
   const j = carregarJogo({ estaduais: true, boot: true });
   j.run(`newGame('c121');
     S.copa.gols={a:{nome:'Autor da Copa',clube:userClub().id,gols:2}};
     torneioDe(userClub().id).gols={b:{nome:'Autor do Estadual',clube:userClub().id,gols:3}};`);
+  const artilheiros = () => j.html().split('id="comp-artilheiros"')[1].split('</section>')[0];
   j.acao('go|copa');
-  assert.match(j.html(), /Autor da Copa/);
-  assert.match(j.html(), /data-acao="verArtilharia\|copa">Ver ranking/);
-  j.acao('verArtilharia|copa');
-  assert.match(j.html(), /<h2>Copa do Brasil \d{4}<\/h2>/);
   assert.match(j.html(), /<option value="copa" selected>Copa do Brasil<\/option>/);
-  assert.match(j.html(), /Autor da Copa/);
+  assert.match(artilheiros(), /Autor da Copa/);
   j.acao('go|estadual');
-  assert.match(j.html(), /Autor do Estadual/);
-  assert.match(j.html(), /data-acao="verArtilharia\|estadual-SP">Ver ranking/);
-  j.acao('verArtilharia|estadual-SP');
-  assert.match(j.html(), /<h2>Paulistão \d{4}<\/h2>/);
   assert.match(j.html(), /<option value="estadual-SP" selected>Paulistão<\/option>/);
-  assert.match(j.html(), /Autor do Estadual/);
+  assert.match(artilheiros(), /Autor do Estadual/);
 });
