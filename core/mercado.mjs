@@ -6,7 +6,7 @@ import { MOVE_N, P, S, addFin, addNews, clubById, divOf, divisions, ehHumano, ta
 import { FORMA_LIM } from './forma.mjs';
 import { ehJanela, sobrasDoElenco } from './mercadoIA.mjs';
 import { autoXI } from './motor.mjs';
-import { ensureSquad } from './partida.mjs';
+import { ensureSquad, saidaAbaixoDoMinimo } from './partida.mjs';
 import { clamp, money, pick, rnd } from './utils.mjs';
 
 /* ================= transferências ================= */
@@ -16,7 +16,7 @@ export function movePlayer(p,to,emprestimo=false){
   if(from.lineup)from.lineup=from.lineup.filter(id=>id!==p.id);
   to.players.push(p);p.clubId=to.id;p.listed=false;delete p.emprestar;if(!emprestimo)novoContrato(p);
   for(const t of tecnicos())t.offers=t.offers.filter(o=>o.pid!==p.id);
-  ensureSquad(from);
+  if(!ehHumano(from))ensureSquad(from); // #410: o clube do técnico não ganha jogador de graça ao vender
 }
 // regra: pode fazer proposta por este jogador agora? (texto do erro ou null)
 const rodadaDaProposta=()=>S.round+'_'+S.season;
@@ -136,6 +136,7 @@ export function aceitarOferta(oid){
   const o=tec().offers.find(x=>x.id===oid);if(!o)return {erro:'Proposta não encontrada.'};const p=P[o.pid],b=clubById(o.from);
   const e=emprestado(o.pid);if(e)return e;
   if(userClub().players.length<=16)return {erro:'Seu elenco ficaria pequeno demais (mínimo 16).'};
+  const m=saidaAbaixoDoMinimo(userClub(),p);if(m)return {erro:m}; // #410: vale para venda e empréstimo
   // #376: a vaga vale para venda e empréstimo (a oferta dura 3 rodadas, e o clube pode ter enchido o elenco)
   if(b.players.length>=32){recusarOferta(oid);return {erro:`${b.name} ficou sem vaga no elenco e desistiu ${o.emprestimo?'do empréstimo':'da proposta'}.`}}
   if(o.emprestimo){ // #142: proposta de empréstimo da IA por um jogador da lista do técnico
@@ -151,6 +152,7 @@ export function venderJa(pid){
   const e=emprestado(pid);if(e)return e;
   const p=P[pid],uc=userClub();
   if(uc.players.length<=16)return {erro:'Seu elenco ficaria pequeno demais (mínimo 16).'};
+  const m=saidaAbaixoDoMinimo(uc,p);if(m)return {erro:m}; // #410
   const amt=valorVendaRapida(pid),vagas=S.clubs.filter(c=>!ehHumano(c)&&c.players.length<32),comCaixa=vagas.filter(c=>c.balance>=amt);
   const b=pick(comCaixa.length?comCaixa:vagas); // venda rápida sempre sai; quem tem caixa paga (#103)
   addFin(`Venda de ${p.name} (${b.name})`,amt);if(b.balance>=amt)caixaIA(b,-amt);movePlayer(p,b);addNews(`💰 ${p.name} vendido ao ${b.name} por ${money(amt)}.`);return {ok:true};
