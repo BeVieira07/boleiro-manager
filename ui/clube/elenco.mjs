@@ -2,13 +2,14 @@
    Filtros por grupo com contagem, busca, ordenação por coluna, cabeçalho e coluna do jogador fixos,
    força em chip com a tendência, energia e as ações de mercado (a forma age por trás, no overall). No celular cada linha vira um cartão. */
 import { RENOVA_ATE, pedidoRenovacao, renovarContrato } from '../../core/contratos.mjs';
+import { seAposenta } from '../../core/aposentadoria.mjs';
 import { energiaDe } from '../../core/energia.mjs';
 import { loanOf, wageBill } from '../../core/emprestimos.mjs';
 import { AMARELOS_PARA_SUSPENSAO, unavailable } from '../../core/escalacao.mjs';
 import { P, userClub } from '../../core/estado.mjs';
 import { getXI } from '../../core/motor.mjs';
 import { esc, money } from '../../core/utils.mjs';
-import { energiaBarra, ovrChip } from '../componentes.mjs';
+import { energiaBarra, ovrChip, tag } from '../componentes.mjs';
 import { loanBtn, loanTag, vLoans } from './emprestimos.mjs';
 import { avisar, confirmar } from '../avisos.mjs';
 import { potTag } from './base.mjs';
@@ -42,12 +43,14 @@ const COLUNAS = [
 const contratoTxt = p => p.contrato == null || loanOf(p.id) ? '—' : p.contrato === 1 ? '<span class="st aviso">Última temporada</span>' : `${p.contrato} temporadas`;
 const podeRenovar = p => p.contrato != null && p.contrato <= RENOVA_ATE && !loanOf(p.id);
 
+export const aposentaTag = p => seAposenta(p) ? tag('Aposenta no fim da temporada', 'aviso') : '';
+
 function linha(p, xi) {
   const tit = xi.includes(p.id);
   const acoes = loanOf(p.id) ? '' : `<button class="btn sm ${p.listed ? 'perigo' : 'sec'}" data-acao="toggleListed|${p.id}" aria-pressed="${!!p.listed}">${p.listed ? 'À venda' : 'Pôr à venda'}</button><button class="btn sec sm" data-acao="quickSell|${p.id}">Vender já</button>${botaoProposta(p)}`;
   return `<tr class="${tit ? 'tit' : ''}${unavailable(p) ? ' indisp' : ''}">
     <td class="c-pos">${posTag(p)}</td>
-    <th scope="row" class="c-nome"><div class="jogador"><span class="camisa" aria-hidden="true">${p.number ?? ''}</span>${p.number != null ? `<span class="sr">camisa ${p.number}, </span>` : ''}<div><b>${esc(p.name)}</b><span class="elenco-situacao">${status(p, tit)}${loanTag(p)}${amarelos(p)}</span></div></div></th>
+    <th scope="row" class="c-nome"><div class="jogador"><span class="camisa" aria-hidden="true">${p.number ?? ''}</span>${p.number != null ? `<span class="sr">camisa ${p.number}, </span>` : ''}<div><b>${esc(p.name)}</b><span class="elenco-situacao">${status(p, tit)}${loanTag(p)}${aposentaTag(p)}${amarelos(p)}</span></div></div></th>
     <td class="n c-idade"><span class="rot">Idade </span>${p.age}</td>
     <td class="c c-ovr"><span class="rot">Força</span><span class="forca">${ovrChip(p.ovr)}${tendenciaTag(p)}</span></td>
     <td class="c-pot"><span class="rot">Potencial</span>${potTag(p)}</td>
@@ -78,7 +81,7 @@ export function filtrarElenco(campo, valor) {
 export function renovar(pid) {
   const p = P[pid], q = pedidoRenovacao(pid);
   if (q.erro) { avisar(q.erro, 'erro'); return }
-  confirmar({ titulo: `Renovar com ${p.name}?`, texto: `Ele pede ${Math.round(q.aumento * 100)}% de aumento: o salário vai de ${money(p.wage)} para ${money(q.salario)} por rodada, e o contrato passa de ${p.contrato} para ${q.anos} temporadas. Ele pode recusar.`, ok: 'Propor renovação' }, () => {
+  confirmar({ titulo: `Renovar com ${p.name}?`, texto: `Ele pede ${Math.round(q.aumento * 100)}% de aumento: o salário vai de ${money(p.wage)} para ${money(q.salario)} por rodada, e o contrato passa de ${p.contrato} para ${q.anos} temporadas. Ele pode recusar.${seAposenta(p) ? ` Atenção: ${p.name} se aposenta no fim da temporada, então o contrato não vale até o fim.` : ''}`, ok: 'Propor renovação' }, () => {
     if (ui.liga) return mercadoLiga({ tipo: 'renovar', pid }); // na liga, a resposta é sorteada no servidor (#35)
     const r = renovarContrato(pid); save(); render(); avisar(r.erro || r.msg, r.erro ? 'erro' : r.ok ? 'ok' : 'aviso');
   });

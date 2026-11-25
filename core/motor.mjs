@@ -11,6 +11,7 @@ import { P, S, addFin, addNews, bilheteriaBase, clubById, clubDo, divOf, ehHuman
 import { adiarForma, aplicarFormaPendente } from './forma.mjs';
 import { noticiaPenaltis } from './gols-copa.mjs';
 import { elencoDoJogo, saidaForcada, sortearLances } from './lances.mjs';
+import { avisarAposentadorias } from './aposentadoria.mjs';
 import { ehJanela, janelaIA } from './mercadoIA.mjs';
 import { ovrNaPosicao } from './posicoes.mjs';
 import { energiaDaRecomposicao, simularLances } from './taticas.mjs';
@@ -109,6 +110,7 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
   aplicarFormaPendente(); // forma da rodada anterior, com o resultado final do jogo ao vivo (#44)
   limparEventosAntigos(); // #195: os lances das rodadas anteriores já foram usados; só o placar fica no save
   S.rng=semente(S.seed,S.season,S.round); // a rodada depende só do estado e das escolhas, não do que foi sorteado antes
+  avisarAposentadorias(); // #418: uma vez por temporada, na metade
   if(ehJanela(S.round))janelaIA(); // #103: começo e metade da temporada
   const games=S.fixtures[S.round].map(g=>simulate(g,{clubeAoVivo:clubeAoVivo(g),cansacoNoJogo}));
   for(const g of games)noticiarPenaltisDaLiga(g,S.round);
