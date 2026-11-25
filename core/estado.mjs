@@ -6,6 +6,7 @@ import { criarCopa } from './copa.mjs';
 import { criarEstaduais } from './estadual.mjs';
 import { SQUAD_MIN, SQUAD_SHAPE, fakePlayer, forcaDoElenco, rate, refStrength, refreshEconomics } from './dados.mjs';
 import { migrarDiretoria } from './diretoria.mjs';
+import { clubesEuropa, montarEuropa } from './europa.mjs';
 import { autoXI } from './motor.mjs';
 import { atribuirPosicoes, converterPosicoesAntigas, simplificarPosicoes } from './posicoes.mjs';
 import { hashStr, money, mulberry32, novaSemente, shuffle } from './utils.mjs';
@@ -39,6 +40,7 @@ export function usarEstado(s){S=s} // único jeito de trocar o jogo atual de for
 export function reindex(){
   P={};for(const c of S.clubs)for(const p of c.players){p.clubId=c.id;P[p.id]=p}
   if(S.continentais)for(const c of Object.values(S.continentais.estrangeiros))for(const p of c.players)if(!P[p.id]){p.clubId=c.id;P[p.id]=p} // #172: os dos clubes estrangeiros também estão no mercado
+  montarEuropa();for(const c of clubesEuropa())for(const p of c.players)if(!P[p.id]){p.clubId=c.id;P[p.id]=p} // #355: e os dos clubes europeus (fora de S)
 }
 /* ================= divisões ================= */
 export const DIVS={A:'Série A',B:'Série B',C:'Série C',D:'Série D'};

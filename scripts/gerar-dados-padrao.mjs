@@ -203,3 +203,19 @@ if (arqCont) {
   writeFileSync('core/dados-continentais.mjs', `// Clubes estrangeiros da Libertadores e da Sul-Americana (API-Football, temporada ${cont.season}). NÃO EDITE: gerado por scripts/gerar-dados-padrao.mjs a partir de data/${arqCont}.\nexport const DADOS_CONTINENTAIS = ${JSON.stringify({ season: cont.season, clubs: clubesCont })};\n`);
   console.log(`core/dados-continentais.mjs: ${clubesCont.filter(c => c.torneio === 'libertadores').length} da Libertadores + ${clubesCont.filter(c => c.torneio === 'sulamericana').length} da Sul-Americana.`);
 }
+
+// #355: clubes europeus (npm run europa), só para o mercado. Arquivo à parte, que a tela baixa quando um jogo abre e a função
+// da liga importa: core/dados-europa.mjs. Jogador compacto: [id, nome, idade, posição detalhada, overall, camisa, valor do Transfermarkt].
+// Quem já está nos dados do Brasil ou das copas fica de fora (os ids vêm da mesma API e o índice P guarda um só).
+if (existsSync('data/europa-2025.json')) {
+  const eu = ler('data/europa-2025.json');
+  const { DADOS_PADRAO } = await import('../core/dados-padrao.mjs?' + Date.now());
+  const cont = existsSync('core/dados-continentais.mjs') ? (await import('../core/dados-continentais.mjs?' + Date.now())).DADOS_CONTINENTAIS : { clubs: [] };
+  const jaNoJogo = new Set([...DADOS_PADRAO.clubs, ...cont.clubs].flatMap(c => c.players.map(p => p.id)));
+  let fora = 0;
+  const clubs = eu.clubs.map(c => ({ id: c.id, name: c.name, short: c.short, liga: c.liga, pais: c.pais, logo: c.logo, strength: c.strength,
+    players: c.players.filter(p => !jaNoJogo.has(p.id) || !++fora).map(p => [p.id, p.name, p.age > 0 && p.age < 50 ? p.age : 24, p.pd, p.ovr, p.number ?? null, p.vm ?? null]) })); // idade: 4 vieram com o ano (2025)
+  const dados = { temporada: eu.temporada, ligas: eu.ligas, clubs };
+  writeFileSync('core/dados-europa.mjs', `// Clubes europeus do mercado (#355), temporada ${eu.temporada}. NÃO EDITE: gerado por scripts/gerar-dados-padrao.mjs a partir de data/europa-2025.json.\nexport const DADOS_EUROPA = ${JSON.stringify(dados)};\n`);
+  console.log(`core/dados-europa.mjs: ${clubs.length} clubes, ${clubs.reduce((n, c) => n + c.players.length, 0)} jogadores (${fora} já estavam no Brasil ou nas copas).`);
+}

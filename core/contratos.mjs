@@ -45,6 +45,17 @@ export function renovarContrato(pid) {
   addNews(`✍️ ${p.name} renovou por ${q.anos} temporadas (${money(p.wage)} por rodada).`);
   return { ok: true, msg: `${p.name} renovou por ${q.anos} temporadas.` };
 }
+/** #426: quem do clube aceita conversar sobre renovação agora (até RENOVA_ATE temporadas, fora emprestados e quem recusou nesta rodada). */
+export const renovaveis = (uc = userClub()) => uc.players.filter(p => p.renRound !== S.round + '_' + S.season && !pedidoRenovacao(p.id).erro);
+/** #426: propõe a renovação a todos os renováveis de uma vez (cada um aceita ou recusa como na renovação avulsa). Devolve {erro} ou {ok, msg, renovaram, recusaram}. */
+export function renovarTodos() {
+  const lista = renovaveis(); if (!lista.length) return { erro: 'Nenhum contrato para renovar agora.' };
+  const renovaram = [], recusaram = [];
+  for (const p of lista) (renovarContrato(p.id).ok ? renovaram : recusaram).push(p.name);
+  const n = (k, um, varios) => `${k} ${k > 1 ? varios : um}`;
+  const msg = [renovaram.length && n(renovaram.length, 'renovou', 'renovaram'), recusaram.length && `${n(recusaram.length, 'recusou', 'recusaram')} (${recusaram.join(', ')})`].filter(Boolean).join('; ');
+  return { ok: renovaram.length > 0, msg: msg + '.', renovaram, recusaram };
+}
 
 /** Virada de temporada: cada contrato perde um ano. Quem fica sem contrato renova (clube da IA, por sorteio) ou sai de graça
  *  para um clube da IA de força parecida. Devolve quem saiu: [{p, de, para}] (para = null: ninguém quis, o jogador parou). */

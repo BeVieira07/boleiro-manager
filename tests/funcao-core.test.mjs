@@ -10,7 +10,7 @@ test('a função da liga importa o core/ do repositório por caminho relativo', 
   const texto = readFileSync(FUNCAO, 'utf8');
   assert.doesNotMatch(texto, /jsdelivr|raw\.githubusercontent/i, 'nada de core/ fixado num commit do GitHub');
   const core = [...texto.matchAll(/from '(\.\.\/\.\.\/\.\.\/core\/[\w.-]+\.mjs)'/g)].map(m => m[1]);
-  assert.deepEqual(core.map(c => c.split('/').pop()).sort(), ['dados-padrao.mjs', 'estado.mjs', 'liga.mjs']);
+  assert.deepEqual(core.map(c => c.split('/').pop()).sort(), ['dados-europa.mjs', 'dados-padrao.mjs', 'estado.mjs', 'europa.mjs', 'liga.mjs']);
   for (const c of core) assert.ok(existsSync(new URL(c, FUNCAO)), `${c} não existe`);
 });
 
@@ -20,4 +20,13 @@ test('core/ só importa arquivos do próprio core/ (o deploy da função empacot
     [...readFileSync(new URL(f, dir), 'utf8').matchAll(/(?:\bfrom\s+|\bimport\(\s*)'([^'\r\n]+)'/g)].map(m => m[1])
       .filter(i => !/^\.\/[\w.-]+\.mjs$/.test(i)).map(i => `${f}: ${i}`));
   assert.deepEqual(fora, []);
+});
+
+// #355: os dados europeus (~300 KB) só chegam por import() na tela (quando um jogo abre) e pela função da liga
+test('nenhum módulo do core ou da tela importa core/dados-europa.mjs de forma estática', () => {
+  const arquivos = pasta => readdirSync(new URL(`../${pasta}/`, import.meta.url), { recursive: true }).map(x => String(x).split(String.fromCharCode(92)).join('/'))
+    .filter(x => x.endsWith('.mjs')).map(x => `${pasta}/${x}`);
+  const ler = x => readFileSync(new URL(`../${x}`, import.meta.url), 'utf8');
+  assert.deepEqual([...arquivos('core'), ...arquivos('ui')].filter(x => /^import\b[^(]*dados-europa/m.test(ler(x))), []);
+  assert.ok(ler('ui/telas.mjs').includes("import('../core/dados-europa.mjs')"), 'a tela baixa os dados por import()');
 });

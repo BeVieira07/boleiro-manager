@@ -22,6 +22,7 @@ A função importa o `core/` do próprio repositório por caminho relativo (`../
 - `tests/funcao-core.test.mjs` confere que a função importa o `core/` por caminho relativo e que o `core/` só importa arquivos dele mesmo (senão o deploy não empacota).
 - Mudou só `ui/`: não precisa republicar.
 - Ação nova do mercado: entra no mapa `MERCADO` de `core/liga.mjs`; a função não muda.
+- Clubes europeus (#355): a função importa `core/dados-europa.mjs` e chama `definirBaseEuropa`; o core monta os clubes a cada estado (~30 ms), sem gravá-los no estado da liga (só `S.europa.chegadas`). O navegador da liga os baixa por `import()` como no solo.
 
 ## Migrações
 - Aplicar pelo MCP (`apply_migration`) ou `npx supabase db push`.
