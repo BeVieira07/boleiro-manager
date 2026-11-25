@@ -4,7 +4,8 @@ import { vCarreira } from './clube/diretoria.mjs';
 import { vConfig } from './inicio/configuracoes.mjs';
 import { wageBill } from '../core/emprestimos.mjs';
 import { escalarMelhores } from '../core/escalacao.mjs';
-import { DIVS, MOVE_N, S, clubById, divOf, divisions, hasTwoDivs, table, tec, tvQuota, userClub } from '../core/estado.mjs';
+import { DIVS, MOVE_N, S, clubById, divOf, divisions, hasTwoDivs, reindex, table, tec, tvQuota, userClub } from '../core/estado.mjs';
+import { definirBaseEuropa, europaCarregada } from '../core/europa.mjs';
 import { clamp, esc, money } from '../core/utils.mjs';
 import { formaRecente, vClube } from './clube/clube.mjs';
 import { proximoCompromisso, telaDeCompeticao, vCompeticoes, verCompeticao } from './temporada/competicoes.mjs';
@@ -41,7 +42,17 @@ export function divTabs(){
 // #169: a rolagem da página e das áreas roláveis (tabelas, listas) sobrevive ao redesenho da MESMA tela; mudar de tela começa do topo
 const ROLAVEIS='.tabela-rolavel,.tw,.nav-resto';
 let telaDesenhada=null;
+// #355: os clubes europeus (core/dados-europa.mjs, ~300 KB) só são baixados quando um jogo abre; o site abre sem eles.
+// Os testes desligam (tests/jogo.mjs) e põem a base direto, para nada chegar no meio de um teste.
+export const EUROPA={baixar:true};
+let baixandoEuropa=null;
+function carregarEuropa(){
+  if(!EUROPA.baixar||europaCarregada()||baixandoEuropa)return;
+  baixandoEuropa=import('../core/dados-europa.mjs').then(m=>{definirBaseEuropa(m.DADOS_EUROPA);if(S){reindex();render()}})
+    .catch(e=>{console.error('Clubes europeus não carregaram; o mercado segue sem eles.',e);baixandoEuropa=null});
+}
 export function render(){
+  if(S)carregarEuropa();
   if(!S&&!['inicio','landing','ligas','lobby','config'].includes(ui.view))ui.view='menu';
   if(S&&telaDeCompeticao(ui.view))ui.view='competicoes'; // #409: Classificação, Artilharia e as telas de cada copa viraram a página Competições
   if(S&&!TITULOS[ui.view])ui.view='clube';
