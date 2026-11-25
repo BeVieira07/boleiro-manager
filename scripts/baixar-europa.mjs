@@ -359,7 +359,7 @@ function montarClubes(raw, times, clubesTm, jogadoresTm, ajustes, informar) {
         continue;
       }
       const idadeTm = j && idadeEm(j.date_of_birth, data);
-      const age = (Number.isInteger(p.age) && p.age > 0 ? p.age : idadeTm) || 24;
+      const age = (Number.isInteger(p.age) && p.age > 0 && p.age < 50 ? p.age : idadeTm) || 24; // #355: a API às vezes manda o ano no lugar da idade
       const jogador = { id: pid, name: p.name, age, pos, ...(pd && { pd }), number: Number.isInteger(p.number) ? p.number : null };
       const valor = Number(j?.market_value_in_eur);
       if (Number.isFinite(valor) && valor > 0) jogador.vm = valor / 1e6;

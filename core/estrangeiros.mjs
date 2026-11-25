@@ -2,6 +2,7 @@ import { potInicial } from './base.mjs';
 import { contratoInicial } from './contratos.mjs';
 import { refreshEconomics } from './dados.mjs';
 import { S, clubById } from './estado.mjs';
+import { clubeEuropeu, nomeLigaEuropa } from './europa.mjs';
 import { atribuirPosicoes } from './posicoes.mjs';
 import { hashStr } from './utils.mjs';
 
@@ -10,13 +11,13 @@ import { hashStr } from './utils.mjs';
    calendário não mudam), em S.continentais.estrangeiros. Mas os jogadores deles entram em P (reindex) com tudo o que o
    mercado usa (posição, valor, salário, contrato, potencial), então dá para comprar e pedir emprestado como os dos
    brasileiros: movePlayer tira do elenco estrangeiro e põe no brasileiro, e o empréstimo volta ao clube de origem. */
-/** Clube do jogo ou estrangeiro das copas (para nome, escudo e elenco), ou null. */
-export const clubeDe = id => clubById(id) || (S.continentais && S.continentais.estrangeiros[id]) || null;
-/** O clube é estrangeiro (das copas)? divOf devolve 'A' para quem não tem série, então o que vale é o campo torneio. */
-export const ehEstrangeiro = c => !!(c && c.torneio);
+/** Clube do jogo, estrangeiro das copas ou europeu (#355) (para nome, escudo e elenco), ou null. */
+export const clubeDe = id => clubById(id) || (S.continentais && S.continentais.estrangeiros[id]) || clubeEuropeu(id) || null;
+/** O clube é estrangeiro (das copas ou europeu, #355)? divOf devolve 'A' para quem não tem série, então o que vale é o campo torneio ou pais. */
+export const ehEstrangeiro = c => !!(c && (c.torneio || c.pais));
 export const todosEstrangeiros = () => (S.continentais ? Object.values(S.continentais.estrangeiros) : []);
 /** Nome da competição do clube estrangeiro ("Libertadores" ou "Sul-Americana"). */
-export const competicaoDe = c => (c.torneio === 'libertadores' ? 'Libertadores' : c.torneio === 'sulamericana' ? 'Sul-Americana' : '');
+export const competicaoDe = c => (c.torneio === 'libertadores' ? 'Libertadores' : c.torneio === 'sulamericana' ? 'Sul-Americana' : c.pais ? nomeLigaEuropa(c.liga) : '');
 
 const BANCO = 14; // os 14 melhores ficam fora da lista: as sobras do elenco é que a IA oferece
 /** Dá a cada jogador do clube estrangeiro o que o mercado usa; idempotente (não mexe no que já existe). A IA oferece as
