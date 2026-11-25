@@ -1,7 +1,7 @@
 /* ================= Elenco como tabela moderna (#60) =================
    Filtros por grupo com contagem, busca, ordenação por coluna, cabeçalho e coluna do jogador fixos,
    força em chip com a tendência, energia e as ações de mercado (a forma age por trás, no overall). No celular cada linha vira um cartão. */
-import { RENOVA_ATE, pedidoRenovacao, renovarContrato } from '../../core/contratos.mjs';
+import { RENOVA_ATE, pedidoRenovacao, renovarContrato, renovaveis, renovarTodos } from '../../core/contratos.mjs';
 import { seAposenta } from '../../core/aposentadoria.mjs';
 import { energiaDe } from '../../core/energia.mjs';
 import { loanOf, wageBill } from '../../core/emprestimos.mjs';
@@ -87,12 +87,39 @@ export function renovar(pid) {
   });
 }
 
+const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
+const nomes = (ps, max = 5) => ps.slice(0, max).map(p => p.name).join(', ') + (ps.length > max ? ` e mais ${ps.length - max}` : '');
+/** #426: renova todos os contratos que dá de uma vez; a confirmação mostra quanto a folha sobe. */
+export function renovarTodosUI() {
+  const lista = renovaveis(); if (!lista.length) { avisar('Nenhum contrato para renovar agora.', 'erro'); return }
+  const antes = lista.reduce((s, p) => s + p.wage, 0), depois = lista.reduce((s, p) => s + pedidoRenovacao(p.id).salario, 0);
+  const saindo = lista.filter(seAposenta); // #418
+  const alerta = saindo.length ? ` Atenção: ${nomes(saindo, 8)} ${saindo.length > 1 ? 'se aposentam' : 'se aposenta'} no fim da temporada.` : '';
+  confirmar({ titulo: `Renovar ${plural(lista.length, 'contrato', 'contratos')}?`, ok: 'Propor a todos',
+    texto: `Proposta de renovação para ${nomes(lista, 8)}. Juntos, os salários passam de ${money(antes, 3)} para ${money(depois, 3)} por rodada. Cada jogador pode recusar.${alerta}` }, () => {
+    if (ui.liga) return mercadoLiga({ tipo: 'renovarTodos' }); // na liga, as respostas são sorteadas no servidor (#35)
+    const r = renovarTodos(); save(); render(); avisar(r.erro || r.msg, r.erro ? 'erro' : r.recusaram.length ? 'aviso' : 'ok');
+  });
+}
+/** #426: no topo do Elenco, os contratos que acabam nesta temporada (saem de graça na virada) e o botão de renovar todos. */
+function avisoContratos(uc) {
+  const fim = uc.players.filter(p => p.contrato === 1 && !loanOf(p.id)), n = renovaveis(uc).length;
+  if (!fim.length && !n) return '';
+  const [tipo, titulo, texto] = fim.length
+    ? ['aviso', `${plural(fim.length, 'contrato acaba', 'contratos acabam')} ao fim desta temporada`, `${nomes(fim)}. Sem renovação, saem de graça na virada.${n ? '' : ' Quem recusou volta a conversar depois da próxima rodada.'}`]
+    : ['info', `${plural(n, 'contrato pode', 'contratos podem')} ser renovado${n === 1 ? '' : 's'}`, `Falta${n === 1 ? '' : 'm'} até ${RENOVA_ATE} temporadas de contrato.`];
+  return `<div class="alerta ${tipo} elenco-contratos" role="status">${icone(tipo === 'aviso' ? 'alerta' : 'info', { rotulo: tipo === 'aviso' ? 'Aviso' : 'Informação' })}
+    <div class="alerta-texto"><b>${esc(titulo)}</b><span class="muted">${esc(texto)}</span></div>
+    ${n ? `<div class="alerta-acoes"><button class="btn sm" data-acao="renovarTodosUI">Renovar todos (${n})</button></div>` : ''}</div>`;
+}
+
 export function vElenco() {
   const uc = userClub(), f = ui.ef, a = 'filtrarElenco';
   const titulares = getXI(uc);
   const energia = titulares.length ? Math.round(titulares.reduce((total, id) => total + energiaDe(P[id]), 0) / titulares.length) : '—';
   const lista = filtrar(uc.players, f);
   return `<p class="muted resumo elenco-resumo">${titulares.length} titulares · energia média ${energia} · folha ${money(wageBill(uc))} por rodada</p>
+  ${avisoContratos(uc)}
   <div class="filtros elenco-filtros">${chipsGrupo(uc.players, f, a)}${campoBusca(f, a)}
     <div class="elenco-ordem"><label for="elencoOrdenar">Ordenar por</label>
       <select id="elencoOrdenar" data-mudar="${a}|ord">${COLUNAS.map(([rotulo, chave]) => `<option value="${chave}"${f.ord === chave ? ' selected' : ''}>${rotulo}</option>`).join('')}</select>

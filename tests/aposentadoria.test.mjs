@@ -54,3 +54,27 @@ test('Elenco e ficha mostram a etiqueta, a renovação avisa e as telas abrem', 
   assert.ok(!j.alertas.some(a => /se aposenta/.test(a)), 'quem não se aposenta não recebe o aviso');
   assert.deepEqual(problemasNasTelas(j, ['elenco', 'clube']), []);
 });
+
+test('renovar todos (#426) avisa quem vai se aposentar', () => {
+  const j = novo();
+  j.run(`userClub().players.forEach((p,i)=>{p.age=i?28:36;p.contrato=i<2?1:4;globalThis.nome??=p.name})`);
+  j.acao('renovarTodosUI');
+  const nome = j.run('userClub().players[0]?.name');
+  assert.ok(j.alertas.some(a => a.startsWith('Proposta de renovação') && a.includes(`${nome} se aposenta no fim da temporada`)));
+});
+
+test('ficha de jogador europeu (#355): não afirma que se aposenta lá fora, só se for contratado', () => {
+  const j = carregarJogo({ boot: true, europa: true }); j.run(`newGame('${clubeDaSerie(j)}')`);
+  const original = document.getElementById;
+  const box = { querySelector: () => ({}), setAttribute() {}, focus() {} };
+  const modal = { style: {}, isConnected: true, querySelector: s => s === '[role="dialog"]' ? box : null, querySelectorAll: () => [] };
+  const raiz = document.documentElement;
+  document.documentElement = { classList: { add() {}, toggle() {} } };
+  document.getElementById = id => id === 'modal' ? modal : id === 'mbox' ? box : original(id);
+  try {
+    j.run(`(()=>{const p=clubesEuropa()[0].players[0];p.age=36;abrirFicha(p.id)})()`);
+    assert.match(box.innerHTML, /Aposenta no fim da temporada se for contratado/);
+    j.run(`(()=>{const p=userClub().players[0];p.age=36;abrirFicha(p.id)})()`);
+    assert.match(box.innerHTML, /Aposenta no fim da temporada<\/span>/);
+  } finally { document.getElementById = original; document.documentElement = raiz }
+});
