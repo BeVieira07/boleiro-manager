@@ -5,7 +5,7 @@
    num bloco síncrono, sem await no meio (várias requisições podem dividir o mesmo processo). */
 import { promoverDaBase, venderDaBase } from './base.mjs';
 import { escolherClube, fecharPassagem, gerarPropostas, pedirDemissao, recusarClubes } from './carreira.mjs';
-import { renovarContrato } from './contratos.mjs';
+import { renovarContrato, renovarTodos } from './contratos.mjs';
 import { emprestimoJa, exercerOpcaoCompra, proporEmprestimo } from './emprestimos.mjs';
 import { definirCantos, definirCobradores, unavailable } from './escalacao.mjs';
 import { RODADA_ESTADUAL } from './estadual.mjs';
@@ -108,6 +108,7 @@ const MERCADO = {
   emprestimoJa: (a, uc) => daIA(a.pid, uc) || emprestimoJa(a.pid),
   alternarEmprestimo: (a, uc) => meu(a.pid, uc) || alternarEmprestimo(a.pid), // #142
   renovar: (a, uc) => meu(a.pid, uc) || renovarContrato(a.pid), // #49
+  renovarTodos: () => renovarTodos(), // #426
   promoverBase: a => promoverDaBase(String(a.pid)), // #50: só acha jogador da base do próprio clube
   venderBase: a => venderDaBase(String(a.pid)),
   // entre técnicos (#36)
