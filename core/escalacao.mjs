@@ -92,11 +92,14 @@ export function aplicarDisponibilidade(games){
   const novos = games.filter(g => g.ev && !g.amarelos && !g.copa);
   if (games.length && !novos.length) return;
   const jogaram = new Set(novos.flatMap(g => [g.h, g.a]));
-  for(const c of S.clubs)for(const p of c.players){
-    if(p.inj>0)p.inj--;
-    if(jogaram.has(c.id))encerrarSuspensaoPorAmarelos(p);
-    const susp=suspensaoSemAmarelos(p);
-    if(susp>0)suspenderPorVermelho(p,susp-1);
+  for(const p of Object.values(P))if(p.inj>0)p.inj--; // a lesão passa a cada data, também a de clube estrangeiro (#415)
+  for(const c of S.clubs){
+    if(!jogaram.has(c.id))continue; // a suspensão só é cumprida em data com jogo do clube (#415)
+    for(const p of c.players){
+      encerrarSuspensaoPorAmarelos(p);
+      const susp=suspensaoSemAmarelos(p);
+      if(susp>0)suspenderPorVermelho(p,susp-1);
+    }
   }
   for(const g of novos){
     for(const e of g.ev){

@@ -142,9 +142,11 @@ export function anotarTitulares(jogaram, jogos, getXI, clubById) {
   }
   return jogaram;
 }
-/** Virada de temporada: férias, todo mundo volta com a energia cheia. */
+/** Virada de temporada: férias, todo mundo volta com a energia cheia e sem lesão; a suspensão pendente continua (#415). */
 export function ferias() {
   delete S.energiaRodada;
+  for (const p of Object.values(P)) p.inj = 0; // inclui os de clube estrangeiro
+  for (const c of S.clubs) for (const p of c.base || []) p.inj = 0;
   for (const c of S.clubs) {
     for (const p of c.players) p.energia = ENERGIA_MAX;
     for (const p of c.base || []) p.energia = ENERGIA_MAX;
