@@ -60,3 +60,19 @@ test('a lesão de jogador de clube estrangeiro diminui a cada data', () => {
   })()`);
   assert.equal(r, 1);
 });
+
+test('vendido para clube europeu (#355): a lesão passa a cada data e zera nas férias', () => {
+  const j = carregarJogo({ europa: true });
+  j.run(`newGame('${clubeDaSerie(j)}')`);
+  const r = j.run(`(() => {
+    const p = userClub().players[0], europeu = clubesEuropa()[0];
+    movePlayer(p, europeu);
+    p.inj = 5;
+    const [h, a] = S.clubs;
+    aplicarDisponibilidade([{ uf: h.uf, h: h.id, a: a.id, ev: [] }]);
+    const naData = p.inj;
+    ferias();
+    return [naData, p.inj, P[p.id] === p, S.europa.chegadas[europeu.id].includes(p)];
+  })()`);
+  assert.deepEqual(r, [4, 0, true, true]);
+});
