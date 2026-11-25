@@ -2,6 +2,7 @@ import { estrelasPot } from './base.mjs';
 import { novoContrato } from './contratos.mjs';
 import { UM_ANO, loanOf, startLoan, wageBill } from './emprestimos.mjs';
 import { clubeDe, ehEstrangeiro } from './estrangeiros.mjs';
+import { ehEuropeu, registrarMudanca } from './europa.mjs';
 import { MOVE_N, P, S, addFin, addNews, clubById, divOf, divisions, ehHumano, table, tec, tecnicos, userClub } from './estado.mjs';
 import { FORMA_LIM } from './forma.mjs';
 import { ehJanela, sobrasDoElenco } from './mercadoIA.mjs';
@@ -13,10 +14,11 @@ import { clamp, money, pick, rnd } from './utils.mjs';
 // emprestimo: ida ou volta de empréstimo, que não mexe no contrato com o clube dono (#49)
 export function movePlayer(p,to,emprestimo=false){
   const from=clubeDe(p.clubId);from.players=from.players.filter(x=>x!==p); // #172: o clube de origem pode ser estrangeiro
+  registrarMudanca(p,from,to); // #355: quem entra num clube europeu fica no save
   if(from.lineup)from.lineup=from.lineup.filter(id=>id!==p.id);
   to.players.push(p);p.clubId=to.id;p.listed=false;delete p.emprestar;if(!emprestimo)novoContrato(p);
   for(const t of tecnicos())t.offers=t.offers.filter(o=>o.pid!==p.id);
-  ensureSquad(from);
+  if(!ehEuropeu(from))ensureSquad(from); // #355: o clube europeu é refeito dos dados a cada jogo aberto; os gerados sumiriam
 }
 // regra: pode fazer proposta por este jogador agora? (texto do erro ou null)
 const rodadaDaProposta=()=>S.round+'_'+S.season;
@@ -133,7 +135,7 @@ const caixaIA=(c,v)=>{if(!ehHumano(c)&&c.balance!=null)c.balance=Math.round((c.b
 // regras de venda: devolvem {erro} ou {ok}. Emprestado não se vende: o contrato é com o clube de origem (#117)
 const emprestado=pid=>loanOf(pid)?{erro:`${P[pid].name} está emprestado: só o clube de origem pode negociá-lo.`}:null;
 export function aceitarOferta(oid){
-  const o=tec().offers.find(x=>x.id===oid);if(!o)return {erro:'Proposta não encontrada.'};const p=P[o.pid],b=clubById(o.from);
+  const o=tec().offers.find(x=>x.id===oid);if(!o)return {erro:'Proposta não encontrada.'};const p=P[o.pid],b=clubeDe(o.from); // #355: a proposta pode ser de um clube europeu
   const e=emprestado(o.pid);if(e)return e;
   if(userClub().players.length<=16)return {erro:'Seu elenco ficaria pequeno demais (mínimo 16).'};
   // #376: a vaga vale para venda e empréstimo (a oferta dura 3 rodadas, e o clube pode ter enchido o elenco)

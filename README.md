@@ -15,7 +15,7 @@ Rode `npm test` para executar a suíte de testes. O workflow [pages.yml](.github
 - A base de clubes e elencos em `data/` vem da API-Football e cobre as Séries A a D de 2024 e os clubes estrangeiros da Libertadores e da Sul-Americana.
 - O overall dos jogadores do Brasileirão prioriza `data/overalls-manual.json`. Nos demais casos, combina as notas de `data/notas-2024.json`, quando disponíveis, com uma estimativa que pode usar o valor de mercado do Transfermarkt nas Séries A e B.
 - Após alterar os dados do jogo em `data/`, rode `npm run dados:padrao` para gerar `core/dados-padrao.mjs` e `core/dados-continentais.mjs`. Não edite esses módulos à mão.
-- `npm run europa -- --ligas=GB1,GB2,ES1,ES2` importa os clubes da Inglaterra e da Espanha para `data/europa-2025.json`, com `API_FOOTBALL_KEY` no `.env`. Se atingir a margem da cota diária, rode o mesmo comando no dia seguinte para retomar. A integração com o mercado está na issue #355.
+- `npm run europa -- --ligas=GB1,GB2,ES1,ES2` importa os clubes da Inglaterra e da Espanha para `data/europa-2025.json`, com `API_FOOTBALL_KEY` no `.env`. Se atingir a margem da cota diária, rode o mesmo comando no dia seguinte para retomar. No jogo, esses clubes ficam no mercado (#355): `npm run dados:padrao` gera `core/dados-europa.mjs`, que a tela só baixa quando um jogo abre.
 - Veja os detalhes na [skill do Boleiro Manager](.claude/skills/boleiro-manager/SKILL.md).
 
 ## Jogar online
