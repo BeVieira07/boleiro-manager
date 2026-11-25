@@ -4,6 +4,7 @@ import { S, tec, tecnicos, usarTecnico, userClub } from '../../core/estado.mjs';
 import { autoXI, concluirRodadaCopa, confirmarRodada, jogarRodada, validateLineup } from '../../core/motor.mjs';
 import { demissao } from '../clube/diretoria.mjs';
 import { save, ui } from '../estado.mjs';
+import { conflito } from '../inicio/saves.mjs';
 import { seasonEnd } from '../partida/partida.mjs';
 import { encerrarVivo, iniciarVivo, penaltisDoJogo, vivoAtivo } from '../partida/aovivo.mjs';
 import { icone } from '../icones.mjs';
@@ -23,7 +24,8 @@ export function playRound(aoVivo=true){
   if(r.erro){if(r.tecnico)usarTecnico(r.tecnico);avisar(r.erro,'erro');ui.view=r.faltam?'clube':'escalacao';render();return}
   const games=r.jogos,mine=r.meu;
   ui.lastRound=r.estadual?{pre:r.estadual.dia,games}:{round:S.round,games}; // #132: data do estadual
-  save();
+  const c0=conflito.n;save();
+  if(conflito.n!==c0)return; // #412: aba desatualizada: o aviso de recarregar vem primeiro; não abre o ao vivo nem os resultados da campanha velha
   if(!aoVivo)return;
   const temCopa=!!S.copa?.pendente, seguir=temCopa?retomarCopa:mostrarResultados;
   if(mine&&(solo?mine.expulsaoAoVivo===userClub().id:verAoVivo(mine)))iniciarVivo(games,mine,seguir,{estadual:r.estadual?.dia,proximo:temCopa?COPA:null});
@@ -56,10 +58,12 @@ export function retomarCopa(){
 export function simToEnd(){
   if(bloqueadoNaLiga())return;
   confirmar({dispensavel:true,titulo:'Simular até o fim?',texto:`As ${S.fixtures.length-S.round} rodadas restantes serão jogadas sem você assistir. Lesionados e suspensos são trocados pela escalação automática.`,ok:'Simular'},()=>{
-    while(S.round<S.fixtures.length&&!tec().demitido){
+    const c0=conflito.n;
+    while(S.round<S.fixtures.length&&!tec().demitido&&conflito.n===c0){
       const err=validateLineup();if(err){userClub().lineup=autoXI(userClub())}
       playRound(false);
     }
+    if(conflito.n!==c0)return; // #412: aba desatualizada: para de simular em memória
     ui.view='tabela';render();if(S.round>=S.fixtures.length)seasonEnd();if(tec().demitido)demissao(); // #366: demitido no meio, a temporada continua
   });
 }
