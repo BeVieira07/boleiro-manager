@@ -2,7 +2,6 @@
 import { agregadoFinal, emPreTemporada, estadualPelaFrente, jogosDaData, nomeData, premioEstadual, tabelaGrupo, torneioDe } from '../../core/estadual.mjs';
 import { S, clubById, divOf, tec } from '../../core/estado.mjs';
 import { esc, money } from '../../core/utils.mjs';
-import { artilhariaDoTorneio } from './artilharia.mjs';
 import { crest, detalhePenaltis } from '../partida/partida.mjs';
 
 /** O que o botão da rodada joga agora: 'estadual' na pré-temporada com jogo de técnico pela frente, senão 'rodada N'. */
@@ -21,7 +20,7 @@ const ordenar = (gs, me) => [...gs].sort((a, b) => (b.h === me || b.a === me) - 
 export function jogosEstadual(d) {
   const me = tec().clubId, tor = torneioDe(me); if (!tor || S.estaduais.temporada !== S.season) return '';
   const gs = jogosDaData(tor, d); if (!gs.length) return '';
-  return `<section class="fase-copa"><div class="card-topo"><h2 class="t3">${esc(tor.nome)} · ${nomeData(tor, d)}</h2><button class="btn fantasma sm" data-acao="go|estadual">Ver o estadual</button></div>
+  return `<section class="fase-copa"><div class="card-topo"><h2 class="t3">${esc(tor.nome)} · ${nomeData(tor, d)}</h2><button class="btn fantasma sm" data-acao="verCompeticao|estadual-${tor.uf}">Ver o estadual</button></div>
     <ul class="jogos">${ordenar(gs, me).map(g => jogo(g, me)).join('')}</ul></section>`;
 }
 /** Na tela Jogos, antes da rodada 1: a próxima data do estadual do seu clube. */
@@ -56,39 +55,25 @@ function final(tor, me) {
     <span class="jogo-time fora ${cls(f.a)}">${crest(A)} ${esc(A.name)}</span><span class="jogo-detalhe">${pernas || 'A jogar'}</span></li></ul></section>`;
 }
 
-export function vEstadual() {
-  const me = tec().clubId, tor = torneioDe(me), voltar = '<p><button class="btn fantasma sm" data-acao="go|competicoes">← Competições</button></p>';
-  if (!tor || S.estaduais.temporada !== S.season) return `${voltar}<section class="card"><h2 class="t3">Estadual</h2><p class="muted">${semEstadual()}</p></section>`;
+/** #409: final e grupos de um estadual (qualquer um da temporada), na página Competições. */
+export function conteudoEstadual(tor) {
+  const me = tec().clubId;
   const situacao = tor.campeao ? `Campeão: <b>${esc(clubById(tor.campeao).name)}</b>.` : 'Em andamento.';
   const formato = tor.grupos.length === 1 ? 'Pontos corridos em turno único' : 'Dois grupos em turno único';
-  return `${voltar}<p class="muted resumo">${esc(tor.nome)}, na pré-temporada (antes da rodada 1). ${formato}, e final em ida e volta; empate na soma vai para os pênaltis. ${situacao}</p>
-    ${artilhariaDoTorneio(tor, 'estadual-' + tor.uf)}${final(tor, me)}${tabelasEstadual(tor, me)}`;
-}
-function semEstadual() {
-  const uc = clubById(tec().clubId);
-  if (!S.estaduais || S.estaduais.temporada !== S.season) return 'Não há estaduais nesta temporada. Eles começam na próxima.';
-  return uc.uf ? `O estado do seu clube (${esc(uc.uf)}) não tem clubes suficientes no jogo para um estadual.` : 'Seu clube não tem estado nos dados, então fica sem estadual.';
+  return `<p class="muted resumo">${esc(tor.nome)}, na pré-temporada (antes da rodada 1). ${formato}, e final em ida e volta; empate na soma vai para os pênaltis. ${situacao}</p>
+    ${final(tor, me)}${tabelasEstadual(tor, me)}`;
 }
 
-/** Cartão do estadual do seu clube na aba Competições (#102, #175). */
+/** Próximo jogo do seu clube no estadual, para o próximo compromisso do técnico (#102; #409). */
 export const cartaoEstadual = {
-  id: 'estadual', get nome() { const t = torneioDe(tec().clubId); return t ? t.nome : 'Estadual' }, tela: 'estadual',
+  id: 'estadual', get nome() { const t = torneioDe(tec().clubId); return t ? t.nome : 'Estadual' },
   cartao() {
     const me = tec().clubId, tor = torneioDe(me);
-    if (!tor || S.estaduais.temporada !== S.season) return { sigla: 'EST', tom: 'erro', fora: semEstadual() };
-    const grupo = tor.grupos.find(g => g.includes(me)), pos = tabelaGrupo(tor, grupo).findIndex(t => t.id === me) + 1, f = tor.final, vaga = tor.grupos.length === 1 ? 2 : 1;
-    const naFinal = f && (f.h === me || f.a === me);
-    const [destaque, status] = tor.campeao === me ? ['Campeão', ['Título conquistado', 'ok']]
-      : tor.campeao ? ['Encerrado', naFinal ? ['Vice-campeão', 'aviso'] : ['Fora da final', 'erro']]
-      : f ? ['Final', naFinal ? ['Na disputa', 'ok'] : ['Fora da final', 'erro']]
-      : [`${pos}º de ${grupo.length}`, pos <= vaga ? [`Classificando (${vaga} passa${vaga > 1 ? 'm' : ''})`, 'ok'] : ['Fora da classificação', 'erro']];
     let proximo = null;
-    if (emPreTemporada() && !tor.campeao) for (let d = S.estaduais.dia; d < S.estaduais.datas && !proximo; d++) {
+    if (tor && S.estaduais.temporada === S.season && emPreTemporada() && !tor.campeao) for (let d = S.estaduais.dia; d < S.estaduais.datas && !proximo; d++) {
       const g = jogosDaData(tor, d).find(x => x.h === me || x.a === me);
       if (g) proximo = { rot: 'Rod.', n: d + 1, h: g.h, a: g.a, nomeAdv: clubById(g.h === me ? g.a : g.h).name, perna: g.final === 'ida' ? 'ida' : g.final === 'volta' ? 'volta' : '', ordem: d - 1000 };
     }
-    const sigla = tor.nome.normalize('NFD').replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase();
-    return { sigla, tom: 'erro', fase: tor.campeao ? 'Encerrado' : f ? 'Final em ida e volta' : 'Fase de grupos · em andamento', destaque, status, proximo, botao: 'Tabela',
-      semProximo: tor.campeao ? 'Competição encerrada' : 'Seu clube foi eliminado' };
+    return { proximo };
   }
 };

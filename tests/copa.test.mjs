@@ -127,8 +127,9 @@ test('save sem copa (de antes): joga normalmente, a tela avisa e a copa começa 
   const j = novo();
   j.run('delete S.copa');
   jogarRodada(j, 3);
-  j.run(`go('copa')`);
-  assert.match(j.html(), /Não há copa nesta temporada/);
+  j.run(`go('copa')`); // #409: sem copa, Competições abre a série do clube e não oferece a copa
+  assert.equal(j.run('competicaoAtual().id'), j.run('divOf(userClub())'));
+  assert.doesNotMatch(j.html(), /<option value="copa"/);
   assert.deepEqual(problemasNasTelas(j), []);
   jogarTemporada(j); virarTemporada(j);
   assert.equal(copa(j).fases[0].jogos.length, 32);

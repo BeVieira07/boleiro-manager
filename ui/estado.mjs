@@ -6,7 +6,7 @@ import { go, render } from './telas.mjs';
 import { avisar } from './avisos.mjs';
 
 // estado só da tela (não vai para o save)
-export const ui={view:'clube',lastRound:null,selEsc:null,vDiv:null,jogosRound:null,mf:{grupo:'',q:'',max:'',club:'',liga:'',aba:'todos',ord:'ovr',dir:-1},ef:{grupo:'',q:'',ord:'pos',dir:1},tvAoVivo:null,vivo:null,artComp:{},classifComp:{},artSo:false,novos:[],liga:null}; // liga: jogando uma liga online (#34)
+export const ui={view:'clube',lastRound:null,selEsc:null,vDiv:null,jogosRound:null,mf:{grupo:'',q:'',max:'',club:'',liga:'',aba:'todos',ord:'ovr',dir:-1},ef:{grupo:'',q:'',ord:'pos',dir:1},tvAoVivo:null,vivo:null,compSel:{},compPainel:'estat',compRodada:null,novos:[],liga:null}; // liga: jogando uma liga online (#34)
 ui.escolhaClube = { serie: '', busca: '', ordem: 'forca', id: '' };
 export const chaveJogoAtual=()=>ui.liga?`liga:${ui.liga.id}`:`save:${S.saveId}`;
 export function save(){if(S)salvarJogo()} // js/saves.js: grava no save da campanha atual

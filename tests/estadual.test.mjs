@@ -67,18 +67,18 @@ test('clube de estado sem estadual vai direto para a rodada 1, e os estaduais da
   j.run('if(validateLineup())userClub().lineup=autoXI(userClub());playRound(false)');
   assert.equal(j.run('S.round'), 1);
   assert.ok(j.run('S.estaduais.torneios.every(t=>t.campeao)'));
-  j.run(`go('competicoes')`);
-  assert.match(j.html(), /Fora nesta temporada/);
-  assert.match(j.html(), /\(PA\) não tem clubes suficientes/);
+  j.run(`go('competicoes')`); j.acao('compAba|estadual'); // #409: os estaduais dos outros estados continuam visíveis
+  assert.equal(j.run('competicaoAtual().tipo'), 'estadual');
+  assert.doesNotMatch(j.html(), /<tr class="me">/);
 });
 
 test('telas: cartão em Competições, tela do torneio, Jogos e Resultados mostram o estadual', () => {
   const j = carregarJogo({ boot: true, estaduais: true });
   novo(j, 'c127'); // Flamengo
-  j.run(`go('competicoes')`);
-  assert.match(j.html(), /Carioca/);
-  assert.match(j.html(), /Fase de grupos/);
-  assert.match(j.html(), /Próximo jogo<\/span><b>Rod\. \d+ · x /);
+  j.run(`go('competicoes')`); j.acao('compAba|estadual');
+  assert.equal(j.run('competicaoAtual().id'), 'estadual-RJ');
+  assert.match(j.html(), /<option value="estadual-RJ" selected>Carioca<\/option>/);
+  assert.equal(j.run('proximoCompromisso().nome'), 'Carioca', 'o próximo jogo do técnico é o do estadual');
   j.run(`go('jogos')`);
   assert.match(j.html(), /Pré-temporada: o estadual vem antes da rodada 1/);
   assert.match(j.html(), /Carioca · Rodada \d/);
@@ -90,7 +90,6 @@ test('telas: cartão em Competições, tela do torneio, Jogos e Resultados mostr
   assert.match(j.html(), /Carioca · Rodada \d/);
   j.acao('go|estadual');
   assert.match(j.html(), /Classificação/);
-  assert.match(j.html(), /data-acao="go\|competicoes">← Competições/);
   assert.match(j.run('lateral()'), /data-acao="go\|competicoes"[^>]*aria-current="page"/);
   assert.deepEqual(problemasNasTelas(j, ['clube', 'competicoes', 'estadual', 'jogos', 'rodada', 'financas']), []);
   jogarPre(j);
@@ -124,7 +123,7 @@ test('save de antes da #132 ganha a UF dos clubes, e os estaduais começam na te
   assert.equal(j.run('clubById("c121").uf'), 'SP');
   assert.equal(j.run('emPreTemporada()'), false);
   j.run(`go('competicoes')`);
-  assert.match(j.html(), /começam na próxima/);
+  assert.match(j.html(), /disabled title="Não há estaduais nesta temporada.">Estadual/);
   j.run('if(validateLineup())userClub().lineup=autoXI(userClub());playRound(false)');
   assert.equal(j.run('S.round'), 1);
 });

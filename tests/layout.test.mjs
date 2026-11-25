@@ -35,8 +35,7 @@ test('o HUD agrupa as telas em seções, marca a aba atual e mantém as opções
   assert.match(clube, /data-acao="go\|clube" aria-current="true"/);
   const copa = j.run(`go('copa');lateral()`);
   assert.match(copa, /data-acao="go\|competicoes" aria-current="page"/);
-  assert.match(copa, /data-acao="go\|tabela"/);
-  assert.match(copa, /data-acao="go\|artilharia"/);
+  assert.doesNotMatch(copa, /data-acao="go\|(tabela|artilharia)"/, '#409: Classificação e Artilharia ficam dentro de Competições');
 });
 
 test('fim da temporada: a barra troca a rodada por encerrar/iniciar temporada', () => {

@@ -3,7 +3,8 @@
 (async () => {
   const { go, verClassificacao } = await import('/ui/telas.mjs');
   const { TITULOS } = await import('/ui/layout.mjs');
-  const { criarJogo, userClub } = await import('/core/estado.mjs');
+  const { criarJogo, divOf, userClub } = await import('/core/estado.mjs');
+  const { compAba, compPainel } = await import('/ui/temporada/competicoes.mjs');
   const { DADOS_PADRAO } = await import('/core/dados-padrao.mjs');
   const { autoXI, jogarRodada, validateLineup } = await import('/core/motor.mjs');
   const { avAba, encerrarVivo, iniciarVivo, avPausar } = await import('/ui/partida/aovivo.mjs');
@@ -87,14 +88,15 @@
     go(tela);
     medir(tela);
   }
-  go('tabela');
+  go('competicoes');
   const estatisticas = app.querySelector('.figma-estatisticas input');
   estatisticas.checked = true;
-  medir('tabela/estatísticas completas');
-  for (const opcao of app.querySelectorAll('#classifCompeticao optgroup:not(:first-child) option')) {
-    verClassificacao(opcao.value);
-    medir('tabela/' + opcao.value);
+  medir('competicoes/estatísticas completas');
+  for (const aba of ['nacional', 'internacional', 'estadual']) { // #409: cada competição de cada aba
+    compAba(aba);
+    for (const opcao of app.querySelectorAll('#compCompeticao option')) { verClassificacao(opcao.value); medir('competicoes/' + opcao.value) }
   }
+  verClassificacao(divOf(userClub())); compPainel('rodadas'); medir('competicoes/rodadas'); compPainel('estat');
 
   criarJogo(membros.map(m => ({ id: m.user_id, nome: m.nome, clubId: m.club_id })), DADOS_PADRAO);
   go('mercado'); medir('mercado/revezamento');

@@ -57,9 +57,9 @@ Os nomes antigos (`--panel`, `--accent`, `--danger`…) apontam para os novos e 
 | `ui/clube/escalacao.mjs`, `css/escalacao.css` | campo com cartas (#61) |
 | `ui/partida/partida.mjs` | linha do tempo, escudo e modal; `ui/partida/aovivo.mjs` é a tela da rodada ao vivo (#62, #135) |
 | `ui/partida/mapa.mjs` | mini campo do cabeçalho ao vivo (#362), com lados nas cores dos clubes e a posição da bola calculada a partir da posse e dos lances em `core/mapa.mjs` |
-| `ui/temporada/competicoes.mjs` | painel de Competições: próximos jogos, uma linha por competição e as que ficaram de fora; cada competição devolve o cartão dela (#175, maquete em `docs/maquetes/competicoes.png`) |
+| `ui/temporada/competicoes.mjs` | página Competições (#409): abas Nacional, Internacional e Estadual com o seletor (`seletorCompeticao`); à esquerda a tabela (`tabelaLiga`) ou o conteúdo da copa (`conteudoCopa`, `conteudoTorneio`, `conteudoEstadual`); à direita Artilheiros, Em melhor fase (forma, só clubes brasileiros) e Estatísticas e história (`estatisticasDe`), e na liga o botão Rodadas. As telas antigas (`tabela`, `artilharia`, `copa`, `libertadores`, `sulamericana`, `estadual`) abrem esta página já na competição (`telaDeCompeticao`). `COMPETICOES` dá o próximo jogo do técnico (`proximoCompromisso`) |
 | `ui/clube/mercado.mjs` | tela Mercado: indicadores (`stat`), abas com contagem, filtros (país, liga, clube, posição, busca, valor máx.) e tabela com situação e negociação (#186, maquete em `docs/maquetes/mercado.png`); o botão de ver o jogador fica de fora até haver tela de detalhe |
-| `ui/temporada/artilharia.mjs` | tela Artilharia: filtros por competição, pódio, ranking com empate e "seus artilheiros"; todas as competições viram o mesmo modelo de linhas (`linhasDe`) (#184, maquete em `docs/maquetes/artilharia.png`) |
+| `ui/temporada/artilharia.mjs` | ranking de gols de qualquer competição no mesmo modelo de linhas (`linhasDe`, #184), usado pela caixa Artilheiros de Competições |
 | `ui/avisos.mjs` | `avisar` (toasts), `confirmar` e `pedirValor` no lugar de `alert`, `confirm` e `prompt` (#64) |
 
 Atributos de evento (ligados em `ui/main.mjs`): `data-acao` (clique), `data-mudar` (change) e `data-digitar` (cada tecla; use quando a tela não pode ser redesenhada inteira, para o campo não perder o foco).

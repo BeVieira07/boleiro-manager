@@ -28,49 +28,55 @@ test('a tabela provisória fecha com a real e não repete o critério de desempa
   assert.doesNotMatch(fonte, /localeCompare|\.Pts\s*\+=|Pts\s*-/, 'o desempate fica só em core/estado.mjs');
 });
 
-test('o seletor da classificação mostra apenas as competições com tabela da temporada', () => {
+// #409: a classificação fica na página Competições, com abas (Nacional, Internacional, Estadual) e o seletor da aba
+test('as abas e o seletor mostram só as competições da temporada, e cada uma abre a sua tabela', () => {
   const j = carregarJogo({ boot: true, estaduais: true, continentais: true });
   j.run("newGame('c121');go('tabela')");
-  assert.match(j.html(), /<label for="classifCompeticao">Competição<\/label><select id="classifCompeticao" data-mudar="verClassificacao">/);
+  assert.equal(j.run('ui.view'), 'competicoes');
+  assert.match(j.html(), /<label for="compCompeticao">Competição<\/label><select id="compCompeticao" data-mudar="verCompeticao">/);
+  assert.match(j.html(), /<optgroup label="Nacional">/);
   assert.match(j.html(), /<option value="A" selected>Série A<\/option>/);
-  assert.match(j.html(), /<option value="estadual-SP">Paulistão<\/option>/);
-  assert.match(j.html(), /<option value="libertadores">Libertadores<\/option>/);
-  assert.match(j.html(), /<option value="sulamericana">Sul-Americana<\/option>/);
-  assert.doesNotMatch(j.html(), /<option value="copa">/);
+  assert.match(j.html(), /<option value="copa">Copa do Brasil<\/option>/);
+  assert.match(j.html(), /aria-pressed="true" data-acao="compAba\|nacional"/);
 
-  j.acao('verClassificacao', 'estadual-SP');
-  assert.match(j.html(), /<h2>Paulistão \d{4}<\/h2>/);
+  j.acao('compAba|estadual');
+  assert.equal(j.run('competicaoAtual().id'), 'estadual-SP', 'a aba abre o estadual do seu clube');
+  assert.match(j.html(), /<option value="estadual-SP" selected>Paulistão<\/option>/);
   assert.match(j.html(), /<h2 class="t3">Grupo A<\/h2>/);
   assert.match(j.html(), /<h2 class="t3">Grupo B<\/h2>/);
   assert.match(j.html(), /<tr class="me">/);
   assert.ok(j.html().includes(j.run("tabelasEstadual(torneioDe('c121'),'c121')")));
 
-  j.acao('verClassificacao', 'libertadores');
-  assert.match(j.html(), /<h2>Libertadores \d{4}<\/h2>/);
+  j.acao('verCompeticao', 'libertadores');
+  assert.match(j.html(), /<optgroup label="Internacional">/);
+  assert.match(j.html(), /<option value="sulamericana">Sul-Americana<\/option>/);
   assert.match(j.html(), /Grupo H da Libertadores/);
   assert.ok(j.html().includes(j.run("tabelasContinental(S.continentais.torneios.find(t=>t.id==='libertadores'),'c121')")));
 
   j.run('S.estaduais.temporada--;S.continentais=null;render()');
-  assert.doesNotMatch(j.html(), /<optgroup label="(?:Estaduais|Continentais)">/);
-  assert.match(j.html(), /<option value="A" selected>Série A<\/option>/);
+  assert.match(j.html(), /<option value="A" selected>Série A<\/option>/, 'sem a competição escolhida, volta à série do clube');
+  assert.match(j.html(), /aria-pressed="false" disabled title="Não há copas sul-americanas nesta temporada.">Internacional/);
+  assert.match(j.html(), /aria-pressed="false" disabled title="Não há estaduais nesta temporada.">Estadual/);
 });
 
-test('cada save começa pela sua série e a escolha na Classificação é independente da tela Jogos', () => {
+test('cada save começa pela sua série e a escolha em Competições é independente da tela Jogos', () => {
   const j = carregarJogo({ boot: true });
-  j.run(`newGame('${clubeDaSerie(j, 'B')}');go('tabela')`);
+  j.run(`newGame('${clubeDaSerie(j, 'B')}');go('competicoes')`);
   const saveId = j.run('S.saveId');
   assert.match(j.html(), /<option value="B" selected>Série B<\/option>/);
-  j.acao('verClassificacao', 'C');
+  j.acao('verCompeticao', 'C');
   assert.match(j.html(), /<h2>Série C \d{4}<\/h2>/);
   j.acao('go|jogos');
   assert.match(j.html(), /aria-pressed="true" data-acao="verDivisao\|B"/);
   j.acao('verDivisao|D');
-  j.acao('go|tabela');
+  j.acao('go|competicoes');
   assert.match(j.html(), /<option value="C" selected>Série C<\/option>/);
 
-  j.run(`newGame('${clubeDaSerie(j, 'A')}');go('tabela')`);
+  j.run(`newGame('${clubeDaSerie(j, 'A')}');go('competicoes')`);
   assert.match(j.html(), /<option value="A" selected>Série A<\/option>/);
   j.acao(`abrirSave|${saveId}`);
-  j.acao('go|tabela');
+  j.acao('go|competicoes');
   assert.match(j.html(), /<option value="C" selected>Série C<\/option>/);
+  j.acao('go|tabela');
+  assert.match(j.html(), /<option value="B" selected>Série B<\/option>/, '"Ver classificação" abre a série do clube');
 });
