@@ -6,6 +6,10 @@ import { createClient } from 'npm:@supabase/supabase-js@2.45.4';
 import { acaoMercadoLiga, iniciarLiga, jogarRodadaLiga, removerTecnicoLiga } from '../../../core/liga.mjs';
 import { S } from '../../../core/estado.mjs';
 import { DADOS_PADRAO } from '../../../core/dados-padrao.mjs';
+// #355: os clubes europeus do mercado; o core os monta a cada estado (reindex), sem gravá-los no estado da liga
+import { DADOS_EUROPA } from '../../../core/dados-europa.mjs';
+import { definirBaseEuropa } from '../../../core/europa.mjs';
+definirBaseEuropa(DADOS_EUROPA);
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',

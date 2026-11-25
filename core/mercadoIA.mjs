@@ -8,8 +8,9 @@
    Busca curta (poucos candidatos por clube) e no máximo MAX_NEGOCIOS por janela: o tempo fica previsível. */
 import { loanOf, loans } from './emprestimos.mjs';
 import { S, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, ehHumano, tecnicos } from './estado.mjs';
+import { clubesEuropa, nomeLigaEuropa } from './europa.mjs';
 import { movePlayer } from './mercado.mjs';
-import { money, rnd, shuffle } from './utils.mjs';
+import { hashStr, money, mulberry32, rnd, shuffle } from './utils.mjs';
 
 export const MAX_NEGOCIOS = 20, MAX_EMPRESTIMOS = 6, ELENCO_MIN = 16, ELENCO_MAX = 32;
 const TITULARES = { G: 1, D: 4, M: 4, A: 2 }; // 4-4-2: a régua de "esse jogador entra no time?"
@@ -70,6 +71,7 @@ export function janelaIA() {
     addNews(`💼 ${quem.name} quer ${alvo.name} e ofereceu ${money(valor)}, mesmo sem ele estar à venda. Responda no painel do clube.`, uc.id);
     propostas.push({ p: alvo, de: quem, valor });
   }
+  propostas.push(...propostasEuropeias());
   // uma notícia por janela, com os maiores negócios (uma por negócio tiraria as outras notícias da lista de 40)
   if (compras.length || emprestimos.length) {
     const nome = c => c.short || c.name;
@@ -77,4 +79,26 @@ export function janelaIA() {
     addNewsTodos(`🔁 Janela de transferências: ${compras.length} venda(s) e ${emprestimos.length} empréstimo(s) entre clubes da IA.${destaques.length ? ' Destaques: ' + destaques.join('; ') + '.' : ''}`);
   }
   return { compras, emprestimos, propostas };
+}
+
+/* #355: clubes europeus também fazem propostas pelos destaques do técnico, por mais do que os brasileiros pagam. Sorteio
+   próprio (semente do jogo, temporada e rodada), não o rnd da rodada: com ou sem os dados europeus carregados, o Brasil
+   joga igual. Só por quem viraria titular lá. */
+export const CHANCE_EUROPA = 0.4;
+function propostasEuropeias() {
+  const eu = clubesEuropa(), feitas = []; if (!eu.length) return feitas;
+  const r = mulberry32(hashStr(`${S.seed}|${S.season}|${S.round}|europa`));
+  for (const t of tecnicos()) {
+    if (t.demitido || r() >= CHANCE_EUROPA) continue;
+    const uc = clubDo(t); if (uc.players.length <= ELENCO_MIN) continue;
+    const alvo = uc.players.filter(p => !loanOf(p.id) && !t.offers.some(o => o.pid === p.id)).sort((a, b) => b.ovr - a.ovr)[Math.floor(r() * 3)];
+    if (!alvo) continue;
+    const valor = Math.round(alvo.value * (1.25 + r() * 0.5) * 10) / 10;
+    const quer = eu.filter(c => c.balance >= valor && c.players.length < ELENCO_MAX && alvo.ovr >= pior(c, alvo.pos));
+    const quem = quer[Math.floor(r() * quer.length)]; if (!quem) continue;
+    t.offers.push({ id: `eu${S.season}_${S.round}_${alvo.id}`, pid: alvo.id, from: quem.id, amount: valor, until: S.round + 3 });
+    addNews(`🌍 ${quem.name} (${nomeLigaEuropa(quem.liga)}, ${quem.pais}) quer ${alvo.name} e ofereceu ${money(valor)}. Responda no painel do clube.`, uc.id);
+    feitas.push({ p: alvo, de: quem, valor });
+  }
+  return feitas;
 }

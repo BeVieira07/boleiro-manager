@@ -48,6 +48,10 @@ ESTADUAIS.ligados = false;
 // #133, #134: Libertadores e Sul-Americana também, salvo carregarJogo({ continentais: true })
 const { CONTINENTAIS } = await import(new URL('core/continental.mjs', RAIZ));
 CONTINENTAIS.ligados = false;
+// #355: clubes europeus no mercado só com carregarJogo({ europa: true }); a tela não baixa nada durante os testes
+const { definirBaseEuropa } = await import(new URL('core/europa.mjs', RAIZ));
+const { DADOS_EUROPA } = await import(new URL('core/dados-europa.mjs', RAIZ));
+(await import(new URL('ui/telas.mjs', RAIZ))).EUROPA.baixar = false;
 // #64: avisos e confirmações vão para j.alertas; as confirmações respondem "sim", como o confirm falso fazia
 avisosTeste.ouvir = m => amb.alertas.push(m); avisosTeste.autoConfirmar = true;
 const UI_INICIAL = JSON.stringify(ui);
@@ -62,9 +66,9 @@ const avaliar = new Function('escopo', 'codigo', 'with (escopo) { return eval(co
 /** Começa do zero: sem jogo, armazenamento vazio (ou o `ls` dado). `boot: true` abre o jogo como no navegador e clica em
  *  "Jogar agora" na landing (#316), indo ao menu; com `landing: true`, para na landing.
  *  `semente`: o Math.random recomeça dela a cada carregarJogo (tests/sorteio-fixo.mjs), então o teste não depende da ordem. */
-export function carregarJogo({ boot = false, landing = false, ls = {}, limiteLs = Infinity, estaduais = false, continentais = false, semente = 20261115 } = {}) {
+export function carregarJogo({ boot = false, landing = false, ls = {}, limiteLs = Infinity, estaduais = false, continentais = false, europa = false, semente = 20261115 } = {}) {
   Math.random = sorteioFixo(semente);
-  ESTADUAIS.ligados = estaduais; CONTINENTAIS.ligados = continentais;
+  ESTADUAIS.ligados = estaduais; CONTINENTAIS.ligados = continentais; definirBaseEuropa(europa ? DADOS_EUROPA : null);
   amb.app = ''; amb.alertas = []; amb.ls = ls; amb.limite = limiteLs; amb.campos = {};
   usarEstado(null); Object.assign(ui, JSON.parse(UI_INICIAL)); salvarJogo.avisou = false;
   if (boot) { main.iniciar(); if (!landing) main.executar('go|menu') }
