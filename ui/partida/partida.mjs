@@ -4,6 +4,7 @@ import { fecharTemporada, iniciarTemporada } from '../../core/partida.mjs';
 import { placarPenaltis, textoPenalti, vencedorPenaltis } from '../../core/penaltis.mjs';
 import { esc, money } from '../../core/utils.mjs';
 import { save, ui } from '../estado.mjs';
+import { conflito } from '../inicio/saves.mjs';
 import { abrirCamada, fecharCamada } from '../avisos.mjs';
 import { icone } from '../icones.mjs';
 import { render } from '../telas.mjs';
@@ -50,7 +51,7 @@ export function openModal(html,{fechavel=true}={}){const m=document.getElementBy
 export function closeModal(){const m=document.getElementById('modal');m.style.display='none';fecharCamada(m)}
 
 export function seasonEnd(){
-  const r=fecharTemporada();if(!r)return;save();
+  const r=fecharTemporada();if(!r)return;const c0=conflito.n;save();if(conflito.n!==c0)return; // #412: aba desatualizada: sem o modal de fim de temporada
   const {div,T,pos,two,mv,prize,ds,di,champs,top}=r;
   const fate=pos==null?'':!two?(pos>=17?'<p class="bad">Seu time terminou na zona de rebaixamento… a diretoria está de olho!</p>':'')
     :di<ds.length-1&&pos>T.length-mv?`<p class="bad">${icone('descer')} Seu time foi rebaixado para a ${DIVS[ds[di+1]]}.</p>`
@@ -62,5 +63,5 @@ export function seasonEnd(){
    ${fate}
    <div class="row" style="justify-content:flex-end"><button class="btn sec" data-acao="closeModal">Ver tabela</button><button class="btn" data-acao="fecharEIniciarTemporada">Iniciar temporada ${S.season+1}</button></div>`);
 }
-export function newSeason(){iniciarTemporada();save();ui.view='clube';render()}
+export function newSeason(){iniciarTemporada();const c0=conflito.n;save();if(conflito.n!==c0)return;ui.view='clube';render()}
 export function fecharEIniciarTemporada(){closeModal();newSeason()}
