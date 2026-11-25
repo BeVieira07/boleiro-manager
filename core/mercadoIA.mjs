@@ -33,7 +33,7 @@ function marcarSobras(ia) {
   }
 }
 // clubes da mesma série ou de uma vizinha
-const vizinhos = (ia, c) => { const ds = divisions(), d = ds.indexOf(divOf(c)); return ia.filter(o => o !== c && Math.abs(ds.indexOf(divOf(o)) - d) <= 1) };
+export const vizinhos = (ia, c) => { const ds = divisions(), d = ds.indexOf(divOf(c)); return ia.filter(o => o !== c && Math.abs(ds.indexOf(divOf(o)) - d) <= 1) };
 
 /** Abre a janela da IA. Devolve {compras, emprestimos, propostas} (listas dos negócios feitos). */
 export function janelaIA() {

@@ -55,3 +55,28 @@ test('no Mercado, os marcados pela IA aparecem à venda ou para empréstimo', ()
   assert.ok(n > 0);
   assert.ok(j.run(`(()=>{ui.mf.ord='ovr';ui.mf.dir=1;return corpoMercado().linhas})()`).match(/À venda|Para empréstimo/));
 });
+
+// #413: oferta por jogador à venda só vem de clube que paga, com vaga, da mesma série ou vizinha, sem repetir
+test('ofertas por jogadores à venda: comprador com caixa, série vizinha e sem oferta repetida', () => {
+  const j = novo();
+  const r = JSON.parse(j.run(`(()=>{
+    const uc=userClub(),t=tec(),ds=divisions(),vistas=new Set(),o={total:0,semCaixa:0,longe:0,repetida:0};
+    for(let n=0;n<80&&S.round<S.fixtures.length&&!t.demitido;n++){
+      t.confBaixa=0;if(validateLineup())uc.lineup=autoXI(uc);
+      for(const p of uc.players.slice(0,8))p.listed=true; // 8 à venda
+      const caixa=Object.fromEntries(S.clubs.map(c=>[c.id,c.balance]));
+      playRound();
+      for(const of of t.offers.filter(x=>!vistas.has(x.id)&&!x.id.startsWith('oe')&&x.id[0]==='o')){
+        vistas.add(of.id);o.total++;
+        const b=clubById(of.from);
+        if(caixa[b.id]<of.amount)o.semCaixa++;
+        if(Math.abs(ds.indexOf(divOf(b))-ds.indexOf(divOf(uc)))>1)o.longe++
+        if(t.offers.filter(x=>x.pid===of.pid&&x.from===of.from).length>1)o.repetida++;
+      }
+    }
+    return JSON.stringify(o)})()`));
+  assert.ok(r.total >= 10, `só ${r.total} ofertas na temporada`);
+  assert.equal(r.semCaixa, 0, 'oferta de clube sem caixa');
+  assert.equal(r.longe, 0, 'oferta de série distante');
+  assert.equal(r.repetida, 0, 'oferta repetida do mesmo clube pelo mesmo jogador');
+});
