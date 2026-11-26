@@ -7,12 +7,13 @@ import { atualizarConfianca } from './diretoria.mjs';
 import { jogarPreTemporada } from './estadual.mjs';
 import { processLoans, wageBill } from './emprestimos.mjs';
 import { aplicarDisponibilidade, autoSlotXI, semSuspensoesPorAmarelos, slotsDe, unavailable } from './escalacao.mjs';
-import { P, S, addFin, addNews, bilheteriaBase, clubById, clubDo, divOf, ehHumano, table, tec, tecnicos, tvQuota, userClub } from './estado.mjs';
+import { P, S, addFin, addNews, bilheteriaBase, clubById, clubDo, divOf, ehHumano, jogaNoBrasil, table, tec, tecnicos, tvQuota, userClub } from './estado.mjs';
 import { adiarForma, aplicarFormaPendente } from './forma.mjs';
 import { noticiaPenaltis } from './gols-copa.mjs';
 import { elencoDoJogo, saidaForcada, sortearLances } from './lances.mjs';
 import { ehJanela, janelaIA, temOferta, vizinhos } from './mercadoIA.mjs';
 import { ovrNaPosicao } from './posicoes.mjs';
+import { concluirDataPlayoff, jogosDaRodada } from './playoffs.mjs';
 import { energiaDaRecomposicao, simularLances } from './taticas.mjs';
 import { clamp, money, pick, rnd, semente } from './utils.mjs';
 
@@ -57,7 +58,7 @@ export function simulate(g,{clubeAoVivo,cansacoNoJogo=true}={}){
   const h=elencoDoJogo(H,titulares(H),cansacoNoJogo),a=elencoDoJogo(A,titulares(A),cansacoNoJogo);
   g.cansacoNoJogo=cansacoNoJogo;
   g.escalacoes={h,a};
-  const chances=chancesDoJogo(power(H,h),power(A,a));
+  const chances=chancesDoJogo(power(H,h),power(A,a),g.neutro);
   g.lh=chances.h;g.la=chances.a;g.hg=0;g.ag=0;
   // Copa do Brasil continua sem lesões e cartões. Sua data compartilha a rodada com a liga.
   g.ev=g.copa?[]:[...sortearLances(h,'h'),...sortearLances(a,'a')];
@@ -93,12 +94,14 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
   if(semClube)return {demitido:true,tecnico:semClube.id};
   if(S.round>=S.fixtures.length)return {fim:true};
   const ativos=tecnicos().filter(t=>!t.demitido);
+  const brasil=jogaNoBrasil(), jogos=jogosDaRodada(S.round);
+  const vaiJogar=t=>brasil||jogos.some(g=>g.h===t.clubId||g.a===t.clubId);
   const faltam=tecnicos().length>1?ativos.filter(t=>!t.pronto):[];
   if(faltam.length)return {erro:`Falta confirmar a rodada: ${faltam.map(t=>t.nome).join(', ')}.`,faltam:faltam.map(t=>t.id)};
-  for(const t of ativos){const e=validateLineup(clubDo(t));if(e)return {erro:(tecnicos().length>1?t.nome+': ':'')+e,tecnico:t.id}}
+  for(const t of ativos.filter(vaiJogar)){const e=validateLineup(clubDo(t));if(e)return {erro:(tecnicos().length>1?t.nome+': ':'')+e,tecnico:t.id}}
   const idSolo=tecnicos().length===1?userClub().id:null;
   const clubeAoVivo=g=>idSolo&&(g.h===idSolo||g.a===idSolo)&&assistir?.(g)?idSolo:null;
-  const pre=jogarPreTemporada(clubeAoVivo,cansacoNoJogo); // #132: estaduais antes da rodada 1
+  const pre=brasil&&jogarPreTemporada(clubeAoVivo,cansacoNoJogo); // #132: estaduais antes da rodada 1
   if(pre){
     for(const t of tecnicos())t.pronto=false;
     S.atual=tecnicos()[0].id;
@@ -106,11 +109,13 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
     renovarPropostasDeClubes();
     return {jogos:pre.jogos,meu:tec().demitido?null:pre.jogos.find(g=>g.h===uc.id||g.a===uc.id)||null,estadual:{dia:pre.dia}};
   }
+  concluirDataPlayoff(S.round-1);
   aplicarFormaPendente(); // forma da rodada anterior, com o resultado final do jogo ao vivo (#44)
   limparEventosAntigos(); // #195: os lances das rodadas anteriores já foram usados; só o placar fica no save
   S.rng=semente(S.seed,S.season,S.round); // a rodada depende só do estado e das escolhas, não do que foi sorteado antes
   if(ehJanela(S.round))janelaIA(); // #103: começo e metade da temporada
-  const games=S.fixtures[S.round].map(g=>simulate(g,{clubeAoVivo:clubeAoVivo(g),cansacoNoJogo}));
+  S.fixtures[S.round]=jogos;
+  const games=jogos.map(g=>simulate(g,{clubeAoVivo:clubeAoVivo(g),cansacoNoJogo}));
   for(const g of games)noticiarPenaltisDaLiga(g,S.round);
   const jogaram=anotarTitulares(new Map(),games,getXI,clubById); // #136: titulares do jogo, antes de lesões e energia mudarem
   aplicarDisponibilidade(games);
@@ -118,15 +123,15 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
   const jogoDe=c=>games.find(g=>g.h===c.id||g.a===c.id);
   for(const t of ativos){
     const uc=clubDo(t),mine=jogoDe(uc);
-    // finanças de cada clube com técnico
-    addFin(`Cota de TV — rodada ${S.round+1}`,tvQuota(divOf(uc)),uc);
-    if(mine&&mine.h===uc.id){
+    // A cota por rodada regular e a folha por partida seguem a cadência do Brasileirão (atalho até a #449).
+    if(brasil||mine&&!mine.playoff)addFin(`Cota de TV — rodada ${S.round+1}`,tvQuota(divOf(uc)),uc);
+    if(mine&&mine.h===uc.id&&!mine.neutro){
       const pos=table(divOf(uc)).findIndex(x=>x.id===uc.id);
       const bonus=S.round===0?1:pos<4?1.3:pos<10?1.1:1; // #381: sem tabela ainda, a ordem seria a alfabética
       addFin(`Bilheteria vs ${clubById(mine.a).name}`,Math.round(bilheteriaBase(uc)*bonus*100)/100,uc);
     }
     const wages=wageBill(uc);
-    addFin('Salários do elenco',-Math.round(wages*1000)/1000,uc);
+    if(brasil||mine)addFin('Salários do elenco',-Math.round(wages*1000)/1000,uc);
     if(mine){const gf=mine.h===uc.id?mine.hg:mine.ag,ga=mine.h===uc.id?mine.ag:mine.hg,bicho=Math.round(wages*0.15*1000)/1000;
       (mine.bicho||(mine.bicho={}))[uc.id]=bicho; // o ajuste ao vivo (ressimularDepois) usa o mesmo valor (#43)
       if(gf>ga)addFin('Bicho por vitória',-bicho,uc)}
@@ -152,14 +157,14 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
       }
     }
   }
-  const {copa,pendente}=semSuspensoesPorAmarelos(()=>{
+  const {copa,pendente}=brasil?semSuspensoesPorAmarelos(()=>{
     const copa=jogarCopa(S.round,true,cansacoNoJogo);
     const pendente=adiarCopa&&copa.some(g=>ehHumano(g.h)||ehHumano(g.a));
     if(!pendente)concluirCopa();
     const continentais=jogarContinentais(S.round,cansacoNoJogo); // #133, #134: Libertadores e Sul-Americana
     anotarTitulares(jogaram,[...copa,...continentais],getXI,clubById); // #136: as copas são outros jogos na mesma rodada
     return {copa,pendente};
-  });
+  }):{copa:[],pendente:false};
   atualizarEnergia(jogaram,[...games,...copa]);
   if(!cansacoNoJogo)for(const g of games){
     for(const e of g.ev.filter(saidaForcada))energiaDaSaidaForcada(clubById(g[e.side]),null,e);
@@ -169,7 +174,7 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
   S.atual=tecnicos()[0].id; // depois da rodada, a vez volta ao primeiro técnico
   S.round++;
   if(!pendente)concluirRodada(games);
-  return {jogos:games,meu:ativos.some(t=>t.id===S.atual)?jogoDe(userClub()):null,copa};
+  return {jogos:games,meu:ativos.some(t=>t.id===S.atual)?jogoDe(userClub())??null:null,copa};
 }
 
 // A rodada já está no save quando o jogo ao vivo começa. Uma revisão substitui ou remove a notícia da mesma partida.
@@ -192,7 +197,7 @@ function concluirRodada(games){
   processLoans();
   for(const t of tecnicos().filter(t=>!t.demitido)){
     const uc=clubDo(t), jogo=games.find(g=>g.h===uc.id||g.a===uc.id);
-    atualizarConfianca(t,jogo);
+    if(jogaNoBrasil()||jogo)atualizarConfianca(t,jogo);
     if(uc.balance<0)addNews('⚠️ Caixa negativo! Venda jogadores para equilibrar as contas.',uc.id);
   }
   renovarPropostasDeClubes();
@@ -208,7 +213,11 @@ export function concluirRodadaCopa(){
 // revezamento (#29): o técnico da vez confirma a escalação; a vez passa ao próximo que falta.
 // Devolve {erro}, {proximo: técnico} ou {todos: true} (todos confirmaram: pode jogar a rodada).
 export function confirmarRodada(){
-  if(!tec().demitido){const e=validateLineup();if(e)return {erro:e};tec().pronto=true}
+  if(!tec().demitido){
+    const me=tec().clubId;
+    if(jogaNoBrasil()||jogosDaRodada(S.round).some(g=>g.h===me||g.a===me)){const e=validateLineup();if(e)return {erro:e}}
+    tec().pronto=true;
+  }
   const falta=tecnicos().filter(t=>t.demitido?!t.recusouClubes:!t.pronto);
   if(falta.length){S.atual=falta[0].id;return {proximo:falta[0]}}
   return {todos:true};

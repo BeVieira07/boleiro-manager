@@ -13,6 +13,7 @@ import { timesDaVolta } from '../../core/gols-copa.mjs';
 import { ESTILOS, MODOS, mudarTatica, recobrarPenalti, ressimularDepois, taticaUser } from '../../core/taticas.mjs';
 import { DIVS, P, S, clubById, divOf, divisions, hasTwoDivs, userClub } from '../../core/estado.mjs';
 import { escalacaoNoMinuto, saidaForcada } from '../../core/lances.mjs';
+import { penaltiPlayoff } from '../../core/playoffs.mjs';
 import { elencoParaTrocas, mudarFormacaoAoVivo, mudarPosicaoAoVivo, substituir, trocasDe } from '../../core/substituicoes.mjs';
 import { esc, hashStr } from '../../core/utils.mjs';
 import { avisar } from '../avisos.mjs';
@@ -37,6 +38,7 @@ const soma = (v, min) => v.jogos.map(g => { const q = placarNoMinuto(g, min); re
 export function penaltisDoJogo(g, rodada) {
   if (S.seed == null) return (g.copa ? g.copa.pen : g.pen) ?? null;
   if (g.copa) return penaltiDaCopa(g, rodada);
+  if (g.playoff) return penaltiPlayoff(g);
   if (g.final === 'volta' && S.estaduais) return penaltiDaFinal(g);
   return null;
 }
@@ -484,14 +486,15 @@ function htmlControles(v) {
 
 const torneioDoVivo = v => v.estadual != null && S.estaduais ? S.estaduais.torneios.find(t => t.uf === v.g.uf) : null;
 const faseCopa = c => `${COPA} · ${c.nome} (${c.volta ? 'volta' : 'ida'})`;
-const competicao = v => { const tor = torneioDoVivo(v); return v.g.copa ? faseCopa(v.g.copa) : tor ? `${tor.nome} · ${nomeData(tor, v.estadual)}` : `${DIVS[divOf(userClub())] || 'Campeonato'} · Rodada ${v.rodada + 1}` };
+const competicao = v => { const tor = torneioDoVivo(v); return v.g.copa ? faseCopa(v.g.copa) : tor ? `${tor.nome} · ${nomeData(tor, v.estadual)}` : `${DIVS[divOf(userClub())] || 'Campeonato'} · ${v.g.playoff || 'Rodada ' + (v.rodada + 1)}` };
+const agregadoDoJogo = g => g.copa?.ida || (!g.neutro && g.agregado);
 function textoAgregado(v) {
-  const copa = v.g.copa;
-  if (!copa?.ida) return '';
+  const ida = agregadoDoJogo(v.g);
+  if (!ida) return '';
   const p = placarNoMinuto(v.g, minTela(v));
   const placar = v.fim && v.pen ? placarPenaltis(v.pen, v.g.h, v.g.a) : '';
   const pen = !v.fim || !v.pen ? '' : placar ? ` (${placar} nos pênaltis)` : ` · ${clubById(vencedorPenaltis(v.pen)).name} venceu nos pênaltis`;
-  return `Placar agregado: ${copa.ida.h + p.h} x ${copa.ida.a + p.a}${pen}`;
+  return `Placar agregado: ${ida.h + p.h} x ${ida.a + p.a}${pen}`;
 }
 // cabeçalho do seu jogo (#170): competição, relógio, placar, último lance, barra de tempo, pausa e estatísticas
 function htmlCab(v) {
@@ -499,7 +502,7 @@ function htmlCab(v) {
   const lado = (c, cls) => `<div class="placar-time ${cls}">${crest(c, 'g')}<b>${esc(c.name)}</b></div>`;
   return `<div class="cab-jogo"><div class="cab-topo"><span class="sobretitulo">${esc(competicao(v))}</span><span class="relogio" id="lclk" aria-live="off">${relogio(v)}</span></div>
     <div class="placar">${lado(H, 'casa')}<div class="placar-centro"><div class="placar-num" id="lsc" aria-live="polite">${p.h} x ${p.a}</div></div>${lado(A, 'fora')}</div>
-    ${v.g.copa?.ida ? `<p class="muted" id="av-agregado">${esc(textoAgregado(v))}</p>` : ''}
+    ${agregadoDoJogo(v.g) ? `<p class="muted" id="av-agregado">${esc(textoAgregado(v))}</p>` : ''}
     <div class="vivo-cobranca" id="av-cobranca" role="status" aria-live="polite" aria-atomic="true">${htmlCobrancaAtual(v)}</div>
     <p class="ult-lance" id="lult">${lanceTxt(v.g, minTela(v))}</p>
     <div class="penaltis" id="av-pen">${htmlPenaltis(v)}</div>

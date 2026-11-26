@@ -61,7 +61,7 @@ function proximoJogo(uc, T) {
   const me = uc.id;
   const g = proximoCompromisso();
   if (!g) return `<section class="card destaque"><h2 class="t3">Próximo jogo</h2><p>${S.round >= S.fixtures.length ? 'Temporada encerrada. Use o botão no topo para fechar a temporada e começar a próxima.' : 'Sem próximos jogos no calendário.'}</p></section>`;
-  const etapa = g.nome === 'Campeonato Brasileiro' ? `Rodada ${g.n}` : `${g.nome} · ${g.perna || g.rot + ' ' + g.n}`;
+  const etapa = g.nome === 'Campeonato Brasileiro' ? `Rodada ${g.n}` : `${g.nome} · ${g.fase || g.perna || g.rot + ' ' + g.n}`;
   const t = taticaUser(uc), posDe = id => { const i = T.findIndex(x => x.id === id); return S.round && i >= 0 ? ' · ' + ord(i + 1) : '' };
   const lado = c => `<div class="time">${crest(c, 'g')}<b>${esc(c.name)}</b><span class="muted">Força ${c.strength}${posDe(c.id)}</span></div>`;
   const formacoes = [...new Set(['4-4-2', '4-3-3', '3-5-2', uc.formation])];

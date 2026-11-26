@@ -7,7 +7,7 @@
    4. Propostas espontâneas: um clube da IA oferece por um destaque do técnico, mesmo sem ele estar à venda.
    Busca curta (poucos candidatos por clube) e no máximo MAX_NEGOCIOS por janela: o tempo fica previsível. */
 import { loanOf, loans } from './emprestimos.mjs';
-import { S, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, ehHumano, tecnicos } from './estado.mjs';
+import { S, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, ehHumano, rodadasRegulares, tecnicos } from './estado.mjs';
 import { clubesEuropa, nomeLigaEuropa } from './europa.mjs';
 import { movePlayer } from './mercado.mjs';
 import { saidaAbaixoDoMinimo } from './partida.mjs';
@@ -16,7 +16,7 @@ import { hashStr, money, mulberry32, rnd, shuffle } from './utils.mjs';
 export const MAX_NEGOCIOS = 20, MAX_EMPRESTIMOS = 6, ELENCO_MIN = 16, ELENCO_MAX = 32;
 const TITULARES = { G: 1, D: 4, M: 4, A: 2 }; // 4-4-2: a régua de "esse jogador entra no time?"
 const BUSCA = 8; // quantos clubes cada jogador consulta
-export const ehJanela = r => r === 0 || r === Math.floor(S.fixtures.length / 2);
+export const ehJanela = r => r === 0 || r === Math.floor(rodadasRegulares() / 2);
 const arred = v => Math.round(v * 1000) / 1000;
 const disponiveis = (c, pos) => c.players.filter(p => p.pos === pos && !loanOf(p.id));
 /** overall do titular mais fraco do clube na posição (0 se faltam titulares) */
@@ -54,7 +54,7 @@ export function janelaIA() {
     de.balance = arred(de.balance + preco); para.balance = arred(para.balance - preco);
     movePlayer(p, para); compras.push({ p, de, para, preco });
   }
-  const ate = Math.min(S.round + Math.floor(S.fixtures.length / 2), S.fixtures.length);
+  const ate = Math.min(S.round + Math.floor(rodadasRegulares() / 2), S.fixtures.length);
   for (const p of shuffle(ia.flatMap(c => c.players.filter(x => x.emprestar)))) { // sem preferência pela ordem dos clubes
     if (emprestimos.length >= MAX_EMPRESTIMOS || compras.length + emprestimos.length >= MAX_NEGOCIOS) break;
     const de = clubById(p.clubId); if (de.players.length <= ELENCO_MIN) continue;

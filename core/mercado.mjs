@@ -2,8 +2,8 @@ import { estrelasPot } from './base.mjs';
 import { novoContrato } from './contratos.mjs';
 import { UM_ANO, loanOf, startLoan, wageBill } from './emprestimos.mjs';
 import { clubeDe, ehEstrangeiro } from './estrangeiros.mjs';
-import { ehEuropeu, registrarMudanca } from './europa.mjs';
-import { MOVE_N, P, S, addFin, addNews, clubById, divOf, divisions, ehHumano, table, tec, tecnicos, userClub } from './estado.mjs';
+import { ehEuropaDoMercado, registrarMudanca } from './europa.mjs';
+import { P, S, addFin, addNews, clubById, divOf, ehHumano, table, tec, tecnicos, userClub, zonasDaDivisao } from './estado.mjs';
 import { FORMA_LIM } from './forma.mjs';
 import { ehJanela, sobrasDoElenco } from './mercadoIA.mjs';
 import { autoXI } from './motor.mjs';
@@ -19,7 +19,7 @@ export function movePlayer(p,to,emprestimo=false){
   to.players.push(p);p.clubId=to.id;p.listed=false;delete p.emprestar;if(!emprestimo)novoContrato(p);
   for(const t of tecnicos())t.offers=t.offers.filter(o=>o.pid!==p.id);
   // #410: o clube do técnico não ganha jogador de graça ao vender; #355: o europeu é refeito dos dados a cada jogo aberto, os gerados sumiriam
-  if(!ehHumano(from)&&!ehEuropeu(from))ensureSquad(from);
+  if(!ehHumano(from)&&!ehEuropaDoMercado(from))ensureSquad(from);
 }
 // regra: pode fazer proposta por este jogador agora? (texto do erro ou null)
 const rodadaDaProposta=()=>S.round+'_'+S.season;
@@ -62,9 +62,9 @@ function precoDaContraproposta(p,seller,pedido){
   else if(seller.balance<wageBill(seller))fatores.push([-0.10,`${seller.name} está com o caixa apertado.`]);
 
   if(S.round>0&&!ehEstrangeiro(seller)){
-    const div=divOf(seller), ds=divisions(), classificacao=table(div);
+    const div=divOf(seller), classificacao=table(div);
     const pos=classificacao.findIndex(t=>t.id===seller.id)+1;
-    const zona=ds.length===1?4:div===ds.at(-1)?0:MOVE_N();
+    const zona=zonasDaDivisao(div).rebaixamento;
     if(pos>0&&pos<=4)fatores.push([0.10,`${seller.name} está entre os quatro primeiros da série.`]);
     else if(pos>0&&pos>classificacao.length-zona){
       fatores.push([seller.balance<=0?-0.05:0.05,`${seller.name} está na zona de rebaixamento.`]);

@@ -5,7 +5,7 @@ import { RENOVA_ATE, pedidoRenovacao, renovarContrato, renovaveis, renovarTodos 
 import { energiaDe } from '../../core/energia.mjs';
 import { loanOf, wageBill } from '../../core/emprestimos.mjs';
 import { AMARELOS_PARA_SUSPENSAO, unavailable } from '../../core/escalacao.mjs';
-import { P, userClub } from '../../core/estado.mjs';
+import { P, jogaNoBrasil, userClub } from '../../core/estado.mjs';
 import { getXI } from '../../core/motor.mjs';
 import { esc, money } from '../../core/utils.mjs';
 import { energiaBarra, ovrChip } from '../componentes.mjs';
@@ -127,6 +127,6 @@ export function vElenco() {
     <thead><tr>${COLUNAS.map(([rotulo, chave, classe]) => th(rotulo, chave, f, a, classe)).join('')}${th('Mercado', '', f, a)}</tr></thead>
     <tbody id="corpoElenco">${corpoElenco(lista, titulares)}</tbody></table></div></section>
   <p class="muted nota">As setas mostram a variação do overall desde o início da temporada, e as estrelas, até onde o jogador pode chegar. A barra de forma sobe com bons jogos e cai no banco. A energia cai a cada jogo como titular e volta no descanso; abaixo de 70 o jogador rende menos e abaixo de 30 também se lesiona mais. Quem chega ao fim do contrato sem renovar sai de graça na virada da temporada.</p>
-  <p class="muted nota">Um jogador pendurado cumpre um jogo de suspensão se receber o próximo amarelo no Brasileirão ou no estadual.</p>
+  <p class="muted nota">Um jogador pendurado cumpre um jogo de suspensão se receber o próximo amarelo ${jogaNoBrasil() ? 'no Brasileirão ou no estadual' : 'na liga'}.</p>
   ${vLoans()}`;
 }

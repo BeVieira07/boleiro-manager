@@ -3,7 +3,7 @@
    Liga: topScorers. Copas e estaduais: artilhariaCopa. */
 import { clubeCont } from '../../core/continental.mjs';
 import { artilhariaCopa } from '../../core/gols-copa.mjs';
-import { S, clubById, divisions, table, tec, topScorers } from '../../core/estado.mjs';
+import { S, clubById, divisions, rodadasDaDivisao, table, tec, topScorers } from '../../core/estado.mjs';
 import { posDNome } from '../../core/posicoes.mjs';
 
 const COPA = { id: 'copa', nome: 'Copa do Brasil' };
@@ -31,6 +31,6 @@ export function linhasDe(c) {
   }
   const J = Object.fromEntries(table(c.id).map(t => [t.id, t.J]));
   const L = topScorers(1000, c.id).map(p => ({ pid: p.id, nome: p.name, sub: posDNome(p), clube: clubById(p.clubId), j: J[p.clubId] ?? 0, gols: p.goals, meu: p.clubId === me }));
-  const total = S.fixtures.length;
+  const total = rodadasDaDivisao(c.id);
   return { status: S.round >= total ? 'Encerrado' : S.round ? `Em andamento · após ${plural(S.round, 'rodada', 'rodadas')}` : 'Ainda sem jogos', linhas: ranquear(L), vazio: 'Nenhum gol ainda nesta série.' };
 }

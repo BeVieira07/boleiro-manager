@@ -1,5 +1,5 @@
 import { loanOf, wageBill } from '../../core/emprestimos.mjs';
-import { DIVS, P, S, clubById, divOf, divisions, ehHumano, tec, userClub } from '../../core/estado.mjs';
+import { DIVS, P, S, clubById, divOf, divisions, ehHumano, jogaNoBrasil, tec, userClub } from '../../core/estado.mjs';
 import { clubeDe, competicaoDe, ehEstrangeiro, todosEstrangeiros } from '../../core/estrangeiros.mjs';
 import { clubesEuropa, ligasEuropa } from '../../core/europa.mjs';
 import { aceitarOferta, alternarEmprestimo, alternarVenda, comprarJa as comprarJaCore, podeProporCompra, precoPedido, proporCompra, recusarOferta, valorVendaRapida, venderJa } from '../../core/mercado.mjs';
@@ -29,12 +29,13 @@ const todosOsClubes = () => [...S.clubs, ...todosEstrangeiros(), ...clubesEuropa
 const clubesPor = () => Object.fromEntries(todosOsClubes().map(c => [c.id, c]));
 const ligaTxt = c => (ehEstrangeiro(c) ? competicaoDe(c) : DIVS[divOf(c)]);
 // liga do filtro: série do Brasil (A a D) ou liga europeia (GB1, ES2...)
-const naLiga = (c, d) => c.pais ? c.liga === d : !ehEstrangeiro(c) && divOf(c) === d;
+const naLiga = (c, d) => ehEstrangeiro(c) ? c.liga === d : divOf(c) === d;
 // país do filtro: Brasil, as copas sul-americanas ou um país europeu (#355)
-const PAISES = () => [['', 'Todos os países'], ['br', 'Brasil'], ...(todosEstrangeiros().length ? [['ext', 'Libertadores e Sul-Americana']] : []),
-  ...[...new Set(ligasEuropa().map(l => l.pais))].map(p => [p, p])];
-const doPais = (c, pais) => !pais || (pais === 'br' ? !ehEstrangeiro(c) : pais === 'ext' ? !!c.torneio : c.pais === pais);
-const ligasDoPais = pais => pais === 'br' || !pais ? divisions().map(d => [d, DIVS[d]]) : ligasEuropa().filter(l => l.pais === pais).map(l => [l.id, l.nome]);
+const PAISES = () => [['', 'Todos os países'], ...(jogaNoBrasil() ? [['br', 'Brasil']] : []),
+  ...(todosEstrangeiros().length ? [['ext', 'Libertadores e Sul-Americana']] : []),
+  ...[...new Set([...(jogaNoBrasil() ? [] : [S.pais]), ...ligasEuropa().map(l => l.pais)])].map(p => [p, p])];
+const doPais = (c, pais) => !pais || (pais === 'br' ? !c.pais && !ehEstrangeiro(c) : pais === 'ext' ? !!c.torneio : c.pais === pais);
+const ligasDoPais = pais => !pais || pais === 'br' || pais === S.pais ? divisions().map(d => [d, DIVS[d]]) : ligasEuropa().filter(l => l.pais === pais).map(l => [l.id, l.nome]);
 // país, liga, clube e valor máximo (antes de aba, posição e busca)
 const listaMercado = ({ ignorarClube = false } = {}) => {
   const uc = userClub(), f = ui.mf, C = clubesPor();
@@ -136,19 +137,21 @@ export function vMercado() {
   const lista = teste ? base.filter(p => teste(p, C)) : base;
   const jogadoresDosClubes = f.club && !porClubeAberta ? listaMercado({ ignorarClube: true }) : base;
   const totalClubes = new Set(jogadoresDosClubes.map(p => p.clubId)).size;
-  const ligas = ligasDoPais(f.pais), exterior = PAISES().length > 2; // #172, #355: com clubes estrangeiros, o país vira filtro
+  const ligas = ligasDoPais(f.pais), paises = PAISES(), exterior = paises.length > 2; // #172, #355: com clubes estrangeiros, o país vira filtro
+  const pais = paises.find(([id]) => id === (f.pais || ''))?.[1] || 'Todos os países';
+  const paisLocal = S.pais || 'Brasil';
   return `<div class="figma-mercado">${indicadores(uc)}${abas(base, totalClubes)}
   <section class="card mer-filtros" aria-label="Filtros do mercado">
     <div class="art-campo mer-pos"><span class="art-rotulo">Posição</span>${chipsGrupo(lista, f, a)}</div>
     <div class="mer-linha"><div class="art-campo mer-busca">${campoBusca(f, a, 'Nome do jogador')}</div>
     <div class="art-campo"><label for="mMax" class="sr">Valor máximo (R$ mi)</label><input id="mMax" inputmode="decimal" placeholder="Valor máx. (R$ mi)" value="${esc(f.max)}" data-mudar="${a}|max"></div></div>
     <div class="mer-linha">
-    <div class="art-campo"><label for="mPais">País</label>${exterior ? `<select id="mPais" data-mudar="${a}|pais">${PAISES().map(([v, r]) => `<option value="${v}" ${(f.pais || '') === v ? 'selected' : ''}>${r}</option>`).join('')}</select>` : '<select id="mPais" disabled><option>Brasil</option></select>'}</div>
+    <div class="art-campo"><label for="mPais">País</label>${exterior ? `<select id="mPais" data-mudar="${a}|pais">${paises.map(([v, r]) => `<option value="${esc(v)}" ${(f.pais || '') === v ? 'selected' : ''}>${esc(r)}</option>`).join('')}</select>` : `<select id="mPais" disabled><option>${esc(paisLocal)}</option></select>`}</div>
     ${ligas.length > 1 ? `<div class="art-campo"><label for="mLiga">Liga</label><select id="mLiga" data-mudar="${a}|liga"><option value="">Todas as divisões</option>${ligas.map(([d, nome]) => `<option value="${d}" ${f.liga === d ? 'selected' : ''}>${esc(nome)}</option>`).join('')}</select></div>` : ''}
     <div class="art-campo"><label for="mClube">Clube</label><select id="mClube" data-mudar="${a}|club"><option value="">Todos os clubes</option>${clubesDaLista().sort((x, y) => x.name.localeCompare(y.name)).map(c => `<option value="${c.id}" ${f.club === c.id ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
     </div></section>
   ${porClubeAberta ? `<p class="muted resumo">Escolha um clube para ver os jogadores dele.</p><div id="clubesMercado">${porClube(base, f)}</div>` : `<section class="card tabela-card"><header class="mer-resumo"><div><h2 class="t3" id="totalMercado" aria-live="polite">${contagem(r.total)}</h2>
-    <span class="muted">em ${exterior ? esc(PAISES().find(([v]) => v === (f.pais || ''))?.[1] || 'Todos os países') : 'Brasil'} · ${f.liga ? esc(ligas.find(([d]) => d === f.liga)?.[1] || '') : 'todas as divisões'}</span></div>
+  <span class="muted">em ${esc(exterior ? pais : paisLocal)} · ${f.liga ? esc(ligas.find(([d]) => d === f.liga)?.[1] || '') : 'todas as divisões'}</span></div>
     <span class="muted">Ordenado por ${ORDEM[f.ord] || 'posição'} · uma proposta por jogador da IA a cada rodada</span></header>
     <div class="tabela-rolavel" tabindex="0" role="region" aria-labelledby="totalMercado"><table class="tabela-jogadores mercado"><caption class="sr">Jogadores de outros clubes</caption>
     <thead><tr>${th('Pos', 'pos', f, a, 'c-pos')}${th('Jogador', 'nome', f, a, 'c-nome')}${th('Clube', '', f, a)}${th('Idade', 'idade', f, a, 'n')}${th('Força', 'ovr', f, a, 'c')}${th('Potencial', 'pot', f, a)}${th('Valor', 'valor', f, a, 'n')}${th('Salário', 'salario', f, a, 'n c-sal')}${th('Situação', '', f, a)}${th('Negociar', '', f, a)}</tr></thead>

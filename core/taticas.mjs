@@ -51,7 +51,7 @@ export function golsSegmento(lh,la,tH,tA,de,ate){
 }
 // A Copa do Brasil credita os gols ao fechar a partida. Os estaduais atualizam a própria artilharia por lance.
 const torneioDoJogo=g=>g.uf&&S.estaduais?S.estaduais.torneios.find(t=>t.uf===g.uf):null;
-function creditarGol(g,side,p,delta){if(g.copa)return;const tor=torneioDoJogo(g);if(tor)creditarGolCopa(tor,g[side],p,delta);else p.goals=Math.max(0,(p.goals||0)+delta)}
+function creditarGol(g,side,p,delta){if(g.copa||g.playoff)return;const tor=torneioDoJogo(g);if(tor)creditarGolCopa(tor,g[side],p,delta);else p.goals=Math.max(0,(p.goals||0)+delta)}
 function registrarGol(g, side, p, m, pen = false) {
   creditarGol(g, side, p, 1);
   const lance = { m, t: 'gol', side, pid: p.id, name: p.name };
@@ -86,8 +86,8 @@ function novosPenaltis(g, clube, side, xi, adversarios, n, de, ate) {
 
 // A força da escalação muda nos lances. Um time que perdeu jogadores tem
 // também um teto menor de criação, mesmo que a média dos que ficaram suba.
-export function chancesComDesfalques(ph,pa,base,inicial){
-  const chances=chancesDoJogo(ph,pa);
+export function chancesComDesfalques(ph,pa,base,inicial,neutro){
+  const chances=chancesDoJogo(ph,pa,neutro);
   for(const [side,p] of [['h',ph],['a',pa]]){
     const faltam=inicial[side].xi.length-p.xi.length;
     if(faltam>0)chances[side]=Math.min(chances[side],base[side]*0.9**faltam);
@@ -119,7 +119,7 @@ export function simularLances(g,min,revisao=false){
   const forca=(side,m)=>power(clubes[side],elencos[side],g.cansacoNoJogo?p=>energiaDoElenco(p,elencos[side],m):undefined);
   const minutosAntes=revisao&&g.cansacoNoJogo?{h:minutosDaPartida(g,'h'),a:minutosDaPartida(g,'a')}:null;
   const inicial={h:forca('h',0),a:forca('a',0)};
-  const base=chancesDoJogo(inicial.h,inicial.a);
+  const base=chancesDoJogo(inicial.h,inicial.a,g.neutro);
   const th=taticaDe(h,a,inicial.h,inicial.a),ta=taticaDe(a,h,inicial.a,inicial.h);
   const amarelos=new Set();
   const lanceDeAtaque=e=>e.t==='gol'||e.t==='penalti';
@@ -133,7 +133,7 @@ export function simularLances(g,min,revisao=false){
   const sortearTrecho=ate=>{
     const meio=(de+ate-1)/2;
     const ph=forca('h',meio),pa=forca('a',meio);
-    const chances=chancesComDesfalques(ph,pa,base,inicial);
+    const chances=chancesComDesfalques(ph,pa,base,inicial,g.neutro);
     const s=golsSegmento(chances.h,chances.a,th,ta,de,ate);
     const taxaH=taxaDePenaltis(s.h,ph.xi),taxaA=taxaDePenaltis(s.a,pa.xi);
     novosGols(g,ph,pa,poisson(s.h-taxaH*CONVERSAO_MEDIA),poisson(s.a-taxaA*CONVERSAO_MEDIA),de,ate);
@@ -241,7 +241,7 @@ export function ressimularDepois(g,min){
     // Em partidas legadas, uma mudança de posição também precisa atualizar as chances restantes.
     const moveu=g.ev.some(e=>e.t==='posicao'&&e.m<=min);
     const ph=power(H,moveu?escalacaoNoMinuto(g,'h',min):null),pa=power(A,moveu?escalacaoNoMinuto(g,'a',min):null);
-    const chances=moveu?chancesDoJogo(ph,pa):{h:g.lh,a:g.la};
+    const chances=moveu?chancesDoJogo(ph,pa,g.neutro):{h:g.lh,a:g.la};
     const s=golsSegmento(chances.h,chances.a,taticaDe(H,A),taticaDe(A,H),min+1,93);
     novosGols(g,ph,pa,poisson(s.h),poisson(s.a),min+1,93);
     g.ev.sort((x,y)=>x.m-y.m);

@@ -1,7 +1,7 @@
 /* ================= configurações (#106) =================
    Preferências deste navegador (localStorage), por aparelho, para todos os saves. Nada disso é regra do jogo: só muda
    como ele é mostrado, então não vai para o save nem para a liga. */
-import { S, divOf, table, userClub } from '../../core/estado.mjs';
+import { S, divOf, rodadasDaDivisao, table, userClub } from '../../core/estado.mjs';
 import { esc } from '../../core/utils.mjs';
 import { render } from '../telas.mjs';
 import { store } from '../utils.mjs';
@@ -27,9 +27,9 @@ export function mudarPref(chave, valor, ev) {
 
 /** Jogo decisivo: contra um dos 4 primeiros da tabela da sua série, ou nas 5 últimas rodadas. */
 export function jogoDecisivo(g, rodada = S.round) {
-  if (g.copa) return true;
+  if (g.copa || g.playoff) return true;
   const uc = userClub(), adv = g.h === uc.id ? g.a : g.h, pos = table(divOf(uc)).findIndex(x => x.id === adv);
-  return (pos >= 0 && pos < 4) || rodada > S.fixtures.length - 5;
+  return (pos >= 0 && pos < 4) || rodada > rodadasDaDivisao(divOf(uc)) - 5;
 }
 export function verAoVivo(g, rodada) { const v = prefs().aoVivo; return v === 'sempre' || (v === 'decisivos' && jogoDecisivo(g, rodada)) }
 

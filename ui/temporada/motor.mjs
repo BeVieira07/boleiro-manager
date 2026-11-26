@@ -28,7 +28,9 @@ export function playRound(aoVivo=true){
   if(conflito.n!==c0)return; // #412: aba desatualizada: o aviso de recarregar vem primeiro; não abre o ao vivo nem os resultados da campanha velha
   if(!aoVivo)return;
   const temCopa=!!S.copa?.pendente, seguir=temCopa?retomarCopa:mostrarResultados;
-  if(mine&&(solo?mine.expulsaoAoVivo===userClub().id:verAoVivo(mine)))iniciarVivo(games,mine,seguir,{estadual:r.estadual?.dia,proximo:temCopa?COPA:null});
+  if(mine&&(solo?mine.expulsaoAoVivo===userClub().id:verAoVivo(mine)))iniciarVivo(games,mine,seguir,{
+    estadual:r.estadual?.dia,proximo:temCopa?COPA:null,aoTerminar:mine.playoff?()=>{if(mine.penInterativa)save()}:null
+  });
   else seguir();
 }
 function fecharCopaAoVivo(){concluirRodadaCopa();save()}

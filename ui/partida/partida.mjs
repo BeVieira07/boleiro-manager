@@ -52,10 +52,10 @@ export function closeModal(){const m=document.getElementById('modal');m.style.di
 
 export function seasonEnd(){
   const r=fecharTemporada();if(!r)return;const c0=conflito.n;save();if(conflito.n!==c0)return; // #412: aba desatualizada: sem o modal de fim de temporada
-  const {div,T,pos,two,mv,prize,ds,di,champs,top}=r;
+  const {div,pos,two,prize,ds,di,champs,top,destino}=r;
   const fate=pos==null?'':!two?(pos>=17?'<p class="bad">Seu time terminou na zona de rebaixamento… a diretoria está de olho!</p>':'')
-    :di<ds.length-1&&pos>T.length-mv?`<p class="bad">${icone('descer')} Seu time foi rebaixado para a ${DIVS[ds[di+1]]}.</p>`
-    :di>0&&pos<=mv?`<p class="ok">${icone('subir')} Acesso! Seu time vai disputar a ${DIVS[ds[di-1]]}.</p>`:'';
+    :destino===ds[di+1]?`<p class="bad">${icone('descer')} Seu time foi rebaixado para a ${DIVS[destino]}.</p>`
+    :destino?`<p class="ok">${icone('subir')} Acesso! Seu time vai disputar a ${DIVS[destino]}.</p>`:'';
   openModal(`<h2>${icone('trofeu',{tam:24})} Fim da temporada ${S.season}</h2>
    ${champs.map(x=>`<p>Campeão${two?' da '+DIVS[x.d]:''}: <b class="gold">${esc(x.c.name)}</b></p>`).join('')}
    ${pos!=null?`<p>Seu time terminou em <b>${pos}º lugar</b>${two?' na '+DIVS[div]:''} e recebeu ${money(prize,3)} de premiação.</p>`:''}

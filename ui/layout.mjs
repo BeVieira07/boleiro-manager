@@ -1,4 +1,5 @@
-import { DIVS, S, divOf, table, tec, tecnicos, userClub } from '../core/estado.mjs';
+import { DIVS, S, divOf, rodadasRegulares, table, tec, tecnicos, userClub } from '../core/estado.mjs';
+import { fasePlayoff } from '../core/playoffs.mjs';
 import { esc, money } from '../core/utils.mjs';
 import { ui } from './estado.mjs';
 import { icone } from './icones.mjs';
@@ -88,7 +89,7 @@ export function barraAcoes(titulo) {
   const aoVivo = ui.view === 'aovivo' && ui.vivo;
   const rodada = aoVivo ? ui.vivo.rodada + 1 : Math.min(S.round + 1, total);
   const estadual = aoVivo ? ui.vivo.estadual != null : rotuloRodada() === 'estadual';
-  const placar = placarItem('Rodada', estadual ? '<span title="Pré-temporada: estaduais">Estadual</span>' : `${rodada}/${total}`)
+  const placar = placarItem('Rodada', estadual ? '<span title="Pré-temporada: estaduais">Estadual</span>' : fasePlayoff(rodada - 1) || `${rodada}/${rodadasRegulares()}`)
     + placarItem('Temporada', S.season)
     + placarItem('Posição', S.round && posicao ? `${posicao}º` : '—')
     + placarItem('Caixa', money(uc.balance), uc.balance < 0 ? 'bad' : 'gold');
