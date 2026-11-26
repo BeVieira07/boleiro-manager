@@ -22,9 +22,11 @@ test('quem não tem nota manual não passa do teto da idade, mesmo valendo muito
   const jovem = { id: 'pj', name: 'Jovem Craque', age: 17, vm: 40, pos: 'A' };
   assert.equal(rate(jovem, 70, 'A'), 62);
   assert.equal(rate({ ...jovem, ovrM: 78 }, 70, 'A'), 78, 'com nota manual vale a nota');
+  assert.equal(rate({ ...jovem, ovrM: 78, ovrEA: 63 }, 70, 'A'), 63, '#441: o overall da EA vale mais que tudo, sem teto');
   const s = novo();
-  for (const c of s.clubs) for (const p of c.players) if (p.ovrM == null) assert.ok(p.ovr <= tetoIdade(p.age), `${p.name} (${p.age} anos) com ${p.ovr}`);
-  for (const c of s.clubs) for (const p of c.players) if (p.ovrM != null) assert.equal(p.ovr, Math.max(40, Math.min(95, Math.round(p.ovrM))), `${p.name}: a nota manual não muda`);
+  for (const c of s.clubs) for (const p of c.players) if (p.ovrM == null && p.ovrEA == null) assert.ok(p.ovr <= tetoIdade(p.age), `${p.name} (${p.age} anos) com ${p.ovr}`);
+  for (const c of s.clubs) for (const p of c.players) if (p.ovrEA != null) assert.equal(p.ovr, p.ovrEA, `${p.name}: o overall da EA não muda`);
+  for (const c of s.clubs) for (const p of c.players) if (p.ovrM != null && p.ovrEA == null) assert.equal(p.ovr, Math.max(40, Math.min(95, Math.round(p.ovrM))), `${p.name}: a nota manual não muda`);
 });
 
 test('a força do clube é a do elenco, e as séries ficam em ordem', () => {

@@ -41,12 +41,16 @@ function capturarJanela(t) {
   return caixa;
 }
 
-function jogarTempoNormal(j, r) {
-  for (let i = 0; i < 93; i++) {
+// Avança o relógio até o minuto m. Pênalti do seu time (#292) é chutado no automático e a janela de expulsão é fechada:
+// os testes que usam isto não testam essas paradas, e elas dependem do sorteio (#441: mudaram com os overalls da EA).
+function avancarAte(j, r, m) {
+  for (let i = 0; i < 600 && j.run(`ui.vivo.min < ${m} && !ui.vivo.fim`); i++) {
+    if (j.run('!!ui.vivo.escolhaPen')) r.agora(() => j.acao('avPenChutar|auto'));
     r.passo();
     if (j.run('!!ui.vivo.expulsao')) j.acao('avExpFechar');
   }
 }
+function jogarTempoNormal(j, r) { avancarAte(j, r, 93) }
 
 test('expulsões do mesmo minuto abrem uma janela e só o fechamento libera o relógio', t => {
   const j = novo(), r = jogoComExpulsao(j, { duas: true }), caixa = capturarJanela(t);
@@ -628,7 +632,8 @@ test('no revezamento, a expulsão do clube do técnico da vez abre a janela (#31
 
 test('cabeçalho com tempo de jogo, último lance e estatísticas que batem com o placar (#170)', () => {
   const j = novo(), r = comRelogioManual(j);
-  r.passo(60);
+  avancarAte(j, r, 60);
+  if (j.run('!!ui.vivo.escolhaPen')) r.agora(() => j.acao('avPenChutar|auto'));
   j.run("render()"); const h = j.html();
   assert.match(h, /15' · 2º tempo/);
   assert.match(h, /Posse de bola/); assert.match(h, /Erros de passe/);

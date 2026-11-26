@@ -53,6 +53,7 @@ export function refStrength(c,clubs){
   return OVR_CENTRO[dv]+(c.strength-mesmos.reduce((s,x)=>s+x.strength,0)/mesmos.length);
 }
 // Overall do jogador, em ordem de prioridade:
+//  0. p.ovrEA — overall do EA FC 27 (data/overalls-ea.json, #441), acima de tudo
 //  1. p.ovrM  — valor escolhido à mão (data/overalls-manual.json)
 //  2. p.base  — calculado da nota média e dos minutos reais (npm run notas), misturado com a estimativa conforme p.conf
 //  3. Séries A e B: valor de mercado real do Transfermarkt (p.vm, em milhões de €; #174), com a idade pesando
@@ -64,6 +65,7 @@ const ACRESCIMO_SERIE={A:0,B:4}; // o valor de mercado cai de uma série para ou
 export const ovrDeValor=(v,a,serie='A')=>62.4+(ACRESCIMO_SERIE[serie]||0)+6*Math.log(v/Math.sqrt(fatorIdade(a))+0.3);
 export const tetoIdade=a=>a<=17?62:a<=19?68:a<=21?74:95;
 export function rate(p,ref,serie,{ converterValor=ovrDeValor, ajusteIdade }={}){
+  if(p.ovrEA!=null)return p.ovrEA; // #441: overall do EA FC 27 (data/overalls-ea.json), acima de tudo
   if(p.ovrM!=null)return clamp(Math.round(p.ovrM),40,95);
   const r=mulberry32(hashStr(p.id+'|'+p.name));
   const a=p.age||25;

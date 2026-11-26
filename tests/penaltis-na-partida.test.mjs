@@ -145,8 +145,11 @@ test('ordem em campo, goleiro adversário, placar e artilharia em cobranças sim
 });
 
 test('mudar a tática aos 45 mantém cobranças já feitas e refaz lances, artilharia e notícia', () => {
+  // #441: a primeira semente da nova tática que muda as cobranças (com uma fixa, o sorteio podia repetir a notícia)
+  let r;
+  for (let k = 3; k < 40; k++) {
   const j = novoJogo();
-  const r = j.run(`(() => {
+  r = j.run(`(() => {
     const g = S.fixtures[0].find(x => [x.h, x.a].includes(userClub().id));
     // a primeira semente com pênalti antes do intervalo e gol de pênalti depois (não depende da taxa de pênaltis, #304)
     for (let i = 0; i < 5000; i++) {
@@ -161,7 +164,7 @@ test('mudar a tática aos 45 mantém cobranças já feitas e refaz lances, artil
     const news = () => tec().news.filter(n => n.penaltis).map(n => n.t);
     const noticiaAntes = news();
     iniciarVivo([g], g, () => {}, { minuto: 45 });
-    S.rng = semente('nova tatica #290', 3);
+    S.rng = semente('nova tatica #290', ${k});
     mudarTatica('modo', 'defensivo'); ressimularDepois(g, ui.tvAoVivo.min());
     encerrarVivo();
     const lances = ev => ev.filter(e => e.t === 'penalti' || e.t === 'gol');
@@ -171,6 +174,8 @@ test('mudar a tática aos 45 mantém cobranças já feitas e refaz lances, artil
       artilharia: jogadores.every((p, i) => (p.goals || 0) - artilharia[i] === conta(g.ev, p) - conta(antes, p)),
       noticiaAntes, noticiaDepois: news(), textoDepois: noticiaPenaltis(g) };
   })()`);
+  if (JSON.stringify(r.noticiaDepois) !== JSON.stringify(r.noticiaAntes)) break;
+  }
   const anterior = r.eventosAntes.find(e => e.m <= 45 && e.t === 'penalti');
   const substituido = r.eventosAntes.find(e => e.m > 45 && e.t === 'gol' && e.pen);
   assert.ok(anterior && substituido, 'a partida original tem pênalti antes do intervalo e gol de pênalti depois');
