@@ -1,3 +1,4 @@
+import { BRASIL } from '../core/campeonatos.mjs';
 import { DIVS, S, divOf, rodadasRegulares, table, tec, tecnicos, userClub } from '../core/estado.mjs';
 import { fasePlayoff } from '../core/playoffs.mjs';
 import { esc, money } from '../core/utils.mjs';
@@ -37,6 +38,7 @@ function opcao(acao, rotulo, simbolo, classe = '') {
 export function lateral() {
   if (!S) return '';
   const uc = userClub();
+  const liga = DIVS[divOf(uc)], pais = S.pais || BRASIL;
   const tela = ABA_POR_TELA[ui.view] || ui.view;
   const secao = SECOES.find(s => s.tela === tela || s.abas?.some(([id]) => id === tela));
   const secoes = SECOES.map(s => {
@@ -54,7 +56,7 @@ export function lateral() {
     ${marca()}
     <nav class="nav" aria-label="Seções do jogo">${secoes}</nav>
     <nav class="nav-lateral" aria-label="Telas do jogo">${lista}</nav>
-    <div class="clube-cartao" role="group" aria-label="${esc(uc.name)}, ${DIVS[divOf(uc)] || ''}, temporada ${S.season}">${crest(uc, 'm')}<div><b>${esc(uc.name)}</b><span class="muted">${DIVS[divOf(uc)] || ''} · ${S.season}</span></div></div>
+    <div class="clube-cartao" role="group" aria-label="${esc(uc.name)}, ${esc(liga)}, ${esc(pais)}">${crest(uc, 'm')}<div><b>${esc(uc.name)}</b><span class="muted">${esc(liga)} · ${esc(pais)}</span></div></div>
     <button type="button" id="opcoes-jogo" class="btn fantasma icone-so nav-mais" data-acao="alternarMais" aria-label="Opções" aria-expanded="${!!ui.maisAberto}" aria-controls="navResto">${icone('menu')}</button>
     <div class="nav-resto" id="navResto" role="group" aria-labelledby="opcoes-jogo"${ui.maisAberto ? '' : ' hidden'}>
       ${ui.liga ? opcao('go|liga', 'Liga', 'liga') : ''}

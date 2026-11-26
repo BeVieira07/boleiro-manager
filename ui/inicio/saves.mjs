@@ -1,3 +1,4 @@
+import { BRASIL } from '../../core/campeonatos.mjs';
 import { migrarSave } from '../../core/versao.mjs';
 import { DIVS, S, divOf, table, usarEstado } from '../../core/estado.mjs';
 import { esc } from '../../core/utils.mjs';
@@ -95,7 +96,14 @@ export function excluirSave(id){
 }
 export function apagarSave(id){const idx=indiceSaves();store.del(SAVE_PREFIX+id);idx.list=idx.list.filter(x=>x.id!==id);if(idx.cur===id)idx.cur=null;store.set(SAVES_KEY,idx)}
 export function voltarMenu(){if(ui.liga)sairDaLiga();else if(S)salvarJogo();usarEstado(null);ui.jogosRound=null;go('menu')}
-export function novoJogo(){if(podeCriarSave()){usarEstado(null);ui.escolhaClube={serie:'',busca:'',ordem:'forca',id:''};go('inicio')}}
+export function novoJogo({ pais = BRASIL, serie = '', id = '' } = {}) {
+  if (!podeCriarSave()) return;
+  usarEstado(null);
+  ui.novos = [];
+  ui.escolhaClube = { pais, serie, busca: '', ordem: 'forca', id };
+  go('inicio');
+  return true;
+}
 /* ---------- tela inicial (#104, maquete do front): continuar, começar algo novo e jogos salvos ---------- */
 export function vMenu(){
   const idx=indiceSaves(),eu=usuarioAtual(),online=onlineConfigurado();
@@ -128,7 +136,7 @@ export function vMenu(){
   return `<div class="inicio">
   <div class="inicio-grade">
     <div class="inicio-menu">
-      <header class="inicio-topo"><h1 aria-label="Boleiro Manager"><img src="img/figma/marca-inicio.svg" alt="" width="58" height="58"><span><b>Boleiro</b><small>Manager</small></span></h1><p>Brasileirão Séries A a D, com os elencos de verdade.</p></header>
+      <header class="inicio-topo"><h1 aria-label="Boleiro Manager"><img src="img/figma/marca-inicio.svg" alt="" width="58" height="58"><span><b>Boleiro</b><small>Manager</small></span></h1><p>Escolha um clube, monte o elenco e dispute a temporada.</p></header>
       <nav class="menu-acoes" aria-label="Menu inicial">
         ${destaque}
         <button type="button" class="menu-acao${cur ? '' : ' continuar-btn'}" data-acao="novoJogo">Novo jogo</button>

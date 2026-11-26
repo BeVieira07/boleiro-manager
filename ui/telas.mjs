@@ -43,13 +43,23 @@ export function divTabs(){
 // #169: a rolagem da página e das áreas roláveis (tabelas, listas) sobrevive ao redesenho da MESMA tela; mudar de tela começa do topo
 const ROLAVEIS='.tabela-rolavel,.tw,.nav-resto';
 let telaDesenhada=null;
-// #355: os clubes europeus (core/dados-europa.mjs, ~300 KB) só são baixados quando um jogo abre; o site abre sem eles.
+// #355: a base europeia entra no mercado ao abrir um jogo. A escolha de país também pode carregá-la (#448).
 // Os testes desligam (tests/jogo.mjs) e põem a base direto, para nada chegar no meio de um teste.
 export const EUROPA={baixar:true};
+export let dadosEuropa;
+let carregamentoDadosEuropa;
+export function carregarDadosEuropa() {
+  carregamentoDadosEuropa ??= import('../core/dados-europa.mjs').then(({ DADOS_EUROPA }) => {
+    dadosEuropa = DADOS_EUROPA;
+    return dadosEuropa;
+  }).catch(erro => { carregamentoDadosEuropa = null; throw erro; });
+  return carregamentoDadosEuropa;
+}
+
 let baixandoEuropa=null;
 function carregarEuropa(){
   if(!EUROPA.baixar||europaCarregada()||baixandoEuropa)return;
-  baixandoEuropa=import('../core/dados-europa.mjs').then(m=>{definirBaseEuropa(m.DADOS_EUROPA);if(S){reindex();render()}})
+  baixandoEuropa=carregarDadosEuropa().then(dados=>{definirBaseEuropa(dados);if(S){reindex();render()}})
     .catch(e=>{console.error('Clubes europeus não carregaram; o mercado segue sem eles.',e);baixandoEuropa=null});
 }
 export function render(){

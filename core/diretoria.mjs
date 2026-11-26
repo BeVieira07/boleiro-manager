@@ -30,12 +30,12 @@ export function fatoresFinanceiros(uc,meta){
   return fat;
 }
 /** Meta que a diretoria de um clube cobra, pela força dele na série: {texto, alvo}. */
-export function metaDe(uc){
-  const d=divOf(uc),n=S.clubs.filter(c=>divOf(c)===d).length;
+export function metaDe(uc,clubes=S.clubs){
+  const d=divOf(uc),concorrentes=clubes.filter(c=>divOf(c)===d),n=concorrentes.length;
   // posição esperada pela força; no empate, desempata pelo id (#441: com vários empatados no topo, ninguém ficava com a meta de acesso)
-  const esp=1+S.clubs.filter(c=>divOf(c)===d&&(c.strength>uc.strength||(c.strength===uc.strength&&c.id<uc.id))).length;
+  const esp=1+concorrentes.filter(c=>c.strength>uc.strength||(c.strength===uc.strength&&c.id<uc.id)).length;
   // #382: Libertadores só na Série A; a série mais alta de uma liga sem a A não tem vaga nem acesso, só título
-  const {acima,acessoDireto,rebaixamento:bottom,playoffAte}=zonasDaDivisao(d);
+  const {acima,acessoDireto,rebaixamento:bottom,playoffAte}=zonasDaDivisao(d,clubes);
   const top=playoffAte||acessoDireto||(d==='A'?6:2);
   const texto=esp<=2?'Lutar pelo título':esp<=top?(d==='A'?'Vaga na Libertadores':playoffAte?'Chegar ao mata-mata do acesso':`Acesso à ${DIVS[acima]}`):bottom&&esp>n-bottom?'Evitar o rebaixamento':'Terminar no meio da tabela';
   return {texto,alvo:esp<=2?3:esp<=top?top:bottom&&esp>n-bottom?n-bottom:Math.min(n,esp+1)}; // alvo: pior posição aceita
