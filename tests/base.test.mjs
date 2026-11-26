@@ -219,15 +219,15 @@ test('liga: quem assume o clube de quem saiu herda a base, sem repetir o jovem j
   assert.equal(c.players.filter(p => p.id === pid).length, 1);
 });
 
-test('base recriada com a mesma semente nunca repete id que já está no jogo', () => {
+test('base recriada com a mesma semente traz só quem não saiu, sem repetir id', () => {
   const j = novo();
   // promovido, e a base apagada (ligas gravadas quando a saída apagava a base)
   const [promovido, europeu] = j.run('userClub().base.map(p=>p.id)');
   j.run(`userClub().players.splice(28);promoverDaBase('${promovido}')`);
   j.run(`S.europa={chegadas:{x:[userClub().base.find(p=>p.id==='${europeu}')]}};delete userClub().base;garantirBase(userClub())`);
   const ids = j.run('userClub().base.map(p=>p.id)');
-  assert.equal(ids.length, 4);
-  assert.equal(new Set(ids).size, 4);
+  assert.equal(ids.length, 2, 'só os que não saíram, sem substitutos');
+  assert.equal(new Set(ids).size, 2);
   assert.ok(!ids.includes(promovido) && !ids.includes(europeu));
 });
 

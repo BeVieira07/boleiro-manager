@@ -546,3 +546,40 @@ test('ao começar a liga, quem está no lobby entra no jogo sozinho; o lobby aco
   assert.ok(j.alertas.some(a => a.includes('A liga começou')));
   assert.match(j.html(), /Confirmar rodada 1/);
 });
+
+test('#414: liga gravada na versão 19 sem a base do clube: ao abrir, a Base mostra os jovens, sem gravar no servidor', async () => {
+  const j0 = carregarJogo();
+  const srv = servidorFalso([clubeDaSerie(j0, 'A', 0), clubeDaSerie(j0, 'A', 1)]);
+  await como(srv, 'a');
+  const j = carregarJogo({ boot: true });
+  await j.acao('comecarLiga|L1'); await esperar();
+  const clube = srv.estado.clubs.find(c => c.id === srv.estado.managers.a.clubId);
+  const ids = clube.base.map(p => p.id);
+  delete clube.base; srv.estado.versao = 19;
+  const antes = JSON.stringify(srv.estado), chamadas = srv.chamadas.length;
+  await j.acao('entrarNaLiga|L1'); await esperar();
+  j.run("go('base')");
+  assert.deepEqual(JSON.parse(j.run('JSON.stringify(userClub().base.map(p=>p.id))')), ids);
+  assert.doesNotMatch(j.html(), /Nenhum jovem na base/);
+  assert.equal(JSON.stringify(srv.estado), antes, 'o navegador não grava o estado da liga');
+  assert.equal(srv.chamadas.length, chamadas);
+});
+
+test('#414: base apagada pela regra antiga e clube reassumido na mesma temporada: só os jovens que não saíram', () => {
+  const j = carregarJogo({ boot: true });
+  const r = JSON.parse(j.run(`(()=>{
+    const a=getData().clubs.filter(c=>c.division==='A');
+    iniciarLiga([{user_id:'ana',nome:'Ana',club_id:a[0].id},{user_id:'bia',nome:'Bia',club_id:a[1].id}],['A'],getData());
+    const s=S, b=a[1].id, ids=clubById(b).base.map(p=>p.id);
+    clubById(b).players.splice(28);
+    const ok=[acaoMercadoLiga(s,'bia',{tipo:'promoverBase',pid:ids[0]}).ok,acaoMercadoLiga(s,'bia',{tipo:'venderBase',pid:ids[1]}).ok];
+    removerTecnicoLiga(s,'bia');
+    delete s.clubs.find(c=>c.id===b).base; s.versao=19; // como a regra antiga gravava
+    acaoMercadoLiga(s,'ana',{tipo:'pedirDemissao'});
+    s.managers.ana.propostasClube=[b];
+    ok.push(acaoMercadoLiga(s,'ana',{tipo:'escolherClube',clubeId:b}).ok);
+    return JSON.stringify({ok,ids,base:s.clubs.find(c=>c.id===b).base.map(p=>p.id)});
+  })()`));
+  assert.deepEqual(r.ok, [true, true, true]);
+  assert.deepEqual(r.base, r.ids.slice(2));
+});

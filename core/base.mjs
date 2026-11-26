@@ -33,22 +33,11 @@ export function novoJovem(c, k, r = rnd) {
   p.goals = 0; p.listed = false; p.contrato = CONTRATO_NOVO; refreshEconomics(p); p.clubId = c.id;
   return p;
 }
-// ids que já são de alguém no jogo. Lê de S, não de P: nas migrações o índice ainda não foi refeito.
-const idsEmUso = () => new Set([
-  ...(S?.clubs || []).flatMap(c => [...c.players, ...(c.base || [])]),
-  ...Object.values(S?.continentais?.estrangeiros || {}).flatMap(c => c.players),
-  ...Object.values(S?.europa?.chegadas || {}).flat(),
-].map(p => p.id));
-/** Chegam jovens novos à base (até BASE_MAX). r: gerador (padrão: o sorteio do jogo).
- *  Com semente fixa o sorteio se repete: quem sair com o id de um jogador que já existe é descartado e sorteado outro. */
+/** Chegam jovens novos à base (até BASE_MAX). r: gerador (padrão: o sorteio do jogo). */
 export function gerarBase(c, r = rnd) {
   if (!c.base) c.base = [];
   let k = 500 + (S ? S.season % 100 : 0) * 10 + c.base.length;
-  const usados = idsEmUso();
-  for (let n = 0; n < BASE_NOVOS && c.base.length < BASE_MAX;) {
-    const p = novoJovem(c, k++, r);
-    if (!usados.has(p.id)) { c.base.push(p); n++ }
-  }
+  for (let n = 0; n < BASE_NOVOS && c.base.length < BASE_MAX; n++) c.base.push(novoJovem(c, k++, r));
 }
 /** Virada de temporada (depois da idade do elenco): a base dos clubes com técnico envelhece, evolui até o potencial,
  *  dispensa quem passou de BASE_IDADE_MAX e recebe jovens novos. Clube que perdeu o técnico fica sem base. */
@@ -65,8 +54,21 @@ export function virarBase() {
   }
 }
 /** Base no começo do jogo (ou num save antigo): sorteio fixo por clube e temporada. */
-/** Garante a base de um clube (#414): sorteio fixo, sem gastar o da rodada. Quem já tem base não ganha jovens a mais. */
-export function garantirBase(c) { if (c && !c.base) gerarBase(c, mulberry32(hashStr(c.id + '|base|' + S.season))) }
+// ids que já são de alguém no jogo. Lê de S, não de P: nas migrações o índice ainda não foi refeito.
+const idsEmUso = () => new Set([
+  ...S.clubs.flatMap(c => [...c.players, ...(c.base || [])]),
+  ...Object.values(S.continentais?.estrangeiros || {}).flatMap(c => c.players),
+  ...Object.values(S.europa?.chegadas || {}).flat(),
+].map(p => p.id));
+/** Garante a base de um clube (#414): sorteio fixo, sem gastar o da rodada. Quem já tem base não ganha jovens a mais.
+ *  O sorteio se repete na mesma temporada: se a base foi apagada (ligas de antes da #414), quem já saiu dela (promovido
+ *  ou vendido, e por isso ainda no jogo) não volta nem é substituído. */
+export function garantirBase(c) {
+  if (!c || c.base) return;
+  const usados = idsEmUso();
+  gerarBase(c, mulberry32(hashStr(c.id + '|base|' + S.season)));
+  c.base = c.base.filter(p => !usados.has(p.id));
+}
 export function criarBases() { for (const t of tecnicos()) garantirBase(clubById(t.clubId)) }
 export function migrarBase(s) { darPotencial(s.clubs); criarBases() }
 
