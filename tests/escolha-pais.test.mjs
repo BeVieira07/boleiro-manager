@@ -10,7 +10,7 @@ test('novo jogo: o país define as divisões e a prévia bate com a campanha na 
   const paises = [...j.html().matchAll(/data-acao="paisDoNovoJogo\|([^"]+)"/g)].map(m => m[1]);
   assert.deepEqual(paises, j.run('[BRASIL, ...Object.keys(CAMPEONATOS)]'));
   assert.equal(idsDaLista(j).length, 20, 'o Brasil começa na Série A');
-  await j.acao('paisDoNovoJogo|Espanha');
+  await j.acao('paisDoNovoJogo|Alemanha'); // país sem regras no jogo: ignorado
   assert.equal(j.run('ui.escolhaClube.pais'), 'Brasil');
   const carregando = j.acao('paisDoNovoJogo|Inglaterra');
   assert.match(j.html(), /role="status">Carregando clubes…/);
