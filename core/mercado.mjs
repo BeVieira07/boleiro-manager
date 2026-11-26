@@ -1,4 +1,5 @@
 import { estrelasPot } from './base.mjs';
+import { adicionarAoElenco } from './camisas.mjs';
 import { novoContrato } from './contratos.mjs';
 import { UM_ANO, loanOf, startLoan, wageBill } from './emprestimos.mjs';
 import { clubeDe, ehEstrangeiro } from './estrangeiros.mjs';
@@ -16,7 +17,7 @@ export function movePlayer(p,to,emprestimo=false){
   const from=clubeDe(p.clubId);from.players=from.players.filter(x=>x!==p); // #172: o clube de origem pode ser estrangeiro
   registrarMudanca(p,from,to); // #355: quem entra num clube europeu fica no save
   if(from.lineup)from.lineup=from.lineup.filter(id=>id!==p.id);
-  to.players.push(p);p.clubId=to.id;p.listed=false;delete p.emprestar;if(!emprestimo)novoContrato(p);
+  adicionarAoElenco(to,p);p.clubId=to.id;p.listed=false;delete p.emprestar;if(!emprestimo)novoContrato(p);
   for(const t of tecnicos())t.offers=t.offers.filter(o=>o.pid!==p.id);
   // #410: o clube do técnico não ganha jogador de graça ao vender; #355: o europeu é refeito dos dados a cada jogo aberto, os gerados sumiriam
   if(!ehHumano(from)&&!ehEuropeu(from))ensureSquad(from);

@@ -8,6 +8,7 @@
    Nenhum módulo do core importa core/dados-europa.mjs (há teste): sem a base, o jogo segue só com o Brasil e as copas.
    shortcut: jogador que fica num clube europeu não envelhece nem evolui, e o caixa dos clubes europeus volta ao inicial a
    cada jogo aberto; guardar isso em S.europa se a Europa passar a ter partidas ou janelas entre os clubes de lá. */
+import { numerarElenco } from './camisas.mjs';
 import { S } from './estado.mjs';
 import { prepararEstrangeiro } from './estrangeiros.mjs';
 import { POSD } from './posicoes.mjs';
@@ -38,13 +39,34 @@ export function montarEuropa() {
   for (const lista of Object.values(chegadas)) for (const p of lista) noJogo.add(p.id);
   const clubes = {};
   for (const b of BASE.clubs) {
+    // Numera a base inteira, com quem já saiu: a camisa de um original não depende de quem foi ou veio (#416).
+    const todos = b.players.map(jogador), daBase = new Map(todos.map(p => [p.id, p.number]));
+    numerarElenco(todos);
+    const originais = todos.filter(p => !noJogo.has(p.id));
+    const contratados = chegadas[b.id] || [];
     const c = { id: b.id, name: b.name, short: b.short, color: '#2b3a55', liga: b.liga, pais: b.pais, logo: b.logo, strength: b.strength,
-      players: [...b.players.filter(x => !noJogo.has(x[0])).map(jogador), ...(chegadas[b.id] || [])] };
+      players: [...originais, ...contratados] };
     prepararEstrangeiro(c);
+    if (S.europa?.fixarCamisas) guardarUnicas(originais, contratados, daBase);
+    for (const p of originais) p.number = S.europa?.camisas?.[p.id] ?? p.number;
+    // Prioridade: originais com o número da base, depois as chegadas, por fim os originais que já foram renumerados.
+    const daCasa = new Set(originais.filter(p => p.number === daBase.get(p.id)));
+    numerarElenco([...daCasa, ...contratados, ...originais.filter(p => !daCasa.has(p))]);
     c.balance = caixaInicial(c);
     clubes[c.id] = c;
   }
+  if (S.europa) delete S.europa.fixarCamisas;
   REG = { para: S, clubes };
+}
+
+// Save de antes da migração 21: o original que era o único com o número no clube (o outro dono já tinha saído) fica com ele.
+function guardarUnicas(originais, contratados, daBase) {
+  const usos = {};
+  for (const n of [...originais.map(p => daBase.get(p.id)), ...contratados.map(p => p.number)]) usos[n] = (usos[n] || 0) + 1;
+  for (const p of originais) {
+    const n = daBase.get(p.id);
+    if (n >= 1 && n <= 99 && usos[n] === 1 && p.number !== n) (S.europa.camisas ??= {})[p.id] = n;
+  }
 }
 
 /** movePlayer: quem entra num clube europeu fica guardado no save (o clube é refeito dos dados ao abrir o jogo); quem sai, deixa. */

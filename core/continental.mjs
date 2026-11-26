@@ -9,6 +9,7 @@
    final: {h, a, hg, ag, pen, v}, campeao, gols: {pid: {nome, clube, gols}}}.
    shortcut: como na Copa do Brasil, os jogos são simulados junto com a rodada, sem ao vivo, cartões ou lesões.
    Estado de antes da #133 não tem S.continentais: as copas começam na temporada seguinte. */
+import { numerarElenco } from './camisas.mjs';
 import { registrarTitulo } from './carreira.mjs';
 import { DADOS_CONTINENTAIS } from './dados-continentais.mjs';
 import { aplicarConfianca } from './diretoria.mjs';
@@ -81,7 +82,13 @@ export function criarContinentais(vagas) {
     torneios.push({ id: cfg.id, nome: cfg.nome, grupos, rodadas: grupoJogos(grupos), fases: [], final: null, campeao: null, gols: {} });
   }
   S.continentais = torneios.length ? { temporada: S.season, datas: Array.from({ length: DATAS }, (_, k) => Math.floor((k + 1) * R / (DATAS + 1))), estrangeiros, torneios } : null;
-  if (S.continentais) { for (const c of Object.values(S.continentais.estrangeiros)) prepararEstrangeiro(c); reindex() }
+  if (S.continentais) {
+    for (const c of Object.values(S.continentais.estrangeiros)) {
+      prepararEstrangeiro(c);
+      numerarElenco(c.players);
+    }
+    reindex();
+  }
 }
 
 /** Classificação de um grupo (só jogos feitos). */

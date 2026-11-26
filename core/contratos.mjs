@@ -2,6 +2,7 @@
    p.contrato = temporadas que faltam, contando a atual (1 = acaba ao fim desta temporada). p.aum = aumento negociado na
    renovação (multiplica o salário de mercado; some numa transferência). Empréstimo não mexe no contrato do clube dono.
    O valor de mercado depende do overall e da idade. Jogador sem o campo (estado de antes da #49) recebe contratoInicial. */
+import { adicionarAoElenco } from './camisas.mjs';
 import { refreshEconomics, salarioDe } from './dados.mjs';
 import { loanOf } from './emprestimos.mjs';
 import { P, S, addNews, clubById, ehHumano, userClub } from './estado.mjs';
@@ -72,7 +73,7 @@ export function vencerContratos() {
     const vagas = S.clubs.filter(d => d.id !== c.id && !ehHumano(d) && d.players.length < 30);
     const perto = vagas.filter(d => Math.abs(d.strength - c.strength) <= 6), d = vagas.length ? pick(perto.length ? perto : vagas) : null;
     c.players = c.players.filter(x => x !== p); if (c.lineup) c.lineup = c.lineup.filter(id => id !== p.id);
-    if (d) { d.players.push(p); p.clubId = d.id; p.listed = false; p.contrato = 2; delete p.aum; delete p.renRound }
+    if (d) { adicionarAoElenco(d, p); p.clubId = d.id; p.listed = false; p.contrato = 2; delete p.aum; delete p.renRound }
     addNews(`📄 Fim de contrato: ${p.name} saiu de graça${d ? ` para o ${d.name}` : ''}.`, c.id);
     saidas.push({ p, de: c, para: d });
   }
