@@ -12,6 +12,7 @@ import { loanTag } from './emprestimos.mjs';
 import { tendenciaTag } from './forma.mjs';
 import { icone } from '../icones.mjs';
 import { negociar } from './mercado.mjs';
+import { botaoObservar, observadosAtuais } from './observados.mjs';
 import { crest, openModal } from '../partida/partida.mjs';
 import { posTag } from './posicoes.mjs';
 
@@ -55,5 +56,5 @@ export function abrirFicha(pid, origem) {
     ])}
     <h3 class="t3">Atributos</h3>
     ${dados(atributosDe(p).map(a => [esc(a.nome), a.v]))}
-    <div class="row ficha-acoes"><button type="button" class="btn sec" data-acao="closeModal" data-principal>Fechar</button>${acoes}</div>`);
+    <div class="row ficha-acoes"><button type="button" class="btn sec" data-acao="closeModal" data-principal>Fechar</button>${botaoObservar(p, observadosAtuais().has(pid), true)}${acoes}</div>`);
 }

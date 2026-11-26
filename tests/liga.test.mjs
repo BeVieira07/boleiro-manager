@@ -120,12 +120,15 @@ test('no lobby, excluir a liga exige confirmação e atualiza a lista de todos o
   j.campo('nomeLiga', 'Pelada'); j.campo('serieLigaA', true); j.campo('clubeLiga', clubeDaSerie(j, 'A', 0));
   await j.acao('criarLiga');
   await srv.cliente('b').rpc('entrar_liga', { codigo: srv.ligas[0].codigo_convite });
+  const observados = 'brasfoot_observados:liga:L1'; // #419
+  j.ls[observados] = '{"a":["1"]}';
   avisosTeste.autoConfirmar = false;
   try {
     await j.acao('excluirLiga|L1');
     assert.match(j.alertas.at(-1), /todos os membros.*não pode ser desfeita/);
     assert.deepEqual(srv.chamadas, []);
     await j.acao('responderDialogo|nao');
+    assert.ok(j.ls[observados], 'cancelar mantém a lista de observados');
     assert.equal(j.run('ui.view'), 'lobby');
     assert.equal(srv.ligas.length, 1);
     assert.deepEqual(srv.chamadas, []);
@@ -136,6 +139,7 @@ test('no lobby, excluir a liga exige confirmação e atualiza a lista de todos o
     assert.equal(j.run('ui.view'), 'ligas');
     assert.match(j.html(), /nenhuma liga/);
     assert.equal(j.alertas.at(-1), 'Liga excluída.');
+    assert.equal(j.ls[observados], undefined, 'excluir a liga apaga a lista de observados');
   } finally { avisosTeste.autoConfirmar = true }
 
   await como(srv, 'b');

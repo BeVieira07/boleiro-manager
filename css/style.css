@@ -1026,6 +1026,8 @@ body.em-jogo .avisos{bottom:24px}
 .mer-busca .busca{width:100%}
 .mer-resumo{display:flex;flex-wrap:wrap;justify-content:space-between;gap:var(--e2) var(--e4);font-size:13px;margin-bottom:var(--e3)}
 .btn.emp{background:#1f3f73;color:#dbe8ff;border-color:#2f5a9e}
+.btn.observar-jogador[aria-pressed="true"]{color:var(--verde-claro);border-color:var(--verde)}
+.observar-jogador[aria-pressed="true"] svg{fill:currentColor}
 .mercado .c-sit{max-width:none}
 @media(max-width:799px){.tabela-jogadores.mercado{min-width:0}.mercado .c-sit{order:3;flex-basis:100%}}
 .sit-tags{display:flex;flex-wrap:wrap;gap:4px}

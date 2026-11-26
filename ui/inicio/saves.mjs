@@ -3,6 +3,7 @@ import { DIVS, S, divOf, table, usarEstado } from '../../core/estado.mjs';
 import { esc } from '../../core/utils.mjs';
 import { getData, save, ui } from '../estado.mjs';
 import { onlineConfigurado, painelConta, usuarioAtual } from './conta.mjs';
+import { apagarObservados } from '../clube/observados.mjs';
 import { agendarEnvio, apagarNaNuvem, deOutraConta, liberarEspaco, pendente, savesNuvem } from './nuvem.mjs';
 import { icone } from '../icones.mjs';
 import { crest } from '../partida/partida.mjs';
@@ -89,7 +90,7 @@ export function abrirSave(id){
 export function excluirSave(id){
   const e=indiceSaves().list.find(x=>x.id===id)||(savesNuvem()||[]).find(x=>x.id===id)?.resumo;
   confirmar({titulo:'Excluir o jogo salvo?',texto:`O jogo ${e?e.clube+', temporada '+e.season:''} será apagado deste navegador${usuarioAtual()?' e da nuvem':''}: elenco, tabela, finanças e histórico. Isso não pode ser desfeito.`,ok:'Excluir',perigo:true},()=>{
-    apagarSave(id);apagarNaNuvem(id);if(S&&S.saveId===id)usarEstado(null);
+    apagarSave(id);apagarObservados('save:'+id);apagarNaNuvem(id);if(S&&S.saveId===id)usarEstado(null);
     ui.view='menu';render();avisar('Jogo salvo excluído.','ok');
   });
 }

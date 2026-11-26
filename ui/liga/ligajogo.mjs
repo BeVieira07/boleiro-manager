@@ -14,6 +14,7 @@ import { taticaUser } from '../../core/taticas.mjs';
 import { esc, money } from '../../core/utils.mjs';
 import { migrarCarreira, migrarValoresDeMercado } from '../../core/versao.mjs';
 import { avisar, confirmar, pedirValor } from '../avisos.mjs';
+import { apagarObservados } from '../clube/observados.mjs';
 import { clienteLogado, sessaoEncerrada, usuarioAtual } from '../inicio/conta.mjs';
 import { ui } from '../estado.mjs';
 import { icone } from '../icones.mjs';
@@ -299,7 +300,7 @@ export const botaoExcluirLiga = ligaId => `<button class="btn perigo" data-acao=
 export function excluirLiga(id) {
   confirmar({ titulo: 'Excluir liga?', texto: 'A liga vai desaparecer para todos os membros. Esta ação não pode ser desfeita.', ok: 'Excluir liga', perigo: true }, async () => {
     pararLobby();
-    if (await chamarFuncao({ liga: id, acao: 'excluir' })) await voltarDaLiga('Liga excluída.', 'ok');
+    if (await chamarFuncao({ liga: id, acao: 'excluir' })) { apagarObservados('liga:' + id); await voltarDaLiga('Liga excluída.', 'ok') }
     else if (ui.view === 'lobby') await abrirLobby(id);
   });
 }

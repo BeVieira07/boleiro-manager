@@ -13,6 +13,7 @@ import { botaoFicha } from './ficha-jogador.mjs';
 import { save, ui } from '../estado.mjs';
 import { campoBusca, chipsGrupo, filtrar, mudarFiltro, th } from './jogadores.mjs';
 import { icone } from '../icones.mjs';
+import { botaoObservar, gravarObservacao, observadosAtuais } from './observados.mjs';
 import { closeModal, crest } from '../partida/partida.mjs';
 import { posTag } from './posicoes.mjs';
 import { render } from '../telas.mjs';
@@ -23,7 +24,7 @@ import { avisar, confirmar, pedirValor } from '../avisos.mjs';
    Maquete em docs/maquetes/mercado.png. Os indicadores, as abas e as contagens dos chips olham só para País, Liga, Clube e Valor
    máximo (listaMercado); busca e posição só mexem na tabela, então digitar não redesenha a tela (filtrarMercado). */
 const LIMITE = 120, VAGAS = 32;
-const ABAS = [['todos', 'Todos os jogadores', 'pessoas'], ['venda', 'À venda', 'etiqueta'], ['emprestimo', 'Para empréstimo', 'trocar'], ['clube', 'Por clube', 'escudo']];
+const ABAS = [['todos', 'Todos os jogadores', 'pessoas'], ['venda', 'À venda', 'etiqueta'], ['emprestimo', 'Para empréstimo', 'trocar'], ['clube', 'Por clube', 'escudo'], ['observados', 'Observados', 'observados']];
 const ORDEM = { pos: 'posição', nome: 'nome', idade: 'idade', ovr: 'força', pot: 'potencial', valor: 'valor', salario: 'salário' };
 const todosOsClubes = () => [...S.clubs, ...todosEstrangeiros(), ...clubesEuropa()]; // #172: clubes estrangeiros das copas; #355: e os europeus
 const clubesPor = () => Object.fromEntries(todosOsClubes().map(c => [c.id, c]));
@@ -36,9 +37,10 @@ const PAISES = () => [['', 'Todos os países'], ['br', 'Brasil'], ...(todosEstra
 const doPais = (c, pais) => !pais || (pais === 'br' ? !ehEstrangeiro(c) : pais === 'ext' ? !!c.torneio : c.pais === pais);
 const ligasDoPais = pais => pais === 'br' || !pais ? divisions().map(d => [d, DIVS[d]]) : ligasEuropa().filter(l => l.pais === pais).map(l => [l.id, l.nome]);
 // país, liga, clube e valor máximo (antes de aba, posição e busca)
-const listaMercado = ({ ignorarClube = false } = {}) => {
+const listaMercado = ({ ignorarClube = false, observados = null } = {}) => {
   const uc = userClub(), f = ui.mf, C = clubesPor();
-  let L = Object.values(P).filter(p => p.clubId !== uc.id && C[p.clubId]);
+  const jogadores = observados ? [...observados].map(pid => P[pid]) : Object.values(P);
+  let L = jogadores.filter(p => C[p.clubId] && (observados || p.clubId !== uc.id));
   if (f.pais) L = L.filter(p => doPais(C[p.clubId], f.pais));
   if (f.liga) L = L.filter(p => naLiga(C[p.clubId], f.liga));
   if (f.club && !ignorarClube) L = L.filter(p => p.clubId === f.club);
@@ -48,11 +50,18 @@ const listaMercado = ({ ignorarClube = false } = {}) => {
 };
 const daAba = { todos: () => true, venda: (p, C) => p.listed && !ehHumano(C[p.clubId]), emprestimo: (p, C) => p.emprestar && !ehHumano(C[p.clubId]) };
 const contaAba = (L, aba) => { const C = clubesPor(); return L.filter(p => daAba[aba](p, C)).length };
+function listaDaAba(observados, base) {
+  if (ui.mf.aba === 'observados') return listaMercado({ observados });
+  const teste = daAba[ui.mf.aba];
+  const C = clubesPor();
+  return teste ? base.filter(p => teste(p, C)) : base;
+}
 const clubesDaLista = () => {
   const uc = userClub(), f = ui.mf;
-  return todosOsClubes().filter(c => c.id !== uc.id && doPais(c, f.pais) && (!f.liga || naLiga(c, f.liga)));
+  return todosOsClubes().filter(c => (f.aba === 'observados' || c.id !== uc.id) && doPais(c, f.pais) && (!f.liga || naLiga(c, f.liga)));
 };
 function situacao(p, c) {
+  if (c.id === userClub().id) return tag('Seu elenco', 'info');
   if (loanOf(p.id)) return `<span class="sit-tags">${loanTag(p)}</span><span class="sit-txt">O contrato é do clube de origem.</span>`;
   if (ehHumano(c)) return `${tag('Outro técnico', 'info')}<span class="sit-txt">Negocie com o técnico do clube.</span>`;
   const tags = [], txt = [];
@@ -79,18 +88,34 @@ export function negociar(p, c, { soImediatas = false } = {}) {
   const pedir = p.emprestar ? `<button class="btn sec sm" data-acao="loanForm|${p.id}|in">Pedir empréstimo</button>` : '';
   return `${compra}${emprestimo}${pedir}<button class="btn${compra || emprestimo ? ' sec' : ''} sm" data-acao="makeBid|${p.id}">Fazer proposta</button>`;
 }
-export function corpoMercado() {
-  const C = clubesPor(), L = filtrar(listaMercado().filter(p => daAba[ui.mf.aba] ? daAba[ui.mf.aba](p, C) : true), ui.mf);
+export function corpoMercado(observados = observadosAtuais(), lista = listaDaAba(observados, listaMercado())) {
+  const C = clubesPor(), L = filtrar(lista, ui.mf);
+  const vazio = ui.mf.aba === 'observados' && !observados.size
+    ? 'Nenhum jogador observado. Use o botão Observar no Mercado ou na ficha de um jogador.'
+    : 'Nenhum jogador com esse filtro.';
   const linhas = L.slice(0, LIMITE).map(p => { const c = C[p.clubId];
     return `<tr><td class="c-pos">${posTag(p)}</td><th scope="row" class="c-nome">${esc(p.name)}</th>
     <td class="figma-clube-mercado"><span class="club">${crest(c)} <span><b>${esc(c.name)}</b><span class="muted">${esc(ligaTxt(c))}</span></span></span></td>
     <td class="n c-idade"><span class="rot">Idade </span>${p.age}</td><td class="c c-ovr">${ovrChip(p.ovr)}</td><td class="c-pot">${potTag(p)}</td><td class="n c-valor">${money(p.value)}</td><td class="n c-sal">${money(p.wage)}</td>
-    <td class="c-sit">${situacao(p, c)}</td><td class="c-acoes"><div class="acoes">${botaoFicha(p, 'mercado')}${negociar(p, c)}</div></td></tr>` }).join('');
-  return { linhas: linhas || '<tr><td colspan="10" class="muted">Nenhum jogador com esse filtro.</td></tr>', total: L.length };
+    <td class="c-sit">${situacao(p, c)}</td><td class="c-acoes"><div class="acoes">${botaoFicha(p, 'mercado')}${botaoObservar(p, observados.has(String(p.id)))}${negociar(p, c)}</div></td></tr>` }).join('');
+  return { linhas: linhas || `<tr><td colspan="10" class="muted">${vazio}</td></tr>`, total: L.length };
+}
+export function alternarObservado(pid) {
+  const r = gravarObservacao(pid);
+  if (r === null) { avisar('Não foi possível guardar a lista de observados neste navegador.', 'erro'); return }
+  if (!r) return;
+  const ativo = document.activeElement;
+  const ficha = document.getElementById('mbox')?.querySelector('.observar-jogador');
+  if (ficha?.dataset.acao === `alternarObservado|${pid}`) ficha.setAttribute('aria-pressed', String(r.marcado));
+  if (ui.view === 'mercado') render();
+  if (ativo?.isConnected === false && !r.marcado && ui.mf.aba === 'observados') {
+    document.querySelector('[data-acao="filtrarMercado|aba|observados"]')?.focus({ preventScroll: true });
+  }
 }
 const contagem = t => `${t} jogador${t === 1 ? '' : 'es'}${t > LIMITE ? ` (mostrando os ${LIMITE} primeiros)` : ''}`;
 export function filtrarMercado(campo, valor) {
   mudarFiltro(ui.mf, campo, valor);
+  if (campo === 'aba' && valor !== 'observados' && ui.mf.club === userClub().id) ui.mf.club = ''; // #419: o seu clube só é opção nos Observados
   if (campo === 'pais') { ui.mf.liga = ''; ui.mf.club = '' } // #355: as ligas e os clubes mudam com o país
   if (campo === 'club' && valor && ui.mf.aba === 'clube') ui.mf.aba = 'todos'; // escolheu o clube na aba "Por clube": mostra os jogadores dele
   if (campo === 'q') {
@@ -116,8 +141,8 @@ function indicadores(uc) {
     ${stat({ rotulo: 'Elenco', valor: `${n} / ${VAGAS}`, cor: cheio ? 'var(--ouro)' : '', classe: cheio ? 'stat-alerta' : '', sub: n > VAGAS ? `${n - VAGAS} acima do limite: venda ou empreste antes de contratar` : n === VAGAS ? 'No limite: venda ou empreste antes de contratar' : `${VAGAS - n} vaga${VAGAS - n === 1 ? '' : 's'} livre${VAGAS - n === 1 ? '' : 's'}` })}
     ${stat({ rotulo: 'Suas propostas', valor: minhas, unid: 'aguardando resposta' })}</div>`;
 }
-function abas(L, clubes) {
-  const n = { todos: L.length, venda: contaAba(L, 'venda'), emprestimo: contaAba(L, 'emprestimo'), clube: clubes };
+function abas(L, clubes, observados) {
+  const n = { todos: L.length, venda: contaAba(L, 'venda'), emprestimo: contaAba(L, 'emprestimo'), clube: clubes, observados };
   return `<div class="mer-abas" role="group" aria-label="Lista do mercado">${ABAS.map(([k, rot, ic]) => `<button type="button" class="mer-aba${ui.mf.aba === k ? ' on' : ''}" aria-pressed="${ui.mf.aba === k}" data-acao="filtrarMercado|aba|${k}">${icone(ic, { tam: 16 })}${rot}<span class="n">${n[k]}</span></button>`).join('')}</div>`;
 }
 function porClube(jogadores, f) {
@@ -131,13 +156,12 @@ function porClube(jogadores, f) {
 export function vMercado() {
   const uc = userClub(), f = ui.mf, a = 'filtrarMercado', porClubeAberta = f.aba === 'clube';
   const base = listaMercado({ ignorarClube: porClubeAberta });
-  const r = porClubeAberta ? null : corpoMercado();
-  const C = clubesPor(), teste = daAba[f.aba];
-  const lista = teste ? base.filter(p => teste(p, C)) : base;
+  const observados = observadosAtuais(), lista = listaDaAba(observados, base);
+  const r = porClubeAberta ? null : corpoMercado(observados, lista);
   const jogadoresDosClubes = f.club && !porClubeAberta ? listaMercado({ ignorarClube: true }) : base;
   const totalClubes = new Set(jogadoresDosClubes.map(p => p.clubId)).size;
   const ligas = ligasDoPais(f.pais), exterior = PAISES().length > 2; // #172, #355: com clubes estrangeiros, o país vira filtro
-  return `<div class="figma-mercado">${indicadores(uc)}${abas(base, totalClubes)}
+  return `<div class="figma-mercado">${indicadores(uc)}${abas(base, totalClubes, observados.size)}
   <section class="card mer-filtros" aria-label="Filtros do mercado">
     <div class="art-campo mer-pos"><span class="art-rotulo">Posição</span>${chipsGrupo(lista, f, a)}</div>
     <div class="mer-linha"><div class="art-campo mer-busca">${campoBusca(f, a, 'Nome do jogador')}</div>
@@ -150,7 +174,7 @@ export function vMercado() {
   ${porClubeAberta ? `<p class="muted resumo">Escolha um clube para ver os jogadores dele.</p><div id="clubesMercado">${porClube(base, f)}</div>` : `<section class="card tabela-card"><header class="mer-resumo"><div><h2 class="t3" id="totalMercado" aria-live="polite">${contagem(r.total)}</h2>
     <span class="muted">em ${exterior ? esc(PAISES().find(([v]) => v === (f.pais || ''))?.[1] || 'Todos os países') : 'Brasil'} · ${f.liga ? esc(ligas.find(([d]) => d === f.liga)?.[1] || '') : 'todas as divisões'}</span></div>
     <span class="muted">Ordenado por ${ORDEM[f.ord] || 'posição'} · uma proposta por jogador da IA a cada rodada</span></header>
-    <div class="tabela-rolavel" tabindex="0" role="region" aria-labelledby="totalMercado"><table class="tabela-jogadores mercado"><caption class="sr">Jogadores de outros clubes</caption>
+    <div class="tabela-rolavel" tabindex="0" role="region" aria-labelledby="totalMercado"><table class="tabela-jogadores mercado"><caption class="sr">${f.aba === 'observados' ? 'Jogadores observados' : 'Jogadores de outros clubes'}</caption>
     <thead><tr>${th('Pos', 'pos', f, a, 'c-pos')}${th('Jogador', 'nome', f, a, 'c-nome')}${th('Clube', '', f, a)}${th('Idade', 'idade', f, a, 'n')}${th('Força', 'ovr', f, a, 'c')}${th('Potencial', 'pot', f, a)}${th('Valor', 'valor', f, a, 'n')}${th('Salário', 'salario', f, a, 'n c-sal')}${th('Situação', '', f, a)}${th('Negociar', '', f, a)}</tr></thead>
     <tbody id="corpoMercado">${r.linhas}</tbody></table></div></section>`}</div>`;
 }
