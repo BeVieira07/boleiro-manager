@@ -9,7 +9,14 @@ function escolherCamisa(p, ocupados) {
   const livre = n => !ocupados.has(n);
   const preferida = p.pd === 'GOL' ? CAMISAS_GOLEIRO.find(livre)
     : NUMEROS.find(n => POSD_CAMISA[n] === p.pd && livre(n));
-  return preferida ?? NUMEROS.find(livre);
+  return preferida ?? NUMEROS.find(livre) ?? acimaDe99(livre);
+}
+
+// Elenco com mais de 99 jogadores (empréstimos voltando na liga, #436): ninguém fica sem número.
+function acimaDe99(livre) {
+  let n = 100;
+  while (!livre(n)) n++;
+  return n;
 }
 
 /** Dá camisa à chegada sem mudar os números de quem já está no elenco. */

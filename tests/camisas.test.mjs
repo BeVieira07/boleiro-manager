@@ -114,16 +114,80 @@ test('a posição inferida com a camisa original sobrevive à renumeração no j
   assert.notEqual(p.number, 2);
 });
 
-test('ao remontar a Europa, os reforços mantêm as camisas gravadas no save', () => {
+test('ao remontar a Europa, os reforços mantêm as camisas livres gravadas no save', () => {
   const j = carregarJogo();
   const s = criarCampanha(j);
-  const contratado = { id: 'reforco', name: 'Reforço', pos: 'A', pd: 'ATA', number: 9, age: 25, ovr: 70 };
+  const contratado = { id: 'reforco', name: 'Reforço', pos: 'A', pd: 'ATA', number: 8, age: 25, ovr: 70 };
   s.versao = 19;
   s.europa = { chegadas: { e1: [contratado] } };
   j.run(`definirBaseEuropa({ ligas: [], clubs: [{ id: 'e1', name: 'Clube europeu', pais: 'Portugal',
     players: [['original', 'Centroavante', 25, 'ATA', 70, 9], ['reserva', 'Reserva', 22, 'ATA', 65, 11]] }] })`);
   assert.deepEqual(j.run('migrarSave(S)'), { ok: true });
-  assert.equal(contratado.number, 9);
+  assert.equal(contratado.number, 8);
+  assert.equal(j.run('P.original.number'), 9);
   assert.equal(j.run('P.reserva.number'), 11);
   conferirCamisas(j.run('clubesEuropa()'));
+});
+
+test('com os 99 números ocupados, quem chega recebe o menor número livre acima de 99', () => {
+  const j = carregarJogo();
+  const players = Array.from({ length: 99 }, (_, i) => ({ id: `x${i}`, pd: 'ATA', number: i + 1 }));
+  const clube = { players };
+  const chegada = j.run('adicionarAoElenco');
+  const a = { id: 'a', pd: 'ATA', number: 9 }, b = { id: 'b', pd: 'GOL' };
+  chegada(clube, a);
+  chegada(clube, b);
+  assert.deepEqual([a.number, b.number], [100, 101]);
+  j.run('numerarElenco')(clube.players);
+  assert.deepEqual([a.number, b.number], [100, 101]);
+});
+
+// Clube europeu mínimo: duas camisas 5 repetidas na base (o 2º dono, "monreal", é renumerado) e um 7 único.
+const remontar = (j, s) => {
+  j.run(`definirBaseEuropa({ ligas: [], clubs: [{ id: 'e1', name: 'Clube europeu', pais: 'Portugal', players: [
+    ['yeray', 'Yeray', 27, 'ZAG', 75, 5], ['monreal', 'Monreal', 24, 'MEI', 70, 5], ['perez', 'Pérez', 25, 'ATA', 70, 7]] }] })`);
+  j.run('reindex()');
+  return () => Object.fromEntries(j.run('clubesEuropa()')[0].players.map(p => [p.id, p.number]));
+};
+const europeu = (chegadas, versao) => {
+  const j = carregarJogo();
+  const s = criarCampanha(j);
+  s.europa = { chegadas: { e1: chegadas } };
+  if (versao) s.versao = versao;
+  return { j, s };
+};
+const reforco = (id, number) => ({ id, name: id, pos: 'A', pd: 'ATA', number, age: 25, ovr: 70 });
+
+for (const numero of [null, 7]) test(`a migração não tira a camisa única do europeu original (reforço com ${numero})`, () => {
+  const novo = reforco('reforco', numero);
+  const { j, s } = europeu([novo], 20);
+  assert.deepEqual(j.run('migrarSave(S)'), { ok: true });
+  const camisas = remontar(j, s)();
+  assert.equal(camisas.perez, 7);
+  assert.ok(Number.isInteger(camisas.reforco) && camisas.reforco !== 7);
+  conferirCamisas(j.run('clubesEuropa()'));
+});
+
+test('a camisa dos europeus originais não muda ao reabrir depois de uma saída ou chegada', () => {
+  const { j, s } = europeu([]);
+  const antes = remontar(j, s)();
+  // a chegada pega a camisa que o jogo deu a ela contra o elenco montado
+  const clube = j.run('clubesEuropa()')[0], novo = reforco('reforco', antes.monreal);
+  j.run('adicionarAoElenco')(clube, novo);
+  s.europa.chegadas.e1 = [novo];
+  const comprado = clube.players.find(p => p.id === 'yeray');
+  s.clubs[0].players.push({ ...comprado, number: 99, clubId: s.clubs[0].id });
+  const depois = remontar(j, JSON.parse(JSON.stringify(s)))();
+  assert.deepEqual(depois, { monreal: antes.monreal, perez: antes.perez, reforco: novo.number });
+});
+
+test('save antigo: quem já era o único com o número no clube continua com ele depois de reabrir', () => {
+  // antes desta versão, com o Yeray já vendido, o Monreal aparecia com a 5, e o reforço com um número só dele
+  const { j, s } = europeu([reforco('reforco', 1)], 20);
+  s.clubs[0].players.push({ ...reforco('yeray', 99), clubId: s.clubs[0].id });
+  assert.deepEqual(j.run('migrarSave(S)'), { ok: true });
+  const esperado = { monreal: 5, perez: 7, reforco: 1 };
+  assert.deepEqual(remontar(j, s)(), esperado);
+  j.run('usarEstado')(JSON.parse(JSON.stringify(s)));
+  assert.deepEqual(remontar(j, s)(), esperado);
 });
