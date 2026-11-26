@@ -1,7 +1,7 @@
 import { P, S, addNews, tecnicos, userClub } from './estado.mjs';
 import { autoXI, getXI } from './motor.mjs';
 import { POSD, ovrNaPosicao, penalidadePosicao, posDSigla } from './posicoes.mjs';
-import { fatorEnergia } from './energia.mjs';
+import { fatorEnergia, quemPodeEstarLesionado } from './energia.mjs';
 import { NOMES_ALVOS_PENALTI } from './penaltis.mjs';
 
 /* ================= escalação: tela, disponibilidade e trocas ================= */
@@ -92,7 +92,7 @@ export function aplicarDisponibilidade(games){
   const novos = games.filter(g => g.ev && !g.amarelos && !g.copa);
   if (games.length && !novos.length) return;
   const jogaram = new Set(novos.flatMap(g => [g.h, g.a]));
-  for(const p of Object.values(P))if(p.inj>0)p.inj--; // a lesão passa a cada data, também a de clube estrangeiro (#415)
+  for(const p of quemPodeEstarLesionado())if(p.inj>0)p.inj--; // a lesão passa a cada data, também a de clube estrangeiro ou europeu (#415)
   for(const c of S.clubs){
     if(!jogaram.has(c.id))continue; // a suspensão só é cumprida em data com jogo do clube (#415)
     for(const p of c.players){

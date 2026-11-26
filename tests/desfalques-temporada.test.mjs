@@ -76,3 +76,25 @@ test('vendido para clube europeu (#355): a lesão passa a cada data e zera nas f
   })()`);
   assert.deepEqual(r, [4, 0, true, true]);
 });
+
+test('save reaberto sem a base europeia: a lesão do vendido à Europa passa na data e zera nas férias', () => {
+  const j = carregarJogo({ europa: true });
+  j.run(`newGame('${clubeDaSerie(j)}')`);
+  const save = j.run(`(() => {
+    const p = userClub().players.find(p => p.age < 28);
+    movePlayer(p, clubesEuropa()[0]);
+    p.inj = 5;
+    return JSON.stringify(S);
+  })()`);
+  const semBase = carregarJogo();
+  semBase.run(`migrarSave(JSON.parse(${JSON.stringify(save)}))`);
+  const estado = () => semBase.run(`(() => {
+    const p = Object.values(S.europa.chegadas).flat()[0];
+    return [p.inj, !!P[p.id]];
+  })()`);
+  assert.deepEqual(estado(), [5, false], 'sem a base, o jogador não entra em P');
+  semBase.run('userClub().lineup = autoXI(userClub()); playRound(false)');
+  assert.deepEqual(estado(), [4, false]);
+  semBase.run('ferias()');
+  assert.deepEqual(estado(), [0, false]);
+});
