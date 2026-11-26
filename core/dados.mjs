@@ -58,20 +58,20 @@ export function refStrength(c,clubs){
 //  3. Séries A e B: valor de mercado real do Transfermarkt (p.vm, em milhões de €; #174), com a idade pesando
 //  4. estimativa pela força do clube e idade, com pouco sorteio; quem jogou pouco ou nada (p.mn) fica mais baixo
 // Quem não tem nota manual nunca passa do teto da idade (jovem de base não é craque sem alguém escrever que é).
-const fatorIdade=a=>a<=21?1.4:a<=24?1.2:a<=28?1:a<=31?0.7:0.4; // o mesmo de valueOf: jovem vale mais, veterano menos
+export const fatorIdade=a=>a<=21?1.4:a<=24?1.2:a<=28?1:a<=31?0.7:0.4; // jovem vale mais, veterano menos
 /** Overall que um valor de mercado (milhões de €) sugere, para a idade: 0 → 55, 1 → 64, 5 → 72, 15 → 78, 40 → 85. */
 const ACRESCIMO_SERIE={A:0,B:4}; // o valor de mercado cai de uma série para outra mais do que o nível de jogo: sem isso, a B ficava igual à C
 export const ovrDeValor=(v,a,serie='A')=>62.4+(ACRESCIMO_SERIE[serie]||0)+6*Math.log(v/Math.sqrt(fatorIdade(a))+0.3);
 export const tetoIdade=a=>a<=17?62:a<=19?68:a<=21?74:95;
-export function rate(p,ref,serie){
+export function rate(p,ref,serie,{ converterValor=ovrDeValor, ajusteIdade }={}){
   if(p.ovrM!=null)return clamp(Math.round(p.ovrM),40,95);
   const r=mulberry32(hashStr(p.id+'|'+p.name));
   const a=p.age||25;
-  const ageAdj=a<=19?-6:a<=21?-3:a<=23?-1:a<=30?1:a<=32?0:a<=34?-2:-4;
+  const ageAdj=ajusteIdade?.(a)??(a<=19?-6:a<=21?-3:a<=23?-1:a<=30?1:a<=32?0:a<=34?-2:-4);
   let h=ref-1+(r()+r()+r()-1.5)*6+ageAdj;
   if(p.mn!=null&&p.mn<600)h-=4;
   const porValor=serie==='A'||serie==='B';
-  if(porValor&&p.vm!=null)h=ovrDeValor(p.vm,a,serie)+(r()+r()-1)*1.5; // o mesmo valor não empata: um pouco de sorteio fixo por jogador
+  if(porValor&&p.vm!=null)h=converterValor(p.vm,a,serie)+(r()+r()-1)*1.5; // o mesmo valor não empata: um pouco de sorteio fixo por jogador
   else if(porValor)h=Math.min(h-4,ref-5); // não casou com o Transfermarkt (reserva, base ou já saiu): nível de banco do clube, nunca de craque
   if(p.base!=null){const w=p.conf??1;h=w*p.base+(1-w)*h}
   return clamp(Math.round(Math.min(h,tetoIdade(a))),40,93);
@@ -83,7 +83,7 @@ export function forcaDoElenco(c){
   return xi.length?Math.round(xi.reduce((s,x)=>s+x,0)/xi.length):c.strength;
 }
 export function valueOf(p){
-  const af=p.age<=21?1.4:p.age<=24?1.2:p.age<=28?1:p.age<=31?0.7:0.4;
+  const af=fatorIdade(p.age);
   return Math.round(0.3*Math.pow(1.13,p.ovr-50)*af*10)/10 || 0.1;
 }
 // O salário segue o valor de mercado, vezes o aumento negociado na renovação (p.aum).

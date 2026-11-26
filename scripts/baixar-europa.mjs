@@ -1,11 +1,13 @@
 // npm run europa -- --ligas=GB1,GB2,ES1,ES2
+// node scripts/baixar-europa.mjs --recalibrar (recalcula os overalls dos elencos salvos, sem rede)
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { gunzipSync } from 'node:zlib';
-import { erroIds, forcaDoElenco, rate } from '../core/dados.mjs';
+import { erroIds, fatorIdade, forcaDoElenco, rate } from '../core/dados.mjs';
 import { atribuirPosicoes, POSD, POS_SIMPLES } from '../core/posicoes.mjs';
 import { clamp, norm } from '../core/utils.mjs';
+import { linhasCsv } from './csv.mjs';
 
 const API = 'https://v3.football.api-sports.io';
 const DATASET = 'https://pub-e682421888d945d684bcae8890b0ec20.r2.dev/data';
@@ -15,15 +17,15 @@ const PAUSA_MS = 7000;
 const MARGEM_DIARIA = 2;
 const PADRAO = 'GB1,GB2,ES1,ES2';
 const LIGAS = {
-  GB1: { api: 39, nome: 'Premier League', pais: 'Inglaterra', clubes: 20, centro: 76 },
-  GB2: { api: 40, nome: 'Championship', pais: 'Inglaterra', clubes: 24, centro: 70 },
-  ES1: { api: 140, nome: 'LaLiga', pais: 'Espanha', clubes: 20, centro: 75 },
-  ES2: { api: 141, nome: 'LaLiga 2', pais: 'Espanha', clubes: 22, centro: 67 },
-  IT1: { api: 135, nome: 'Serie A', pais: 'Itália', clubes: 20, centro: 74 },
-  IT2: { api: 136, nome: 'Serie B', pais: 'Itália', clubes: 20, centro: 66 },
-  FR1: { api: 61, nome: 'Ligue 1', pais: 'França', clubes: 18, centro: 72 },
-  FR2: { api: 62, nome: 'Ligue 2', pais: 'França', clubes: 18, centro: 65 },
-  PO1: { api: 94, nome: 'Liga Portugal', pais: 'Portugal', clubes: 18, centro: 68 },
+  GB1: { api: 39, nome: 'Premier League', pais: 'Inglaterra', clubes: 20, centro: 73 },
+  GB2: { api: 40, nome: 'Championship', pais: 'Inglaterra', clubes: 24, centro: 67, ajusteValor: -0.5 },
+  ES1: { api: 140, nome: 'LaLiga', pais: 'Espanha', clubes: 20, centro: 70, ajusteValor: 1.5 },
+  ES2: { api: 141, nome: 'LaLiga 2', pais: 'Espanha', clubes: 22, centro: 68 },
+  IT1: { api: 135, nome: 'Serie A', pais: 'Itália', clubes: 20, centro: 70, ajusteValor: -0.5 },
+  IT2: { api: 136, nome: 'Serie B', pais: 'Itália', clubes: 20, centro: 67 },
+  FR1: { api: 61, nome: 'Ligue 1', pais: 'França', clubes: 18, centro: 68 },
+  FR2: { api: 62, nome: 'Ligue 2', pais: 'França', clubes: 18, centro: 64, ajusteValor: -0.5 },
+  PO1: { api: 94, nome: 'Liga Portugal', pais: 'Portugal', clubes: 18, centro: 66, ajusteValor: -0.5 },
   PO2: { api: 95, nome: 'Liga Portugal 2', pais: 'Portugal', clubes: 18, centro: 60 }
 };
 // Calendários oficiais de 2025/26 e ids da API-Football. Extras vieram da terceira divisão.
@@ -89,25 +91,6 @@ function salvar(arq, conteudo) {
     renameSync(tmp, arq);
   } finally {
     rmSync(tmp, { force: true });
-  }
-}
-
-function* linhasCsv(csv) {
-  let linha = [], campo = '', entreAspas = false;
-  for (let i = 0; i <= csv.length; i++) {
-    const c = csv[i];
-    if (entreAspas) {
-      if (c === '"' && csv[i + 1] === '"') { campo += c; i++; }
-      else if (c === '"') entreAspas = false;
-      else if (c === undefined) throw new Error('Campo CSV com aspas abertas.');
-      else campo += c;
-    } else if (c === '"' && !campo) entreAspas = true;
-    else if (c === ',') { linha.push(campo); campo = ''; }
-    else if (c === '\n' || c === '\r' || c === undefined) {
-      if (linha.length || campo) yield [...linha, campo];
-      linha = []; campo = '';
-      if (c === '\r' && csv[i + 1] === '\n') i++;
-    } else campo += c;
   }
 }
 
@@ -315,6 +298,25 @@ function casaJogador(p, candidatos, data) {
   return primeiro && (!segundo || primeiro.diferenca < segundo.diferenca) ? primeiro.j : null;
 }
 
+function avaliarElenco(c) {
+  const { centro, ajusteValor = 0 } = LIGAS[c.liga];
+  c.strength = centro;
+  // A Liga Portugal 2 ficou com a escala anterior por falta de amostra da própria divisão.
+  const ajustes = c.liga === 'PO2' ? undefined : {
+    // Curva mais suave nos valores baixos, com compensação pela desvalorização dos veteranos.
+    converterValor: (v, a) => {
+      const veterania = clamp(a - 27, 0, 7);
+      return 64.5 + 4.5 * Math.log(v / Math.sqrt(fatorIdade(a)) + 1) + veterania + ajusteValor;
+    },
+    ajusteIdade: a => a >= 31 ? 1 : undefined
+  };
+  // 'C' usa a estimativa de rate sem o desconto por falta de valor reservado ao Brasileirão.
+  for (const p of c.players) p.ovr = rate(p, centro, p.vm == null ? 'C' : 'A', ajustes);
+  const referencia = centro + clamp((forcaDoElenco(c) - centro) / 2, -6, 6);
+  for (const p of c.players) if (p.vm == null) p.ovr = rate(p, referencia, 'C', ajustes);
+  c.strength = forcaDoElenco(c);
+}
+
 function montarClubes(raw, times, clubesTm, jogadoresTm, ajustes, informar) {
   const casamentos = casarClubes(times, clubesTm.map(c => ({ ...c, tokens: nomeClube(c.name) })), ajustes.clubes || {}, informar);
   const porId = new Map(jogadoresTm.map(j => [j.player_id, j]));
@@ -382,12 +384,7 @@ function montarClubes(raw, times, clubesTm, jogadoresTm, ajustes, informar) {
 
   for (const c of clubs) {
     atribuirPosicoes(c.players);
-    const { centro } = LIGAS[c.liga];
-    // 'C' usa a estimativa padrão de rate, sem o desconto reservado a quem falta no Transfermarkt no Brasileirão.
-    for (const p of c.players) p.ovr = rate(p, centro, p.vm == null ? 'C' : 'A');
-    const referencia = centro + clamp((forcaDoElenco({ ...c, strength: centro }) - centro) / 2, -6, 6);
-    for (const p of c.players) if (p.vm == null) p.ovr = rate(p, referencia, 'C');
-    c.strength = forcaDoElenco({ ...c, strength: centro });
+    avaliarElenco(c);
   }
   return { clubs, casamentos };
 }
@@ -509,10 +506,20 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const args = process.argv.slice(2);
   const chave = process.env.API_FOOTBALL_KEY;
   try {
-    if (args.length > 1 || (args.length && !args[0].startsWith('--ligas='))) throw new Error(`Use --ligas=${PADRAO}.`);
-    const ligas = (args[0]?.slice('--ligas='.length) ?? PADRAO).split(',');
-    const resultado = await importarEuropa({ ligas, chave });
-    if (resultado.falhasEscudos || resultado.elencosInvalidos || resultado.clubesSemPar) process.exitCode = 1;
+    if (args.length === 1 && args[0] === '--recalibrar') {
+      const arq = 'data/europa-2025.json';
+      const dados = JSON.parse(readFileSync(arq, 'utf8'));
+      for (const c of dados.clubs) avaliarElenco(c);
+      salvar(arq, `${JSON.stringify(dados, null, 2)}\n`);
+      console.log(`${arq}: overalls recalculados para ${dados.clubs.length} clubes.`);
+    } else {
+      if (args.length > 1 || (args.length && !args[0].startsWith('--ligas='))) {
+        throw new Error(`Use --ligas=${PADRAO} ou --recalibrar.`);
+      }
+      const ligas = (args[0]?.slice('--ligas='.length) ?? PADRAO).split(',');
+      const resultado = await importarEuropa({ ligas, chave });
+      if (resultado.falhasEscudos || resultado.elencosInvalidos || resultado.clubesSemPar) process.exitCode = 1;
+    }
   } catch (e) {
     console.error(chave ? e.message.replaceAll(chave, '[omitida]') : e.message);
     process.exitCode = 1;

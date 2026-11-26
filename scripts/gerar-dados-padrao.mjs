@@ -187,15 +187,15 @@ if (arqCont) {
   // força de 2026 e notas dos destaques, à mão (data/continentais-forca-2026.json); sem o arquivo, fica a força do download
   const fc = existsSync('data/continentais-forca-2026.json') ? ler('data/continentais-forca-2026.json') : { clubes: {}, jogadores: {} };
   const { hashStr, mulberry32 } = await import('../core/utils.mjs');
-  // nota de quem não está na lista: sorteio fixo por jogador, com a idade pesando (auge dos 24 aos 31); o 1º do ranking fica
-  // 3 acima da força do clube e cada um seguinte 0,65 abaixo, então os 11 melhores ficam em média perto da força
-  const idade = a => a >= 24 && a <= 31 ? 0.35 : a >= 21 && a <= 33 ? 0.15 : a <= 20 ? -0.1 : 0;
+  // Nota de quem não está na lista: sorteio fixo por jogador, com vantagem para os mais experientes.
+  // O primeiro fica até 4 acima da força do clube, com queda de meio ponto por posição no ranking.
+  const idade = a => a <= 20 ? -0.3 : a <= 23 ? 0.2 : a <= 31 ? 0.4 : 0.5;
   const notas = c => {
     const forca = fc.clubes[c.id] ?? c.strength, dest = fc.jogadores[c.id] || {};
     for (const n of Object.keys(dest)) if (!c.players.some(p => p.name === n)) console.log(`Força 2026: "${n}" não está no elenco do ${c.name}.`);
     const ordem = c.players.filter(p => dest[p.name] == null).map(p => ({ p, s: mulberry32(hashStr(p.id + '|nota'))() + idade(p.age) })).sort((a, b) => b.s - a.s);
-    const topo = Math.min(forca + 3, ...Object.values(dest).map(v => v - 1)); // os gerados ficam abaixo dos destaques
-    const ovr = new Map(ordem.map(({ p }, i) => [p.id, Math.max(45, forca - 16, Math.min(88, Math.round(topo - 0.65 * i)))]));
+    const topo = Math.min(forca + 4, ...Object.values(dest).map(v => v - 1)); // os gerados ficam abaixo dos destaques
+    const ovr = new Map(ordem.map(({ p }, i) => [p.id, Math.max(45, forca - 16, Math.min(88, Math.round(topo - 0.5 * i)))]));
     return { forca, ovr: p => dest[p.name] ?? ovr.get(p.id) };
   };
   const clubesCont = cont.clubs.map(c => { const n = notas(c); return { id: c.id, name: c.name, short: sigla(c.name), color: '#335', logo: existsSync(`img/escudos/${c.id}.png`) ? `img/escudos/${c.id}.png` : c.logo,
