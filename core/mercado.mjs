@@ -1,6 +1,6 @@
 import { estrelasPot } from './base.mjs';
 import { novoContrato } from './contratos.mjs';
-import { UM_ANO, loanOf, startLoan, wageBill } from './emprestimos.mjs';
+import { UM_ANO, avisarVagasEmprestimos, loanOf, startLoan, wageBill } from './emprestimos.mjs';
 import { clubeDe, ehEstrangeiro } from './estrangeiros.mjs';
 import { ehEuropeu, registrarMudanca } from './europa.mjs';
 import { MOVE_N, P, S, addFin, addNews, clubById, divOf, divisions, ehHumano, table, tec, tecnicos, userClub } from './estado.mjs';
@@ -12,14 +12,15 @@ import { clamp, money, pick, rnd } from './utils.mjs';
 
 /* ================= transferências ================= */
 // emprestimo: ida ou volta de empréstimo, que não mexe no contrato com o clube dono (#49)
-export function movePlayer(p,to,emprestimo=false){
+export function movePlayer(p,to,emprestimo=false,{reporElenco=true}={}){
   const from=clubeDe(p.clubId);from.players=from.players.filter(x=>x!==p); // #172: o clube de origem pode ser estrangeiro
   registrarMudanca(p,from,to); // #355: quem entra num clube europeu fica no save
   if(from.lineup)from.lineup=from.lineup.filter(id=>id!==p.id);
   to.players.push(p);p.clubId=to.id;p.listed=false;delete p.emprestar;if(!emprestimo)novoContrato(p);
   for(const t of tecnicos())t.offers=t.offers.filter(o=>o.pid!==p.id);
   // #410: o clube do técnico não ganha jogador de graça ao vender; #355: o europeu é refeito dos dados a cada jogo aberto, os gerados sumiriam
-  if(!ehHumano(from)&&!ehEuropeu(from))ensureSquad(from);
+  if(reporElenco&&!ehHumano(from)&&!ehEuropeu(from))ensureSquad(from);
+  avisarVagasEmprestimos(to);
 }
 // regra: pode fazer proposta por este jogador agora? (texto do erro ou null)
 const rodadaDaProposta=()=>S.round+'_'+S.season;

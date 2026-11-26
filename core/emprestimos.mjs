@@ -1,8 +1,9 @@
-import { P, S, addFin, addNews, addNewsTodos, clubById, ehHumano, tec, userClub } from './estado.mjs';
+import { ELENCO_MAX } from './base.mjs';
+import { P, S, addFin, addNews, addNewsTodos, clubById, clubDo, ehHumano, tec, tecnicos, userClub } from './estado.mjs';
 import { novoContrato } from './contratos.mjs';
 import { clubeDe } from './estrangeiros.mjs';
 import { movePlayer } from './mercado.mjs';
-import { ensureSquad, saidaAbaixoDoMinimo } from './partida.mjs';
+import { saidaAbaixoDoMinimo } from './partida.mjs';
 import { money, rnd } from './utils.mjs';
 
 /* ================= empréstimos ================= */
@@ -11,6 +12,7 @@ import { money, rnd } from './utils.mjs';
 //   (fim.s = temporada, fim.r = S.round em que volta), com o salário dividido 50/50 e sem opção de compra.
 // Formato antigo (empréstimos feitos antes da #142, e os entre clubes da IA da #103): {pid, from, to, until, payer, buy}:
 //   until = rodada (S.round) em que volta, na mesma temporada; payer = quem paga o salário; buy = opção de compra ou null.
+// Ao prorrogar um empréstimo antigo, fim substitui until e payer e buy preservam as condições originais.
 export const loans=()=>S.loans||(S.loans=[]);
 export const loanOf=pid=>loans().find(l=>l.pid===pid);
 export const loansOut=c=>loans().filter(l=>l.from===c.id);
@@ -23,9 +25,10 @@ export const loanLeft=l=>Math.max(0,l.fim?(l.fim.s-S.season)*S.fixtures.length+l
 /** "até a rodada 12 da temporada 2025" / "até o fim da temporada 2024" / "até a rodada 12" (formato antigo). */
 export const fimTxt=l=>l.fim?(l.fim.r?`até a rodada ${l.fim.r} da temporada ${l.fim.s}`:`até o fim da temporada ${l.fim.s-1}`):`até a rodada ${l.until}`;
 /** Quem paga o salário, em texto. */
-export const salarioTxt=l=>l.fim?'dividido 50/50':l.payer==='from'?'pago por quem cede':'pago por quem recebe';
+const divideSalario=l=>l.fim&&!l.payer;
+export const salarioTxt=l=>divideSalario(l)?'dividido 50/50':l.payer==='from'?'pago por quem cede':'pago por quem recebe';
 // folha salarial real do clube: o salário do emprestado é dividido 50/50 (#142); no formato antigo, quem paga arca com ele
-const parte=(l,dono)=>l.fim?0.5:(l.payer==='from')===dono?1:0;
+const parte=(l,dono)=>divideSalario(l)?0.5:(l.payer==='from')===dono?1:0;
 export function wageBill(c){
   let w=0;
   for(const p of c.players){const l=loanOf(p.id);w+=l&&l.to===c.id?p.wage*parte(l,false):p.wage}
@@ -50,7 +53,7 @@ export function proporEmprestimo({pid},imediato=false){
 export const emprestimoJa=pid=>proporEmprestimo({pid},true);
 export function loanCheck(p,lender,borrower){
   if(loanOf(p.id))return `${p.name} já está emprestado.`;
-  if(borrower.players.length>=32)return `${borrower.name} já tem 32 jogadores.`;
+  if(borrower.players.length>=ELENCO_MAX)return `${borrower.name} já tem ${ELENCO_MAX} jogadores.`;
   if(ehHumano(lender)){const m=saidaAbaixoDoMinimo(lender,p);if(m)return m} // #410
   if(ehHumano(lender)&&lender.players.length<=16)return 'Seu elenco ficaria pequeno demais (mínimo 16).';
   if(!ehHumano(lender)){
@@ -66,11 +69,46 @@ export function startLoan(l){
   const msg=`🤝 ${p.name} emprestado do ${clubeDe(l.from).name} ao ${clubById(l.to).name} ${fimTxt(l)}.`;
   addNews(msg,l.from);addNews(msg,l.to); // para os técnicos dos dois clubes (clube da IA: descarta)
 }
+
+const ANTECEDENCIA_VOLTA=3;
+const AVISO_VOLTA='Volta de empréstimo.';
+export const REGRA_VOLTA='Libere vagas no Elenco. Se faltar vaga no prazo, o empréstimo será prorrogado por uma temporada nas mesmas condições.';
+
+/** Vagas para as voltas mais próximas com o elenco atual, sem contar saídas futuras. */
+export function avisoVagasEmprestimos(c) {
+  const proximos=(S.loans||[]).filter(l=>l.from===c.id&&P[l.pid]&&loanLeft(l)<=ANTECEDENCIA_VOLTA);
+  const vagas=Math.max(0,c.players.length+proximos.length-ELENCO_MAX);
+  if(!proximos.length||!vagas)return null;
+  const ultimo=proximos.reduce((a,b)=>loanLeft(a)>=loanLeft(b)?a:b);
+  const prazo=fimTxt({fim:ultimo.fim??{s:S.season,r:ultimo.until}});
+  const faltam=vagas===1?'Falta 1 vaga':`Faltam ${vagas} vagas`;
+  return { etiqueta:faltam, resumo:`${faltam} para receber de volta os jogadores emprestados ${prazo} com o elenco atual.` };
+}
+
+export function avisarVagasEmprestimos(c) {
+  if(!ehHumano(c))return;
+  const aviso=avisoVagasEmprestimos(c);
+  if(!aviso)return;
+  const msg=`${AVISO_VOLTA} ${aviso.resumo} ${REGRA_VOLTA}`;
+  const anterior=tecnicos().find(t=>t.clubId===c.id)?.news.find(n=>n.t.startsWith(AVISO_VOLTA));
+  if(anterior?.t!==msg)addNews(msg,c.id);
+}
+
+// #436: quem não tem vaga prorroga por uma temporada, sem transferir o atleta nem cobrar taxa.
+function prorrogar(l,p,from,to) {
+  if(!l.fim){l.payer??='to';delete l.until}
+  l.fim=UM_ANO();
+  const msg=`O empréstimo de ${p.name} foi prorrogado por uma temporada nas mesmas condições (${fimTxt(l)}). O ${from.name} não tinha vaga no elenco.`;
+  addNews(msg,from.id);addNews(msg,to.id);
+}
+
 export function endLoan(l,back){ // back: devolve ao clube de origem
+  const p=P[l.pid];
+  if(!p||!back){S.loans=loans().filter(x=>x!==l);return}
+  const from=clubeDe(l.from),to=clubeDe(l.to);
+  if(from.players.length>=ELENCO_MAX){prorrogar(l,p,from,to);return}
   S.loans=loans().filter(x=>x!==l);
-  const p=P[l.pid];if(!p||!back)return;
-  const from=clubeDe(l.from),to=clubById(l.to);
-  movePlayer(p,from,true);ensureSquad(to);
+  movePlayer(p,from,true,{reporElenco:false});
   const msg=`🔙 ${p.name} voltou ao ${from.name} (fim do empréstimo).`;addNews(msg,from.id);if(to.id!==from.id)addNews(msg,to.id);
 }
 // chamada a cada rodada, depois de S.round++, e no começo da temporada (empréstimo de 1 ano feito na rodada 0)
@@ -78,12 +116,16 @@ export function processLoans(){
   for(const l of [...loans()]){
     if(!acabou(l))continue;
     const p=P[l.pid];
-    if(l.buy&&p&&ehHumano(l.from)&&!ehHumano(l.to)&&rnd()<0.4){ // clube de IA exerce a opção de compra (só empréstimos de antes da #142)
-      addFin(`Opção de compra de ${p.name} (${clubById(l.to).name})`,l.buy,clubById(l.from));addNewsTodos(`💰 ${clubById(l.to).name} exerceu a opção de compra de ${p.name} por ${money(l.buy)}.`); // transferência com a IA: todos veem (#35)
+    const comprador=l.buy&&p&&ehHumano(l.from)&&!ehHumano(l.to)&&clubeDe(l.to);
+    if(comprador&&comprador.balance>=l.buy&&rnd()<0.4){ // opção de compra dos empréstimos anteriores à #142
+      addFin(`Opção de compra de ${p.name}`,-l.buy,comprador);
+      addFin(`Opção de compra de ${p.name} (${comprador.name})`,l.buy,clubeDe(l.from));
+      addNewsTodos(`💰 ${comprador.name} exerceu a opção de compra de ${p.name} por ${money(l.buy)}.`);
       S.loans=loans().filter(x=>x!==l);novoContrato(p);continue;
     }
     endLoan(l,true);
   }
+  for(const t of tecnicos())if(!t.demitido)avisarVagasEmprestimos(clubDo(t));
 }
 // regra: exerce a opção de compra de um jogador que peguei emprestado (só empréstimos de antes da #142; os novos não têm)
 export function exercerOpcaoCompra(pid){

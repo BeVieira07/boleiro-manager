@@ -1,8 +1,9 @@
 import { clubeDe } from '../../core/estrangeiros.mjs';
-import { UM_ANO, emprestimoJa as emprestimoJaCore, exercerOpcaoCompra, fimTxt, loanLeft, loanOf, loansIn, loansOut, proporEmprestimo, salarioTxt } from '../../core/emprestimos.mjs';
+import { REGRA_VOLTA, UM_ANO, avisoVagasEmprestimos, emprestimoJa as emprestimoJaCore, exercerOpcaoCompra, fimTxt, loanLeft, loanOf, loansIn, loansOut, proporEmprestimo, salarioTxt } from '../../core/emprestimos.mjs';
 import { P, clubById, ehHumano, userClub } from '../../core/estado.mjs';
 import { posDSigla } from '../../core/posicoes.mjs';
 import { esc, money } from '../../core/utils.mjs';
+import { tag } from '../componentes.mjs';
 import { save, ui } from '../estado.mjs';
 import { render } from '../telas.mjs';
 import { mercadoLiga } from '../liga/ligajogo.mjs';
@@ -48,8 +49,10 @@ export function buyLoaned(pid){
 export function vLoans(){
   const uc=userClub(),inn=loansIn(uc),out=loansOut(uc);
   if(!inn.length&&!out.length)return '';
+  const aviso=avisoVagasEmprestimos(uc);
   const row=(l,isIn)=>{const p=P[l.pid];return `<tr><td><span class="pos ${p.pos}">${posDSigla(p)}</span> ${esc(p.name)}</td><td class="n ovr">${p.ovr}</td><td>${isIn?'de '+esc(clubeDe(l.from).name):'para '+esc(clubById(l.to).name)}</td><td>${fimTxt(l)} (${loanLeft(l)} rod.)</td><td>Salário: ${salarioTxt(l)}</td><td>${l.buy?'Opção de compra '+money(l.buy)+(isIn?` <button class="btn sm" data-acao="buyLoaned|${l.pid}">Comprar</button>`:''):'Sem opção de compra'}</td></tr>`};
   return `<div class="card"><h2 class="t3">Empréstimos</h2>
+   ${aviso?`<p>${tag(aviso.etiqueta,'aviso')} para a volta dos emprestados. ${REGRA_VOLTA}</p>`:''}
    ${inn.length?`<p class="muted" id="emprestados-ao-clube">Emprestados ao meu clube</p><div class="tw" tabindex="0" role="region" aria-labelledby="emprestados-ao-clube"><table>${inn.map(l=>row(l,true)).join('')}</table></div>`:''}
    ${out.length?`<p class="muted" id="emprestados-pelo-clube">Emprestados pelo meu clube</p><div class="tw" tabindex="0" role="region" aria-labelledby="emprestados-pelo-clube"><table>${out.map(l=>row(l,false)).join('')}</table></div>`:''}</div>`;
 }

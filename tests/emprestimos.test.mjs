@@ -124,6 +124,54 @@ test('empréstimo antigo (antes da #142) continua com o prazo, quem paga e a op�
   assert.ok(w > 0);
 });
 
+test('#436: avisa o técnico antes do prazo e devolve só até preencher as 32 vagas', () => {
+  const j = novo();
+  const ids = j.run(`(() => {
+    const dono = userClub(), destino = S.clubs.find(c => !ehHumano(c)),
+      reforcos = S.clubs.find(c => c !== destino && !ehHumano(c));
+    const cedidos = dono.players.slice(-2);
+    for (const p of cedidos) startLoan({ pid: p.id, from: dono.id, to: destino.id, fim: { s: S.season, r: 5 } });
+    while (dono.players.length < 32) movePlayer(reforcos.players.at(-1), dono);
+    S.round = 2; processLoans();
+    return cedidos.map(p => p.id);
+  })()`);
+  assert.match(j.run('tec().news[0].t'), /Faltam 2 vagas/);
+  j.run("go('elenco')");
+  assert.match(j.html(), /Faltam 2 vagas/);
+  assert.match(j.html(), /prorrogado por uma temporada/);
+  j.run("go('clube')");
+  assert.match(j.html(), /Faltam 2 vagas/);
+  j.run(`movePlayer(userClub().players.at(-1), S.clubs.find(c => !ehHumano(c) && c.players.length < 32));
+    S.round = 4; processLoans()`);
+  assert.match(j.run('tec().news[0].t'), /Falta 1 vaga/);
+  const antes = j.run('JSON.stringify([Object.keys(P).sort(), S.clubs.map(c => c.balance)])');
+  const temporada = j.run('S.season');
+  j.run('S.round = 5; processLoans()');
+  assert.equal(j.run('userClub().players.length'), 32);
+  assert.equal(j.run(`loanOf('${ids[0]}')`), undefined);
+  assert.deepEqual(j.run(`loanOf('${ids[1]}').fim`), { s: temporada + 1, r: 5 });
+  assert.equal(j.run('JSON.stringify([Object.keys(P).sort(), S.clubs.map(c => c.balance)])'), antes);
+});
+
+test('#436: clube da IA lotado prorroga empréstimo antigo, mantendo salário e opção', () => {
+  const j = novo();
+  const pid = j.run(`(() => {
+    const [dono, outro] = S.clubs.filter(c => !ehHumano(c)), p = dono.players.at(-1);
+    startLoan({ pid: p.id, from: dono.id, to: userClub().id, until: 5, payer: 'from', buy: 3 });
+    while (dono.players.length < 32) movePlayer(outro.players.at(-1), dono);
+    return p.id;
+  })()`);
+  const folha = j.run('wageBill(userClub())'), temporada = j.run('S.season');
+  j.run('S.round = 5; processLoans(); processLoans()');
+  assert.equal(j.run(`P['${pid}'].clubId`), j.run('userClub().id'));
+  const l = j.run(`loanOf('${pid}')`);
+  assert.deepEqual(l.fim, { s: temporada + 1, r: 5 });
+  assert.equal(l.buy, 3);
+  assert.equal(j.run(`salarioTxt(loanOf('${pid}'))`), 'pago por quem cede');
+  assert.equal(j.run('wageBill(userClub())'), folha);
+  assert.equal(j.run(`clubeDe('${l.from}').players.length`), 32);
+});
+
 test('pedir emprestado pela tela: confirmação com o prazo e a divisão do salário', () => {
   const j = novo();
   const pid = daLista(j);

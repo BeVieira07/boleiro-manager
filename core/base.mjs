@@ -65,6 +65,7 @@ export function promoverDaBase(id) {
   if (uc.players.length >= ELENCO_MAX) return { erro: `Seu elenco já tem ${ELENCO_MAX} jogadores. Venda alguém antes.` };
   uc.base = uc.base.filter(x => x !== p); p.number = null; uc.players.push(p); P[p.id] = p;
   addNews(`⬆️ ${p.name} (${POSD[p.pd].nome}, ${p.age} anos) foi promovido da base.`);
+  avisarVagasEmprestimos(uc);
   return { ok: true, msg: `${p.name} agora faz parte do elenco principal.` };
 }
 export const valorVendaBase = p => Math.round(Math.max(0.1, valueOf(p)) * 0.5 * 100) / 100;
