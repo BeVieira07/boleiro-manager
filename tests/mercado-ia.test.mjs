@@ -83,21 +83,18 @@ test('ofertas por jogadores à venda: comprador com caixa, série vizinha e sem 
 
 // #413: a janela não repete a oferta que o clube já fez pelo jogador quando estava à venda (caso achado na revisão do PR #425)
 test('proposta espontânea da janela não duplica oferta aberta do mesmo clube pelo mesmo jogador', () => {
-  const j = carregarJogo({ boot: true });
-  j.run(`newGame(getData().clubs.find(c=>c.name.startsWith('Vasco')).id);S.seed=87`);
-  const r = JSON.parse(j.run(`(()=>{
-    const uc=userClub(),t=tec();
-    const joga=()=>{t.confBaixa=0;if(validateLineup())uc.lineup=autoXI(uc);jogarRodada()};
-    while(S.round<17)joga();
-    const oito=[...uc.players].sort((a,b)=>b.ovr-a.ovr).slice(0,8);
-    for(const p of oito)p.listed=true;
-    joga();joga();
-    const abertas=t.offers.map(o=>o.pid+' '+o.from);
-    for(const p of oito)p.listed=false;
-    joga(); // rodada 19: janela do meio da temporada
-    return JSON.stringify({abertas,depois:t.offers.map(o=>({id:o.id,par:o.pid+' '+o.from}))})})()`));
-  assert.ok(r.abertas.includes('p345748 c794'), 'a reprodução precisa da oferta aberta do Bragantino por A. Gómez');
-  assert.ok(r.depois.some(o => o.id.startsWith('e2024_19_')), 'a janela precisa ter feito a proposta espontânea');
-  const pares = r.depois.map(o => o.par);
-  assert.deepEqual(pares.filter((x, i) => pares.indexOf(x) !== i), []);
+  // #441: cenário montado (antes era a semente 87 com uma oferta do Bragantino, que mudava a cada recalibração dos overalls):
+  // só um clube da IA tem caixa, e ele já tem oferta aberta por todos os jogadores do técnico
+  const j = novo();
+  const r = j.run(`(()=>{
+    const uc=userClub(),t=tec(),ia=S.clubs.filter(c=>!ehHumano(c)&&divOf(c)===divOf(uc)).sort((a,b)=>a.strength-b.strength),x=ia[0];
+    for(const c of S.clubs)if(!ehHumano(c))c.balance=c===x?1000:0;
+    let repetidas=0;
+    for(let s=1;s<=30;s++){
+      t.offers=uc.players.map(p=>({id:'o'+p.id,pid:p.id,from:x.id,amount:1,until:99}));
+      S.rng=s;S.round=0;janelaIA();
+      const pares=t.offers.map(o=>o.pid+' '+o.from);repetidas+=pares.length-new Set(pares).size;
+    }
+    return repetidas})()`);
+  assert.equal(r, 0);
 });
