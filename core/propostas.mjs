@@ -8,6 +8,7 @@
 import { UM_ANO, loanOf, startLoan } from './emprestimos.mjs';
 import { P, S, addFin, addNews, clubDo, tec, tecDoClube } from './estado.mjs';
 import { movePlayer } from './mercado.mjs';
+import { saidaAbaixoDoMinimo } from './partida.mjs';
 import { money } from './utils.mjs';
 
 export const propostas = () => S.propostas || (S.propostas = []);
@@ -34,6 +35,7 @@ function conferir(pr) {
   const { jog, ced, rec } = l;
   if (loanOf(jog.id)) return { erro: `${jog.name} está emprestado.` };
   if (pr.negocio === 'emprestimo' && !jog.emprestar) return { erro: `${jog.name} não está na lista de empréstimo do ${ced.name}.` };
+  { const m = saidaAbaixoDoMinimo(ced, jog); if (m) return { erro: m }; } // #410
   if (ced.players.length <= 16) return { erro: `${ced.name} ficaria com menos de 16 jogadores.` };
   if (rec.players.length >= 32) return { erro: `${rec.name} já tem 32 jogadores.` };
   if (pr.valor > rec.balance) return { erro: `${rec.name} não tem caixa para ${money(pr.valor)}.` };

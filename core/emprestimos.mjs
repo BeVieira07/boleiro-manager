@@ -2,7 +2,7 @@ import { P, S, addFin, addNews, addNewsTodos, clubById, ehHumano, tec, userClub 
 import { novoContrato } from './contratos.mjs';
 import { clubeDe } from './estrangeiros.mjs';
 import { movePlayer } from './mercado.mjs';
-import { ensureSquad } from './partida.mjs';
+import { ensureSquad, saidaAbaixoDoMinimo } from './partida.mjs';
 import { money, rnd } from './utils.mjs';
 
 /* ================= empréstimos ================= */
@@ -51,6 +51,7 @@ export const emprestimoJa=pid=>proporEmprestimo({pid},true);
 export function loanCheck(p,lender,borrower){
   if(loanOf(p.id))return `${p.name} já está emprestado.`;
   if(borrower.players.length>=32)return `${borrower.name} já tem 32 jogadores.`;
+  if(ehHumano(lender)){const m=saidaAbaixoDoMinimo(lender,p);if(m)return m} // #410
   if(ehHumano(lender)&&lender.players.length<=16)return 'Seu elenco ficaria pequeno demais (mínimo 16).';
   if(!ehHumano(lender)){
     if(p.bidRound===S.round+'_'+S.season)return `${lender.name} não quer negociar ${p.name} de novo nesta rodada.`;
@@ -60,7 +61,7 @@ export function loanCheck(p,lender,borrower){
   return null;
 }
 export function startLoan(l){
-  const p=P[l.pid];movePlayer(p,clubById(l.to),true); // movePlayer garante o elenco mínimo de quem cedeu
+  const p=P[l.pid];movePlayer(p,clubById(l.to),true); // movePlayer só completa o elenco de quem cedeu se for clube da IA; o do técnico já foi barrado por saidaAbaixoDoMinimo
   loans().push(l);
   const msg=`🤝 ${p.name} emprestado do ${clubeDe(l.from).name} ao ${clubById(l.to).name} ${fimTxt(l)}.`;
   addNews(msg,l.from);addNews(msg,l.to); // para os técnicos dos dois clubes (clube da IA: descarta)

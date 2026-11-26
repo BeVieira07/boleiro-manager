@@ -72,9 +72,21 @@ export function iniciarTemporada(){
   for(const t of tecnicos().filter(t=>!t.demitido)){t.offers=[];confiancaNovaTemporada(t);const uc=clubDo(t);uc.lineup=getXI(uc);if(uc.lineup.length<11)uc.lineup=autoXI(uc)}
   addNewsTodos(`📅 Começa a temporada ${S.season}!`);
 }
+// #410: elenco mínimo por posição, num só lugar. A IA é completada por ensureSquad; o técnico, só na virada e no fim do empréstimo
+export const MINIMO_POSICAO={G:2,D:5,M:5,A:3};
+const NOME_POSICAO={G:'goleiros',D:'defensores',M:'meias',A:'atacantes'}; // os nomes das telas (Elenco)
+/** Texto do erro se a saída de p deixaria a posição do clube abaixo do mínimo; senão null.
+ *  Só contam os jogadores próprios: o emprestado ao clube volta ao dono e não repõe quem saiu. */
+export function saidaAbaixoDoMinimo(c,p){
+  const min=MINIMO_POSICAO[p.pos];if(!min)return null;
+  const recebido=x=>(S.loans||[]).some(l=>l.pid===x.id&&l.to===c.id);
+  const daPos=c.players.filter(x=>x.pos===p.pos),proprios=daPos.filter(x=>!recebido(x));
+  if(proprios.length-1>=min)return null;
+  return `${c.name} precisa manter pelo menos ${min} ${NOME_POSICAO[p.pos]}.${daPos.length>proprios.length?' Jogadores emprestados não contam.':''}`;
+}
 export function ensureSquad(c){
   const r=rnd;let i=c.players.length+100;
-  for(const [pos,n] of Object.entries({G:2,D:5,M:5,A:3})){
+  for(const [pos,n] of Object.entries(MINIMO_POSICAO)){
     while(c.players.filter(p=>p.pos===pos).length<n){
       const p=fakePlayer(c.id,i++,c.strength,pos,r,[17,19]);p.ovr=clamp(c.strength-10+ri(-4,6),40,85);
       p.goals=0;p.listed=false;p.contrato=CONTRATO_NOVO;p.pot=potInicial(p);refreshEconomics(p);p.clubId=c.id;c.players.push(p);P[p.id]=p;
