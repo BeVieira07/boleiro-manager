@@ -34,7 +34,11 @@ function marcarSobras(ia) {
   }
 }
 // clubes da mesma série ou de uma vizinha
-const vizinhos = (ia, c) => { const ds = divisions(), d = ds.indexOf(divOf(c)); return ia.filter(o => o !== c && Math.abs(ds.indexOf(divOf(o)) - d) <= 1) };
+export const vizinhos = (ia, c) => { const ds = divisions(), d = ds.indexOf(divOf(c)); return ia.filter(o => o !== c && Math.abs(ds.indexOf(divOf(o)) - d) <= 1) };
+
+/** #413: o técnico já tem oferta aberta por este jogador (do clube `de`, ou de qualquer um, se omitido)? Vale para os três
+    caminhos que criam proposta de compra: jogador à venda, janela da IA e Europa. */
+export const temOferta = (t, pid, de) => t.offers.some(o => o.pid === pid && (!de || o.from === de));
 
 /** Abre a janela da IA. Devolve {compras, emprestimos, propostas} (listas dos negócios feitos). */
 export function janelaIA() {
@@ -65,7 +69,7 @@ export function janelaIA() {
     const alvo = uc.players.filter(p => !p.listed && !loanOf(p.id)).sort((a, b) => nota(b) - nota(a))[Math.floor(rnd() * 3)];
     if (!alvo || uc.players.length <= ELENCO_MIN) continue;
     const valor = Math.round(alvo.value * (1.05 + rnd() * 0.35) * 10) / 10;
-    const quem = shuffle(ia.filter(c => c.balance >= valor && c.players.length < ELENCO_MAX)).slice(0, BUSCA).find(c => alvo.ovr >= pior(c, alvo.pos));
+    const quem = shuffle(ia.filter(c => c.balance >= valor && c.players.length < ELENCO_MAX && !temOferta(t, alvo.id, c.id))).slice(0, BUSCA).find(c => alvo.ovr >= pior(c, alvo.pos));
     if (!quem) continue;
     t.offers.push({ id: `e${S.season}_${S.round}_${alvo.id}`, pid: alvo.id, from: quem.id, amount: valor, until: S.round + 3 });
     addNews(`💼 ${quem.name} quer ${alvo.name} e ofereceu ${money(valor)}, mesmo sem ele estar à venda. Responda no painel do clube.`, uc.id);
@@ -91,7 +95,7 @@ function propostasEuropeias() {
   for (const t of tecnicos()) {
     if (t.demitido || r() >= CHANCE_EUROPA) continue;
     const uc = clubDo(t); if (uc.players.length <= ELENCO_MIN) continue;
-    const alvo = uc.players.filter(p => !loanOf(p.id) && !t.offers.some(o => o.pid === p.id)).sort((a, b) => b.ovr - a.ovr)[Math.floor(r() * 3)];
+    const alvo = uc.players.filter(p => !loanOf(p.id) && !temOferta(t, p.id)).sort((a, b) => b.ovr - a.ovr)[Math.floor(r() * 3)];
     if (!alvo) continue;
     const valor = Math.round(alvo.value * (1.25 + r() * 0.5) * 10) / 10;
     const quer = eu.filter(c => c.balance >= valor && c.players.length < ELENCO_MAX && alvo.ovr >= pior(c, alvo.pos));

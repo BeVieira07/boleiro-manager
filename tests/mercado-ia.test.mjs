@@ -55,3 +55,49 @@ test('no Mercado, os marcados pela IA aparecem à venda ou para empréstimo', ()
   assert.ok(n > 0);
   assert.ok(j.run(`(()=>{ui.mf.ord='ovr';ui.mf.dir=1;return corpoMercado().linhas})()`).match(/À venda|Para empréstimo/));
 });
+
+// #413: oferta por jogador à venda só vem de clube que paga, com vaga, da mesma série ou vizinha, sem repetir
+test('ofertas por jogadores à venda: comprador com caixa, série vizinha e sem oferta repetida', () => {
+  const j = novo();
+  const r = JSON.parse(j.run(`(()=>{
+    const uc=userClub(),t=tec(),ds=divisions(),vistas=new Set(),o={total:0,semCaixa:0,longe:0,repetida:0};
+    for(let n=0;n<80&&S.round<S.fixtures.length&&!t.demitido;n++){
+      t.confBaixa=0;if(validateLineup())uc.lineup=autoXI(uc);
+      for(const p of uc.players.slice(0,8))p.listed=true; // 8 à venda
+      const caixa=Object.fromEntries(S.clubs.map(c=>[c.id,c.balance]));
+      playRound();
+      for(const of of t.offers.filter(x=>!vistas.has(x.id)&&!x.id.startsWith('oe')&&x.id[0]==='o')){
+        vistas.add(of.id);o.total++;
+        const b=clubById(of.from);
+        if(caixa[b.id]<of.amount)o.semCaixa++;
+        if(Math.abs(ds.indexOf(divOf(b))-ds.indexOf(divOf(uc)))>1)o.longe++
+        if(t.offers.filter(x=>x.pid===of.pid&&x.from===of.from).length>1)o.repetida++;
+      }
+    }
+    return JSON.stringify(o)})()`));
+  assert.ok(r.total >= 10, `só ${r.total} ofertas na temporada`);
+  assert.equal(r.semCaixa, 0, 'oferta de clube sem caixa');
+  assert.equal(r.longe, 0, 'oferta de série distante');
+  assert.equal(r.repetida, 0, 'oferta repetida do mesmo clube pelo mesmo jogador');
+});
+
+// #413: a janela não repete a oferta que o clube já fez pelo jogador quando estava à venda (caso achado na revisão do PR #425)
+test('proposta espontânea da janela não duplica oferta aberta do mesmo clube pelo mesmo jogador', () => {
+  const j = carregarJogo({ boot: true });
+  j.run(`newGame(getData().clubs.find(c=>c.name.startsWith('Vasco')).id);S.seed=87`);
+  const r = JSON.parse(j.run(`(()=>{
+    const uc=userClub(),t=tec();
+    const joga=()=>{t.confBaixa=0;if(validateLineup())uc.lineup=autoXI(uc);jogarRodada()};
+    while(S.round<17)joga();
+    const oito=[...uc.players].sort((a,b)=>b.ovr-a.ovr).slice(0,8);
+    for(const p of oito)p.listed=true;
+    joga();joga();
+    const abertas=t.offers.map(o=>o.pid+' '+o.from);
+    for(const p of oito)p.listed=false;
+    joga(); // rodada 19: janela do meio da temporada
+    return JSON.stringify({abertas,depois:t.offers.map(o=>({id:o.id,par:o.pid+' '+o.from}))})})()`));
+  assert.ok(r.abertas.includes('p345748 c794'), 'a reprodução precisa da oferta aberta do Bragantino por A. Gómez');
+  assert.ok(r.depois.some(o => o.id.startsWith('e2024_19_')), 'a janela precisa ter feito a proposta espontânea');
+  const pares = r.depois.map(o => o.par);
+  assert.deepEqual(pares.filter((x, i) => pares.indexOf(x) !== i), []);
+});

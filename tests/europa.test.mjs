@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { gzipSync } from 'node:zlib';
-import { erroIds, forcaDoElenco, rate } from '../core/dados.mjs';
+import { erroIds, forcaDoElenco } from '../core/dados.mjs';
 import { POSD } from '../core/posicoes.mjs';
 import { importarEuropa } from '../scripts/baixar-europa.mjs';
 
@@ -96,7 +96,7 @@ test('importação europeia para na margem diária, retoma do cache e classifica
   ]);
   const [goleiro, lateral, atacante] = rebaixado.players;
   assert.equal(goleiro.vm, .75); // dois nomes abreviados compatíveis, idade identifica o primeiro
-  assert.equal(goleiro.ovr, rate(goleiro, 67, 'A'));
+  assert.equal(goleiro.ovr, 67); // curva de valor da Europa, com sorteio fixo para a ficha fictícia
   assert.equal(lateral.vm, 1.45); // vírgula e aspas escapadas no CSV
   assert.equal(lateral.pd, 'LE');
   assert.equal(atacante.number, null);

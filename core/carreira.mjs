@@ -14,6 +14,7 @@
      Com acesso (zona de subida) ou título, abre a metade de baixo da série de cima (no título da A, qualquer clube).
    - Pedir demissão com campanha abaixo da meta pesa na reputação como a demissão. Se ninguém couber, sai a proposta
      do clube mais fraco da série mais baixa. */
+import { garantirBase } from './base.mjs';
 import { CONF_INICIO, definirMeta, metaDe } from './diretoria.mjs';
 import { DIVS, MOVE_N, S, addNewsTodos, clubById, clubDo, divOf, divisions, hasTwoDivs, table, tec, tecDoClube, tecnicos } from './estado.mjs';
 import { autoXI } from './motor.mjs';
@@ -166,6 +167,7 @@ export function escolherClube(clubeId, t = tec()) {
   abrirPassagem(t);
   t.conf = CONF_INICIO; t.confBaixa = 0; t.confFat = []; t.offers = []; t.pronto = false;
   definirMeta(t);
+  garantirBase(c); // #414: quem assume no meio da temporada já encontra a base
   c.lineup = autoXI(c);
   addNewsTodos(`🤝 ${t.nome} deixou o ${antigo.name} e assumiu o ${c.name} (${DIVS[divOf(c)]}). Meta: ${t.meta.texto}.`);
   return { ok: true, msg: `Você é o novo técnico do ${c.name}.`, clube: c.id };
