@@ -10,6 +10,7 @@ import { loanOf, loans } from './emprestimos.mjs';
 import { S, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, ehHumano, tecnicos } from './estado.mjs';
 import { clubesEuropa, nomeLigaEuropa } from './europa.mjs';
 import { movePlayer } from './mercado.mjs';
+import { saidaAbaixoDoMinimo } from './partida.mjs';
 import { hashStr, money, mulberry32, rnd, shuffle } from './utils.mjs';
 
 export const MAX_NEGOCIOS = 20, MAX_EMPRESTIMOS = 6, ELENCO_MIN = 16, ELENCO_MAX = 32;
@@ -66,7 +67,8 @@ export function janelaIA() {
   for (const t of tecnicos()) {
     if (t.demitido || rnd() >= 0.6) continue;
     const uc = clubDo(t), nota = p => p.ovr + 3 * (p.forma || 0);
-    const alvo = uc.players.filter(p => !p.listed && !loanOf(p.id)).sort((a, b) => nota(b) - nota(a))[Math.floor(rnd() * 3)];
+    // #441: não oferece por quem não pode sair (mínimo por posição, #410): a proposta não poderia ser aceita
+    const alvo = uc.players.filter(p => !p.listed && !loanOf(p.id) && !saidaAbaixoDoMinimo(uc, p)).sort((a, b) => nota(b) - nota(a))[Math.floor(rnd() * 3)];
     if (!alvo || uc.players.length <= ELENCO_MIN) continue;
     const valor = Math.round(alvo.value * (1.05 + rnd() * 0.35) * 10) / 10;
     const quem = shuffle(ia.filter(c => c.balance >= valor && c.players.length < ELENCO_MAX && !temOferta(t, alvo.id, c.id))).slice(0, BUSCA).find(c => alvo.ovr >= pior(c, alvo.pos));
@@ -95,7 +97,7 @@ function propostasEuropeias() {
   for (const t of tecnicos()) {
     if (t.demitido || r() >= CHANCE_EUROPA) continue;
     const uc = clubDo(t); if (uc.players.length <= ELENCO_MIN) continue;
-    const alvo = uc.players.filter(p => !loanOf(p.id) && !temOferta(t, p.id)).sort((a, b) => b.ovr - a.ovr)[Math.floor(r() * 3)];
+    const alvo = uc.players.filter(p => !loanOf(p.id) && !temOferta(t, p.id) && !saidaAbaixoDoMinimo(uc, p)).sort((a, b) => b.ovr - a.ovr)[Math.floor(r() * 3)];
     if (!alvo) continue;
     const valor = Math.round(alvo.value * (1.25 + r() * 0.5) * 10) / 10;
     const quer = eu.filter(c => c.balance >= valor && c.players.length < ELENCO_MAX && alvo.ovr >= pior(c, alvo.pos));

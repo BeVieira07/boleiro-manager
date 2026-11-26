@@ -168,7 +168,7 @@ export function comparar(jogadores, referencia) {
     return melhores.length === 1 ? melhores : [];
   });
   return pares.map(({ p, par }) => ({
-    ...p, diferenca: p.ovr - par.nota, mesmoClube: par.clubeConfere,
+    ...p, nota: par.nota, diferenca: p.ovr - par.nota, mesmoClube: par.clubeConfere,
     mesmaLiga: LIGAS_EA.has(p.liga) && par.jogador.league === LIGAS_EA.get(p.liga)
   }));
 }

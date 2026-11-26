@@ -3,7 +3,9 @@
 // Junta a Série A (data/brasileirao-<ano>.json) com as Séries B, C e D (data/brasileirao-serie-<b|c|d>-<ano>.json), se existirem.
 // Aplica também o overall real dos jogadores:
 //   1. data/notas-<ano>.json (npm run notas): nota média e minutos -> p.base (overall calculado) e p.conf (confiança)
-//   2. data/overalls-manual.json: overall escolhido à mão para os craques -> p.ovrM (vale mais que tudo)
+//   2. data/overalls-manual.json: overall escolhido à mão para os craques -> p.ovrM
+//   3. data/overalls-ea.json (#441, node scripts/overalls-ea.mjs): overall do EA FC 27 -> p.ovrEA (vale mais que tudo;
+//      vale também para os estrangeiros das copas e os europeus). Sem o arquivo, ficam as fórmulas calibradas da #433.
 import { readFileSync, readdirSync, writeFileSync, existsSync } from 'node:fs';
 import { reduzirElenco } from './reduzir-elenco.mjs';
 
@@ -90,6 +92,13 @@ if (existsSync(mf)) {
   }
   console.log(`Manual: ${manual} overalls ajustados à mão.`);
 }
+
+/* ================= 2b. overalls do EA FC 27 (#441) ================= */
+// Dados da Electronic Arts (base do Kaggle, para análise e sem uso comercial): tudo num arquivo, para sair de uma vez.
+const EA = existsSync('data/overalls-ea.json') ? ler('data/overalls-ea.json').jogadores : {};
+let comEA = 0;
+for (const c of clubs) for (const p of c.players) if (EA[p.id] != null) { p.ovrEA = EA[p.id]; comEA++ }
+console.log(Object.keys(EA).length ? `EA FC 27: ${comEA} jogadores do Brasileirão com o overall da EA.` : 'Sem data/overalls-ea.json: overall pelas fórmulas.');
 
 /* ================= 3. escudos locais ================= */
 // Se img/escudos/<id>.png existe (npm run escudos), o jogo usa o arquivo em vez do link da API.
@@ -196,10 +205,13 @@ if (arqCont) {
     const ordem = c.players.filter(p => dest[p.name] == null).map(p => ({ p, s: mulberry32(hashStr(p.id + '|nota'))() + idade(p.age) })).sort((a, b) => b.s - a.s);
     const topo = Math.min(forca + 4, ...Object.values(dest).map(v => v - 1)); // os gerados ficam abaixo dos destaques
     const ovr = new Map(ordem.map(({ p }, i) => [p.id, Math.max(45, forca - 16, Math.min(88, Math.round(topo - 0.5 * i)))]));
-    return { forca, ovr: p => dest[p.name] ?? ovr.get(p.id) };
+    return { forca, ovr: p => EA[p.id] ?? dest[p.name] ?? ovr.get(p.id) }; // #441: o overall da EA vale mais que tudo
   };
   const clubesCont = cont.clubs.map(c => { const n = notas(c); return { id: c.id, name: c.name, short: sigla(c.name), color: '#335', logo: existsSync(`img/escudos/${c.id}.png`) ? `img/escudos/${c.id}.png` : c.logo,
     strength: n.forca, torneio: c.torneio, players: c.players.map(p => ({ id: p.id, name: p.name, age: p.age, pos: p.pos, ovr: n.ovr(p), number: p.number ?? null })) } });
+  // #441: com overall da EA no elenco, a força do clube sai dos 11 melhores, como no Brasil
+  const { forcaDoElenco: forcaCont } = await import("../core/dados.mjs");
+  for (const c of clubesCont) if (c.players.some(p => EA[p.id] != null)) c.strength = forcaCont(c);
   writeFileSync('core/dados-continentais.mjs', `// Clubes estrangeiros da Libertadores e da Sul-Americana (API-Football, temporada ${cont.season}). NÃO EDITE: gerado por scripts/gerar-dados-padrao.mjs a partir de data/${arqCont}.\nexport const DADOS_CONTINENTAIS = ${JSON.stringify({ season: cont.season, clubs: clubesCont })};\n`);
   console.log(`core/dados-continentais.mjs: ${clubesCont.filter(c => c.torneio === 'libertadores').length} da Libertadores + ${clubesCont.filter(c => c.torneio === 'sulamericana').length} da Sul-Americana.`);
 }
@@ -213,8 +225,12 @@ if (existsSync('data/europa-2025.json')) {
   const cont = existsSync('core/dados-continentais.mjs') ? (await import('../core/dados-continentais.mjs?' + Date.now())).DADOS_CONTINENTAIS : { clubs: [] };
   const jaNoJogo = new Set([...DADOS_PADRAO.clubs, ...cont.clubs].flatMap(c => c.players.map(p => p.id)));
   let fora = 0;
-  const clubs = eu.clubs.map(c => ({ id: c.id, name: c.name, short: c.short, liga: c.liga, pais: c.pais, logo: c.logo, strength: c.strength,
-    players: c.players.filter(p => !jaNoJogo.has(p.id) || !++fora).map(p => [p.id, p.name, p.age > 0 && p.age < 50 ? p.age : 24, p.pd, p.ovr, p.number ?? null, p.vm ?? null]) })); // idade: 4 vieram com o ano (2025)
+  const { forcaDoElenco } = await import('../core/dados.mjs');
+  const clubs = eu.clubs.map(c => {
+    const ps = c.players.filter(p => !jaNoJogo.has(p.id) || !++fora).map(p => ({ ...p, ovr: EA[p.id] ?? p.ovr })); // #441: overall da EA quando houver
+    return { id: c.id, name: c.name, short: c.short, liga: c.liga, pais: c.pais, logo: c.logo, strength: forcaDoElenco({ ...c, players: ps }),
+      players: ps.map(p => [p.id, p.name, p.age > 0 && p.age < 50 ? p.age : 24, p.pd, p.ovr, p.number ?? null, p.vm ?? null]) };
+  }); // idade: 4 vieram com o ano (2025)
   const dados = { temporada: eu.temporada, ligas: eu.ligas, clubs };
   writeFileSync('core/dados-europa.mjs', `// Clubes europeus do mercado (#355), temporada ${eu.temporada}. NÃO EDITE: gerado por scripts/gerar-dados-padrao.mjs a partir de data/europa-2025.json.\nexport const DADOS_EUROPA = ${JSON.stringify(dados)};\n`);
   console.log(`core/dados-europa.mjs: ${clubs.length} clubes, ${clubs.reduce((n, c) => n + c.players.length, 0)} jogadores (${fora} já estavam no Brasil ou nas copas).`);
