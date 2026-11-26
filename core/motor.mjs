@@ -110,7 +110,6 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
   aplicarFormaPendente(); // forma da rodada anterior, com o resultado final do jogo ao vivo (#44)
   limparEventosAntigos(); // #195: os lances das rodadas anteriores já foram usados; só o placar fica no save
   S.rng=semente(S.seed,S.season,S.round); // a rodada depende só do estado e das escolhas, não do que foi sorteado antes
-  avisarAposentadorias(); // #418: uma vez por temporada, na metade
   if(ehJanela(S.round))janelaIA(); // #103: começo e metade da temporada
   const games=S.fixtures[S.round].map(g=>simulate(g,{clubeAoVivo:clubeAoVivo(g),cansacoNoJogo}));
   for(const g of games)noticiarPenaltisDaLiga(g,S.round);
@@ -196,6 +195,7 @@ function concluirRodada(games){
     if(uc.balance<0)addNews('⚠️ Caixa negativo! Venda jogadores para equilibrar as contas.',uc.id);
   }
   renovarPropostasDeClubes();
+  avisarAposentadorias(); // #418: por último, para a notícia não sumir atrás das ofertas da rodada
 }
 
 export function concluirRodadaCopa(){

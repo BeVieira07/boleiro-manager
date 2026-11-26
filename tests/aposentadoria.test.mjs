@@ -78,3 +78,32 @@ test('ficha de jogador europeu (#355): não afirma que se aposenta lá fora, só
     assert.match(box.innerHTML, /Aposenta no fim da temporada<\/span>/);
   } finally { document.getElementById = original; document.documentElement = raiz }
 });
+
+test('save legado com idade em texto: aposenta só quem a virada aposentaria', () => {
+  const j = novo();
+  const [a, b] = j.run(`(()=>{const [a,b]=userClub().players;a.age='35';b.age='36';a.contrato=b.contrato=2;
+    const s=JSON.parse(JSON.stringify(S));s.versao=1;migrarSave(s);S.round=S.fixtures.length;return [a.id,b.id]})()`);
+  assert.deepEqual(j.run(`[seAposenta(P['${a}']),seAposenta(P['${b}'])]`), [false, true]);
+  virarTemporada(j);
+  assert.equal(j.run(`P['${a}']?.age`), 36, 'o de "35" fica, com 36');
+  assert.equal(j.run(`P['${b}']`), undefined);
+});
+
+test('a notícia aparece no painel mesmo numa rodada com muitas ofertas e a janela', () => {
+  const j = novo();
+  j.run(`userClub().players[0].age=36;S.round=Math.floor(S.fixtures.length/2);S.seed=20261116;
+    for(const p of userClub().players)if(!p.listed)toggleListed(p.id);userClub().lineup=autoXI(userClub());jogarRodada();go('clube')`);
+  assert.ok(j.run(`tec().news.filter(n=>/ofereceu/.test(n.t)).length`) >= 9, 'o cenário tem ofertas bastantes para empurrar a notícia');
+  assert.ok(j.html().includes('Aposentadoria no fim da temporada'));
+});
+
+test('técnico sem clube não recebe aviso sobre o elenco antigo', () => {
+  const j = carregarJogo({ boot: true });
+  const [a, b] = [clubeDaSerie(j), clubeDaSerie(j, 'A', 11)];
+  j.run(`iniciarLiga([{user_id:'a',nome:'A',club_id:'${a}'},{user_id:'b',nome:'B',club_id:'${b}'}],['A'],getData())`);
+  j.run(`for(const t of tecnicos())clubDo(t).players[0].age=36;usarTecnico('b');pedirDemissao();recusarClubes();S.managers.b.news=[];
+    S.round=Math.floor(S.fixtures.length/2);jogarRodadaLiga(JSON.parse(JSON.stringify(S)),{})`);
+  const quantos = id => j.run(`S.managers.${id}.news.filter(n=>/Aposentadoria no fim/.test(n.t)).length`);
+  assert.equal(j.run('S.managers.b.demitido'), true);
+  assert.deepEqual([quantos('a'), quantos('b')], [1, 0]);
+});
