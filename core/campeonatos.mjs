@@ -6,6 +6,11 @@ export const CAMPEONATOS = {
     GB1: { nome: 'Premier League', clubes: 20, serieBase: 'A', rebaixamento: 3 },
     GB2: { nome: 'Championship', clubes: 24, serieBase: 'B', acessoDireto: 2,
       playoff: { semifinais: [[3, 6], [4, 5]], pernasSemi: 2 } }
+  },
+  Espanha: {
+    ES1: { nome: 'LaLiga', clubes: 20, serieBase: 'A', rebaixamento: 3 },
+    ES2: { nome: 'LaLiga 2', clubes: 22, serieBase: 'B', acessoDireto: 2,
+      playoff: { semifinais: [[3, 6], [4, 5]], pernasSemi: 2, pernasFinal: 2 } }
   }
 };
 
@@ -21,5 +26,5 @@ export function regraPlayoff(pais) {
 }
 export const datasPlayoff = pais => {
   const regra = regraPlayoff(pais);
-  return regra ? regra.pernasSemi + 1 : 0;
+  return regra ? regra.pernasSemi + (regra.pernasFinal ?? 1) : 0;
 };
