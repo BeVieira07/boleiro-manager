@@ -5,28 +5,31 @@ import { vencedorPenaltis } from './penaltis.mjs';
 import { semente } from './utils.mjs';
 
 const IDA = 'Semifinal (ida)', VOLTA = 'Semifinal (volta)', SEMI = 'Semifinal', FINAL = 'Final do mata-mata';
+const FINAL_IDA = 'Final (ida)', FINAL_VOLTA = 'Final (volta)';
 
 export function fasePlayoff(rodada) {
   const regra = regraPlayoff(S.pais);
   if (!regra || rodada < rodadasRegulares() || rodada >= S.fixtures.length) return null;
   const data = rodada - rodadasRegulares();
-  if (data === regra.pernasSemi) return FINAL;
+  if (data >= regra.pernasSemi) return (regra.pernasFinal ?? 1) === 1 ? FINAL : data === regra.pernasSemi ? FINAL_IDA : FINAL_VOLTA;
   return regra.pernasSemi === 1 ? SEMI : data === 0 ? IDA : VOLTA;
 }
 
-// A chave usa a classificação final. A volta é na casa do melhor colocado e a final é em campo neutro.
+// A chave usa a classificação final. A volta é na casa do melhor colocado; a final de jogo único é em campo neutro.
 export function jogosDaRodada(rodada) {
   const jogos = S.fixtures[rodada] || [];
   const fase = fasePlayoff(rodada);
   if (jogos.length || !fase || S.round < rodadasRegulares()) return jogos;
-  if (fase === VOLTA) return S.fixtures[rodada - 1].map(g => ({ h: g.a, a: g.h, playoff: fase, agregado: { h: g.ag, a: g.hg } }));
-  if (fase === FINAL) {
+  if (fase === VOLTA || fase === FINAL_VOLTA) return S.fixtures[rodada - 1].map(g => ({ h: g.a, a: g.h, playoff: fase, agregado: { h: g.ag, a: g.hg } }));
+  const { div, semifinais } = regraPlayoff(S.pais), T = table(div);
+  if (fase === FINAL || fase === FINAL_IDA) {
     const decisivos = S.fixtures[rodada - 1];
     if (!decisivos.length || decisivos.some(g => g.hg == null)) return [];
     const [h, a] = decisivos.map(vencedorDoConfronto);
-    return [{ h, a, playoff: fase, neutro: true, agregado: { h: 0, a: 0 } }];
+    if (fase === FINAL) return [{ h, a, playoff: fase, neutro: true, agregado: { h: 0, a: 0 } }];
+    const pos = id => T.findIndex(t => t.id === id);
+    return [pos(h) < pos(a) ? { h: a, a: h, playoff: fase } : { h, a, playoff: fase }];
   }
-  const { div, semifinais } = regraPlayoff(S.pais), T = table(div);
   return semifinais.map(([melhor, pior]) => {
     const h = T[melhor - 1].id, a = T[pior - 1].id;
     return fase === IDA ? { h: a, a: h, playoff: fase } : { h, a, playoff: fase, agregado: { h: 0, a: 0 } };
