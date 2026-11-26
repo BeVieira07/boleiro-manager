@@ -10,6 +10,7 @@ import { go, render } from '../telas.mjs';
 import { SAVE_KEY, store } from '../utils.mjs';
 import { avisar, confirmar } from '../avisos.mjs';
 import { sairDaLiga } from '../liga/ligajogo.mjs';
+import { encerrarVivo } from '../partida/aovivo.mjs';
 
 /* ================= jogos salvos e tela inicial (#21) =================
    Cada campanha fica em localStorage[SAVE_PREFIX+id]; SAVES_KEY guarda o índice {cur, list:[resumo]}.
@@ -32,20 +33,36 @@ function estadoAoSalvar(){
   if(c.lineup.join()!==v.xi1.join()||c.formation!==v.f1)return S;
   return {...S,clubs:S.clubs.map(x=>x===c?{...c,lineup:v.xi0,formation:v.f0}:x)};
 }
+/* #412: versão do save que ESTA aba abriu ou gravou por último ({id, data}). Se o índice trouxer outra `data`, outra aba
+   gravou depois e esta cópia está desatualizada: não grava por cima. Sem `base` (jogo novo, cópia da nuvem) grava como sempre. */
+let base=null;
+export const conflito={n:0}; // quantas vezes esta aba tentou gravar desatualizada: quem avançou o jogo em memória confere se mudou (#412)
+/** Esta aba é a dona da versão `data` do save `id` (foi ela que a abriu ou gravou)? Só então o `S` dela vale mais que o do navegador. */
+export const donaDaVersao=(id,data)=>!!base&&base.id===id&&base.data===data;
+function desatualizado(antes){return !!(base&&base.data&&antes&&base.id===S.saveId&&antes.data!==base.data)}
+function avisarDesatualizado(id){
+  if(avisarDesatualizado.aberto)return;avisarDesatualizado.aberto=true;
+  const fim=()=>{avisarDesatualizado.aberto=false};
+  confirmar({titulo:'Jogo atualizado em outra aba',texto:'Este jogo foi salvo em outra aba depois que esta tela o abriu. Para não apagar o que foi salvo lá, esta aba parou de salvar. Carregue a versão mais nova para continuar.',ok:'Carregar a versão mais nova',cancelar:'Agora não'},()=>{fim();abrirSave(id)},fim);
+}
 // grava o jogo atual no seu save (cria um save novo na primeira vez)
 export function salvarJogo(){
   if(ui.liga)return true; // #34: o estado da liga é do servidor; nunca vira save local nem da nuvem
   if(!S)return true;
   const idx=indiceSaves();
   if(!S.saveId)S.saveId=Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36); // id do save não é regra do jogo
+  const antes=idx.list.find(x=>x.id===S.saveId); // mantém x.nuvem: a versão da nuvem em que esta cópia se baseia (#31)
+  if(desatualizado(antes)){conflito.n++;avisarDesatualizado(S.saveId);return false}
   const estado=estadoAoSalvar();
   if(!store.set(SAVE_PREFIX+S.saveId,estado)&&!(liberarEspaco()&&store.set(SAVE_PREFIX+S.saveId,estado))){
-    if(!salvarJogo.avisou)avisar('Não há espaço para salvar no navegador. Exclua um jogo salvo na tela inicial (ou exporte e apague algum).');
+    if(!salvarJogo.avisou)avisar('Não há espaço para salvar no navegador. Exclua um jogo salvo na tela inicial para liberar espaço.');
     salvarJogo.avisou=true;return false;
   }
-  const antes=idx.list.find(x=>x.id===S.saveId); // mantém x.nuvem: a versão da nuvem em que esta cópia se baseia (#31)
   const conta=antes?antes.conta:usuarioAtual()?.id; // #372: de qual conta é o save (o novo, de quem está logado)
-  idx.list=[{...resumoSave(S),...(antes&&antes.nuvem?{nuvem:antes.nuvem}:{}),...(conta?{conta}:{})},...idx.list.filter(x=>x.id!==S.saveId)];idx.cur=S.saveId;
+  const resumo=resumoSave(S);
+  if(antes&&resumo.data<=antes.data)resumo.data=new Date(Date.parse(antes.data)+1).toISOString(); // a data muda a cada gravação, mesmo no mesmo milissegundo
+  base={id:S.saveId,data:resumo.data};
+  idx.list=[{...resumo,...(antes&&antes.nuvem?{nuvem:antes.nuvem}:{}),...(conta?{conta}:{})},...idx.list.filter(x=>x.id!==S.saveId)];idx.cur=S.saveId;
   store.set(SAVES_KEY,idx);agendarEnvio();return true;
 }
 export const MAX_NUVEM=10; // #119: o mesmo limite do banco (gatilho privado.limitar_saves)
@@ -65,7 +82,8 @@ export function abrirSave(id){
   if(!s||!Array.isArray(s.clubs)){avisar('Este save não pôde ser lido.','erro');return}
   const m=migrarSave(s);if(m.erro){avisar(m.erro,'erro');return}
   S.saveId=id;
-  const idx=indiceSaves();idx.cur=id;store.set(SAVES_KEY,idx);
+  encerrarVivo(); // #412: o jogo ao vivo da campanha antiga (temporizador, sons) não continua sobre a nova
+  const idx=indiceSaves();base={id,data:idx.list.find(x=>x.id===id)?.data||null};idx.cur=id;store.set(SAVES_KEY,idx);
   ui.selEsc=null;ui.vDiv=null;ui.jogosRound=null;go('clube');
 }
 export function excluirSave(id){

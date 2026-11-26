@@ -205,8 +205,10 @@ test('mercado da liga: nada com clube de outro técnico, e o que vem do navegado
   assert.match(r({ tipo: 'compra', pid: daAna.id, valor: 1 }).erro, /inválido/);
   assert.match(r({ tipo: 'venderJa', pid: ia.id }).erro, /inválido/);
   for (const tipo of ['apagarTudo', 'constructor', 'toString', '__proto__']) assert.match(r({ tipo }).erro, /desconhecida/);
-  for (let i = 0; i < 20; i++) { // venda rápida nunca vai para o clube de outro técnico
-    const x = copia(s), meu = x.clubs.find(c => c.id === ana).players[i];
+  const MIN = { G: 2, D: 5, M: 5, A: 3 }; // #410: só sai quem tem sobra na posição
+  const sobras = c => c.players.filter(p => c.players.filter(y => y.pos === p.pos).length > MIN[p.pos]);
+  for (let i = 0; i < Math.min(20, sobras(s.clubs.find(c => c.id === ana)).length); i++) { // venda rápida nunca vai para o clube de outro técnico
+    const x = copia(s), meu = sobras(x.clubs.find(c => c.id === ana))[i];
     assert.ok(acaoMercadoLiga(x, 'u-ana', { tipo: 'venderJa', pid: meu.id }).ok);
     assert.notEqual(est.P[meu.id].clubId, bia);
   }

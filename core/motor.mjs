@@ -12,7 +12,7 @@ import { adiarForma, aplicarFormaPendente } from './forma.mjs';
 import { noticiaPenaltis } from './gols-copa.mjs';
 import { elencoDoJogo, saidaForcada, sortearLances } from './lances.mjs';
 import { avisarAposentadorias } from './aposentadoria.mjs';
-import { ehJanela, janelaIA } from './mercadoIA.mjs';
+import { ehJanela, janelaIA, temOferta, vizinhos } from './mercadoIA.mjs';
 import { ovrNaPosicao } from './posicoes.mjs';
 import { energiaDaRecomposicao, simularLances } from './taticas.mjs';
 import { clamp, money, pick, rnd, semente } from './utils.mjs';
@@ -135,8 +135,10 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
     t.offers=t.offers.filter(o=>o.until>S.round);
     for(const p of uc.players.filter(p=>p.listed)){
       if(rnd()<0.35){
-        const buyers=S.clubs.filter(c=>!ehHumano(c)&&c.players.length<32);
-        if(buyers.length){const b=pick(buyers);const amt=Math.round(p.value*(0.75+rnd()*0.5)*10)/10;
+        const amt=Math.round(p.value*(0.75+rnd()*0.5)*10)/10;
+        // #413: só quem pode pagar, tem vaga, é da mesma série ou vizinha e não tem oferta aberta por ele
+        const buyers=vizinhos(S.clubs.filter(c=>!ehHumano(c)),uc).filter(c=>c.players.length<32&&c.balance>=amt&&!temOferta(t,p.id,c.id));
+        if(buyers.length){const b=pick(buyers);
           t.offers.push({id:'o'+S.season+'_'+S.round+'_'+p.id,pid:p.id,from:b.id,amount:amt,until:S.round+3});
           addNews(`💼 ${b.name} ofereceu ${money(amt)} por ${p.name}.`,uc.id);}
       }

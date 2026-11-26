@@ -5,7 +5,7 @@
 import { S } from '../../core/estado.mjs';
 import { clienteLogado, usuarioAtual } from './conta.mjs';
 import { ui } from '../estado.mjs';
-import { SAVES_KEY, SAVE_PREFIX, abrirSave, indiceSaves } from './saves.mjs';
+import { SAVES_KEY, SAVE_PREFIX, abrirSave, donaDaVersao, indiceSaves } from './saves.mjs';
 import { render } from '../telas.mjs';
 import { store } from '../utils.mjs';
 import { avisar } from '../avisos.mjs';
@@ -53,7 +53,8 @@ export function enviarPendentes() {
   if (nuvem.enviando) return nuvem.enviando;
   nuvem.enviando = (async () => {
     for (let r of indiceSaves().list.filter(pendente)) {
-      let estado = S && S.saveId === r.id ? S : store.get(SAVE_PREFIX + r.id);
+      // #412: o índice é dividido entre as abas; o `S` desta aba só vale se foi ela que gravou a versão r.data. Senão, sobe o que está no navegador.
+      let estado = S && S.saveId === r.id && donaDaVersao(r.id, r.data) ? S : store.get(SAVE_PREFIX + r.id);
       if (!estado) continue;
       // outro computador enviou uma versão mais nova depois da que esta cópia conhece: não sobrescreve, sobe como save separado
       const { data: naNuvem, error: e } = await c.from('saves').select('atualizado_em').eq('id', r.id).maybeSingle();

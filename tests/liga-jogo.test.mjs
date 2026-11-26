@@ -281,7 +281,7 @@ test('liga antiga exibe o valor de mercado cheio ao abrir e migra o estado no se
   await como(srv, 'a');
   await j.acao('comecarLiga|L1'); await esperar();
   const clube = srv.estado.clubs.find(c => c.id === srv.membros[0].club_id);
-  const p = clube.players[0], valorCheio = p.value;
+  const p = clube.players.find(x => clube.players.filter(y => y.pos === x.pos).length > { G: 2, D: 5, M: 5, A: 3 }[x.pos]), valorCheio = p.value;
   p.contrato = 1;
   const descontado = Math.max(0.1, Math.round(valorCheio * 0.75 * 10) / 10);
   assert.ok(descontado < valorCheio);
@@ -309,7 +309,7 @@ test('mercado da liga: a venda é feita no servidor, todos recebem o estado novo
   await j.acao('comecarLiga|L1'); await esperar();
   const [ana, bia] = srv.membros.map(m => m.club_id);
   j.run("userClub().formation='3-5-2'"); // mudou a formação e ainda não confirmou
-  const reserva = j.run('userClub().players.find(p=>!userClub().lineup.includes(p.id)).id');
+  const reserva = j.run('userClub().players.find(p=>!userClub().lineup.includes(p.id)&&userClub().players.filter(x=>x.pos===p.pos).length>MINIMO_POSICAO[p.pos]).id');
 
   await j.acao(`quickSell|${reserva}`); await esperar();
   const vendido = srv.estado.clubs.flatMap(c => c.players).find(p => p.id === reserva);
@@ -368,7 +368,8 @@ test('propostas entre técnicos: pelo Mercado, o outro aceita, e quem recebe uma
   for (const id of [ana, bia]) { const c = clube(id); c.players = c.players.slice(0, 25); c.lineup = c.lineup.filter(x => c.players.some(p => p.id === x)); c.balance = 30 }
   srv.liga.versao++; srv.emitir('ligas', srv.liga); await esperar(); // o navegador baixa o estado ajustado
 
-  const daBia = clube(bia).players.find(p => !clube(bia).lineup.includes(p.id)).id;
+  const sobraDe = c => c.players.find(p => !c.lineup.includes(p.id) && c.players.filter(x => x.pos === p.pos).length > { G: 2, D: 5, M: 5, A: 3 }[p.pos]);
+  const daBia = sobraDe(clube(bia)).id;
   j.run(`ui.mf.club='${bia}'`); await j.acao('go|mercado');
   assert.match(j.html(), new RegExp(`propostaForm\|${daBia}`), 'jogador de outro técnico tem botão de proposta');
   j.acao(`propostaForm|${daBia}`);
@@ -384,7 +385,7 @@ test('propostas entre técnicos: pelo Mercado, o outro aceita, e quem recebe uma
   assert.equal(j.run('userClub().balance'), 26.5);
 
   // a Bia oferece um jogador à Ana: ela é avisada e recusa pela tela Liga
-  const outro = clube(bia).players.find(p => !clube(bia).lineup.includes(p.id) && p.id !== daBia).id;
+  const outro = clube(bia).players.find(p => !clube(bia).lineup.includes(p.id) && p.id !== daBia && clube(bia).players.filter(x => x.pos === p.pos).length > { G: 2, D: 5, M: 5, A: 3 }[p.pos]).id;
   clube(bia).players.find(p => p.id === outro).emprestar = true; // #142: só jogador da lista de empréstimo
   await srv.cliente('b').functions.invoke('jogar-rodada', { body: { liga: 'L1', acao: 'mercado', mercado: { tipo: 'proporTecnico', negocio: 'emprestimo', pid: outro, para: 'a', valor: 0 } } });
   await esperar();
@@ -406,7 +407,7 @@ test('sessão encerrada em outro aparelho: a liga avisa e volta a pedir o login,
   await j.acao('comecarLiga|L1'); await esperar();
   assert.equal(j.run('ui.view'), 'clube');
   srv.sessaoEncerrada = true; // alguém clicou em Sair nesta conta em outro computador
-  const pid = j.run('userClub().players.find(p=>!userClub().lineup.includes(p.id)).id');
+  const pid = j.run('userClub().players.find(p=>!userClub().lineup.includes(p.id)&&userClub().players.filter(x=>x.pos===p.pos).length>MINIMO_POSICAO[p.pos]).id');
   await j.acao(`toggleListed|${pid}`); await esperar();
   assert.ok(j.alertas.some(a => a.includes('sessão foi encerrada')));
   assert.equal(j.run('usuarioAtual()'), null, 'o login local foi encerrado');
@@ -485,7 +486,7 @@ for (const acao of ['mercado', 'confirmar rodada']) {
     const antes = j.alertas.length;
 
     if (acao === 'mercado') {
-      const pid = j.run('userClub().players.find(p=>!userClub().lineup.includes(p.id)).id');
+      const pid = j.run('userClub().players.find(p=>!userClub().lineup.includes(p.id)&&userClub().players.filter(x=>x.pos===p.pos).length>MINIMO_POSICAO[p.pos]).id');
       await j.acao(`toggleListed|${pid}`);
       assert.equal(srv.chamadas.at(-1).body.acao, 'mercado');
     } else await j.acao('confirmarLiga');
@@ -545,4 +546,41 @@ test('ao começar a liga, quem está no lobby entra no jogo sozinho; o lobby aco
   assert.equal(j.run('userClub().id'), srv.membros[1].club_id);
   assert.ok(j.alertas.some(a => a.includes('A liga começou')));
   assert.match(j.html(), /Confirmar rodada 1/);
+});
+
+test('#414: liga gravada na versão 19 sem a base do clube: ao abrir, a Base mostra os jovens, sem gravar no servidor', async () => {
+  const j0 = carregarJogo();
+  const srv = servidorFalso([clubeDaSerie(j0, 'A', 0), clubeDaSerie(j0, 'A', 1)]);
+  await como(srv, 'a');
+  const j = carregarJogo({ boot: true });
+  await j.acao('comecarLiga|L1'); await esperar();
+  const clube = srv.estado.clubs.find(c => c.id === srv.estado.managers.a.clubId);
+  const ids = clube.base.map(p => p.id);
+  delete clube.base; srv.estado.versao = 19;
+  const antes = JSON.stringify(srv.estado), chamadas = srv.chamadas.length;
+  await j.acao('entrarNaLiga|L1'); await esperar();
+  j.run("go('base')");
+  assert.deepEqual(JSON.parse(j.run('JSON.stringify(userClub().base.map(p=>p.id))')), ids);
+  assert.doesNotMatch(j.html(), /Nenhum jovem na base/);
+  assert.equal(JSON.stringify(srv.estado), antes, 'o navegador não grava o estado da liga');
+  assert.equal(srv.chamadas.length, chamadas);
+});
+
+test('#414: base apagada pela regra antiga e clube reassumido na mesma temporada: só os jovens que não saíram', () => {
+  const j = carregarJogo({ boot: true });
+  const r = JSON.parse(j.run(`(()=>{
+    const a=getData().clubs.filter(c=>c.division==='A');
+    iniciarLiga([{user_id:'ana',nome:'Ana',club_id:a[0].id},{user_id:'bia',nome:'Bia',club_id:a[1].id}],['A'],getData());
+    const s=S, b=a[1].id, ids=clubById(b).base.map(p=>p.id);
+    clubById(b).players.splice(28);
+    const ok=[acaoMercadoLiga(s,'bia',{tipo:'promoverBase',pid:ids[0]}).ok,acaoMercadoLiga(s,'bia',{tipo:'venderBase',pid:ids[1]}).ok];
+    removerTecnicoLiga(s,'bia');
+    delete s.clubs.find(c=>c.id===b).base; s.versao=19; // como a regra antiga gravava
+    acaoMercadoLiga(s,'ana',{tipo:'pedirDemissao'});
+    s.managers.ana.propostasClube=[b];
+    ok.push(acaoMercadoLiga(s,'ana',{tipo:'escolherClube',clubeId:b}).ok);
+    return JSON.stringify({ok,ids,base:s.clubs.find(c=>c.id===b).base.map(p=>p.id)});
+  })()`));
+  assert.deepEqual(r.ok, [true, true, true]);
+  assert.deepEqual(r.base, r.ids.slice(2));
 });

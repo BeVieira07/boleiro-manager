@@ -5,6 +5,7 @@
    quem confirmou e quando a rodada foi jogada; aí o estado novo é baixado e o seu jogo aparece como replay.
    Nada da liga vai para os saves locais nem da nuvem. */
 import { definirCantos, definirCobradores, unavailable } from '../../core/escalacao.mjs';
+import { garantirBase } from '../../core/base.mjs';
 import { DIVS, P, S, clubById, clubDo, divOf, reindex, table, tec, tecnicos, usarEstado, usarTecnico, userClub } from '../../core/estado.mjs';
 import { autoXI, validateLineup } from '../../core/motor.mjs';
 import { posDSigla } from '../../core/posicoes.mjs';
@@ -87,6 +88,7 @@ async function carregar(id) {
   usarTecnico(eu);
   migrarCarreira(tec()); // liga antiga: monta a própria carreira enquanto o servidor ainda não migrou o save
   migrarValoresDeMercado(S); // exibe o valor atualizado enquanto o servidor ainda não migrou o save
+  if (!tec().demitido) garantirBase(userClub()); // #414: idem para a base (sorteio fixo, igual ao que o servidor vai gravar)
   if (meu && !tec().demitido && meu.clube === tec().clubId) {
     const uc = userClub(); uc.formation = meu.formation || uc.formation; uc.tatica = meu.tatica || uc.tatica;
     uc.lineup = meu.lineup.filter(pid => uc.players.some(p => p.id === pid && !unavailable(p))); // quem saiu ou se machucou

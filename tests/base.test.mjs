@@ -157,3 +157,91 @@ test('liga: promover e vender da base passam pelo servidor e só valem para a ba
   assert.equal(acaoMercadoLiga(s, 'local', { tipo: 'promoverBase', pid: meu.base[0].id }).ok, true);
   assert.equal(acaoMercadoLiga(s, 'local', { tipo: 'venderBase', pid: meu.base[0].id }).ok, true);
 });
+
+// #414: quem assume outro clube encontra a base dele
+test('assumir outro clube: a base já existe, com sorteio fixo, sem jovens a mais e sem gastar o sorteio da rodada', () => {
+  const j = novo();
+  const antigo = j.run('userClub().id');
+  j.run('pedirDemissao()');
+  const ids = j.run('tec().propostasClube'), id = ids[0];
+  assert.equal(j.run(`clubById('${id}').base`), undefined, 'clube da IA não tem base antes');
+  const rng = j.run('JSON.stringify(S.rng)');
+  assert.equal(j.run(`escolherClube('${id}').ok`), true);
+  assert.equal(j.run('JSON.stringify(S.rng)'), rng, 'o sorteio da rodada não foi gasto');
+  const base = j.run('JSON.stringify(userClub().base.map(p=>p.id))');
+  assert.equal(j.run('userClub().base.length'), 4);
+  // mesmo sorteio fixo de criarBases (clube e temporada)
+  const ref = j.run(`(()=>{const clube=clubById('${id}'),salva=clube.base,c={...clube};delete c.base;delete clube.base;gerarBase(c,mulberry32(hashStr(c.id+'|base|'+S.season)));clube.base=salva;return JSON.stringify(c.base.map(p=>p.id))})()`);
+  assert.equal(base, ref);
+  // ir e voltar na mesma temporada: nada novo, nem repetido com promovido/vendido
+  const promovido = j.run('userClub().base[0].id');
+  assert.equal(j.run(`promoverDaBase('${promovido}').ok`), true);
+  j.run('pedirDemissao()');
+  j.run(`tec().propostasClube=['${antigo}']`); // o clube que acabou de deixar ainda conta como vínculo
+  assert.equal(j.run(`escolherClube('${antigo}').ok`), true);
+  j.run('pedirDemissao()');
+  j.run(`tec().propostasClube=['${id}']`);
+  assert.equal(j.run(`escolherClube('${id}').ok`), true);
+  assert.equal(j.run('userClub().base.length'), 3, 'quem foi promovido não volta como jovem novo');
+  assert.equal(j.run(`userClub().base.some(p=>p.id==='${promovido}')`), false);
+  assert.equal(j.run(`S.clubs.flatMap(c=>c.players.concat(c.base||[])).filter(p=>p.id==='${promovido}').length`), 1);
+});
+
+test('assumir clube que já tem base não dá jovens a mais; a notícia da virada aponta para a aba Base', () => {
+  const j = novo();
+  j.run('pedirDemissao()');
+  const id = j.run('tec().propostasClube[0]');
+  j.run(`clubById('${id}').base=[]`);
+  j.run(`escolherClube('${id}')`);
+  assert.equal(j.run('userClub().base.length'), 0);
+  j.run('virarBase()');
+  assert.ok(j.run(`tec().news.some(n=>/Veja na aba Base\./.test(n.t))`));
+  assert.ok(!j.run(`tec().news.some(n=>/Veja em Elenco/.test(n.t))`));
+});
+
+test('liga: quem assume o clube de quem saiu herda a base, sem repetir o jovem já promovido', async () => {
+  const { acaoMercadoLiga, removerTecnicoLiga } = await import(new URL('../core/liga.mjs', import.meta.url));
+  const j = novo();
+  const copia = () => JSON.parse(j.run('JSON.stringify(S)'));
+  const s = copia(), id = s.clubs.find(c => c.id === s.managers.local.clubId).id;
+  const alvo = s.clubs.find(c => c.id !== id && c.players.length < 28).id;
+  s.managers.bia = { ...structuredClone(s.managers.local), id: 'bia', nome: 'Bia', clubId: alvo };
+  delete s.clubs.find(c => c.id === alvo).base;
+  j.run(`usarEstado(${JSON.stringify(s)});reindex();criarBases()`);
+  const comBia = copia(), pid = comBia.clubs.find(c => c.id === alvo).base[0].id;
+  assert.equal(acaoMercadoLiga(comBia, 'bia', { tipo: 'promoverBase', pid }).ok, true);
+  assert.equal(removerTecnicoLiga(comBia, 'bia').ok, true);
+  assert.equal(acaoMercadoLiga(comBia, 'local', { tipo: 'pedirDemissao' }).ok, true);
+  comBia.managers.local.propostasClube = [alvo];
+  assert.equal(acaoMercadoLiga(comBia, 'local', { tipo: 'escolherClube', clubeId: alvo }).ok, true);
+  const c = comBia.clubs.find(x => x.id === alvo);
+  assert.equal(c.base.some(p => p.id === pid), false);
+  assert.equal(c.players.filter(p => p.id === pid).length, 1);
+});
+
+test('base recriada com a mesma semente traz só quem não saiu, sem repetir id', () => {
+  const j = novo();
+  // promovido, e a base apagada (ligas gravadas quando a saída apagava a base)
+  const [promovido, europeu] = j.run('userClub().base.map(p=>p.id)');
+  j.run(`userClub().players.splice(28);promoverDaBase('${promovido}')`);
+  j.run(`S.europa={chegadas:{x:[userClub().base.find(p=>p.id==='${europeu}')]}};delete userClub().base;garantirBase(userClub())`);
+  const ids = j.run('userClub().base.map(p=>p.id)');
+  assert.equal(ids.length, 2, 'só os que não saíram, sem substitutos');
+  assert.equal(new Set(ids).size, 2);
+  assert.ok(!ids.includes(promovido) && !ids.includes(europeu));
+});
+
+test('save da versão anterior: técnico ativo sem base ganha a base; quem está sem clube não', () => {
+  const j = novo();
+  const esperado = j.run('JSON.stringify(userClub().base.map(p=>p.id))');
+  const s = JSON.parse(j.run('JSON.stringify(S)')), meu = s.managers.local.clubId;
+  s.versao = 19;
+  delete s.clubs.find(c => c.id === meu).base;
+  const fora = structuredClone(s);
+  fora.managers.local.demitido = true; fora.managers.local.propostasClube = [];
+  assert.equal(j.run(`migrarSave(${JSON.stringify(s)}).ok`), true);
+  assert.equal(j.run('JSON.stringify(userClub().base.map(p=>p.id))'), esperado);
+  assert.equal(j.run('S.versao===VERSAO_SAVE'), true);
+  j.run(`migrarSave(${JSON.stringify(fora)})`);
+  assert.equal(j.run('userClub().base'), undefined);
+});

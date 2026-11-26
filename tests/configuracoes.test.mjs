@@ -41,7 +41,7 @@ test('confirmação desligada: ações de jogo sem pergunta; excluir save contin
   const j = carregarJogo({ boot: true });
   j.run(`newGame('${clubeDaSerie(j)}')`);
   marcar(j, 'confirmar', false);
-  const pid = j.run('userClub().players.find(p=>!userClub().lineup.includes(p.id)).id'), n = j.alertas.length;
+  const pid = j.run('userClub().players.find(p=>!userClub().lineup.includes(p.id)&&userClub().players.filter(x=>x.pos===p.pos).length>MINIMO_POSICAO[p.pos]).id'), n = j.alertas.length;
   j.acao(`quickSell|${pid}`);
   assert.notEqual(j.run(`P['${pid}'].clubId`), j.run('userClub().id'), 'vendido');
   assert.ok(!j.alertas.slice(n).some(a => a.includes('não pode ser desfeita')), 'sem a pergunta de confirmação');

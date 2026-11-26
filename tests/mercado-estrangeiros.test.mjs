@@ -118,3 +118,23 @@ test('comprado e emprestado não voltam ao elenco estrangeiro na temporada segui
   assert.equal(r.completos, r.total);
   assert.equal(r.emP, r.total);
 });
+
+test('estrangeiro emprestado que fez gol na liga e voltou ao clube de origem sai da artilharia, e nenhuma tela quebra (#411)', () => {
+  const j = novo();
+  const r = acha(j, 'p.emprestar');
+  const { pid } = r;
+  assert.equal(j.run(`emprestimoJa('${pid}').ok`), true);
+  j.run(`P['${pid}'].goals=7`);
+  const na = divisao => j.run(`topScorers(1000${divisao ? `,'${divisao}'` : ''}).some(p=>p.id==='${pid}')`);
+  assert.ok(na('A') && na(), 'emprestado a um clube do jogo, ele aparece');
+  j.run(`endLoan(loanOf('${pid}'),true)`);
+  assert.equal(j.run(`clubById(P['${pid}'].clubId)`), undefined, 'voltou a um clube fora de S.clubs');
+  for (const d of [undefined, 'A', 'B', 'C', 'D']) assert.equal(na(d), false, `fora da artilharia (série ${d ?? 'sem filtro'})`);
+  assert.equal(j.run('topScorers(1000).every(p=>clubById(p.clubId))'), true);
+  j.run(`go('artilharia')`);
+  assert.deepEqual(problemasNasTelas(j, ['competicoes', 'artilharia']), []);
+  j.run('S.round=S.fixtures.length;S.seasonClosed=0');
+  const fim = j.run('fecharTemporada()');
+  assert.ok(!fim.top || fim.top.id !== pid, 'o resumo da temporada não cita o estrangeiro');
+  assert.ok(!j.run('S.history[0].scorer').includes(j.run(`P['${pid}'].name`)));
+});

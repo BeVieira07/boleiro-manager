@@ -142,9 +142,13 @@ export function anotarTitulares(jogaram, jogos, getXI, clubById) {
   }
   return jogaram;
 }
-/** Virada de temporada: férias, todo mundo volta com a energia cheia. */
+// quem foi para a Europa (#355) está no save mesmo quando a base europeia não carregou (e aí não entra em P); o Set evita contar duas vezes
+export const quemPodeEstarLesionado = () => new Set([...Object.values(P), ...Object.values(S.europa?.chegadas || {}).flat()]);
+/** Virada de temporada: férias, todo mundo volta com a energia cheia e sem lesão; a suspensão pendente continua (#415). */
 export function ferias() {
   delete S.energiaRodada;
+  for (const p of quemPodeEstarLesionado()) if (p.inj) p.inj = 0; // só quem tem lesão (não engorda o save); inclui os de clube estrangeiro e europeu
+  for (const c of S.clubs) for (const p of c.base || []) if (p.inj) p.inj = 0;
   for (const c of S.clubs) {
     for (const p of c.players) p.energia = ENERGIA_MAX;
     for (const p of c.base || []) p.energia = ENERGIA_MAX;
