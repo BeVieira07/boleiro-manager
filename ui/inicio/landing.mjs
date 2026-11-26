@@ -1,19 +1,20 @@
 /* ================= landing page (#316): a primeira tela ao abrir o site =================
    Apresenta o jogo e leva ao menu (Continuar, Novo jogo, jogos salvos) ou direto à escolha de clube. */
+import { BRASIL } from '../../core/campeonatos.mjs';
 import { corOk } from '../../core/dados.mjs';
-import { DIVS, divOf } from '../../core/estado.mjs';
+import { DIVS, divOf, divsOf } from '../../core/estado.mjs';
 import { esc, money } from '../../core/utils.mjs';
 import { onlineConfigurado, usuarioAtual } from './conta.mjs';
-import { MAX_TECNICOS, getData, ui } from '../estado.mjs';
+import { MAX_TECNICOS, dadosDoNovoJogo, getData, ui } from '../estado.mjs';
 import { icone } from '../icones.mjs';
 import { crest } from '../partida/partida.mjs';
 import { novoJogo } from './saves.mjs';
-import { clubesPreparados, estrelas, expectativa, selecionarClubeInicio } from './escolha.mjs';
+import { clubesPreparados, estrelas, expectativa, paisDoNovoJogo, selecionarPais, seletorPaises, statusClubes } from './escolha.mjs';
 import { render } from '../telas.mjs';
 
 const ITENS = [
-  ['Séries A, B, C e D', '80 clubes em quatro divisões, pontos corridos com ida e volta. No fim do ano sobem 4 e caem 4 entre séries vizinhas, e quanto mais baixa a série, menor a cota de TV e o caixa.'],
-  ['Copas no meio do caminho', 'Estadual na pré-temporada, Copa do Brasil no mata-mata, e Libertadores ou Sul-Americana para quem se classifica.'],
+  ['Séries A, B, C e D', 'No Brasil, 80 clubes disputam quatro divisões em pontos corridos, com jogos de ida e volta. Cada país tem suas próprias regras de acesso e rebaixamento.'],
+  ['Copas no Brasil', 'Estadual na pré-temporada, Copa do Brasil no mata-mata, e Libertadores ou Sul-Americana para quem se classifica.'],
   ['O time no campo', 'Escolha a formação, troque titulares e reservas direto no gramado e fique de olho na energia de quem joga toda rodada.'],
   ['Mercado e caixa', 'Compre, venda e empreste jogadores sem estourar o caixa. Bilheteria, TV e premiação entram; salários e contratações saem.'],
   ['Diretoria e carreira', 'A diretoria cobra a meta da temporada. Perdeu a confiança, perdeu o cargo, mas outros clubes podem mandar proposta.']
@@ -29,7 +30,7 @@ const PERGUNTAS = [
   ['Precisa instalar alguma coisa?', 'Não. O jogo abre no navegador, no computador ou no celular.'],
   ['Onde ficam os meus jogos salvos?', 'No próprio navegador, até 5 jogos. Com uma conta, eles também vão para a nuvem e dá para continuar em outro aparelho.'],
   ['Preciso criar conta?', 'Não para jogar sozinho. A conta só serve para guardar os jogos na nuvem e para as ligas online com amigos.'],
-  ['Os jogadores são de verdade?', 'Os elencos vêm do Brasileirão 2024, e o overall de cada jogador sai das notas da temporada real. O jogo é um projeto independente, sem ligação com a CBF, os clubes ou os jogadores.'],
+  ['Os jogadores são de verdade?', 'Os elencos são baseados em temporadas reais dos clubes. O jogo é um projeto independente, sem ligação com as federações, os clubes ou os jogadores.'],
   ['Quantas pessoas podem jogar juntas?', `No mesmo computador, até ${MAX_TECNICOS} técnicos, um por clube. Na liga online, até 20, cada um no seu aparelho.`]
 ];
 
@@ -62,17 +63,16 @@ function campo() {
 }
 
 /* #338: seção de clubes, com o favorito contra o azarão e o álbum de cada série */
-const SERIES_ALBUM = ['A', 'B', 'C', 'D'];
 // a cor do clube vai numa variável CSS (é dado do clube, como no escudo); cor inválida cai no verde do tema
 const corDo = c => corOk(c.color) ? ` style="--cor:${c.color}"` : '';
 const porForca = (a, b) => b.strength - a.strength || a.name.localeCompare(b.name, 'pt-BR');
 
-function cartaoDuelo(c, rotulo, clubes) {
+function cartaoDuelo(c, rotulo, clubes, pais) {
   return `<article class="lp-duelo-card"${corDo(c)} aria-labelledby="lp-duelo-${esc(c.id)}">
     <div class="lp-duelo-faixa"><span class="lp-duelo-rotulo">${rotulo}</span><span class="lp-uf">${esc(c.uf || '')}</span></div>
     <div class="lp-duelo-corpo">${crest(c, 'g')}
       <h3 id="lp-duelo-${esc(c.id)}">${esc(c.name)}</h3>
-      <p class="muted">${DIVS[divOf(c)] || ''} · ${estrelas(c.strength)}</p>
+      <p class="muted">${esc(DIVS[divOf(c)])} · ${esc(pais)} · ${estrelas(c.strength)}</p>
       <dl class="lp-duelo-dados"><div><dt>Força</dt><dd>${c.strength}</dd></div><div><dt>Caixa inicial</dt><dd>${money(c.balance)}</dd></div></dl>
       <dl class="lp-duelo-meta"><div><dt>A diretoria quer</dt><dd>${esc(expectativa(c, clubes))}</dd></div></dl>
       <button type="button" class="btn sec" data-acao="escolherClubeLanding|${esc(c.id)}">Jogar com ${esc(c.name)}</button>
@@ -80,14 +80,14 @@ function cartaoDuelo(c, rotulo, clubes) {
   </article>`;
 }
 
-function album(clubes, serie) {
+function album(clubes, series, serie) {
   const daSerie = clubes.filter(c => divOf(c) === serie).sort(porForca);
-  const abas = SERIES_ALBUM.map(s => {
+  const abas = series.map(s => {
     const n = clubes.filter(c => divOf(c) === s).length;
-    return `<button type="button" class="lp-aba" data-acao="lpSerie|${s}" aria-pressed="${s === serie}">Série ${s} <small>${n}</small></button>`;
+    return `<button type="button" class="lp-aba" data-acao="lpSerie|${s}" aria-pressed="${s === serie}">${esc(DIVS[s])} <small>${n}</small></button>`;
   }).join('');
   return `<div class="lp-album-topo"><h3 class="lp-album-titulo" id="lp-album-t">O álbum completo</h3>
-      <div class="lp-abas" role="group" aria-label="Série do álbum">${abas}</div></div>
+      <div class="lp-abas" role="group" aria-label="Divisão do álbum">${abas}</div></div>
     <ol class="lp-album" aria-labelledby="lp-album-t">${daSerie.map((c, i) => `<li><button type="button" class="lp-figurinha"${corDo(c)} data-acao="escolherClubeLanding|${esc(c.id)}">
       <span class="lp-figurinha-faixa"><span class="lp-pos">${i + 1}</span></span>${crest(c, 'm')}
       <b>${esc(c.name)}</b>${estrelas(c.strength)}<span class="sr">: começar um jogo novo com este clube</span></button></li>`).join('')}</ol>
@@ -95,22 +95,27 @@ function album(clubes, serie) {
 }
 
 function secaoClubes() {
-  const clubes = clubesPreparados();
-  if (!clubes.length) return '';
+  const { pais, serie } = ui.albumClubes;
+  const seletor = seletorPaises(pais, 'lpPais');
+  const clubes = clubesPreparados(pais);
+  if (!clubes.length) return seletor + statusClubes(ui.albumClubes, 'lpPais');
+  const series = divsOf(clubes);
   const ordem = [...clubes].sort(porForca);
-  const favorito = ordem[0], azarao = [...ordem].reverse().find(c => divOf(c) === 'D') ?? ordem.at(-1);
-  const serie = SERIES_ALBUM.includes(ui.lpSerie) ? ui.lpSerie : 'A';
-  return `<div class="lp-duelo">${cartaoDuelo(favorito, 'O favorito', clubes)}
+  const favorito = ordem[0], azarao = pais === BRASIL ? ordem.findLast(c => divOf(c) === 'D') ?? ordem.at(-1) : ordem.at(-1);
+  const ativa = series.includes(serie) ? serie : series[0];
+  return `${seletor}<div class="lp-duelo">${cartaoDuelo(favorito, 'O favorito', clubes, pais)}
       <div class="lp-duelo-x" aria-hidden="true"><b>X</b><span>${favorito.strength - azarao.strength} pontos de força de diferença</span></div>
-      ${cartaoDuelo(azarao, 'O azarão', clubes)}</div>
+      ${cartaoDuelo(azarao, 'O azarão', clubes, pais)}</div>
     <p class="sr">${favorito.strength - azarao.strength} pontos de força de diferença entre ${esc(favorito.name)} e ${esc(azarao.name)}.</p>
-    ${album(clubes, serie)}`;
+    ${album(clubes, series, ativa)}`;
 }
+
+export const lpPais = pais => selecionarPais(ui.albumClubes, pais, 'landing');
 
 /** Aba do álbum de clubes da landing. */
 export function lpSerie(s) {
-  if (!SERIES_ALBUM.includes(s)) return;
-  ui.lpSerie = s;
+  if (!divsOf(clubesPreparados(ui.albumClubes.pais)).includes(s)) return;
+  ui.albumClubes.serie = s;
   render();
 }
 
@@ -137,7 +142,7 @@ export function vLanding() {
     <div>
       <p class="lp-sobre">Manager de futebol no navegador</p>
       <h1 id="lp-titulo">Assuma o clube. <span>Aguente a diretoria.</span></h1>
-      <p class="lp-texto">Escolha um dos 80 clubes das Séries A, B, C e D, arme o time, negocie no mercado e jogue a temporada inteira. Abre no navegador, no computador ou no celular, sem instalar nada.</p>
+      <p class="lp-texto">Escolha um clube para comandar, arme o time, negocie no mercado e jogue a temporada inteira. Abre no navegador, no computador ou no celular, sem instalar nada.</p>
       <div class="lp-acoes">${jogar('Jogar agora', 'go|menu')}<a class="btn sec lp-ver" href="#lp-jogo">Ver o que tem no jogo</a></div>
       <p class="lp-nota">Seus jogos ficam salvos no navegador. Criar conta é opcional e só serve para a nuvem e as ligas online.</p>
     </div>
@@ -146,7 +151,7 @@ export function vLanding() {
 
   <section class="lp-secao" id="lp-jogo" aria-labelledby="lp-jogo-t"><div class="lp-largura lp-duas">
     <div><p class="lp-sobre">O jogo</p><h2 id="lp-jogo-t">Uma temporada inteira no seu colo</h2>
-      <p class="lp-texto">Do estadual à última rodada: Brasileirão, copas, mercado e as contas do clube. Você decide, a rodada mostra se deu certo.</p></div>
+      <p class="lp-texto">Prepare o time para a próxima rodada, negocie no mercado e cuide das contas do clube ao longo da temporada.</p></div>
     <ol class="lp-itens">${ITENS.map(([t, d], i) => `<li><span class="lp-num">0${i + 1}</span><div><h3>${t}</h3><p>${d}</p></div></li>`).join('')}</ol>
   </div></section>
 
@@ -154,13 +159,13 @@ export function vLanding() {
     ${campo()}
     <div><p class="lp-sobre">Escalação</p><h2 id="lp-esc-t">Toque no titular, toque no reserva. Pronto.</h2>
       <p class="lp-texto">A troca acontece no próprio campo. Mudou de 4-4-2 para 4-3-3? As vagas se ajeitam e o botão "Escalar melhores" monta o time pela força.</p>
-      <p class="lp-texto">Os elencos vêm do Brasileirão 2024, e o overall de cada jogador sai das notas da temporada real, de 40 a 95.</p></div>
+      <p class="lp-texto">O exemplo usa o elenco do Palmeiras no Brasileirão 2024.</p></div>
   </div></section>
 
   <section class="lp-secao" id="lp-clubes" aria-labelledby="lp-clubes-t"><div class="lp-largura">
-    <div class="lp-cab-secao"><div><p class="lp-sobre">80 clubes</p><h2 id="lp-clubes-t">Do Maracanã ao Barradão</h2>
-      <p class="lp-texto">Cada clube começa com força, caixa e cobrança diferentes. Pegar um gigante é mais fácil; subir com um clube da Série D é outra história.</p></div>
-      <button type="button" class="btn sec" data-acao="novoJogo">Escolher meu clube</button></div>
+    <div class="lp-cab-secao"><div><h2 id="lp-clubes-t">${ui.albumClubes.pais === BRASIL ? 'Do Maracanã ao Barradão' : `Clubes · ${esc(ui.albumClubes.pais)}`}</h2>
+      <p class="lp-texto">Compare a força, o caixa inicial e a expectativa da diretoria antes de assumir o time.</p></div>
+      <button type="button" class="btn sec" data-acao="escolherClubeLanding">Escolher meu clube</button></div>
     ${secaoClubes()}
   </div></section>
 
@@ -193,6 +198,8 @@ export function vLanding() {
 
 /** Cartão de clube da landing: abre a escolha de clube do jogo novo já com ele marcado. */
 export function escolherClubeLanding(id) {
-  novoJogo();
-  if (ui.view === 'inicio') selecionarClubeInicio(id); // com 5 jogos salvos, novoJogo só avisa e não abre a escolha
+  const { pais, serie } = ui.albumClubes;
+  const clube = id && clubesPreparados(pais).find(c => c.id === id);
+  if (id && !clube) return;
+  if (novoJogo({ pais, serie: clube ? divOf(clube) : serie, id }) && !dadosDoNovoJogo(pais)) return paisDoNovoJogo(pais);
 }

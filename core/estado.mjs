@@ -65,13 +65,13 @@ export function seasonPrize(div, pos) {
   return Math.round((piso + (20 - pos) * porPosicao) * 100) / 100;
 }
 export const startBalance=(div,s)=>Math.round(({A:10+(s-60)*1.5,B:Math.max(2,3+(s-55)*0.5),C:Math.max(1,1.5+(s-50)*0.2),D:Math.max(0.8,1+(s-48)*0.1)})[serieBase(div)]*10)/10;
-export const MOVE_N=()=>Math.min(4,...divisions().map(d=>S.clubs.filter(c=>divOf(c)===d).length-1));
+export const MOVE_N=(clubes=S.clubs)=>Math.min(4,...divsOf(clubes).map(d=>clubes.filter(c=>divOf(c)===d).length-1));
 
-export function zonasDaDivisao(div){
-  const ds=divisions(), i=ds.indexOf(div), acima=ds[i-1], abaixo=ds[i+1], regra=regraLiga(div);
+export function zonasDaDivisao(div,clubes=S.clubs){
+  const ds=divsOf(clubes), i=ds.indexOf(div), acima=ds[i-1], abaixo=ds[i+1], regra=regraLiga(div);
   if(regra)return {acima,abaixo,acessoDireto:regra.acessoDireto??0,rebaixamento:regra.rebaixamento??0,
     playoffAte:regra.playoff?Math.max(...regra.playoff.semifinais.flat()):0};
-  const vagas=ds.length>1?MOVE_N():4;
+  const vagas=ds.length>1?MOVE_N(clubes):4;
   return {acima,abaixo,acessoDireto:acima?vagas:0,rebaixamento:ds.length===1||abaixo?vagas:0,playoffAte:0};
 }
 export const rodadasRegulares=()=>S.fixtures.length-datasPlayoff(S.pais);
@@ -80,17 +80,10 @@ export function rodadasDaDivisao(div){
   return regra?2*(regra.clubes-1):rodadasRegulares();
 }
 
-// regra: monta a campanha nova a partir dos dados (sem tela nem armazenamento).
-// `quem` é o id do clube (um técnico, o solo) ou uma lista [{id, nome, clubId}] (vários técnicos).
-// Para uma carreira europeia, passe DADOS_EUROPA e { pais }.
-export function criarJogo(quem,data,{pais=BRASIL}={}){
-  const lista=Array.isArray(quem)?quem:[{id:'local',nome:'Você',clubId:quem}];
-  if(!lista.length||new Set(lista.map(t=>t.clubId)).size!==lista.length)throw new Error('Cada técnico precisa de um clube diferente.');
-  const europeu=pais!==BRASIL;
-  const clubs=europeu?dadosParaCarreira(data,pais):JSON.parse(JSON.stringify(data.clubs));
-  if(lista.some(t=>!clubs.some(c=>c.id===t.clubId)))throw new Error('Escolha um clube do país do jogo.');
+// Prepara as cópias dos elencos usadas na campanha e na prévia da escolha de clube.
+export function prepararElencos(clubs,{posv,europeu}){
   for(const c of clubs){
-    if(!europeu&&data.posv!==2)converterPosicoesAntigas(c.players); // dados antigos (aba Dados) usam as siglas de antes da #23
+    if(!europeu&&posv!==2)converterPosicoesAntigas(c.players); // dados antigos (aba Dados) usam as siglas de antes da #23
     simplificarPosicoes(c.players); // os dados guardam a posição real (Transfermarkt); o jogo usa só 6 (#97)
     const minimo=c.players.length<16 ? SQUAD_SHAPE : SQUAD_MIN;
     const r=mulberry32(hashStr(c.id));let k=0;
@@ -109,6 +102,18 @@ export function criarJogo(quem,data,{pais=BRASIL}={}){
   // #174: a força do clube é a do elenco (média dos 11 titulares), depois de todos os overalls; a da tabela de 2024 ficou velha.
   // Só depois do laço: refStrength compara cada clube com a média da série, com as forças de antes
   for(const c of clubs)c.strength=forcaDoElenco(c);
+}
+
+// regra: monta a campanha nova a partir dos dados (sem tela nem armazenamento).
+// `quem` é o id do clube (um técnico, o solo) ou uma lista [{id, nome, clubId}] (vários técnicos).
+// Para uma carreira europeia, passe DADOS_EUROPA e { pais }.
+export function criarJogo(quem,data,{pais=BRASIL}={}){
+  const lista=Array.isArray(quem)?quem:[{id:'local',nome:'Você',clubId:quem}];
+  if(!lista.length||new Set(lista.map(t=>t.clubId)).size!==lista.length)throw new Error('Cada técnico precisa de um clube diferente.');
+  const europeu=pais!==BRASIL;
+  const clubs=europeu?dadosParaCarreira(data,pais):JSON.parse(JSON.stringify(data.clubs));
+  if(lista.some(t=>!clubs.some(c=>c.id===t.clubId)))throw new Error('Escolha um clube do país do jogo.');
+  prepararElencos(clubs,{posv:data.posv,europeu});
   const seed=novaSemente();
   S={versao:VERSAO_SAVE,seed,rng:seed,posv:2,pais,season:data.season||2026,dataSource:data.source,round:0,clubs,
      fixtures:makeAllFixtures(clubs,pais),history:[],

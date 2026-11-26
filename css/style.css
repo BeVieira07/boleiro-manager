@@ -151,8 +151,8 @@ html:has(.nav-abas){scroll-padding-block-start:121px}
 .nav .nav-item[aria-current]{color:var(--tinta-verde);background:linear-gradient(180deg,#49db89,var(--verde))}
 .nav-resto{position:absolute;z-index:1;right:24px;top:calc(100% + 6px);padding:6px;border:1px solid var(--linha);border-radius:var(--r);background:var(--painel);box-shadow:var(--sombra);max-height:calc(100dvh - 85px);overflow:auto;overscroll-behavior:contain}
 .nav-resto .nav-item{width:100%;font:600 14px/1.35 var(--f-texto);letter-spacing:0;text-transform:none}
-.clube-cartao{background:var(--painel);border:1px solid var(--linha);border-left:3px solid var(--linha);border-radius:var(--r-sm);padding:5px 10px;display:flex;gap:10px;align-items:center}
-.clube-cartao>div{display:flex;flex-direction:column;line-height:1.3;min-width:0}
+.clube-cartao{background:var(--painel);border:1px solid var(--linha);border-left:3px solid var(--linha);border-radius:var(--r-sm);padding:5px 10px;display:flex;gap:10px;align-items:center;min-width:0}
+.clube-cartao>div{display:flex;flex-direction:column;line-height:1.3;min-width:0;overflow-wrap:anywhere}
 .clube-cartao b{font:700 15px/1.2 var(--f-titulo);text-transform:uppercase}
 .clube-cartao .muted{font-size:12px}
 .nav-item.nav-perigo{color:var(--perigo-claro)}
@@ -196,7 +196,7 @@ body.em-jogo .conteudo{max-width:1312px;padding:22px 16px 48px}
   html:has(body.em-jogo){scroll-padding-block-end:calc(72px + env(safe-area-inset-bottom))}
   .hud{min-height:59px;padding:4px 12px;gap:10px}
   .hud .marca{margin-right:auto}
-  .hud .marca>div,.clube-cartao>div,.nav-secao{display:none}
+  .hud .marca>div,.nav-secao{display:none}
   .clube-cartao{padding:2px 5px;border-left:1px solid var(--linha)}
   .nav-mais,.nav-item{min-height:44px}
   .nav{position:fixed;inset:auto 0 0;justify-content:space-around;gap:3px;padding:8px 6px calc(8px + env(safe-area-inset-bottom));margin:0;background:var(--lateral);border-top:1px solid var(--linha)}
@@ -449,6 +449,9 @@ th[aria-sort="ascending"],th[aria-sort="descending"]{color:var(--verde-claro)}
 .escolha-corpo>h1{font:italic 800 clamp(32px,4.1vw,58px)/1 var(--f-titulo);text-transform:uppercase}
 .escolha-corpo>p{margin:10px 0 24px}
 .escolha-corpo>.escolha-vez{margin:0 0 12px;color:var(--verde-claro)}
+.paises-clubes{margin-bottom:var(--e4)}
+.paises-clubes .muted{margin-right:var(--e2)}
+.paises-clubes .chip:disabled{cursor:default}
 .escolha-filtros{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:22px}
 .escolha-filtros .busca{margin-left:auto}
 .escolha-ordem{display:flex;align-items:center;gap:8px;color:var(--texto2)}
@@ -1197,7 +1200,7 @@ body.em-jogo .avisos{bottom:24px}
 .lp-duelo-x b{font:italic 800 72px/1 var(--f-titulo);color:var(--ouro)}
 .lp-album-topo{display:flex;align-items:center;justify-content:space-between;gap:var(--e4);flex-wrap:wrap;margin-bottom:var(--e5)}
 .lp-album-titulo{margin:0;font:italic 800 clamp(28px,3vw,38px)/1 var(--f-titulo);letter-spacing:0;text-transform:uppercase;color:var(--texto)}
-.lp-abas{display:flex;gap:4px;padding:4px;border:1px solid var(--linha);border-radius:var(--r);background:var(--lateral)}
+.lp-abas{display:flex;flex-wrap:wrap;gap:4px;padding:4px;border:1px solid var(--linha);border-radius:var(--r);background:var(--lateral)}
 .lp-aba{min-height:44px;padding:0 18px;border:1px solid transparent;border-radius:var(--r-sm);background:none;color:var(--texto2);font:700 17px/1 var(--f-titulo);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
 .lp-aba small{margin-left:4px;font-size:12px;color:var(--muted)}
 .lp-aba[aria-pressed="true"]{border-color:var(--verde);background:var(--verde-esc);color:var(--verde-claro)}
@@ -1229,7 +1232,7 @@ body.em-jogo .avisos{bottom:24px}
   body.em-jogo .casca{display:grid;grid-template-columns:236px minmax(0,1fr);align-items:start}
   body.em-jogo .lateral{position:sticky;top:0;height:100dvh;border-right:1px solid var(--linha2);background:var(--lateral)}
   body.em-jogo .hud{flex-direction:column;align-items:stretch;gap:var(--e2);height:100%;min-height:0;padding:18px 14px 14px;border:0;background:none;overflow-y:auto}
-  body.em-jogo .hud .marca{padding:0 6px 10px}
+  body.em-jogo .hud .marca{order:-2;padding:0 6px 10px}
   body.em-jogo .hud>.nav,body.em-jogo .nav-abas,body.em-jogo .nav-mais{display:none}
   body.em-jogo .nav-lateral{display:flex;flex-direction:column;gap:2px}
   .nav-lateral .nav-item{gap:12px;min-height:38px;padding:6px 12px;font:600 15px/1.2 var(--f-texto);letter-spacing:0;text-transform:none}
@@ -1238,7 +1241,7 @@ body.em-jogo .avisos{bottom:24px}
   body.em-jogo .nav-resto,body.em-jogo .nav-resto[hidden]{position:static;display:flex;flex-direction:column;gap:2px;margin-top:auto;padding:12px 0 0;border:0;border-top:1px solid var(--linha2);border-radius:0;background:none;box-shadow:none;max-height:none;overflow:visible}
   body.em-jogo .nav-resto .nav-item{min-height:32px;padding:4px 12px;font-size:13px;color:var(--muted)}
   body.em-jogo .nav-resto .nav-item.nav-perigo{color:var(--perigo-claro)}
-  body.em-jogo .clube-cartao{order:10;padding:10px 12px;border-left:1px solid var(--linha);border-radius:var(--r)}
+  body.em-jogo .clube-cartao{order:-1;padding:10px 12px;border-left:1px solid var(--linha);border-radius:var(--r)}
   body.em-jogo .clube-cartao b{max-width:none}
 }
 /* #360: com a barra lateral sobra menos largura; no Elenco o nome não quebra no meio e os botões descem para uma 2ª linha */
