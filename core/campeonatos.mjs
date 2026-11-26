@@ -11,6 +11,12 @@ export const CAMPEONATOS = {
     ES1: { nome: 'LaLiga', clubes: 20, serieBase: 'A', rebaixamento: 3 },
     ES2: { nome: 'LaLiga 2', clubes: 22, serieBase: 'B', acessoDireto: 2,
       playoff: { semifinais: [[3, 6], [4, 5]], pernasSemi: 2, pernasFinal: 2 } }
+  },
+  Itália: {
+    IT1: { nome: 'Serie A', clubes: 20, serieBase: 'A', rebaixamento: 3 },
+    // Preliminar em jogo único (5º x 8º, 6º x 7º); 3º e 4º entram na semifinal. Empate em qualquer fase: passa o melhor colocado.
+    IT2: { nome: 'Serie B', clubes: 20, serieBase: 'B', acessoDireto: 2,
+      playoff: { preliminar: [[5, 8], [6, 7]], semifinais: [[3], [4]], pernasSemi: 2, pernasFinal: 2, empate: 'melhor' } }
   }
 };
 
@@ -26,5 +32,5 @@ export function regraPlayoff(pais) {
 }
 export const datasPlayoff = pais => {
   const regra = regraPlayoff(pais);
-  return regra ? regra.pernasSemi + (regra.pernasFinal ?? 1) : 0;
+  return regra ? (regra.preliminar ? 1 : 0) + regra.pernasSemi + (regra.pernasFinal ?? 1) : 0;
 };
