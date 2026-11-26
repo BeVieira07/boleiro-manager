@@ -4,47 +4,65 @@ import { penaltisDaVolta } from './gols-copa.mjs';
 import { vencedorPenaltis } from './penaltis.mjs';
 import { semente } from './utils.mjs';
 
-const IDA = 'Semifinal (ida)', VOLTA = 'Semifinal (volta)', SEMI = 'Semifinal', FINAL = 'Final do mata-mata';
+const PRELIMINAR = 'Fase preliminar', IDA = 'Semifinal (ida)', VOLTA = 'Semifinal (volta)', SEMI = 'Semifinal', FINAL = 'Final do mata-mata';
 const FINAL_IDA = 'Final (ida)', FINAL_VOLTA = 'Final (volta)';
+
+/** As datas do mata-mata, em ordem: [preliminar], semifinal (1 ou 2 jogos) e final (1 ou 2 jogos). */
+export const datasDoPlayoff = regra => [...(regra.preliminar ? [PRELIMINAR] : []),
+  ...(regra.pernasSemi === 1 ? [SEMI] : [IDA, VOLTA]), ...((regra.pernasFinal ?? 1) === 1 ? [FINAL] : [FINAL_IDA, FINAL_VOLTA])];
 
 export function fasePlayoff(rodada) {
   const regra = regraPlayoff(S.pais);
   if (!regra || rodada < rodadasRegulares() || rodada >= S.fixtures.length) return null;
-  const data = rodada - rodadasRegulares();
-  if (data >= regra.pernasSemi) return (regra.pernasFinal ?? 1) === 1 ? FINAL : data === regra.pernasSemi ? FINAL_IDA : FINAL_VOLTA;
-  return regra.pernasSemi === 1 ? SEMI : data === 0 ? IDA : VOLTA;
+  return datasDoPlayoff(regra)[rodada - rodadasRegulares()] ?? null;
 }
 
-// A chave usa a classificação final. A volta é na casa do melhor colocado; a final de jogo único é em campo neutro.
+// A chave usa a classificação final. Jogo único e volta são na casa do melhor colocado; a final de jogo único é em campo neutro.
+// Com empate: 'melhor', o empate no confronto classifica o melhor colocado (sem pênaltis); senão, pênaltis.
 export function jogosDaRodada(rodada) {
   const jogos = S.fixtures[rodada] || [];
   const fase = fasePlayoff(rodada);
   if (jogos.length || !fase || S.round < rodadasRegulares()) return jogos;
   if (fase === VOLTA || fase === FINAL_VOLTA) return S.fixtures[rodada - 1].map(g => ({ h: g.a, a: g.h, playoff: fase, agregado: { h: g.ag, a: g.hg } }));
-  const { div, semifinais } = regraPlayoff(S.pais), T = table(div);
+  const regra = regraPlayoff(S.pais), T = table(regra.div), pos = id => T.findIndex(t => t.id === id);
+  const unico = (h, a) => ({ h, a, playoff: fase, ...(regra.empate !== 'melhor' && { agregado: { h: 0, a: 0 } }) });
+  const anteriores = () => {
+    const d = S.fixtures[rodada - 1];
+    return d.length && d.every(g => g.hg != null) ? d.map(vencedorDoConfronto) : null;
+  };
+  if (fase === PRELIMINAR) return regra.preliminar.map(([m, p]) => unico(T[m - 1].id, T[p - 1].id));
   if (fase === FINAL || fase === FINAL_IDA) {
-    const decisivos = S.fixtures[rodada - 1];
-    if (!decisivos.length || decisivos.some(g => g.hg == null)) return [];
-    const [h, a] = decisivos.map(vencedorDoConfronto);
-    if (fase === FINAL) return [{ h, a, playoff: fase, neutro: true, agregado: { h: 0, a: 0 } }];
-    const pos = id => T.findIndex(t => t.id === id);
+    const v = anteriores();
+    if (!v) return [];
+    const [h, a] = v;
+    if (fase === FINAL) return [{ ...unico(h, a), neutro: true }];
     return [pos(h) < pos(a) ? { h: a, a: h, playoff: fase } : { h, a, playoff: fase }];
   }
-  return semifinais.map(([melhor, pior]) => {
-    const h = T[melhor - 1].id, a = T[pior - 1].id;
-    return fase === IDA ? { h: a, a: h, playoff: fase } : { h, a, playoff: fase, agregado: { h: 0, a: 0 } };
-  });
+  // Semifinal: com preliminar, o melhor colocado enfrenta o pior classificado dela.
+  let pares = regra.semifinais.map(([m, p]) => [T[m - 1].id, p && T[p - 1].id]);
+  if (regra.preliminar) {
+    const v = anteriores();
+    if (!v) return [];
+    const vindos = v.sort((x, y) => pos(y) - pos(x));
+    pares = pares.map(([m], i) => [m, vindos[i]]);
+  }
+  return pares.map(([m, p]) => fase === IDA ? { h: p, a: m, playoff: fase } : unico(m, p));
 }
 
 export function penaltiPlayoff(g) {
-  if (!g.agregado || g.hg == null) return null;
+  if (!g.agregado || g.hg == null || regraPlayoff(S.pais)?.empate === 'melhor') return null;
   if (!g.escalacoes) return g.pen ?? null;
   return penaltisDaVolta(g, g.agregado, semente(S.seed, S.season, g.playoff, g.h, g.a));
 }
 
 function vencedorDoConfronto(g) {
-  const { h, a } = g.agregado;
-  if (h + g.hg === a + g.ag) return vencedorPenaltis(penaltiPlayoff(g));
+  const { h, a } = g.agregado || { h: 0, a: 0 };
+  if (h + g.hg === a + g.ag) {
+    const regra = regraPlayoff(S.pais);
+    if (regra.empate !== 'melhor') return vencedorPenaltis(penaltiPlayoff(g));
+    const T = table(regra.div), pos = id => T.findIndex(t => t.id === id);
+    return pos(g.h) < pos(g.a) ? g.h : g.a;
+  }
   return h + g.hg > a + g.ag ? g.h : g.a;
 }
 

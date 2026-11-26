@@ -70,7 +70,7 @@ export const MOVE_N=()=>Math.min(4,...divisions().map(d=>S.clubs.filter(c=>divOf
 export function zonasDaDivisao(div){
   const ds=divisions(), i=ds.indexOf(div), acima=ds[i-1], abaixo=ds[i+1], regra=regraLiga(div);
   if(regra)return {acima,abaixo,acessoDireto:regra.acessoDireto??0,rebaixamento:regra.rebaixamento??0,
-    playoffAte:regra.playoff?Math.max(...regra.playoff.semifinais.flat()):0};
+    playoffAte:regra.playoff?Math.max(...regra.playoff.semifinais.flat(),...(regra.playoff.preliminar||[]).flat()):0};
   const vagas=ds.length>1?MOVE_N():4;
   return {acima,abaixo,acessoDireto:acima?vagas:0,rebaixamento:ds.length===1||abaixo?vagas:0,playoffAte:0};
 }
