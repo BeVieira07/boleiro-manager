@@ -31,7 +31,7 @@ const jogador = ([id, name, age, pd, ovr, number, vm]) => ({ id, name, age, pos:
 /** Monta os clubes europeus do jogo atual, uma vez por estado (reindex chama). Idempotente. */
 export function montarEuropa() {
   if (!BASE || !S || REG.para === S) return;
-  const noJogo = new Set();
+  const noJogo = new Set(S.aposentados);
   for (const c of S.clubs) for (const p of [...c.players, ...(c.base || [])]) noJogo.add(p.id);
   for (const c of Object.values(S.continentais?.estrangeiros || {})) for (const p of c.players) noJogo.add(p.id);
   const chegadas = S.europa?.chegadas || {};

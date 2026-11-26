@@ -86,7 +86,7 @@ export function criarJogo(quem,data){
   for(const c of clubs)c.strength=forcaDoElenco(c);
   const seed=novaSemente();
   S={versao:VERSAO_SAVE,seed,rng:seed,posv:2,season:data.season||2026,dataSource:data.source,round:0,clubs,
-     fixtures:makeAllFixtures(clubs),history:[],
+     fixtures:makeAllFixtures(clubs),history:[],aposentados:[],
      managers:Object.fromEntries(lista.map(t=>[t.id,novoTecnico(t.id,t.nome,t.clubId)])),atual:lista[0].id};
   for(const c of S.clubs)c.balance=startBalance(divOf(c),c.strength); // clubes da IA também têm caixa
   darPotencial(S.clubs);

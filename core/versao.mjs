@@ -79,6 +79,7 @@ const MIGRACOES = [
   },
   migrarValoresDeMercado, // 18: valor de mercado sem desconto pelo prazo do contrato (#350)
   s => { for (const c of s.clubs) if (c.balance == null) c.balance = startBalance(divOf(c), c.strength) }, // 19: caixa dos clubes da IA em saves de antes da #28 (#373)
+  s => { s.aposentados ??= [] }, // 20: jogadores que não podem voltar dos dados originais (#417)
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 
