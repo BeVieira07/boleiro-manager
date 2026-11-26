@@ -1,6 +1,6 @@
 import { registrarTemporada, sairDoClube } from './carreira.mjs';
 import { wageBill } from './emprestimos.mjs';
-import { DIVS, MOVE_N, S, addNews, bilheteriaBase, clubById, clubDo, divOf, divisions, hasTwoDivs, seasonPrize, table, tec, tvQuota, userClub } from './estado.mjs';
+import { DIVS, S, addNews, bilheteriaBase, clubById, clubDo, divOf, rodadasDaDivisao, seasonPrize, table, tec, tvQuota, userClub, zonasDaDivisao } from './estado.mjs';
 import { clamp } from './utils.mjs';
 
 /* ================= confiança da diretoria (#11) =================
@@ -25,18 +25,19 @@ export function fatoresFinanceiros(uc,meta){
   if(uc.balance<0)fat.push({t:'Caixa negativo',v:-1.5});
   else if(saldos.length===QUEDA_RODADAS&&saldos.every(x=>x<0)){
     const o=[...saldos].sort((a,b)=>a-b),ritmo=(o[1]+o[2])/2,premio=meta?seasonPrize(divOf(uc),meta.alvo):0;
-    if(uc.balance+ritmo*(S.fixtures.length-S.round)+premio<0)fat.push({t:`Caixa em queda há ${QUEDA_RODADAS} rodadas`,v:-0.8});
+    if(uc.balance+ritmo*Math.max(0,rodadasDaDivisao(divOf(uc))-S.round)+premio<0)fat.push({t:`Caixa em queda há ${QUEDA_RODADAS} rodadas`,v:-0.8});
   }
   return fat;
 }
 /** Meta que a diretoria de um clube cobra, pela força dele na série: {texto, alvo}. */
 export function metaDe(uc){
-  const d=divOf(uc),ds=divisions(),di=ds.indexOf(d),n=S.clubs.filter(c=>divOf(c)===d).length;
+  const d=divOf(uc),n=S.clubs.filter(c=>divOf(c)===d).length;
   // posição esperada pela força; no empate, desempata pelo id (#441: com vários empatados no topo, ninguém ficava com a meta de acesso)
   const esp=1+S.clubs.filter(c=>divOf(c)===d&&(c.strength>uc.strength||(c.strength===uc.strength&&c.id<uc.id))).length;
   // #382: Libertadores só na Série A; a série mais alta de uma liga sem a A não tem vaga nem acesso, só título
-  const mv=hasTwoDivs()?MOVE_N():4,top=di===0?(d==='A'?6:2):mv,bottom=!hasTwoDivs()?4:di===ds.length-1?0:mv;
-  const texto=esp<=2?'Lutar pelo título':esp<=top?(d==='A'?'Vaga na Libertadores':`Acesso à ${DIVS[ds[di-1]]}`):bottom&&esp>n-bottom?'Evitar o rebaixamento':'Terminar no meio da tabela';
+  const {acima,acessoDireto,rebaixamento:bottom,playoffAte}=zonasDaDivisao(d);
+  const top=playoffAte||acessoDireto||(d==='A'?6:2);
+  const texto=esp<=2?'Lutar pelo título':esp<=top?(d==='A'?'Vaga na Libertadores':playoffAte?'Chegar ao mata-mata do acesso':`Acesso à ${DIVS[acima]}`):bottom&&esp>n-bottom?'Evitar o rebaixamento':'Terminar no meio da tabela';
   return {texto,alvo:esp<=2?3:esp<=top?top:bottom&&esp>n-bottom?n-bottom:Math.min(n,esp+1)}; // alvo: pior posição aceita
 }
 export function definirMeta(t=tec()){t.meta=metaDe(clubDo(t))}

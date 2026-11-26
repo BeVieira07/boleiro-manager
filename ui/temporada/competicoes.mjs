@@ -4,9 +4,11 @@
    As telas antigas (Classificação, Artilharia, Copa, Libertadores, Sul-Americana e Estadual) abrem esta página (telaDeCompeticao).
    COMPETICOES: os cartões de cada competição dão o próximo jogo do técnico (proximoCompromisso, no Painel e em Jogos). */
 import { jogosDaDataCont, torneioContDe } from '../../core/continental.mjs';
+import { regraPlayoff } from '../../core/campeonatos.mjs';
 import { COPA } from '../../core/copa.mjs';
-import { DIVS, P, S, clubById, divOf, divisions, tec, userClub } from '../../core/estado.mjs';
+import { DIVS, P, S, clubById, divOf, divisions, jogaNoBrasil, rodadasDaDivisao, rodadasRegulares, tec, userClub } from '../../core/estado.mjs';
 import { jogosDaData, torneioDe } from '../../core/estadual.mjs';
+import { fasePlayoff, jogosDaRodada, promovidoNoPlayoff } from '../../core/playoffs.mjs';
 import { clamp, esc } from '../../core/utils.mjs';
 import { chip, seletorCompeticao } from '../componentes.mjs';
 import { chaveJogoAtual, ui } from '../estado.mjs';
@@ -19,24 +21,27 @@ import { cartaoCopa, conteudoCopa } from './copa.mjs';
 import { cartaoEstadual, conteudoEstadual } from './estadual.mjs';
 import { cartoesContinentais, conteudoTorneio } from './continental.mjs';
 
-const brasileirao = {
-  id: 'brasileirao', nome: 'Campeonato Brasileiro',
+const campeonato = {
+  id: 'brasileirao', get nome() { return jogaNoBrasil() ? 'Campeonato Brasileiro' : DIVS[divOf(userClub())] },
   cartao() {
-    const uc = userClub(), rodada = S.fixtures.findIndex((jogos, i) => i >= S.round && jogos.some(x => x.h === uc.id || x.a === uc.id));
-    const g = S.fixtures[rodada]?.find(x => x.h === uc.id || x.a === uc.id);
-    return { proximo: g ? { rot: 'Rod.', n: rodada + 1, h: g.h, a: g.a, nomeAdv: clubById(g.h === uc.id ? g.a : g.h).name, ordem: rodada + 1 } : null };
+    const uc = userClub();
+    for (let r = S.round; r < S.fixtures.length; r++) {
+      const g = jogosDaRodada(r).find(x => x.h === uc.id || x.a === uc.id);
+      if (g) return { proximo: { rot: 'Rod.', n: r + 1, h: g.h, a: g.a, nomeAdv: clubById(g.h === uc.id ? g.a : g.h).name, ordem: r + 1, ...(g.playoff && { fase: g.playoff }) } };
+    }
+    return { proximo: null };
   }
 };
 
 /** As competições da temporada, na ordem das linhas. Competição nova: uma linha aqui. */
-export const COMPETICOES = [cartaoEstadual, brasileirao, cartaoCopa, ...cartoesContinentais];
+export const COMPETICOES = [cartaoEstadual, campeonato, cartaoCopa, ...cartoesContinentais];
 
 const cartoes = lista => lista.map(c => [c, c.cartao()]);
 const proximos = ds => ds.filter(([, d]) => d.proximo).map(([c, d]) => ({ ...d.proximo, nome: c.nome, tom: d.tom || 'info' }))
   .sort((a, b) => a.ordem - b.ordem);
 
 export function proximoCompromisso() {
-  return proximos(cartoes(COMPETICOES))[0];
+  return proximos(cartoes(jogaNoBrasil() ? COMPETICOES : [campeonato]))[0];
 }
 
 /* ---------- qual competição está aberta ---------- */
@@ -45,10 +50,10 @@ const daTemporada = e => e?.temporada === S.season ? e.torneios : [];
 export function abasCompeticoes() {
   return [
     { id: 'nacional', nome: 'Nacional', lista: [...divisions().map(d => ({ id: d, nome: DIVS[d], tipo: 'liga' })), ...(S.copa ? [{ id: 'copa', nome: COPA, tipo: 'copa' }] : [])] },
-    { id: 'internacional', nome: 'Internacional', vazia: 'Não há copas sul-americanas nesta temporada.',
+    ...(jogaNoBrasil() ? [{ id: 'internacional', nome: 'Internacional', vazia: 'Não há copas sul-americanas nesta temporada.',
       lista: daTemporada(S.continentais).map(t => ({ id: t.id, nome: t.nome, tipo: 'continental', tor: t })) },
     { id: 'estadual', nome: 'Estadual', vazia: 'Não há estaduais nesta temporada.',
-      lista: daTemporada(S.estaduais).map(t => ({ id: 'estadual-' + t.uf, nome: t.nome, tipo: 'estadual', tor: t })) }
+      lista: daTemporada(S.estaduais).map(t => ({ id: 'estadual-' + t.uf, nome: t.nome, tipo: 'estadual', tor: t })) }] : [])
   ];
 }
 /** A competição aberta: a escolhida neste jogo, ou a série do seu clube. */
@@ -84,7 +89,7 @@ export function telaDeCompeticao(view) {
 /* ---------- estatísticas e história ---------- */
 /** Os jogos já disputados na competição, no formato {h, a, hg, ag}. */
 export function jogosDaCompeticao(c) {
-  if (c.tipo === 'liga') return S.fixtures.slice(0, S.round).flat().filter(g => g.hg != null && divOf(clubById(g.h)) === c.id);
+  if (c.tipo === 'liga') return S.fixtures.slice(0, Math.min(S.round, rodadasDaDivisao(c.id))).flat().filter(g => g.hg != null && divOf(clubById(g.h)) === c.id);
   if (c.tipo === 'copa') return (S.copa?.fases || []).flatMap(f => f.jogos.flatMap(j => [
     j.ida && { h: j.h, a: j.a, hg: j.ida.h, ag: j.ida.a }, j.volta && { h: j.a, a: j.h, hg: j.volta.a, ag: j.volta.h }])).filter(Boolean);
   if (c.tipo === 'continental') return S.continentais.datas.flatMap((_, k) => jogosDaDataCont(c.tor, k)).filter(g => g?.hg != null);
@@ -150,7 +155,7 @@ function historia(c) {
   </dl></section>`;
 }
 function rodadas(c) {
-  const n = S.fixtures.length; if (!n) return '<section class="card comp-quadro"><p class="muted">Sem rodadas nesta temporada.</p></section>';
+  const n = rodadasDaDivisao(c.id); if (!n) return '<section class="card comp-quadro"><p class="muted">Sem rodadas nesta temporada.</p></section>';
   const r = clamp(ui.compRodada ?? rodadaAtual(), 0, n - 1);
   return `<section class="card comp-quadro" aria-labelledby="comp-rodada"><nav class="navega-rodada" aria-label="Rodadas">
     <button class="btn sec icone-so" data-acao="verRodadaComp|${Math.max(0, r - 1)}" aria-label="Rodada anterior"${r === 0 ? ' disabled' : ''}>${icone('voltar')}</button>
@@ -164,9 +169,20 @@ function lado(c) {
   return `<aside class="comp-lado" aria-label="Estatísticas da competição">${painel === 'rodadas' ? rodadas(c) : artilheiros(c) + emFase(c) + historia(c)}${botoes}</aside>`;
 }
 
+function mataMata(d, me) {
+  if (regraPlayoff(S.pais)?.div !== d || S.round < rodadasRegulares()) return '';
+  const datas = S.fixtures.slice(rodadasRegulares()).map((_, i) => {
+    const r = rodadasRegulares() + i, jogos = jogosDaRodada(r);
+    return jogos.length ? `<h3 class="t3">${fasePlayoff(r)}</h3>${listaJogos(jogos, me)}` : '';
+  }).join('');
+  const vencedor = promovidoNoPlayoff(d);
+  return `<section class="card comp-quadro"><h2>Mata-mata de acesso</h2>
+    ${vencedor ? `<p>${esc(clubById(vencedor).name)} conquistou o acesso.</p>` : ''}${datas}</section>`;
+}
+
 function principal(c) {
   const me = tec().clubId;
-  if (c.tipo === 'liga') return legendaLiga(c.id) + tabelaLiga(c.id, me);
+  if (c.tipo === 'liga') return legendaLiga(c.id) + tabelaLiga(c.id, me) + mataMata(c.id, me);
   if (c.tipo === 'copa') return conteudoCopa();
   if (c.tipo === 'continental') return conteudoTorneio(c.id);
   return conteudoEstadual(c.tor);

@@ -2,7 +2,7 @@ import { potInicial } from './base.mjs';
 import { contratoInicial } from './contratos.mjs';
 import { refreshEconomics } from './dados.mjs';
 import { S, clubById } from './estado.mjs';
-import { clubeEuropeu, nomeLigaEuropa } from './europa.mjs';
+import { clubeEuropeu, ehEuropaDoMercado, nomeLigaEuropa } from './europa.mjs';
 import { atribuirPosicoes } from './posicoes.mjs';
 import { hashStr } from './utils.mjs';
 
@@ -13,8 +13,8 @@ import { hashStr } from './utils.mjs';
    brasileiros: movePlayer tira do elenco estrangeiro e põe no brasileiro, e o empréstimo volta ao clube de origem. */
 /** Clube do jogo, estrangeiro das copas ou europeu (#355) (para nome, escudo e elenco), ou null. */
 export const clubeDe = id => clubById(id) || (S.continentais && S.continentais.estrangeiros[id]) || clubeEuropeu(id) || null;
-/** O clube é estrangeiro (das copas ou europeu, #355)? divOf devolve 'A' para quem não tem série, então o que vale é o campo torneio ou pais. */
-export const ehEstrangeiro = c => !!(c && (c.torneio || c.pais));
+/** Clube que só participa do mercado da campanha. */
+export const ehEstrangeiro = c => !!c?.torneio || ehEuropaDoMercado(c);
 export const todosEstrangeiros = () => (S.continentais ? Object.values(S.continentais.estrangeiros) : []);
 /** Nome da competição do clube estrangeiro ("Libertadores" ou "Sul-Americana"). */
 export const competicaoDe = c => (c.torneio === 'libertadores' ? 'Libertadores' : c.torneio === 'sulamericana' ? 'Sul-Americana' : c.pais ? nomeLigaEuropa(c.liga) : '');

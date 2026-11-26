@@ -5,6 +5,7 @@
    o estado já em S e deve deixar o save no formato novo; VERSAO_SAVE acompanha sozinho. Saves sem versão rodam todas,
    por isso cada uma confere se o campo já existe (vários saves antigos já tinham parte das mudanças). */
 import { garantirBase, migrarBase } from './base.mjs';
+import { BRASIL } from './campeonatos.mjs';
 import { adicionarTitulo, abrirPassagem, fecharPassagem, garantirCarreira, gerarPropostas } from './carreira.mjs';
 import { migrarContratos } from './contratos.mjs';
 import { COPA } from './copa.mjs';
@@ -80,6 +81,7 @@ const MIGRACOES = [
   migrarValoresDeMercado, // 18: valor de mercado sem desconto pelo prazo do contrato (#350)
   s => { for (const c of s.clubs) if (c.balance == null) c.balance = startBalance(divOf(c), c.strength) }, // 19: caixa dos clubes da IA em saves de antes da #28 (#373)
   () => { for (const t of tecnicos()) if (!t.demitido) garantirBase(clubDo(t)) }, // 20: base de quem assumiu um clube no meio da temporada (#414)
+  s => { s.pais ??= BRASIL }, // 21: país da campanha (#443)
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 

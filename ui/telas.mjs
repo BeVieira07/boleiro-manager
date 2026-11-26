@@ -4,8 +4,9 @@ import { vCarreira } from './clube/diretoria.mjs';
 import { vConfig } from './inicio/configuracoes.mjs';
 import { wageBill } from '../core/emprestimos.mjs';
 import { escalarMelhores } from '../core/escalacao.mjs';
-import { DIVS, MOVE_N, S, clubById, divOf, divisions, hasTwoDivs, reindex, table, tec, tvQuota, userClub } from '../core/estado.mjs';
+import { DIVS, S, clubById, divOf, divisions, hasTwoDivs, jogaNoBrasil, reindex, rodadasDaDivisao, table, tec, tvQuota, userClub, zonasDaDivisao } from '../core/estado.mjs';
 import { definirBaseEuropa, europaCarregada } from '../core/europa.mjs';
+import { fasePlayoff, jogosDaRodada, penaltiPlayoff } from '../core/playoffs.mjs';
 import { clamp, esc, money } from '../core/utils.mjs';
 import { formaRecente, vClube } from './clube/clube.mjs';
 import { proximoCompromisso, telaDeCompeticao, vCompeticoes, verCompeticao } from './temporada/competicoes.mjs';
@@ -25,7 +26,7 @@ import { vLigas, vLobby } from './liga/liga.mjs';
 import { bloqueadoNaLiga, vLigaJogo } from './liga/ligajogo.mjs';
 import { vMercado } from './clube/mercado.mjs';
 import { botaoRodada } from './temporada/motor.mjs';
-import { crest, newSeason, seasonEnd } from './partida/partida.mjs';
+import { crest, detalhePenaltis, newSeason, seasonEnd } from './partida/partida.mjs';
 import { vMenu } from './inicio/saves.mjs';
 import { vLanding } from './inicio/landing.mjs';
 import { vTecnico } from './clube/tecnico.mjs';
@@ -90,9 +91,12 @@ export function autoLineup(){escalarMelhores();save();render()}
 export function jogoCard(g,me){
   const H=clubById(g.h),A=clubById(g.a),meu=me&&(g.h===me||g.a===me),feito=g.hg!=null;
   const v=(gp,gc)=>feito?(gp>gc?'venceu':gp<gc?'perdeu':''):'';
+  const pen=g.playoff&&feito?detalhePenaltis(penaltiPlayoff(g),H,A):'';
+  const agregado=feito&&g.agregado&&!g.neutro?`Agregado: ${g.agregado.h+g.hg} x ${g.agregado.a+g.ag}`:'';
+  const detalhe=[agregado,pen].filter(Boolean).join(' · ');
   return `<li class="jogo${meu?' meu':''}"><span class="jogo-time casa ${v(g.hg,g.ag)}"><span>${esc(H.name)}</span> ${crest(H)}</span>
     <span class="jogo-placar">${feito?`${g.hg}<span aria-hidden="true"> x </span><span class="sr"> a </span>${g.ag}`:'<span class="muted">x</span>'}</span>
-    <span class="jogo-time fora ${v(g.ag,g.hg)}">${crest(A)} <span>${esc(A.name)}</span></span></li>`;
+    <span class="jogo-time fora ${v(g.ag,g.hg)}">${crest(A)} <span>${esc(A.name)}</span></span>${detalhe?`<span class="jogo-detalhe">${detalhe}</span>`:''}</li>`;
 }
 export const listaJogos=(gs,me)=>gs.length?`<ul class="jogos">${[...gs].sort((a,b)=>(b.h===me||b.a===me)-(a.h===me||a.a===me)).map(g=>jogoCard(g,me)).join('')}</ul>`:'<p class="muted">Nenhum jogo nesta série.</p>';
 function cartaoProximoJogo() {
@@ -100,7 +104,7 @@ function cartaoProximoJogo() {
   if (!p) return '<section class="card figma-jogo-seguinte"><h2 class="t3">Próximo jogo do clube</h2><p class="muted">Nenhum jogo agendado.</p></section>';
   const H = clubeCont(p.h), A = clubeCont(p.a);
   return `<section class="card figma-jogo-seguinte"><div class="card-topo">
-    <h2 class="t3">Próximo jogo do clube</h2><span class="pill">Rodada ${p.n} · ${esc(p.nome)}${p.perna ? ' · ' + esc(p.perna) : ''}</span></div>
+    <h2 class="t3">Próximo jogo do clube</h2><span class="pill">${p.fase ? esc(p.fase) : 'Rodada ' + p.n} · ${esc(p.nome)}${p.perna ? ' · ' + esc(p.perna) : ''}</span></div>
     <div class="figma-confronto"><span class="club">${crest(H, 'm')} ${esc(H.name)}</span>
     <span class="figma-versus" aria-hidden="true">×</span><span class="sr">contra</span>
     <span class="club">${crest(A, 'm')} ${esc(A.name)}</span></div></section>`;
@@ -112,27 +116,31 @@ export function vJogos(){
   if (!n) return `<div class="figma-jogos">${r === 0 ? proximoEstadual() : ''}${cartaoProximoJogo()}</div>`;
   return `<div class="figma-jogos"><div class="figma-rodada-controles"><nav class="navega-rodada" aria-label="Rodadas">
     <button class="btn sec icone-so" data-acao="verRodadaJogos|${Math.max(0,r-1)}" aria-label="Rodada anterior"${r===0?' disabled':''}>${icone('voltar')}</button>
-    <b>Rodada ${r+1} <span class="muted">de ${n}</span></b>${r<S.round?tag('encerrada','ok'):r===S.round?tag('próxima','aviso'):''}
+    <b>${fasePlayoff(r)||`Rodada ${r+1} <span class="muted">de ${n}</span>`}</b>${r<S.round?tag('encerrada','ok'):r===S.round?tag('próxima','aviso'):''}
     <button class="btn sec icone-so" data-acao="verRodadaJogos|${Math.min(n-1,r+1)}" aria-label="Próxima rodada"${r>=n-1?' disabled':''}>${icone('seguir')}</button>
     ${r!==atual?`<button class="btn fantasma sm" data-acao="verRodadaJogos|${atual}">Ir para a rodada atual</button>`:''}</nav>${divTabs()}</div>
-  ${r===0?proximoEstadual():''}${listaJogos(S.fixtures[r].filter(g=>inDiv(g,d)),tec().clubId)}${jogosCopa(r)}${jogosContinentais(r)}${cartaoProximoJogo()}</div>`;
+  ${r===0?proximoEstadual():''}${listaJogos(jogosDaRodada(r).filter(g=>inDiv(g,d)),tec().clubId)}${jogosCopa(r)}${jogosContinentais(r)}${cartaoProximoJogo()}</div>`;
 }
 export function vRodada(){
   if(!ui.lastRound)return vClube();
   const me=tec().clubId,d=curDiv(),pre=ui.lastRound.pre!=null; // pre: data do estadual na pré-temporada (#132)
-  return `${pre?`<p class="muted">Data ${ui.lastRound.pre+1} da pré-temporada encerrada.</p>${jogosEstadual(ui.lastRound.pre)}`:`<p class="muted">Rodada ${ui.lastRound.round} encerrada.</p>${divTabs()}${listaJogos(ui.lastRound.games.filter(g=>inDiv(g,d)),me)}${jogosCopa(ui.lastRound.round-1)}${jogosContinentais(ui.lastRound.round-1)}`}
+  const fase=fasePlayoff(ui.lastRound.round-1);
+  return `${pre?`<p class="muted">Data ${ui.lastRound.pre+1} da pré-temporada encerrada.</p>${jogosEstadual(ui.lastRound.pre)}`:`<p class="muted">${fase?`Resultados · ${fase}`:`Rodada ${ui.lastRound.round} encerrada.`}</p>${fase?'':divTabs()}${listaJogos(fase?ui.lastRound.games:ui.lastRound.games.filter(g=>inDiv(g,d)),me)}${jogosCopa(ui.lastRound.round-1)}${jogosContinentais(ui.lastRound.round-1)}`}
   <div class="row" style="margin-top:var(--e4)">${S.round<S.fixtures.length?botaoRodada('btn big',`${icone('play',{tam:16})}Jogar ${rotuloRodada()}`):''}<button class="btn sec" data-acao="go|tabela">Ver classificação</button><button class="btn sec" data-acao="go|clube">Painel do clube</button></div>`;
 }
 
 /* ---------- classificação e artilharia ---------- */
 // zonas da classificação de uma série: G (Libertadores ou acesso) e Z (rebaixamento)
 export function zonas(d){
-  const two=hasTwoDivs(),mv=two?MOVE_N():4,ds=divisions(),di=ds.indexOf(d),last=di===ds.length-1,top=di===0?6:mv,bottom=!two?4:last?0:mv;
-  return {top,bottom,nomeTop:di===0?'Libertadores (G6)':`Acesso à ${DIVS[ds[di-1]]} (G${mv})`,nomeBottom:bottom?`Rebaixamento${two?' para a '+DIVS[ds[di+1]]:''} (Z${bottom})`:''};
+  const {acima,abaixo,acessoDireto,rebaixamento:bottom,playoffAte}=zonasDaDivisao(d), brasil=jogaNoBrasil();
+  const top=!acima&&brasil?6:acessoDireto;
+  const nomeTop=top?acima?`Acesso à ${DIVS[acima]} (G${top})`:'Libertadores (G6)':'';
+  return {top,bottom,playoffAte,nomeTop,nomeBottom:bottom?`Rebaixamento${abaixo?' para a '+DIVS[abaixo]:''} (Z${bottom})`:''};
 }
 export function legendaLiga(d) {
-  const { bottom, nomeTop, nomeBottom } = zonas(d);
-  return `<div class="legenda"><span><i class="zona-cor lib" aria-hidden="true"></i>${esc(nomeTop)}</span>
+  const { top, bottom, nomeTop, nomeBottom, playoffAte } = zonas(d);
+  return `<div class="legenda">${nomeTop?`<span><i class="zona-cor lib" aria-hidden="true"></i>${esc(nomeTop)}</span>`:''}
+    ${playoffAte?`<span>Mata-mata de acesso (${top + 1}º ao ${playoffAte}º)</span>`:''}
     ${bottom ? `<span><i class="zona-cor z4" aria-hidden="true"></i>${esc(nomeBottom)}</span>` : ''}</div>`;
 }
 
@@ -143,8 +151,9 @@ function formaNaTabela(id) {
 }
 
 export function tabelaLiga(d, me) {
-  const T = table(d), { top, bottom, nomeTop, nomeBottom } = zonas(d), total = S.fixtures.length;
-  const zona = i => i < top ? ['zona-lib', nomeTop] : bottom && i >= T.length - bottom ? ['zona-z4', nomeBottom] : ['', ''];
+  const T = table(d), { top, bottom, nomeTop, nomeBottom, playoffAte } = zonas(d), total = rodadasDaDivisao(d);
+  const zona = i => i < top ? ['zona-lib', nomeTop] : i < playoffAte ? ['', 'Mata-mata de acesso']
+    : bottom && i >= T.length - bottom ? ['zona-z4', nomeBottom] : ['', ''];
   const rodada = total ? `Rodada ${Math.min(S.round + 1, total)} de ${total}` : 'Sem jogos agendados';
   const colunas = ['V', 'E', 'D', 'GP', 'GC'];
   return `<section class="card tabela-card figma-tabela-liga" aria-labelledby="titulo-classificacao">
@@ -157,7 +166,7 @@ export function tabelaLiga(d, me) {
     <th scope="col" class="n">SG</th><th scope="col" class="n figma-estat-extra">Últimos 5</th></tr></thead>
     <tbody>${T.map((t, i) => {
       const c = clubById(t.id), [z, nz] = zona(i);
-      return `<tr class="${t.id === me ? 'me' : ''}"><td class="${z}"${nz ? ` title="${esc(nz)}"` : ''}>${i + 1}${nz ? `<span class="sr"> (${esc(nz)})</span>` : ''}</td>
+      return `<tr class="${t.id === me ? 'me' : ''}"><td class="${z}"${nz ? ` title="${esc(nz)}"` : ''}>${i + 1}${nz ? `<span class="sr"> (${esc(nz)})</span>` : ''}${i >= top && i < playoffAte ? ' <span aria-hidden="true">·</span>' : ''}</td>
       <th scope="row"><span class="club">${crest(c)} ${esc(c.name)}</span></th><td class="n"><b>${t.Pts}</b></td><td class="n">${t.J}</td>
       ${colunas.map(k => `<td class="n figma-estat-extra">${t[k]}</td>`).join('')}
       <td class="n">${t.GP - t.GC}</td><td class="n figma-estat-extra">${formaNaTabela(t.id)}</td></tr>`;

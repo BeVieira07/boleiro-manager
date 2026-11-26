@@ -1,4 +1,4 @@
-import { S, contarJogo, divOf, linhaDaTabela, ordenarTabela } from './estado.mjs';
+import { S, contarJogo, divOf, linhaDaTabela, ordenarTabela, rodadasDaDivisao } from './estado.mjs';
 import { hashStr, mulberry32 } from './utils.mjs';
 
 /* ================= o campeonato inteiro no mesmo relógio (#135) =================
@@ -14,8 +14,9 @@ export function placarNoMinuto(g, min) {
 export function tabelaNoMinuto(div, rodada, jogos, min) {
   const T = {};
   for (const c of S.clubs) if (divOf(c) === div) T[c.id] = linhaDaTabela(c.id);
-  for (let r = 0; r < rodada; r++) for (const g of S.fixtures[r]) if (g.hg != null) contarJogo(T, g.h, g.a, g.hg, g.ag);
-  for (const g of jogos) { const p = placarNoMinuto(g, min); contarJogo(T, g.h, g.a, p.h, p.a) }
+  const total = rodadasDaDivisao(div);
+  for (let r = 0; r < Math.min(rodada, total); r++) for (const g of S.fixtures[r]) if (g.hg != null) contarJogo(T, g.h, g.a, g.hg, g.ag);
+  if (rodada < total) for (const g of jogos) { const p = placarNoMinuto(g, min); contarJogo(T, g.h, g.a, p.h, p.a) }
   return ordenarTabela(T);
 }
 

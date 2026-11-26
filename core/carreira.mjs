@@ -16,7 +16,9 @@
      do clube mais fraco da série mais baixa. */
 import { garantirBase } from './base.mjs';
 import { CONF_INICIO, definirMeta, metaDe } from './diretoria.mjs';
-import { DIVS, MOVE_N, S, addNewsTodos, clubById, clubDo, divOf, divisions, hasTwoDivs, table, tec, tecDoClube, tecnicos } from './estado.mjs';
+import { DIVS, S, addNewsTodos, clubById, clubDo, divOf, divisions, table, tec, tecDoClube, tecnicos, zonasDaDivisao } from './estado.mjs';
+import { serieBase } from './campeonatos.mjs';
+import { promovidoNoPlayoff } from './playoffs.mjs';
 import { autoXI } from './motor.mjs';
 import { clamp, rnd } from './utils.mjs';
 
@@ -55,7 +57,7 @@ export function registrarTitulo(comp, nome, clube) {
 /** Reputação de 0 a 100: série do clube, campanha contra a meta, temporadas anteriores e o motivo da saída. */
 export function reputacao(t, motivo = t.saida) {
   const uc = clubDo(t);
-  let r = BASE_SERIE[divOf(uc)] ?? 30;
+  let r = BASE_SERIE[serieBase(divOf(uc))] ?? 30;
   r += clamp(campanha(t).dif * 3, -25, 25); // campanha contra a meta
   r += clamp((t.historico || []).reduce((s, h) => s + (h.pos === 1 ? 8 : h.pos <= h.alvo ? 3 : -2), 0), -10, 20);
   if (motivo === 'demitido' || campanha(t).dif < 0) r -= 10; // pedir demissão indo mal pesa como ser demitido (#271)
@@ -70,10 +72,10 @@ const clubesDa = d => S.clubs.filter(c => divOf(c) === d);
 const posPelaForca = c => 1 + clubesDa(divOf(c)).filter(o => o.strength > c.strength).length;
 /** Campanha atual no clube do técnico: posição, diferença para a meta (positiva = acima) e se está no acesso ou no título. */
 export function campanha(t) {
-  const c = clubDo(t), d = divOf(c), i = divisions().indexOf(d);
+  const c = clubDo(t), d = divOf(c);
   if (!(S.round > 0 && t.meta)) return { pos: null, dif: 0, sobe: false };
-  const pos = posNaTabela(c), mv = hasTwoDivs() ? MOVE_N() : 4;
-  return { pos, dif: t.meta.alvo - pos, sobe: pos === 1 || (i > 0 && pos <= mv) };
+  const pos = posNaTabela(c), { acessoDireto } = zonasDaDivisao(d);
+  return { pos, dif: t.meta.alvo - pos, sobe: pos === 1 || pos <= acessoDireto || promovidoNoPlayoff(d) === c.id };
 }
 // posição de cada clube na tabela da série dele, calculada uma vez por sorteio
 const posicoes = () => new Map(divisions().flatMap(d => table(d).map((x, k) => [x.id, k + 1])));
@@ -87,7 +89,8 @@ export function nivelDe(c, soForca = false, pos = null) {
 /** Teto de nível das propostas (#271): o melhor nível de clube que a campanha e o histórico do técnico justificam. */
 export function tetoDeNivel(t) {
   const c = clubDo(t), d = divOf(c), i = divisions().indexOf(d), n = clubesDa(d).length;
-  const mv = hasTwoDivs() ? MOVE_N() : 4, base = nivelDe(c, true), camp = campanha(t);
+  const { acessoDireto, rebaixamento } = zonasDaDivisao(d);
+  const mv = acessoDireto || rebaixamento, base = nivelDe(c, true), camp = campanha(t);
   let pos = 2; // folga: nível parecido
   pos += camp.dif < 0 ? camp.dif * 1.5 : camp.pos ? Math.min(6, 1 + camp.dif) : 0;
   pos += clamp((t.historico || []).reduce((s, h) => s + (h.pos === 1 ? 2 : h.pos <= h.alvo ? 0.6 : -1), 0), -3, 2);

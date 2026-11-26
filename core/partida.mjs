@@ -8,46 +8,63 @@ import { criarEstaduais } from './estadual.mjs';
 import { todosEstrangeiros } from './estrangeiros.mjs';
 import { fakePlayer, forcaDoElenco, refreshEconomics } from './dados.mjs';
 import { confiancaFimTemporada, confiancaNovaTemporada } from './diretoria.mjs';
-import { DIVS, MOVE_N, P, S, addFin, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, hasTwoDivs, makeAllFixtures, reindex, seasonPrize, table, tecnicos, topScorers, userClub } from './estado.mjs';
+import { DIVS, MOVE_N, P, S, addFin, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, hasTwoDivs, jogaNoBrasil, makeAllFixtures, reindex, seasonPrize, table, tecnicos, topScorers, zonasDaDivisao } from './estado.mjs';
 import { autoXI, concluirRodadaCopa, getXI } from './motor.mjs';
 import { POSD } from './posicoes.mjs';
 import { clamp, ri, rnd } from './utils.mjs';
 import { limparEventosAntigos } from './aovivo.mjs';
 import { aplicarFormaPendente } from './forma.mjs';
 import { processLoans } from './emprestimos.mjs';
+import { concluirDataPlayoff, promovidoNoPlayoff } from './playoffs.mjs';
 
 /* ================= fim de temporada ================= */
 // regra: fecha a temporada (premiação, histórico, diretoria). Devolve o resumo, ou null se já foi fechada.
 export function fecharTemporada(){
-  if(S.seasonClosed===S.season)return null;
+  if(S.seasonClosed===S.season||!jogaNoBrasil()&&S.round<S.fixtures.length)return null;
   concluirRodadaCopa();
+  concluirDataPlayoff(S.round-1);
   aplicarFormaPendente(); // a última rodada (#44)
   limparEventosAntigos(S.fixtures.length); // #195
-  const two=hasTwoDivs(),mv=MOVE_N(),ds=divisions(),res={};
+  const two=hasTwoDivs(),ds=divisions(),res={};
+  const mv=jogaNoBrasil()?MOVE_N():zonasDaDivisao(ds[0]).rebaixamento;
   const ativos=tecnicos().filter(t=>!t.demitido);
   for(const t of ativos){ // premiação e diretoria de cada técnico
     const uc=clubDo(t),dv=divOf(uc),Tb=table(dv),ps=Tb.findIndex(x=>x.id===uc.id)+1,pr=seasonPrize(dv,ps);
     addFin(`Premiação ${DIVS[dv]} — ${ps}º lugar`,pr,uc);res[t.id]={div:dv,T:Tb,pos:ps,prize:pr};
   }
   const {div=null,T=[],pos=null,prize=0}=res[S.atual]||{},di=ds.indexOf(div);
+  const meu=ativos.find(t=>t.id===S.atual)?.clubId;
+  const mov=mudancasDeDivisao().find(m=>m.up.includes(meu)||m.down.includes(meu));
+  const destino=mov?(mov.up.includes(meu)?mov.hi:mov.lo):null;
   const champs=divisions().map(d=>({d,c:clubById(table(d)[0].id)}));
   const top=topScorers(1,divisions()[0])[0];
   S.history.unshift({season:S.season,champ:champs[0].c.name,champs:Object.fromEntries(champs.map(x=>[x.d,x.c.name])),me:pos,div,tecnicos:Object.fromEntries(Object.entries(res).map(([k,v])=>[k,{pos:v.pos,div:v.div}])),scorer:top?`${top.name} (${top.goals})`:'-',...(S.copa&&S.copa.campeao?{copa:clubById(S.copa.campeao).name}:{})});
   for(const {d,c} of champs)registrarTitulo('serie',DIVS[d],c.id);
   for(const t of ativos)confiancaFimTemporada(t,res[t.id].pos);S.seasonClosed=S.season;
-  return {div,T,pos,two,mv,prize,ds,di,champs,top};
+  return {div,T,pos,two,mv,prize,ds,di,champs,top,destino};
+}
+// Calcula todos os movimentos antes de mudar a divisão dos clubes.
+function mudancasDeDivisao(){
+  const ds=divisions();
+  return ds.slice(0,-1).map((hi,i)=>{
+    const lo=ds[i+1], {rebaixamento}=zonasDaDivisao(hi), {acessoDireto}=zonasDaDivisao(lo);
+    const down=rebaixamento?table(hi).slice(-rebaixamento).map(t=>t.id):[];
+    const up=table(lo).slice(0,acessoDireto).map(t=>t.id), vencedor=promovidoNoPlayoff(lo);
+    if(vencedor)up.push(vencedor);
+    return {hi,lo,down,up};
+  });
 }
 // regra: começa a temporada seguinte (acesso/rebaixamento, fim de contratos, idade, aposentadoria, calendário)
 export function iniciarTemporada(){
-  const vagas=vagasBrasileiras(); // #133: pela Série A que acabou, antes do acesso e do rebaixamento
-  if(hasTwoDivs()){ // acesso e rebaixamento entre séries vizinhas, com base nas tabelas finais
-    const ds=divisions(),n=MOVE_N(),moves=[];
-    for(let i=0;i<ds.length-1;i++)moves.push({hi:ds[i],lo:ds[i+1],down:table(ds[i]).slice(-n).map(t=>clubById(t.id)),up:table(ds[i+1]).slice(0,n).map(t=>clubById(t.id))});
-    for(const m of moves){ // aplica só depois de calcular todas as tabelas
-      m.down.forEach(c=>c.division=m.lo);m.up.forEach(c=>c.division=m.hi);
-      addNewsTodos(`⬆️ Sobem para a ${DIVS[m.hi]}: ${m.up.map(c=>c.name).join(', ')}.`);
-      addNewsTodos(`⬇️ Caem para a ${DIVS[m.lo]}: ${m.down.map(c=>c.name).join(', ')}.`);
-    }
+  const brasil=jogaNoBrasil();
+  if(!brasil&&S.round<S.fixtures.length)return;
+  if(!brasil)fecharTemporada();
+  const vagas=brasil?vagasBrasileiras():null; // #133: pela Série A que acabou, antes do acesso e do rebaixamento
+  for(const {hi,lo,up,down} of mudancasDeDivisao()){
+    const subir=up.map(clubById), cair=down.map(clubById);
+    subir.forEach(c=>c.division=hi);cair.forEach(c=>c.division=lo);
+    addNewsTodos(`⬆️ Sobem para a ${DIVS[hi]}: ${subir.map(c=>c.name).join(', ')}.`);
+    addNewsTodos(`⬇️ Caem para a ${DIVS[lo]}: ${cair.map(c=>c.name).join(', ')}.`);
   }
   vencerContratos(); // #49: antes da idade; o elenco que ficar pequeno é completado logo abaixo (ensureSquad)
   for(const c of S.clubs){
@@ -65,8 +82,8 @@ export function iniciarTemporada(){
   virarBase(); // #50: a base dos clubes com técnico
   ferias(); // #136: energia cheia na nova temporada
   for(const c of S.clubs)c.strength=forcaDoElenco(c); // #374: meta, bilheteria e Copa pela força do elenco de agora, não a do jogo novo
-  S.season++;S.round=0;S.fixtures=makeAllFixtures(S.clubs);
-  reindex();criarCopa();criarEstaduais();criarContinentais(vagas);
+  S.season++;S.round=0;S.fixtures=makeAllFixtures(S.clubs,S.pais);
+  reindex();if(brasil){criarCopa();criarEstaduais();criarContinentais(vagas)}
   processLoans(); // #142: empréstimo de 1 ano feito na rodada 0 volta agora
   for(const c of [...S.clubs,...todosEstrangeiros()])for(const p of [...c.players,...(c.base||[])])p.amar=0;
   for(const t of tecnicos().filter(t=>!t.demitido)){t.offers=[];confiancaNovaTemporada(t);const uc=clubDo(t);uc.lineup=getXI(uc);if(uc.lineup.length<11)uc.lineup=autoXI(uc)}

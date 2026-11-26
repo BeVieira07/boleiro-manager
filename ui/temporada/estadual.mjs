@@ -1,11 +1,12 @@
 /* ================= Estaduais na tela (#132): cartão, tela do torneio e jogos da pré-temporada ================= */
 import { agregadoFinal, emPreTemporada, estadualPelaFrente, jogosDaData, nomeData, premioEstadual, tabelaGrupo, torneioDe } from '../../core/estadual.mjs';
 import { S, clubById, divOf, tec } from '../../core/estado.mjs';
+import { fasePlayoff } from '../../core/playoffs.mjs';
 import { esc, money } from '../../core/utils.mjs';
 import { crest, detalhePenaltis } from '../partida/partida.mjs';
 
-/** O que o botão da rodada joga agora: 'estadual' na pré-temporada com jogo de técnico pela frente, senão 'rodada N'. */
-export const rotuloRodada = () => estadualPelaFrente() ? 'estadual' : `rodada ${S.round + 1}`;
+/** Próxima data que o botão de jogar avança. */
+export const rotuloRodada = () => estadualPelaFrente() ? 'estadual' : fasePlayoff(S.round)?.toLowerCase() ?? `rodada ${S.round + 1}`;
 
 function jogo(g, me) {
   const H = clubById(g.h), A = clubById(g.a), meu = g.h === me || g.a === me, feito = g.hg != null;
