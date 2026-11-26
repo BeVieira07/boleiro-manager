@@ -35,7 +35,7 @@ export function metaDe(uc,clubes=S.clubs){
   const d=divOf(uc),concorrentes=clubes.filter(c=>divOf(c)===d),n=concorrentes.length;
   // posição esperada pela força; no empate, desempata pelo id (#441: com vários empatados no topo, ninguém ficava com a meta de acesso)
   const esp=1+concorrentes.filter(c=>c.strength>uc.strength||(c.strength===uc.strength&&c.id<uc.id)).length;
-  const {acima,acessoDireto,rebaixamento:bottom,playoffAte}=zonasDaDivisao(d,clubes);
+  const {acima,acessoDireto,rebaixamento,playoffAte,repescagem}=zonasDaDivisao(d,clubes);
   const metas=regraLiga(d)?.metas;
   if(metas){
     if(esp<=metas.titulo.ate)return {texto:'Lutar pelo título',alvo:metas.titulo.alvo};
@@ -43,12 +43,12 @@ export function metaDe(uc,clubes=S.clubs){
     if(esp<=acessoDireto)return {texto:`Acesso direto à ${DIVS[acima]}`,alvo:acessoDireto};
     if(esp<=playoffAte)return {texto:'Chegar ao mata-mata do acesso',alvo:playoffAte};
   }else{
-    if(playoffAte && esp>2 && esp<=playoffAte)return {texto:'Chegar ao mata-mata do acesso',alvo:playoffAte};
     if(esp<=2)return {texto:'Lutar pelo título',alvo:3};
     if(d==='A'&&esp<=6)return {texto:'Vaga na Libertadores',alvo:6}; // #382
     if(esp<=acessoDireto)return {texto:`Acesso à ${DIVS[acima]}`,alvo:acessoDireto};
   }
-  if(bottom&&esp>n-bottom)return {texto:'Evitar o rebaixamento',alvo:n-bottom};
+  const salvo=repescagem?repescagem-1:n-rebaixamento;
+  if(esp>salvo)return {texto:'Evitar o rebaixamento',alvo:salvo};
   return {texto:'Terminar no meio da tabela',alvo:Math.min(n,esp+1)};
 }
 export function definirMeta(t=tec()){t.meta=metaDe(clubDo(t))}

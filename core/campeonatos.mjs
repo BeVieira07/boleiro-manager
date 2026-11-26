@@ -7,7 +7,7 @@ export const BRASIL = 'Brasil';
    volta, com a volta na casa do melhor. Empate: pênaltis, ou o melhor colocado passa com `empate: 'melhor'`. */
 const SEMI = (pernas = 2) => ({ nome: 'Semifinal', pernas, jogos: [[3, 6], [4, 5]] });
 
-// shortcut: valores da Série A/B, calibrar na #449
+// Valores monetários em milhões de reais. Calibração em docs/premiacoes.md.
 export const CAMPEONATOS = {
   Inglaterra: {
     GB1: {
@@ -31,36 +31,99 @@ export const CAMPEONATOS = {
     }
   },
   Espanha: {
-    ES1: { nome: 'LaLiga', clubes: 20, serieBase: 'A', rebaixamento: 3 },
-    ES2: { nome: 'LaLiga 2', clubes: 22, serieBase: 'B', acessoDireto: 2,
-      playoff: { fases: [SEMI(), { nome: 'Final', pernas: 2, jogos: [['v1', 'v2']] }] } }
+    ES1: {
+      nome: 'LaLiga', clubes: 20, rebaixamento: 3, reputacaoBase: 62,
+      economia: {
+        tv: 1.50, premioPorCota: 0.40, forcaReferencia: 77,
+        bilheteria: { base: 1.15, porPonto: 0.27, piso: 0.42 },
+        caixaInicial: { base: 45, porPonto: 6, piso: 21 }
+      },
+      metas: { titulo: { ate: 2, alvo: 3 }, vagaEuropeia: 4 }
+    },
+    ES2: {
+      nome: 'LaLiga 2', clubes: 22, acessoDireto: 2, reputacaoBase: 42,
+      playoff: { fases: [SEMI(), { nome: 'Final', pernas: 2, jogos: [['v1', 'v2']] }] },
+      economia: {
+        tv: 0.69, premioPorCota: 0.08, forcaReferencia: 71,
+        bilheteria: { base: 0.35, porPonto: 0.085, piso: 0.16 },
+        caixaInicial: { base: 21, porPonto: 2.5, piso: 8 }
+      },
+      metas: { titulo: { ate: 1, alvo: 1 } }
+    }
   },
   Itália: {
-    IT1: { nome: 'Serie A', clubes: 20, serieBase: 'A', rebaixamento: 3 },
-    IT2: { nome: 'Serie B', clubes: 20, serieBase: 'B', acessoDireto: 2,
+    IT1: {
+      nome: 'Serie A', clubes: 20, rebaixamento: 3, reputacaoBase: 60,
+      economia: {
+        tv: 1.34, premioPorCota: 0.36, forcaReferencia: 77,
+        bilheteria: { base: 0.87, porPonto: 0.23, piso: 0.33 },
+        caixaInicial: { base: 41, porPonto: 5.5, piso: 19 }
+      },
+      metas: { titulo: { ate: 2, alvo: 3 }, vagaEuropeia: 4 }
+    },
+    IT2: {
+      nome: 'Serie B', clubes: 20, acessoDireto: 2, reputacaoBase: 40,
       playoff: { empate: 'melhor', fases: [
         { nome: 'Fase preliminar', pernas: 1, jogos: [[5, 8], [6, 7]] },
         { nome: 'Semifinal', pernas: 2, jogos: [[3, 'vPior'], [4, 'vMelhor']] },
-        { nome: 'Final', pernas: 2, jogos: [['v1', 'v2']] }] } }
+        { nome: 'Final', pernas: 2, jogos: [['v1', 'v2']] }] },
+      economia: {
+        tv: 0.68, premioPorCota: 0.07, forcaReferencia: 70,
+        bilheteria: { base: 0.28, porPonto: 0.07, piso: 0.13 },
+        caixaInicial: { base: 20, porPonto: 2.3, piso: 8 }
+      },
+      metas: { titulo: { ate: 1, alvo: 1 } }
+    }
   },
   França: {
-    FR1: { nome: 'Ligue 1', clubes: 18, serieBase: 'A', rebaixamento: 2 },
-    FR2: { nome: 'Ligue 2', clubes: 18, serieBase: 'B', acessoDireto: 2,
+    FR1: {
+      nome: 'Ligue 1', clubes: 18, rebaixamento: 2, reputacaoBase: 55,
+      economia: {
+        tv: 1.02, premioPorCota: 0.27, forcaReferencia: 75,
+        bilheteria: { base: 0.68, porPonto: 0.19, piso: 0.26 },
+        caixaInicial: { base: 34, porPonto: 4.5, piso: 15 }
+      },
+      metas: { titulo: { ate: 2, alvo: 3 }, vagaEuropeia: 4 }
+    },
+    FR2: {
+      nome: 'Ligue 2', clubes: 18, acessoDireto: 2, reputacaoBase: 36,
       playoff: { fases: [
         { nome: 'Mata-mata (1ª fase)', pernas: 1, jogos: [[4, 5]] },
         { nome: 'Mata-mata (2ª fase)', pernas: 1, jogos: [[3, 'v1']] },
-        { nome: 'Repescagem', pernas: 2, jogos: [[{ acima: 16 }, 'v1']] }] } }
+        { nome: 'Repescagem', pernas: 2, jogos: [[{ acima: 16 }, 'v1']] }] },
+      economia: {
+        tv: 0.39, premioPorCota: 0.05, forcaReferencia: 67,
+        bilheteria: { base: 0.22, porPonto: 0.045, piso: 0.10 },
+        caixaInicial: { base: 13, porPonto: 1.5, piso: 5 }
+      },
+      metas: { titulo: { ate: 1, alvo: 1 } }
+    }
   },
   Portugal: {
-    PO1: { nome: 'Liga Portugal', clubes: 18, serieBase: 'A', rebaixamento: 2 },
-    PO2: { nome: 'Liga Portugal 2', clubes: 18, serieBase: 'B', acessoDireto: 2,
-      playoff: { fases: [{ nome: 'Repescagem', pernas: 2, jogos: [[{ acima: 16 }, 3]] }] } }
+    PO1: {
+      nome: 'Liga Portugal', clubes: 18, rebaixamento: 2, reputacaoBase: 50,
+      economia: {
+        tv: 0.58, premioPorCota: 0.16, forcaReferencia: 70,
+        bilheteria: { base: 0.44, porPonto: 0.12, piso: 0.17 },
+        caixaInicial: { base: 20, porPonto: 3, piso: 9 }
+      },
+      metas: { titulo: { ate: 2, alvo: 3 }, vagaEuropeia: 3 }
+    },
+    PO2: {
+      nome: 'Liga Portugal 2', clubes: 18, acessoDireto: 2, reputacaoBase: 32,
+      playoff: { fases: [{ nome: 'Repescagem', pernas: 2, jogos: [[{ acima: 16 }, 3]] }] },
+      economia: {
+        tv: 0.28, premioPorCota: 0.04, forcaReferencia: 62,
+        bilheteria: { base: 0.12, porPonto: 0.025, piso: 0.05 },
+        caixaInicial: { base: 8.5, porPonto: 0.9, piso: 3.5 }
+      },
+      metas: { titulo: { ate: 1, alvo: 1 } }
+    }
   }
 };
 
 const ligas = Object.assign({}, ...Object.values(CAMPEONATOS));
 export const regraLiga = div => ligas[div];
-export const serieBase = div => regraLiga(div)?.serieBase ?? div;
 
 export function regraPlayoff(pais) {
   for (const [div, regra] of Object.entries(CAMPEONATOS[pais] || {})) {

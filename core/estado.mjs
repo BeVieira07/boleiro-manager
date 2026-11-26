@@ -1,5 +1,5 @@
 import { criarBases, darPotencial } from './base.mjs';
-import { BRASIL, CAMPEONATOS, datasPlayoff, playoffAte, regraLiga, repescagemDe, serieBase } from './campeonatos.mjs';
+import { BRASIL, CAMPEONATOS, datasPlayoff, playoffAte, regraLiga, repescagemDe } from './campeonatos.mjs';
 import { abrirPassagem } from './carreira.mjs';
 import { contratoInicial } from './contratos.mjs';
 import { criarContinentais, vagasBrasileiras } from './continental.mjs';
@@ -53,7 +53,7 @@ export const divsOf=clubs=>[...new Set(clubs.map(divOf))].sort();
 export const divisions=()=>divsOf(S.clubs);
 export const hasTwoDivs=()=>divisions().length>1;
 export const jogaNoBrasil=()=>!S.pais||S.pais===BRASIL;
-export const tvQuota=div=>regraLiga(div)?.economia?.tv??({A:1.2,B:0.5,C:0.2,D:0.1})[serieBase(div)];
+export const tvQuota=div=>regraLiga(div)?.economia.tv??({A:1.2,B:0.5,C:0.2,D:0.1})[div];
 const valorPorForca=(forca,referencia,{base,porPonto,piso})=>Math.max(piso,base+(forca-referencia)*porPonto);
 // bilheteria de um jogo em casa, antes do bônus pela posição na tabela
 export function bilheteriaBase(c){
@@ -65,15 +65,14 @@ export function bilheteriaBase(c){
 const PREMIO_LIGA = { A: [0.55, 0.19], B: [0.23, 0.10], C: [0.12, 0.055], D: [0.06, 0.03] };
 export function seasonPrize(div, pos) {
   const liga = regraLiga(div);
-  if (liga?.economia) return Math.round((liga.clubes + 1 - pos) * liga.economia.premioPorCota * 100) / 100;
-  if (liga) pos = Math.min(20, pos);
-  const [piso, porPosicao] = PREMIO_LIGA[serieBase(div)];
+  if (liga) return Math.round((liga.clubes + 1 - pos) * liga.economia.premioPorCota * 100) / 100;
+  const [piso, porPosicao] = PREMIO_LIGA[div];
   return Math.round((piso + (20 - pos) * porPosicao) * 100) / 100;
 }
 export function startBalance(div,s){
   const economia=regraLiga(div)?.economia;
   const valor=economia?valorPorForca(s,economia.forcaReferencia,economia.caixaInicial)
-    :({A:10+(s-60)*1.5,B:Math.max(2,3+(s-55)*0.5),C:Math.max(1,1.5+(s-50)*0.2),D:Math.max(0.8,1+(s-48)*0.1)})[serieBase(div)];
+    :({A:10+(s-60)*1.5,B:Math.max(2,3+(s-55)*0.5),C:Math.max(1,1.5+(s-50)*0.2),D:Math.max(0.8,1+(s-48)*0.1)})[div];
   return Math.round(valor*10)/10;
 }
 export const MOVE_N=(clubes=S.clubs)=>Math.min(4,...divsOf(clubes).map(d=>clubes.filter(c=>divOf(c)===d).length-1));
@@ -105,7 +104,7 @@ export function prepararElencos(clubs,{posv,europeu}){
     atribuirPosicoes(c.players);
     const ref=europeu?c.strength:refStrength(c,clubs);
     c.players.forEach(p=>{
-      if(!europeu||!Number.isFinite(p.ovr))p.ovr=rate(p,ref,serieBase(divOf(c)));
+      if(!europeu||!Number.isFinite(p.ovr))p.ovr=rate(p,ref,divOf(c));
       p.contrato=contratoInicial(p);refreshEconomics(p);p.goals=0;p.amar=0;p.listed=false;
     });
     c.formation='4-4-2';c.fin=[];
