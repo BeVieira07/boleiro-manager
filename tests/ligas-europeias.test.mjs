@@ -110,7 +110,7 @@ test('Inglaterra: cada liga tem TV, bilheteria, caixa inicial e prêmios própri
 test('Inglaterra: metas de título, vaga europeia, permanência e acesso seguem a liga', () => {
   const j = iniciarNaInglaterra('GB1', { clubeId: 'e33' });
   const metas = div => j.run(`S.clubs.filter(c => divOf(c) === '${div}')
-    .sort((a, b) => b.strength - a.strength || (a.id < b.id ? -1 : 1)).map(metaDe)`);
+    .sort((a, b) => b.strength - a.strength || (a.id < b.id ? -1 : 1)).map(c => metaDe(c))`);
   const premier = metas('GB1'), championship = metas('GB2');
   assert.deepEqual(premier[0], { texto: 'Lutar pelo título', alvo: 3 });
   assert.deepEqual(premier.slice(2, 4), Array(2).fill({ texto: 'Vaga europeia', alvo: 4 }));

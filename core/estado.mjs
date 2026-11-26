@@ -1,5 +1,5 @@
 import { criarBases, darPotencial } from './base.mjs';
-import { BRASIL, CAMPEONATOS, datasPlayoff, regraLiga } from './campeonatos.mjs';
+import { BRASIL, CAMPEONATOS, datasPlayoff, playoffAte, regraLiga, repescagemDe, serieBase } from './campeonatos.mjs';
 import { abrirPassagem } from './carreira.mjs';
 import { contratoInicial } from './contratos.mjs';
 import { criarContinentais, vagasBrasileiras } from './continental.mjs';
@@ -53,7 +53,7 @@ export const divsOf=clubs=>[...new Set(clubs.map(divOf))].sort();
 export const divisions=()=>divsOf(S.clubs);
 export const hasTwoDivs=()=>divisions().length>1;
 export const jogaNoBrasil=()=>!S.pais||S.pais===BRASIL;
-export const tvQuota=div=>regraLiga(div)?.economia.tv??({A:1.2,B:0.5,C:0.2,D:0.1})[div];
+export const tvQuota=div=>regraLiga(div)?.economia?.tv??({A:1.2,B:0.5,C:0.2,D:0.1})[serieBase(div)];
 const valorPorForca=(forca,referencia,{base,porPonto,piso})=>Math.max(piso,base+(forca-referencia)*porPonto);
 // bilheteria de um jogo em casa, antes do bônus pela posição na tabela
 export function bilheteriaBase(c){
@@ -65,29 +65,54 @@ export function bilheteriaBase(c){
 const PREMIO_LIGA = { A: [0.55, 0.19], B: [0.23, 0.10], C: [0.12, 0.055], D: [0.06, 0.03] };
 export function seasonPrize(div, pos) {
   const liga = regraLiga(div);
-  if (liga) return Math.round((liga.clubes + 1 - pos) * liga.economia.premioPorCota * 100) / 100;
-  const [piso, porPosicao] = PREMIO_LIGA[div];
+  if (liga?.economia) return Math.round((liga.clubes + 1 - pos) * liga.economia.premioPorCota * 100) / 100;
+  if (liga) pos = Math.min(20, pos);
+  const [piso, porPosicao] = PREMIO_LIGA[serieBase(div)];
   return Math.round((piso + (20 - pos) * porPosicao) * 100) / 100;
 }
 export function startBalance(div,s){
   const economia=regraLiga(div)?.economia;
   const valor=economia?valorPorForca(s,economia.forcaReferencia,economia.caixaInicial)
-    :({A:10+(s-60)*1.5,B:Math.max(2,3+(s-55)*0.5),C:Math.max(1,1.5+(s-50)*0.2),D:Math.max(0.8,1+(s-48)*0.1)})[div];
+    :({A:10+(s-60)*1.5,B:Math.max(2,3+(s-55)*0.5),C:Math.max(1,1.5+(s-50)*0.2),D:Math.max(0.8,1+(s-48)*0.1)})[serieBase(div)];
   return Math.round(valor*10)/10;
 }
-export const MOVE_N=()=>Math.min(4,...divisions().map(d=>S.clubs.filter(c=>divOf(c)===d).length-1));
+export const MOVE_N=(clubes=S.clubs)=>Math.min(4,...divsOf(clubes).map(d=>clubes.filter(c=>divOf(c)===d).length-1));
 
-export function zonasDaDivisao(div){
-  const ds=divisions(), i=ds.indexOf(div), acima=ds[i-1], abaixo=ds[i+1], regra=regraLiga(div);
+export function zonasDaDivisao(div,clubes=S.clubs){
+  const ds=divsOf(clubes), i=ds.indexOf(div), acima=ds[i-1], abaixo=ds[i+1], regra=regraLiga(div);
   if(regra)return {acima,abaixo,acessoDireto:regra.acessoDireto??0,rebaixamento:regra.rebaixamento??0,
-    playoffAte:regra.playoff?Math.max(...regra.playoff.semifinais.flat()):0};
-  const vagas=ds.length>1?MOVE_N():4;
+    playoffAte:playoffAte(div),repescagem:repescagemDe(abaixo)};
+  const vagas=ds.length>1?MOVE_N(clubes):4;
   return {acima,abaixo,acessoDireto:acima?vagas:0,rebaixamento:ds.length===1||abaixo?vagas:0,playoffAte:0};
 }
 export const rodadasRegulares=()=>S.fixtures.length-datasPlayoff(S.pais);
 export function rodadasDaDivisao(div){
   const regra=regraLiga(div);
   return regra?2*(regra.clubes-1):rodadasRegulares();
+}
+
+// Prepara as cópias dos elencos usadas na campanha e na prévia da escolha de clube.
+export function prepararElencos(clubs,{posv,europeu}){
+  for(const c of clubs){
+    if(!europeu&&posv!==2)converterPosicoesAntigas(c.players); // dados antigos (aba Dados) usam as siglas de antes da #23
+    simplificarPosicoes(c.players); // os dados guardam a posição real (Transfermarkt); o jogo usa só 6 (#97)
+    const minimo=c.players.length<16 ? SQUAD_SHAPE : SQUAD_MIN;
+    const r=mulberry32(hashStr(c.id));let k=0;
+    for(const [pos,n] of Object.entries(minimo)){
+      const tem=c.players.filter(p=>p.pos===pos).length;
+      for(let i=tem;i<n;i++)c.players.push(fakePlayer(c.id,k++,c.strength,pos,r));
+    }
+    atribuirPosicoes(c.players);
+    const ref=europeu?c.strength:refStrength(c,clubs);
+    c.players.forEach(p=>{
+      if(!europeu||!Number.isFinite(p.ovr))p.ovr=rate(p,ref,serieBase(divOf(c)));
+      p.contrato=contratoInicial(p);refreshEconomics(p);p.goals=0;p.amar=0;p.listed=false;
+    });
+    c.formation='4-4-2';c.fin=[];
+  }
+  // #174: a força do clube é a do elenco (média dos 11 titulares), depois de todos os overalls; a da tabela de 2024 ficou velha.
+  // Só depois do laço: refStrength compara cada clube com a média da série, com as forças de antes
+  for(const c of clubs)c.strength=forcaDoElenco(c);
 }
 
 // regra: monta a campanha nova a partir dos dados (sem tela nem armazenamento).
@@ -99,26 +124,7 @@ export function criarJogo(quem,data,{pais=BRASIL}={}){
   const europeu=pais!==BRASIL;
   const clubs=europeu?dadosParaCarreira(data,pais):JSON.parse(JSON.stringify(data.clubs));
   if(lista.some(t=>!clubs.some(c=>c.id===t.clubId)))throw new Error('Escolha um clube do país do jogo.');
-  for(const c of clubs){
-    if(!europeu&&data.posv!==2)converterPosicoesAntigas(c.players); // dados antigos (aba Dados) usam as siglas de antes da #23
-    simplificarPosicoes(c.players); // os dados guardam a posição real (Transfermarkt); o jogo usa só 6 (#97)
-    const minimo=c.players.length<16 ? SQUAD_SHAPE : SQUAD_MIN;
-    const r=mulberry32(hashStr(c.id));let k=0;
-    for(const [pos,n] of Object.entries(minimo)){
-      const tem=c.players.filter(p=>p.pos===pos).length;
-      for(let i=tem;i<n;i++)c.players.push(fakePlayer(c.id,k++,c.strength,pos,r));
-    }
-    atribuirPosicoes(c.players);
-    const ref=europeu?c.strength:refStrength(c,clubs);
-    c.players.forEach(p=>{
-      if(!europeu||!Number.isFinite(p.ovr))p.ovr=rate(p,ref,divOf(c));
-      p.contrato=contratoInicial(p);refreshEconomics(p);p.goals=0;p.amar=0;p.listed=false;
-    });
-    c.formation='4-4-2';c.fin=[];
-  }
-  // #174: a força do clube é a do elenco (média dos 11 titulares), depois de todos os overalls; a da tabela de 2024 ficou velha.
-  // Só depois do laço: refStrength compara cada clube com a média da série, com as forças de antes
-  for(const c of clubs)c.strength=forcaDoElenco(c);
+  prepararElencos(clubs,{posv:data.posv,europeu});
   const seed=novaSemente();
   S={versao:VERSAO_SAVE,seed,rng:seed,posv:2,pais,season:data.season||2026,dataSource:data.source,round:0,clubs,
      fixtures:makeAllFixtures(clubs,pais),history:[],
