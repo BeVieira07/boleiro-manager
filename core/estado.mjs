@@ -1,4 +1,5 @@
 import { criarBases, darPotencial } from './base.mjs';
+import { numerarElenco } from './camisas.mjs';
 import { abrirPassagem } from './carreira.mjs';
 import { contratoInicial } from './contratos.mjs';
 import { criarContinentais, vagasBrasileiras } from './continental.mjs';
@@ -77,6 +78,7 @@ export function criarJogo(quem,data){
       for(let i=tem;i<n;i++)c.players.push(fakePlayer(c.id,k++,c.strength,pos,r));
     }
     atribuirPosicoes(c.players);
+    numerarElenco(c.players);
     const ref=refStrength(c,clubs);
     c.players.forEach(p=>{p.ovr=rate(p,ref,divOf(c));p.contrato=contratoInicial(p);refreshEconomics(p);p.goals=0;p.amar=0;p.listed=false});
     c.formation='4-4-2';c.fin=[];

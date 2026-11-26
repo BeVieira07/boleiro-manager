@@ -8,6 +8,7 @@
    Nenhum módulo do core importa core/dados-europa.mjs (há teste): sem a base, o jogo segue só com o Brasil e as copas.
    shortcut: jogador que fica num clube europeu não envelhece nem evolui, e o caixa dos clubes europeus volta ao inicial a
    cada jogo aberto; guardar isso em S.europa se a Europa passar a ter partidas ou janelas entre os clubes de lá. */
+import { numerarElenco } from './camisas.mjs';
 import { S } from './estado.mjs';
 import { prepararEstrangeiro } from './estrangeiros.mjs';
 import { POSD } from './posicoes.mjs';
@@ -38,9 +39,13 @@ export function montarEuropa() {
   for (const lista of Object.values(chegadas)) for (const p of lista) noJogo.add(p.id);
   const clubes = {};
   for (const b of BASE.clubs) {
+    const originais = b.players.filter(x => !noJogo.has(x[0])).map(jogador);
+    const contratados = chegadas[b.id] || [];
     const c = { id: b.id, name: b.name, short: b.short, color: '#2b3a55', liga: b.liga, pais: b.pais, logo: b.logo, strength: b.strength,
-      players: [...b.players.filter(x => !noJogo.has(x[0])).map(jogador), ...(chegadas[b.id] || [])] };
+      players: [...originais, ...contratados] };
     prepararEstrangeiro(c);
+    // As camisas salvas das chegadas têm prioridade sobre as reconstruídas da base.
+    numerarElenco([...contratados, ...originais]);
     c.balance = caixaInicial(c);
     clubes[c.id] = c;
   }
