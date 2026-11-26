@@ -142,15 +142,16 @@ export function vRodada(){
 /* ---------- classificação e artilharia ---------- */
 // zonas da classificação de uma série: G (Libertadores ou acesso) e Z (rebaixamento)
 export function zonas(d){
-  const {acima,abaixo,acessoDireto,rebaixamento:bottom,playoffAte}=zonasDaDivisao(d), brasil=jogaNoBrasil();
+  const {acima,abaixo,acessoDireto,rebaixamento:bottom,playoffAte,repescagem=0}=zonasDaDivisao(d), brasil=jogaNoBrasil();
   const top=!acima&&brasil?6:acessoDireto;
   const nomeTop=top?acima?`Acesso à ${DIVS[acima]} (G${top})`:'Libertadores (G6)':'';
-  return {top,bottom,playoffAte,nomeTop,nomeBottom:bottom?`Rebaixamento${abaixo?' para a '+DIVS[abaixo]:''} (Z${bottom})`:''};
+  return {top,bottom,playoffAte,repescagem,nomeRepescagem:repescagem?`Repescagem contra a ${DIVS[abaixo]} (${repescagem}º)`:'',nomeTop,nomeBottom:bottom?`Rebaixamento${abaixo?' para a '+DIVS[abaixo]:''} (Z${bottom})`:''};
 }
 export function legendaLiga(d) {
-  const { top, bottom, nomeTop, nomeBottom, playoffAte } = zonas(d);
+  const { top, bottom, nomeTop, nomeBottom, playoffAte, nomeRepescagem } = zonas(d);
   return `<div class="legenda">${nomeTop?`<span><i class="zona-cor lib" aria-hidden="true"></i>${esc(nomeTop)}</span>`:''}
-    ${playoffAte?`<span>Mata-mata de acesso (${top + 1}º ao ${playoffAte}º)</span>`:''}
+    ${playoffAte?`<span>Mata-mata de acesso (${playoffAte > top + 1 ? `${top + 1}º ao ` : ''}${playoffAte}º)</span>`:''}
+    ${nomeRepescagem?`<span>${esc(nomeRepescagem)}</span>`:''}
     ${bottom ? `<span><i class="zona-cor z4" aria-hidden="true"></i>${esc(nomeBottom)}</span>` : ''}</div>`;
 }
 
@@ -161,8 +162,8 @@ function formaNaTabela(id) {
 }
 
 export function tabelaLiga(d, me) {
-  const T = table(d), { top, bottom, nomeTop, nomeBottom, playoffAte } = zonas(d), total = rodadasDaDivisao(d);
-  const zona = i => i < top ? ['zona-lib', nomeTop] : i < playoffAte ? ['', 'Mata-mata de acesso']
+  const T = table(d), { top, bottom, nomeTop, nomeBottom, playoffAte, repescagem, nomeRepescagem } = zonas(d), total = rodadasDaDivisao(d);
+  const zona = i => i < top ? ['zona-lib', nomeTop] : i < playoffAte ? ['', 'Mata-mata de acesso'] : i === repescagem - 1 ? ['', nomeRepescagem]
     : bottom && i >= T.length - bottom ? ['zona-z4', nomeBottom] : ['', ''];
   const rodada = total ? `Rodada ${Math.min(S.round + 1, total)} de ${total}` : 'Sem jogos agendados';
   const colunas = ['V', 'E', 'D', 'GP', 'GC'];
@@ -176,7 +177,7 @@ export function tabelaLiga(d, me) {
     <th scope="col" class="n">SG</th><th scope="col" class="n figma-estat-extra">Últimos 5</th></tr></thead>
     <tbody>${T.map((t, i) => {
       const c = clubById(t.id), [z, nz] = zona(i);
-      return `<tr class="${t.id === me ? 'me' : ''}"><td class="${z}"${nz ? ` title="${esc(nz)}"` : ''}>${i + 1}${nz ? `<span class="sr"> (${esc(nz)})</span>` : ''}${i >= top && i < playoffAte ? ' <span aria-hidden="true">·</span>' : ''}</td>
+      return `<tr class="${t.id === me ? 'me' : ''}"><td class="${z}"${nz ? ` title="${esc(nz)}"` : ''}>${i + 1}${nz ? `<span class="sr"> (${esc(nz)})</span>` : ''}${i >= top && i < playoffAte || i === repescagem - 1 ? ' <span aria-hidden="true">·</span>' : ''}</td>
       <th scope="row"><span class="club">${crest(c)} ${esc(c.name)}</span></th><td class="n"><b>${t.Pts}</b></td><td class="n">${t.J}</td>
       ${colunas.map(k => `<td class="n figma-estat-extra">${t[k]}</td>`).join('')}
       <td class="n">${t.GP - t.GC}</td><td class="n figma-estat-extra">${formaNaTabela(t.id)}</td></tr>`;

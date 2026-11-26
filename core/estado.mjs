@@ -1,5 +1,5 @@
 import { criarBases, darPotencial } from './base.mjs';
-import { BRASIL, CAMPEONATOS, datasPlayoff, regraLiga, serieBase } from './campeonatos.mjs';
+import { BRASIL, CAMPEONATOS, datasPlayoff, playoffAte, regraLiga, repescagemDe, serieBase } from './campeonatos.mjs';
 import { abrirPassagem } from './carreira.mjs';
 import { contratoInicial } from './contratos.mjs';
 import { criarContinentais, vagasBrasileiras } from './continental.mjs';
@@ -70,7 +70,7 @@ export const MOVE_N=(clubes=S.clubs)=>Math.min(4,...divsOf(clubes).map(d=>clubes
 export function zonasDaDivisao(div,clubes=S.clubs){
   const ds=divsOf(clubes), i=ds.indexOf(div), acima=ds[i-1], abaixo=ds[i+1], regra=regraLiga(div);
   if(regra)return {acima,abaixo,acessoDireto:regra.acessoDireto??0,rebaixamento:regra.rebaixamento??0,
-    playoffAte:regra.playoff?Math.max(...regra.playoff.semifinais.flat()):0};
+    playoffAte:playoffAte(div),repescagem:repescagemDe(abaixo)};
   const vagas=ds.length>1?MOVE_N(clubes):4;
   return {acima,abaixo,acessoDireto:acima?vagas:0,rebaixamento:ds.length===1||abaixo?vagas:0,playoffAte:0};
 }

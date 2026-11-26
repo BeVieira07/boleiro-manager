@@ -8,7 +8,7 @@ import { regraPlayoff } from '../../core/campeonatos.mjs';
 import { COPA } from '../../core/copa.mjs';
 import { DIVS, P, S, clubById, divOf, divisions, jogaNoBrasil, rodadasDaDivisao, rodadasRegulares, tec, userClub } from '../../core/estado.mjs';
 import { jogosDaData, torneioDe } from '../../core/estadual.mjs';
-import { fasePlayoff, jogosDaRodada, promovidoNoPlayoff } from '../../core/playoffs.mjs';
+import { fasePlayoff, jogosDaRodada, resultadoPlayoff } from '../../core/playoffs.mjs';
 import { clamp, esc } from '../../core/utils.mjs';
 import { chip, seletorCompeticao } from '../componentes.mjs';
 import { chaveJogoAtual, ui } from '../estado.mjs';
@@ -175,9 +175,10 @@ function mataMata(d, me) {
     const r = rodadasRegulares() + i, jogos = jogosDaRodada(r);
     return jogos.length ? `<h3 class="t3">${fasePlayoff(r)}</h3>${listaJogos(jogos, me)}` : '';
   }).join('');
-  const vencedor = promovidoNoPlayoff(d);
+  const r = resultadoPlayoff(), v = r && clubById(r.vencedor).name;
+  const fim = !r ? '' : r.sobe ? `${v} conquistou o acesso.` : `${v} se manteve na ${DIVS[divOf(clubById(r.vencedor))]}.`;
   return `<section class="card comp-quadro"><h2>Mata-mata de acesso</h2>
-    ${vencedor ? `<p>${esc(clubById(vencedor).name)} conquistou o acesso.</p>` : ''}${datas}</section>`;
+    ${fim ? `<p>${esc(fim)}</p>` : ''}${datas}</section>`;
 }
 
 function principal(c) {
