@@ -4,7 +4,7 @@
    Para acrescentar uma migração: ponha a função no FIM de MIGRACOES (nunca no meio nem mudando as de antes). Ela recebe
    o estado já em S e deve deixar o save no formato novo; VERSAO_SAVE acompanha sozinho. Saves sem versão rodam todas,
    por isso cada uma confere se o campo já existe (vários saves antigos já tinham parte das mudanças). */
-import { migrarBase } from './base.mjs';
+import { garantirBase, migrarBase } from './base.mjs';
 import { adicionarTitulo, abrirPassagem, fecharPassagem, garantirCarreira, gerarPropostas } from './carreira.mjs';
 import { migrarContratos } from './contratos.mjs';
 import { COPA } from './copa.mjs';
@@ -79,6 +79,7 @@ const MIGRACOES = [
   },
   migrarValoresDeMercado, // 18: valor de mercado sem desconto pelo prazo do contrato (#350)
   s => { for (const c of s.clubs) if (c.balance == null) c.balance = startBalance(divOf(c), c.strength) }, // 19: caixa dos clubes da IA em saves de antes da #28 (#373)
+  () => { for (const t of tecnicos()) if (!t.demitido) garantirBase(clubDo(t)) }, // 20: base de quem assumiu um clube no meio da temporada (#414)
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 

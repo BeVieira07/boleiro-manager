@@ -146,7 +146,7 @@ export function removerTecnicoLiga(estado, userId) {
   const t = S.managers[userId]; if (!t) return { erro: 'Esse técnico não está na liga.' };
   const c = clubDo(t);
   fecharPassagem(t);
-  delete S.managers[userId]; delete c.base;
+  delete S.managers[userId]; // a base fica até a virada (virarBase): recriada agora, repetiria quem já foi promovido (#414)
   S.propostas = (S.propostas || []).filter(p => p.de !== userId && p.para !== userId);
   if (S.atual === userId) S.atual = Object.keys(S.managers)[0] ?? null;
   addNewsTodos(`👋 ${t.nome} saiu da liga. O ${c.name} volta a ser da IA.`);

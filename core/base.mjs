@@ -33,11 +33,22 @@ export function novoJovem(c, k, r = rnd) {
   p.goals = 0; p.listed = false; p.contrato = CONTRATO_NOVO; refreshEconomics(p); p.clubId = c.id;
   return p;
 }
-/** Chegam jovens novos à base (até BASE_MAX). r: gerador (padrão: o sorteio do jogo). */
+// ids que já são de alguém no jogo. Lê de S, não de P: nas migrações o índice ainda não foi refeito.
+const idsEmUso = () => new Set([
+  ...(S?.clubs || []).flatMap(c => [...c.players, ...(c.base || [])]),
+  ...Object.values(S?.continentais?.estrangeiros || {}).flatMap(c => c.players),
+  ...Object.values(S?.europa?.chegadas || {}).flat(),
+].map(p => p.id));
+/** Chegam jovens novos à base (até BASE_MAX). r: gerador (padrão: o sorteio do jogo).
+ *  Com semente fixa o sorteio se repete: quem sair com o id de um jogador que já existe é descartado e sorteado outro. */
 export function gerarBase(c, r = rnd) {
   if (!c.base) c.base = [];
   let k = 500 + (S ? S.season % 100 : 0) * 10 + c.base.length;
-  for (let n = 0; n < BASE_NOVOS && c.base.length < BASE_MAX; n++) c.base.push(novoJovem(c, k++, r));
+  const usados = idsEmUso();
+  for (let n = 0; n < BASE_NOVOS && c.base.length < BASE_MAX;) {
+    const p = novoJovem(c, k++, r);
+    if (!usados.has(p.id)) { c.base.push(p); n++ }
+  }
 }
 /** Virada de temporada (depois da idade do elenco): a base dos clubes com técnico envelhece, evolui até o potencial,
  *  dispensa quem passou de BASE_IDADE_MAX e recebe jovens novos. Clube que perdeu o técnico fica sem base. */
