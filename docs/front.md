@@ -32,7 +32,7 @@ Os nomes antigos (`--panel`, `--accent`, `--danger`…) apontam para os novos e 
 | `.btn` | botão primário (verde). `.sec` secundário, `.perigo` (ou `.red`) para perda, `.fantasma` sem fundo, `.icone-so` só com ícone (precisa de `aria-label`). Tamanhos `.sm` e `.big`. |
 | `.chip` | opção ou filtro; `.on` ou `aria-pressed="true"` marca o ativo. Agrupe em `.chips` com `role="group"` e `aria-label`. JS: `chip(rotulo, acao, on)` em `ui/componentes.mjs`. |
 | `.pill` | informação curta, sem clique. |
-| `.tag` | status: `.ok`, `.aviso`, `.erro`, `.info`. JS: `tag(texto, tipo)`. Aposentadoria (#418): `aposentaTag(p)` em `ui/clube/elenco.mjs` (".tag.aviso" "Aposenta no fim da temporada") no Elenco e na ficha; em jogador de clube estrangeiro a ficha acrescenta "se for contratado". |
+| `.tag` | status: `.ok`, `.aviso`, `.erro`, `.info`. JS: `tag(texto, tipo)`. Aposentadoria (#418): `.tag.aviso` "Aposenta no fim da temporada" no Elenco (`aposentaTag(p)`) e na ficha, quando `seAposenta(p)`; em jogador de clube estrangeiro a ficha acrescenta "se for contratado". |
 | `.pos.G/.D/.M/.A` | sigla da posição colorida pelo grupo (`posTag(p)` em `ui/clube/posicoes.mjs`). |
 | `.ovr.alto/.medio/.baixo` | overall em chip: alto 76+, médio 68–75, baixo até 67. JS: `ovrChip(v)`. |
 | `.tend` | seta de tendência do overall (`tendenciaTag(p)`). |

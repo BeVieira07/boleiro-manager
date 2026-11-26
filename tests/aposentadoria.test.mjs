@@ -19,9 +19,11 @@ test('uma notícia por temporada, na metade, lista só os aposentáveis do clube
   const j = novo();
   j.run(`(()=>{const [a,b,c]=userClub().players;a.age=36;b.age=35;globalThis.nome=a.name;globalThis.fora=b.name})()`);
   const avisos = () => j.run(`tec().news.filter(n=>/Aposentadoria no fim/.test(n.t))`);
-  jogarRodada(j, j.run('Math.floor(S.fixtures.length/2)'));
+  assert.equal(j.run('S.fixtures.length'), 38);
+  jogarRodada(j, 18);
   assert.equal(avisos().length, 0, 'antes da metade não avisa');
   jogarRodada(j, 1);
+  assert.equal(avisos()[0]?.r, 18, 'sai ao fim da 19ª, a que fecha a primeira metade');
   const a = avisos();
   assert.equal(a.length, 1);
   assert.ok(a[0].t.includes(j.run('globalThis.nome')));
@@ -33,7 +35,7 @@ test('uma notícia por temporada, na metade, lista só os aposentáveis do clube
 test('sem aposentável no clube, não há notícia', () => {
   const j = novo();
   j.run('userClub().players.forEach(p=>{p.age=Math.min(p.age,30)})');
-  jogarRodada(j, j.run('Math.floor(S.fixtures.length/2)+1'));
+  jogarRodada(j, 19);
   assert.equal(j.run(`tec().news.filter(n=>/Aposentadoria no fim/.test(n.t)).length`), 0);
 });
 
@@ -89,11 +91,12 @@ test('save legado com idade em texto: aposenta só quem a virada aposentaria', (
   assert.equal(j.run(`P['${b}']`), undefined);
 });
 
-test('a notícia aparece no painel mesmo numa rodada com muitas ofertas e a janela', () => {
+test('a notícia aparece no painel mesmo numa rodada com muitas ofertas', () => {
   const j = novo();
-  j.run(`userClub().players[0].age=36;S.round=Math.floor(S.fixtures.length/2);S.seed=20261116;
+  j.run(`userClub().players[0].age=36;S.round=Math.floor(S.fixtures.length/2)-1;S.seed=20261116;
     for(const p of userClub().players)if(!p.listed)toggleListed(p.id);userClub().lineup=autoXI(userClub());jogarRodada();go('clube')`);
   assert.ok(j.run(`tec().news.filter(n=>/ofereceu/.test(n.t)).length`) >= 9, 'o cenário tem ofertas bastantes para empurrar a notícia');
+  assert.match(j.run('tec().news[0].t'), /Aposentadoria no fim/, 'gravada depois das ofertas: fica no topo');
   assert.ok(j.html().includes('Aposentadoria no fim da temporada'));
 });
 
@@ -102,7 +105,7 @@ test('técnico sem clube não recebe aviso sobre o elenco antigo', () => {
   const [a, b] = [clubeDaSerie(j), clubeDaSerie(j, 'A', 11)];
   j.run(`iniciarLiga([{user_id:'a',nome:'A',club_id:'${a}'},{user_id:'b',nome:'B',club_id:'${b}'}],['A'],getData())`);
   j.run(`for(const t of tecnicos())clubDo(t).players[0].age=36;usarTecnico('b');pedirDemissao();recusarClubes();S.managers.b.news=[];
-    S.round=Math.floor(S.fixtures.length/2);jogarRodadaLiga(JSON.parse(JSON.stringify(S)),{})`);
+    S.round=Math.floor(S.fixtures.length/2)-1;jogarRodadaLiga(JSON.parse(JSON.stringify(S)),{})`);
   const quantos = id => j.run(`S.managers.${id}.news.filter(n=>/Aposentadoria no fim/.test(n.t)).length`);
   assert.equal(j.run('S.managers.b.demitido'), true);
   assert.deepEqual([quantos('a'), quantos('b')], [1, 0]);

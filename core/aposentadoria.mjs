@@ -8,13 +8,12 @@ export const IDADE_APOSENTADORIA = 37;
 // Number: save legado pode ter a idade em texto, e "35" + 1 viraria "351" (a virada faz p.age++, que converte).
 export const seAposenta = p => Number(p.age) + 1 >= IDADE_APOSENTADORIA;
 
-/** Regra: no fim da rodada da metade do campeonato, uma notícia por técnico com clube lista os jogadores dele que vão se
- *  aposentar. Depois das ofertas e da janela da IA, para ficar no topo do painel. S.round já aponta para a próxima. */
+/** Regra: no fim da rodada que fecha a primeira metade do campeonato (a 19ª de 38), uma notícia por técnico com clube lista os jogadores dele que vão se
+ *  aposentar. Depois das ofertas e da janela da IA, para ficar no topo do painel. S.round já conta as rodadas jogadas. */
 export function avisarAposentadorias() {
-  const rodada = S.round - 1;
-  if (rodada !== Math.floor(S.fixtures.length / 2)) return;
+  if (S.round !== Math.floor(S.fixtures.length / 2)) return;
   for (const t of tecnicos().filter(t => !t.demitido)) {
     const lista = clubDo(t).players.filter(seAposenta);
-    if (lista.length) addNews(`🧓 Aposentadoria no fim da temporada: ${lista.map(p => `${p.name} (${p.age} anos)`).join(', ')}.`, t.clubId, rodada);
+    if (lista.length) addNews(`🧓 Aposentadoria no fim da temporada: ${lista.map(p => `${p.name} (${p.age} anos)`).join(', ')}.`, t.clubId, S.round - 1);
   }
 }
