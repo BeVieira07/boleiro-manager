@@ -17,6 +17,9 @@ test('a virada de temporada zera a lesão de todos e mantém a suspensão penden
     S.continentais = { estrangeiros: { ext: { id: 'ext', players: [e] } } }; reindex();
     a.inj = 5; b.susp = 2; globalThis.ids = [a.id, b.id, e.id];
   })()`);
+  j.run('globalThis.semCampo = Object.values(P).filter(p => !("inj" in p)); ferias()');
+  assert.ok(j.run('semCampo.length') > 0);
+  assert.equal(j.run('semCampo.filter(p => "inj" in p).length'), 0, 'quem nunca se lesionou não ganha o campo');
   virarTemporada(j);
   const r = j.run('ids.map(id => [P[id].inj || 0, P[id].susp || 0])');
   assert.equal(r[0][0], 0, 'lesão do elenco zerada');
