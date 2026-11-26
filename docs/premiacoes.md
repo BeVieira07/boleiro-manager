@@ -39,3 +39,29 @@ A amostra de cada divisão representa os caixas iniciais baixo, intermediário e
 | D | Sampaio Corrêa | 2,200 | 0,900 | 0,010 | 1,280 | 15,98 → 1,15 |
 
 Os prêmios por fase crescem dentro de cada divisão. Para as copas, os valores-base têm multiplicadores de 100%, 42%, 22% e 11% para A, B, C e D. Na Série A, os totais de campeão são 2,950 na Copa do Brasil em seis fases, 0,350 no estadual, 4,290 na Libertadores e 2,420 na Sul-Americana. Os lançamentos anteriores permanecem no valor original. O ajuste é aplicado apenas no momento de creditar os próximos prêmios, inclusive em saves existentes.
+
+## Inglaterra (#449)
+
+Em 2024/25, os clubes da Premier League registraram £3,4 bilhões de receitas de transmissão e pouco mais de £1 bilhão em dias de jogo. Na Championship, foram £461 milhões e £208 milhões, respectivamente. Por clube e por temporada, a Premier ficou aproximadamente 8,9 vezes acima em transmissão e 6 vezes em dias de jogo. As contas da Deloitte incluem pagamentos da UEFA na Premier League e pagamentos de paraquedas na Championship, que ajudam a explicar as diferenças observadas. [Deloitte, Premier League Clubs](https://www.deloitte.com/uk/en/services/consulting/research/annual-review-of-football-finance-premier-league-clubs.html) · [Deloitte, Football League Clubs](https://www.deloitte.com/uk/en/services/consulting/research/annual-review-of-football-finance-football-league-clubs.html)
+
+O jogo usa os valores abaixo em milhões de reais. O clube de referência tem força 80 na Premier League e 72 na Championship. O caixa inicial e a bilheteria variam com a força do clube. A reserva inicial equivale a cerca de um quarto do valor dos elencos da amostra, que também é a referência usada para o caixa dos clubes europeus no mercado.
+
+| Liga | TV por rodada regular | TV na temporada | Bilheteria-base por mando | Bilheteria-base na temporada | Prêmio do último ao campeão | Caixa inicial de referência |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| Premier League | 2,05 | 77,90 | 1,50 | 28,50 | 0,53 a 10,60 | 65,00 |
+| Championship | 0,84 | 38,64 | 0,40 | 9,20 | 0,10 a 2,40 | 26,00 |
+
+A distância entre as ligas foi reduzida para 2,0 vezes na TV anual e 3,1 vezes na bilheteria anual de referência, antes dos bônus de classificação. A folha da fase regular dos clubes medianos da amostra é cerca de 2,4 vezes maior na Premier League (2,9 vezes por rodada, em calendários de 38 e 46 rodadas). Com a diferença real de receitas, os valores que cobrem a folha da Championship deixariam uma sobra muito alta na Premier League nesse modelo.
+
+As duas ligas distribuem a premiação por cotas de mérito. O último recebe uma cota, o penúltimo duas e assim por diante até o campeão. A cota do jogo foi calibrada para cada divisão e a premiação do campeão da Premier League ficou 4,4 vezes acima da do campeão da Championship. [Premier League, pagamentos centrais de 2024/25](https://www.premierleague.com/en/news/4325409) · [EFL Handbook, artigo 40, Ladder Payment](https://www.efl.com/documents/efl-handbook.pdf)
+
+A cada rodada regular da própria liga, o clube do técnico recebe TV e paga a folha. Encerrada a fase regular, quem disputa o mata-mata paga a folha nas datas em que joga. A bilheteria entra em partidas com mando, incluindo as semifinais do acesso, e o bicho corresponde a 15% da folha por vitória. A diretoria estima a receita regular como TV mais meia bilheteria-base, pois metade dos jogos regulares é em casa. Nas metas, a vaga europeia da Premier League corresponde ao quarto lugar ou melhor. A Championship tem acesso direto até o segundo lugar e mata-mata do terceiro ao sexto.
+
+O teste de temporada usa a semente 449 e os clubes nas posições centrais por força, com a demissão ativa. A faixa de −10% a +60% do caixa inicial admite um déficit pequeno e uma reserva para reforços. As duas campanhas pagaram a folha inteira, mantiveram o caixa positivo a cada rodada e cumpriram a meta esportiva.
+
+| Clube | Caixa inicial | Folha paga | Menor caixa | Caixa final | Variação | Posição final e meta |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Crystal Palace | 65,000 | 108,161 (38 rodadas) | 49,433 | 64,283 | −1,1% | 8º, meta de 11º |
+| Swansea | 26,000 | 47,301 (46 rodadas e 2 jogos do mata-mata) | 22,657 | 26,791 | +3,0% | 5º, meta de 13º |
+
+Saves ingleses da #443 passam a usar os valores nos próximos lançamentos e recalculam as metas dos técnicos ativos na temporada em curso. O caixa, os lançamentos e as temporadas já registradas conservam os valores gravados.

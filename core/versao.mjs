@@ -11,8 +11,8 @@ import { migrarContratos } from './contratos.mjs';
 import { COPA } from './copa.mjs';
 import { valueOf } from './dados.mjs';
 import { DADOS_PADRAO } from './dados-padrao.mjs';
-import { migrarDiretoria } from './diretoria.mjs';
-import { DIVS, S, clubDo, divOf, migrarTecnicos, reindex, startBalance, tecnicos, usarEstado } from './estado.mjs';
+import { definirMeta, migrarDiretoria } from './diretoria.mjs';
+import { DIVS, S, clubDo, divOf, jogaNoBrasil, migrarTecnicos, reindex, startBalance, tecnicos, usarEstado } from './estado.mjs';
 import { limparEventosAntigos } from './aovivo.mjs';
 import { prepararEstrangeiro } from './estrangeiros.mjs';
 import { migrarPenaltis } from './penaltis.mjs';
@@ -82,6 +82,11 @@ const MIGRACOES = [
   s => { for (const c of s.clubs) if (c.balance == null) c.balance = startBalance(divOf(c), c.strength) }, // 19: caixa dos clubes da IA em saves de antes da #28 (#373)
   () => { for (const t of tecnicos()) if (!t.demitido) garantirBase(clubDo(t)) }, // 20: base de quem assumiu um clube no meio da temporada (#414)
   s => { s.pais ??= BRASIL }, // 21: país da campanha (#443)
+  s => { // 22: metas das ligas europeias (#449)
+    if (!jogaNoBrasil() && s.seasonClosed !== s.season) {
+      for (const t of tecnicos()) if (!t.demitido) definirMeta(t);
+    }
+  },
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
 

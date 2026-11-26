@@ -7,7 +7,7 @@ import { atualizarConfianca } from './diretoria.mjs';
 import { jogarPreTemporada } from './estadual.mjs';
 import { processLoans, wageBill } from './emprestimos.mjs';
 import { aplicarDisponibilidade, autoSlotXI, semSuspensoesPorAmarelos, slotsDe, unavailable } from './escalacao.mjs';
-import { P, S, addFin, addNews, bilheteriaBase, clubById, clubDo, divOf, ehHumano, jogaNoBrasil, table, tec, tecnicos, tvQuota, userClub } from './estado.mjs';
+import { P, S, addFin, addNews, bilheteriaBase, clubById, clubDo, divOf, ehHumano, jogaNoBrasil, rodadasDaDivisao, table, tec, tecnicos, tvQuota, userClub } from './estado.mjs';
 import { adiarForma, aplicarFormaPendente } from './forma.mjs';
 import { noticiaPenaltis } from './gols-copa.mjs';
 import { elencoDoJogo, saidaForcada, sortearLances } from './lances.mjs';
@@ -122,16 +122,16 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
   adiarForma(games);
   const jogoDe=c=>games.find(g=>g.h===c.id||g.a===c.id);
   for(const t of ativos){
-    const uc=clubDo(t),mine=jogoDe(uc);
-    // A cota por rodada regular e a folha por partida seguem a cadência do Brasileirão (atalho até a #449).
-    if(brasil||mine&&!mine.playoff)addFin(`Cota de TV — rodada ${S.round+1}`,tvQuota(divOf(uc)),uc);
+    const uc=clubDo(t),mine=jogoDe(uc),div=divOf(uc);
+    const regular=brasil||S.round<rodadasDaDivisao(div);
+    if(regular)addFin(`Cota de TV — rodada ${S.round+1}`,tvQuota(div),uc);
     if(mine&&mine.h===uc.id&&!mine.neutro){
-      const pos=table(divOf(uc)).findIndex(x=>x.id===uc.id);
+      const pos=table(div).findIndex(x=>x.id===uc.id);
       const bonus=S.round===0?1:pos<4?1.3:pos<10?1.1:1; // #381: sem tabela ainda, a ordem seria a alfabética
       addFin(`Bilheteria vs ${clubById(mine.a).name}`,Math.round(bilheteriaBase(uc)*bonus*100)/100,uc);
     }
     const wages=wageBill(uc);
-    if(brasil||mine)addFin('Salários do elenco',-Math.round(wages*1000)/1000,uc);
+    if(regular||mine)addFin('Salários do elenco',-Math.round(wages*1000)/1000,uc);
     if(mine){const gf=mine.h===uc.id?mine.hg:mine.ag,ga=mine.h===uc.id?mine.ag:mine.hg,bicho=Math.round(wages*0.15*1000)/1000;
       (mine.bicho||(mine.bicho={}))[uc.id]=bicho; // o ajuste ao vivo (ressimularDepois) usa o mesmo valor (#43)
       if(gf>ga)addFin('Bicho por vitória',-bicho,uc)}
@@ -197,7 +197,7 @@ function concluirRodada(games){
   processLoans();
   for(const t of tecnicos().filter(t=>!t.demitido)){
     const uc=clubDo(t), jogo=games.find(g=>g.h===uc.id||g.a===uc.id);
-    if(jogaNoBrasil()||jogo)atualizarConfianca(t,jogo);
+    if(jogaNoBrasil()||S.round<=rodadasDaDivisao(divOf(uc))||jogo)atualizarConfianca(t,jogo);
     if(uc.balance<0)addNews('⚠️ Caixa negativo! Venda jogadores para equilibrar as contas.',uc.id);
   }
   renovarPropostasDeClubes();

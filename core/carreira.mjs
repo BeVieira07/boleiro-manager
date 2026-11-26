@@ -17,7 +17,7 @@
 import { garantirBase } from './base.mjs';
 import { CONF_INICIO, definirMeta, metaDe } from './diretoria.mjs';
 import { DIVS, S, addNewsTodos, clubById, clubDo, divOf, divisions, table, tec, tecDoClube, tecnicos, zonasDaDivisao } from './estado.mjs';
-import { serieBase } from './campeonatos.mjs';
+import { regraLiga } from './campeonatos.mjs';
 import { promovidoNoPlayoff } from './playoffs.mjs';
 import { autoXI } from './motor.mjs';
 import { clamp, rnd } from './utils.mjs';
@@ -57,7 +57,8 @@ export function registrarTitulo(comp, nome, clube) {
 /** Reputação de 0 a 100: série do clube, campanha contra a meta, temporadas anteriores e o motivo da saída. */
 export function reputacao(t, motivo = t.saida) {
   const uc = clubDo(t);
-  let r = BASE_SERIE[serieBase(divOf(uc))] ?? 30;
+  const div = divOf(uc);
+  let r = regraLiga(div)?.reputacaoBase ?? BASE_SERIE[div] ?? 30;
   r += clamp(campanha(t).dif * 3, -25, 25); // campanha contra a meta
   r += clamp((t.historico || []).reduce((s, h) => s + (h.pos === 1 ? 8 : h.pos <= h.alvo ? 3 : -2), 0), -10, 20);
   if (motivo === 'demitido' || campanha(t).dif < 0) r -= 10; // pedir demissão indo mal pesa como ser demitido (#271)

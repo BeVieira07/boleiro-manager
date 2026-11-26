@@ -1,6 +1,7 @@
 import { registrarTemporada, sairDoClube } from './carreira.mjs';
+import { regraLiga } from './campeonatos.mjs';
 import { wageBill } from './emprestimos.mjs';
-import { DIVS, S, addNews, bilheteriaBase, clubById, clubDo, divOf, rodadasDaDivisao, seasonPrize, table, tec, tvQuota, userClub, zonasDaDivisao } from './estado.mjs';
+import { DIVS, S, addNews, bilheteriaBase, clubById, clubDo, divOf, rodadasDaDivisao, seasonPrize, table, tec, tvQuota, zonasDaDivisao } from './estado.mjs';
 import { clamp } from './utils.mjs';
 
 /* ================= confiança da diretoria (#11) =================
@@ -10,7 +11,7 @@ import { clamp } from './utils.mjs';
 export const CONF_INICIO=60,DEMISSAO_NIVEL=10,DEMISSAO_RODADAS=3;
 export const FAIXAS=[[80,'Segurança total'],[55,'Estável'],[30,'Em risco'],[0,'Demissão iminente']];
 export const faixaConf=c=>FAIXAS.find(f=>c>=f[0])[1];
-/* finanças (#48). Receita esperada por rodada: cota de TV + meia bilheteria (um jogo em casa a cada dois), sem a premiação.
+/* finanças (#48). Receita esperada por rodada regular da liga: cota de TV + meia bilheteria (um jogo em casa a cada dois).
    A folha só pesa acima de FOLHA_LIMITE vezes a receita: no elenco padrão a mais alta começa em 1,41 e passa de 1,7 com a evolução
    dos jogadores (Flamengo, que fecha a temporada no vermelho); os outros 79 clubes ficam abaixo do limite, ou perto dele.
    Caixa em queda: QUEDA_RODADAS rodadas seguidas no vermelho e, no ritmo delas (a mediana, para uma compra isolada não pesar),
@@ -34,11 +35,20 @@ export function metaDe(uc){
   const d=divOf(uc),n=S.clubs.filter(c=>divOf(c)===d).length;
   // posição esperada pela força; no empate, desempata pelo id (#441: com vários empatados no topo, ninguém ficava com a meta de acesso)
   const esp=1+S.clubs.filter(c=>divOf(c)===d&&(c.strength>uc.strength||(c.strength===uc.strength&&c.id<uc.id))).length;
-  // #382: Libertadores só na Série A; a série mais alta de uma liga sem a A não tem vaga nem acesso, só título
   const {acima,acessoDireto,rebaixamento:bottom,playoffAte}=zonasDaDivisao(d);
-  const top=playoffAte||acessoDireto||(d==='A'?6:2);
-  const texto=esp<=2?'Lutar pelo título':esp<=top?(d==='A'?'Vaga na Libertadores':playoffAte?'Chegar ao mata-mata do acesso':`Acesso à ${DIVS[acima]}`):bottom&&esp>n-bottom?'Evitar o rebaixamento':'Terminar no meio da tabela';
-  return {texto,alvo:esp<=2?3:esp<=top?top:bottom&&esp>n-bottom?n-bottom:Math.min(n,esp+1)}; // alvo: pior posição aceita
+  const metas=regraLiga(d)?.metas;
+  if(metas){
+    if(esp<=metas.titulo.ate)return {texto:'Lutar pelo título',alvo:metas.titulo.alvo};
+    if(esp<=metas.vagaEuropeia)return {texto:'Vaga europeia',alvo:metas.vagaEuropeia};
+    if(esp<=acessoDireto)return {texto:`Acesso direto à ${DIVS[acima]}`,alvo:acessoDireto};
+    if(esp<=playoffAte)return {texto:'Chegar ao mata-mata do acesso',alvo:playoffAte};
+  }else{
+    if(esp<=2)return {texto:'Lutar pelo título',alvo:3};
+    if(d==='A'&&esp<=6)return {texto:'Vaga na Libertadores',alvo:6}; // #382
+    if(esp<=acessoDireto)return {texto:`Acesso à ${DIVS[acima]}`,alvo:acessoDireto};
+  }
+  if(bottom&&esp>n-bottom)return {texto:'Evitar o rebaixamento',alvo:n-bottom};
+  return {texto:'Terminar no meio da tabela',alvo:Math.min(n,esp+1)};
 }
 export function definirMeta(t=tec()){t.meta=metaDe(clubDo(t))}
 export function migrarDiretoria(estado){for(const t of Object.values(estado.managers||{})){if(t.conf==null){t.conf=CONF_INICIO;t.confBaixa=0;t.confFat=[]}if(!t.meta)definirMeta(t)}}

@@ -2,9 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { carregarJogo, clubeDaSerie, problemasNasTelas } from './jogo.mjs';
 
-function iniciarNaInglaterra(div = 'GB1') {
-  const j = carregarJogo({ estaduais: true, continentais: true });
-  j.run(`criarJogo(DADOS_EUROPA.clubs.find(c => c.liga === '${div}').id, DADOS_EUROPA, { pais: 'Inglaterra' })`);
+function iniciarNaInglaterra(div = 'GB1', { clubeId, semente } = {}) {
+  const j = carregarJogo({ estaduais: true, continentais: true, semente });
+  const id = clubeId ?? j.run(`DADOS_EUROPA.clubs.find(c => c.liga === '${div}').id`);
+  j.run(`criarJogo('${id}', DADOS_EUROPA, { pais: 'Inglaterra' })`);
   return j;
 }
 
@@ -22,7 +23,6 @@ test('Inglaterra: temporada completa, artilharia, três acessos e três rebaixam
   assert.ok(j.run("S.clubs.every(c => c.pais === 'Inglaterra' && !ehEstrangeiro(c) && !clubeEuropeu(c.id))"));
   assert.ok(j.run("clubesEuropa().length > 0 && clubesEuropa().every(c => c.pais !== 'Inglaterra')"));
   assert.ok(j.run("DADOS_EUROPA.clubs.filter(c => c.pais === 'Inglaterra').every(c => c.players.every(([id,,,,ovr]) => P[id].ovr === ovr))"));
-  assert.ok(j.run("tvQuota('GB1') === tvQuota('A') && seasonPrize('GB2',24) === seasonPrize('B',20)"));
   assert.deepEqual(problemasNasTelas(j), []);
   j.run("go('competicoes')");
   assert.match(j.html(), /Premier League/);
@@ -94,6 +94,95 @@ test('Championship: mando das semifinais, agregado, pênaltis e final única em 
   assert.deepEqual(j.run('S.fixtures[48][0].pen'), penFinal);
 });
 
+test('Inglaterra: cada liga tem TV, bilheteria, caixa inicial e prêmios próprios', () => {
+  const j = iniciarNaInglaterra();
+  assert.ok(j.run("tvQuota('GB1') > tvQuota('GB2') && tvQuota('GB1') !== tvQuota('A') && tvQuota('GB2') !== tvQuota('B')"));
+  assert.ok(j.run("bilheteriaBase({ division: 'GB1', strength: 72 }) > bilheteriaBase({ division: 'GB2', strength: 72 })"));
+  assert.ok(j.run("startBalance('GB1',72) > startBalance('GB2',72)"));
+  assert.ok(j.run("seasonPrize('GB1',1) > seasonPrize('GB2',1)"));
+  for (const [div, clubes] of [['GB1', 20], ['GB2', 24]]) {
+    const pr = j.run(`Array.from({length:${clubes}}, (_, i) => seasonPrize('${div}', i + 1))`);
+    assert.ok(pr.every((valor, i) => valor > (pr[i + 1] ?? 0)));
+    assert.ok(Math.abs(pr[0] / pr.at(-1) - clubes) < 1e-9, 'campeão recebe uma cota para cada clube da liga');
+  }
+});
+
+test('Inglaterra: metas de título, vaga europeia, permanência e acesso seguem a liga', () => {
+  const j = iniciarNaInglaterra('GB1', { clubeId: 'e33' });
+  const metas = div => j.run(`S.clubs.filter(c => divOf(c) === '${div}')
+    .sort((a, b) => b.strength - a.strength || (a.id < b.id ? -1 : 1)).map(metaDe)`);
+  const premier = metas('GB1'), championship = metas('GB2');
+  assert.deepEqual(premier[0], { texto: 'Lutar pelo título', alvo: 3 });
+  assert.deepEqual(premier.slice(2, 4), Array(2).fill({ texto: 'Vaga europeia', alvo: 4 }));
+  assert.deepEqual(premier[9], { texto: 'Terminar no meio da tabela', alvo: 11 });
+  assert.deepEqual(premier.slice(-3), Array(3).fill({ texto: 'Evitar o rebaixamento', alvo: 17 }));
+  assert.deepEqual(championship[0], { texto: 'Lutar pelo título', alvo: 1 });
+  assert.deepEqual(championship[1], { texto: 'Acesso direto à Premier League', alvo: 2 });
+  assert.deepEqual(championship.slice(2, 6), Array(4).fill({ texto: 'Chegar ao mata-mata do acesso', alvo: 6 }));
+  assert.ok([...premier, ...championship].every(m => !m.texto.includes('Libertadores')));
+  assert.deepEqual(j.run('tec().meta'), premier[3]);
+  j.run("go('clube')");
+  assert.match(j.html(), /Vaga europeia/);
+  assert.doesNotMatch(j.html(), /Libertadores/);
+});
+
+for (const [div, clubeId, nome, jogosRegulares, alvoMediano] of [
+  ['GB1', 'e52', 'Crystal Palace', 38, 11],
+  ['GB2', 'e76', 'Swansea', 46, 13]
+]) {
+  test(`${div}: ${nome} paga a folha e termina com caixa saudável e meta cumprida`, () => {
+    const j = iniciarNaInglaterra(div, { clubeId, semente: 449 });
+    const inicial = j.run('userClub().balance'), clube = j.run('userClub()');
+    const alvo = j.run('tec().meta.alvo');
+    assert.equal(clube.name, nome);
+    assert.equal(alvo, alvoMediano, 'clube no meio da lista por força');
+    let folhaPaga = 0;
+    while (j.run('S.round < S.fixtures.length')) {
+      const rodada = j.run('S.round');
+      const r = j.run('if (validateLineup()) userClub().lineup = autoXI(userClub()); jogarRodada()');
+      assert.equal(r.erro, undefined);
+      assert.equal(r.demitido, undefined);
+      assert.equal(j.run('tec().demitido'), false);
+      assert.deepEqual(j.run('tec().confFat.filter(f => /Folha|Caixa/.test(f.t))'), []);
+
+      const lancamentos = clube.fin.filter(f => f.r === rodada);
+      const valores = prefixo => lancamentos.filter(f => f.desc.startsWith(prefixo)).map(f => f.amount);
+      const regular = rodada < jogosRegulares;
+      const folha = j.run('wageBill(userClub())'); // a forma dos jogadores pode mudar a folha no início da rodada
+      const salario = -Math.round(folha * 1000) / 1000;
+      assert.deepEqual(valores('Salários do elenco'), regular || r.meu ? [salario] : []);
+      assert.deepEqual(valores('Cota de TV'), regular ? [j.run(`tvQuota('${div}')`)] : []);
+      assert.equal(valores('Bilheteria').length, r.meu?.h === clube.id && !r.meu.neutro ? 1 : 0);
+      const ganhou = r.meu && (r.meu.h === clube.id ? r.meu.hg > r.meu.ag : r.meu.ag > r.meu.hg);
+      assert.deepEqual(valores('Bicho por vitória'), ganhou ? [-Math.round(folha * 0.15 * 1000) / 1000] : []);
+      folhaPaga -= valores('Salários do elenco')[0] ?? 0;
+      assert.ok(clube.balance >= 0, `caixa negativo na rodada ${rodada + 1}`);
+    }
+
+    const fim = j.run('fecharTemporada()');
+    assert.equal(fim.div, div);
+    assert.ok(fim.pos <= alvo, `${fim.pos}º lugar, meta de ${alvo}º`);
+    assert.equal(fim.prize, j.run(`seasonPrize('${div}', ${fim.pos})`));
+    assert.ok(folhaPaga > inicial, 'pagou mais que o caixa inicial em salários');
+    assert.ok(clube.balance >= inicial * 0.90 && clube.balance <= inicial * 1.60,
+      `caixa de ${inicial} para ${clube.balance} milhões`);
+    assert.equal(j.run('tec().demitido'), false);
+  });
+}
+
+test('save inglês da #443 recalcula a meta e preserva os lançamentos feitos', () => {
+  const j = iniciarNaInglaterra('GB1', { clubeId: 'e33' });
+  const meta = j.run('tec().meta');
+  j.run(`S.versao = 21;
+    tec().meta = { texto: 'Terminar no meio da tabela', alvo: 5 };
+    addFin('Cota de TV — rodada 1', 1.2)`);
+  const caixa = j.run('userClub().balance'), fin = j.run('userClub().fin');
+  assert.deepEqual(j.run('migrarSave(JSON.parse(JSON.stringify(S)))'), { ok: true });
+  assert.deepEqual(j.run('tec().meta'), meta);
+  assert.equal(j.run('userClub().balance'), caixa);
+  assert.deepEqual(j.run('userClub().fin'), fin);
+});
+
 test('save anterior ao campo país migra para Brasil', () => {
   const j = carregarJogo();
   j.run(`criarJogo('${clubeDaSerie(j)}', getData())`);
@@ -101,7 +190,7 @@ test('save anterior ao campo país migra para Brasil', () => {
   assert.deepEqual(j.run(`(() => {
     const antigo = JSON.parse(JSON.stringify(S));
     delete antigo.pais;
-    antigo.versao = VERSAO_SAVE - 1;
+    antigo.versao = 20;
     return migrarSave(antigo);
   })()`), { ok: true });
   assert.equal(j.run('S.pais'), 'Brasil');
