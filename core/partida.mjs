@@ -15,7 +15,8 @@ import { clamp, ri, rnd } from './utils.mjs';
 import { limparEventosAntigos } from './aovivo.mjs';
 import { aplicarFormaPendente } from './forma.mjs';
 import { processLoans } from './emprestimos.mjs';
-import { concluirDataPlayoff, promovidoNoPlayoff } from './playoffs.mjs';
+import { concluirDataPlayoff, resultadoPlayoff } from './playoffs.mjs';
+import { regraLiga } from './campeonatos.mjs';
 
 /* ================= fim de temporada ================= */
 // regra: fecha a temporada (premiação, histórico, diretoria). Devolve o resumo, ou null se já foi fechada.
@@ -49,8 +50,8 @@ function mudancasDeDivisao(){
   return ds.slice(0,-1).map((hi,i)=>{
     const lo=ds[i+1], {rebaixamento}=zonasDaDivisao(hi), {acessoDireto}=zonasDaDivisao(lo);
     const down=rebaixamento?table(hi).slice(-rebaixamento).map(t=>t.id):[];
-    const up=table(lo).slice(0,acessoDireto).map(t=>t.id), vencedor=promovidoNoPlayoff(lo);
-    if(vencedor)up.push(vencedor);
+    const up=table(lo).slice(0,acessoDireto).map(t=>t.id), pl=regraLiga(lo)?.playoff?resultadoPlayoff():null;
+    if(pl?.sobe)up.push(pl.sobe);if(pl?.cai)down.push(pl.cai); // repescagem (#446, #447): o de cima que perde cai
     return {hi,lo,down,up};
   });
 }
