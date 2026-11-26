@@ -27,7 +27,7 @@ export const CAMPEONATOS = {
         bilheteria: { base: 0.40, porPonto: 0.115, piso: 0.20 },
         caixaInicial: { base: 26, porPonto: 3, piso: 10 }
       },
-      metas: { titulo: { ate: 1, alvo: 1 } }
+      metas: {} // 2ª divisão: o favorito tem meta de acesso direto
     }
   },
   Espanha: {
@@ -48,7 +48,7 @@ export const CAMPEONATOS = {
         bilheteria: { base: 0.35, porPonto: 0.085, piso: 0.16 },
         caixaInicial: { base: 21, porPonto: 2.5, piso: 8 }
       },
-      metas: { titulo: { ate: 1, alvo: 1 } }
+      metas: {} // 2ª divisão: o favorito tem meta de acesso direto
     }
   },
   Itália: {
@@ -72,7 +72,7 @@ export const CAMPEONATOS = {
         bilheteria: { base: 0.28, porPonto: 0.07, piso: 0.13 },
         caixaInicial: { base: 20, porPonto: 2.3, piso: 8 }
       },
-      metas: { titulo: { ate: 1, alvo: 1 } }
+      metas: {} // 2ª divisão: o favorito tem meta de acesso direto
     }
   },
   França: {
@@ -96,7 +96,7 @@ export const CAMPEONATOS = {
         bilheteria: { base: 0.22, porPonto: 0.045, piso: 0.10 },
         caixaInicial: { base: 13, porPonto: 1.5, piso: 5 }
       },
-      metas: { titulo: { ate: 1, alvo: 1 } }
+      metas: {} // 2ª divisão: o favorito tem meta de acesso direto
     }
   },
   Portugal: {
@@ -117,7 +117,7 @@ export const CAMPEONATOS = {
         bilheteria: { base: 0.12, porPonto: 0.025, piso: 0.05 },
         caixaInicial: { base: 8.5, porPonto: 0.9, piso: 3.5 }
       },
-      metas: { titulo: { ate: 1, alvo: 1 } }
+      metas: {} // 2ª divisão: o favorito tem meta de acesso direto
     }
   }
 };

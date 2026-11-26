@@ -38,7 +38,7 @@ export function metaDe(uc,clubes=S.clubs){
   const {acima,acessoDireto,rebaixamento,playoffAte,repescagem}=zonasDaDivisao(d,clubes);
   const metas=regraLiga(d)?.metas;
   if(metas){
-    if(esp<=metas.titulo.ate)return {texto:'Lutar pelo título',alvo:metas.titulo.alvo};
+    if(metas.titulo&&esp<=metas.titulo.ate)return {texto:'Lutar pelo título',alvo:metas.titulo.alvo};
     if(esp<=metas.vagaEuropeia)return {texto:'Vaga europeia',alvo:metas.vagaEuropeia};
     if(esp<=acessoDireto)return {texto:`Acesso direto à ${DIVS[acima]}`,alvo:acessoDireto};
     if(esp<=playoffAte)return {texto:'Chegar ao mata-mata do acesso',alvo:playoffAte};

@@ -120,7 +120,7 @@ test('Inglaterra: metas de título, vaga europeia, permanência e acesso seguem 
   assert.deepEqual(premier.slice(2, 4), Array(2).fill({ texto: 'Vaga europeia', alvo: 4 }));
   assert.deepEqual(premier[9], { texto: 'Terminar no meio da tabela', alvo: 11 });
   assert.deepEqual(premier.slice(-3), Array(3).fill({ texto: 'Evitar o rebaixamento', alvo: 17 }));
-  assert.deepEqual(championship[0], { texto: 'Lutar pelo título', alvo: 1 });
+  assert.deepEqual(championship[0], { texto: 'Acesso direto à Premier League', alvo: 2 }, 'na 2ª divisão o favorito tem meta de acesso, não de título');
   assert.deepEqual(championship[1], { texto: 'Acesso direto à Premier League', alvo: 2 });
   assert.deepEqual(championship.slice(2, 6), Array(4).fill({ texto: 'Chegar ao mata-mata do acesso', alvo: 6 }));
   assert.ok([...premier, ...championship].every(m => !m.texto.includes('Libertadores')));
