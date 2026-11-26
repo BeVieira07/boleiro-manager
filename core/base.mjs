@@ -37,7 +37,11 @@ export function novoJovem(c, k, r = rnd) {
 export function gerarBase(c, r = rnd) {
   if (!c.base) c.base = [];
   let k = 500 + (S ? S.season % 100 : 0) * 10 + c.base.length;
-  for (let n = 0; n < BASE_NOVOS && c.base.length < BASE_MAX; n++) c.base.push(novoJovem(c, k++, r));
+  for (let n = 0; n < BASE_NOVOS && c.base.length < BASE_MAX; n++) {
+    let p;
+    do { p = novoJovem(c, k++, r) } while (S?.aposentados?.includes(p.id));
+    c.base.push(p);
+  }
 }
 /** Virada de temporada (depois da idade do elenco): a base dos clubes com técnico envelhece, evolui até o potencial,
  *  dispensa quem passou de BASE_IDADE_MAX e recebe jovens novos. Clube que perdeu o técnico fica sem base. */

@@ -37,6 +37,28 @@ export function fecharTemporada(){
   for(const t of ativos)confiancaFimTemporada(t,res[t.id].pos);S.seasonClosed=S.season;
   return {div,T,pos,two,mv,prize,ds,di,champs,top};
 }
+function envelhecerElenco(c,continental=false){
+  c.players=c.players.filter(p=>{
+    const ovrAnterior=p.ovr;
+    p.age++;
+    const d=p.age<=21?ri(1,4):p.age<=24?ri(0,3):p.age<=29?ri(-1,1):p.age<=32?ri(-2,0):ri(-4,-1);
+    p.ovr=clamp(d>0?Math.max(p.ovr,Math.min(p.ovr+d,tetoOvr(p))):p.ovr+d,40,95); // #50: só sobe até o potencial
+    if(p.age>=37){
+      addNews(`👋 ${p.name} se aposentou.`,c.id);
+      S.aposentados.push(p.id);
+      S.loans=(S.loans||[]).filter(l=>l.pid!==p.id); // #367: sem empréstimo pendurado
+      return false;
+    }
+    if(continental){ // as copas guardam gols no torneio e não usam a forma do Brasileirão
+      delete p.goals;delete p.forma;delete p.o0;delete p.oT;
+    }else{
+      p.o0=ovrAnterior;p.forma=0;p.oT=p.ovr;p.goals=0; // #44: teto da forma depois da idade
+    }
+    refreshEconomics(p);
+    return true;
+  });
+}
+
 // regra: começa a temporada seguinte (acesso/rebaixamento, fim de contratos, idade, aposentadoria, calendário)
 export function iniciarTemporada(){
   const vagas=vagasBrasileiras(); // #133: pela Série A que acabou, antes do acesso e do rebaixamento
@@ -51,23 +73,19 @@ export function iniciarTemporada(){
   }
   vencerContratos(); // #49: antes da idade; o elenco que ficar pequeno é completado logo abaixo (ensureSquad)
   for(const c of S.clubs){
-    const keep=[];
-    for(const p of c.players){
-      p.o0=p.ovr;p.forma=0;
-      p.age++;
-      const d=p.age<=21?ri(1,4):p.age<=24?ri(0,3):p.age<=29?ri(-1,1):p.age<=32?ri(-2,0):ri(-4,-1);
-      p.ovr=clamp(d>0?Math.max(p.ovr,Math.min(p.ovr+d,tetoOvr(p))):p.ovr+d,40,95);p.oT=p.ovr;p.goals=0; // sobe só até o potencial (#50); oT: o teto da forma conta depois da idade (#44)
-      if(p.age>=37){addNews(`👋 ${p.name} se aposentou.`,c.id);S.loans=(S.loans||[]).filter(l=>l.pid!==p.id);continue} // #367: sem empréstimo pendurado
-      refreshEconomics(p);keep.push(p);
-    }
-    c.players=keep;ensureSquad(c);
+    envelhecerElenco(c);ensureSquad(c);
   }
   virarBase(); // #50: a base dos clubes com técnico
   ferias(); // #136: energia cheia na nova temporada
   for(const c of S.clubs)c.strength=forcaDoElenco(c); // #374: meta, bilheteria e Copa pela força do elenco de agora, não a do jogo novo
+  for(const c of todosEstrangeiros())envelhecerElenco(c,true); // antes do retorno dos empréstimos, para cada jogador envelhecer uma vez
   S.season++;S.round=0;S.fixtures=makeAllFixtures(S.clubs);
   reindex();criarCopa();criarEstaduais();criarContinentais(vagas);
   processLoans(); // #142: empréstimo de 1 ano feito na rodada 0 volta agora
+  for(const c of todosEstrangeiros()){
+    ensureSquad(c);
+    c.strength=forcaDoElenco(c);
+  }
   for(const c of [...S.clubs,...todosEstrangeiros()])for(const p of [...c.players,...(c.base||[])])p.amar=0;
   for(const t of tecnicos().filter(t=>!t.demitido)){t.offers=[];confiancaNovaTemporada(t);const uc=clubDo(t);uc.lineup=getXI(uc);if(uc.lineup.length<11)uc.lineup=autoXI(uc)}
   addNewsTodos(`📅 Começa a temporada ${S.season}!`);
@@ -88,7 +106,9 @@ export function ensureSquad(c){
   const r=rnd;let i=c.players.length+100;
   for(const [pos,n] of Object.entries(MINIMO_POSICAO)){
     while(c.players.filter(p=>p.pos===pos).length<n){
-      const p=fakePlayer(c.id,i++,c.strength,pos,r,[17,19]);p.ovr=clamp(c.strength-10+ri(-4,6),40,85);
+      let p;
+      do{p=fakePlayer(c.id,i++,c.strength,pos,r,[17,19])}while(P[p.id]||S.aposentados.includes(p.id));
+      p.ovr=clamp(c.strength-10+ri(-4,6),40,85);
       p.goals=0;p.listed=false;p.contrato=CONTRATO_NOVO;p.pot=potInicial(p);refreshEconomics(p);p.clubId=c.id;c.players.push(p);P[p.id]=p;
       addNews(`🌱 ${p.name} (${POSD[p.pd].nome}) subiu da base.`,c.id);
     }

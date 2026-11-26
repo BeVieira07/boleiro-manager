@@ -94,3 +94,55 @@ test('liga online: a rodada do servidor joga as copas sul-americanas', async () 
   for (let i = 0; i <= d0; i++) { jogarRodadaLiga(s, {}); s = JSON.parse(JSON.stringify(est.S)) }
   assert.ok(s.continentais.torneios.every(t => t.rodadas[0].every(g => g.hg != null)), 'a 1ª rodada dos grupos não foi jogada');
 });
+
+test('liga online: estrangeiros evoluem por três viradas sem ressuscitar aposentados', () => {
+  const j = carregarJogo({ continentais: true, europa: true });
+  const caso = j.run(`(() => {
+    iniciarLiga([{ user_id: 'ana', nome: 'Ana', club_id: 'c127' }], ['A'], DADOS_PADRAO);
+    const river = clubeDe(P.p1493.clubId);
+    const comprado = P.p1493;
+    movePlayer(comprado, userClub());
+    comprado.age = 36;
+    comprado.contrato = 4;
+    const emprestado = river.players.find(p => p.pos === 'D' && p.age < 30);
+    startLoan({ pid: emprestado.id, from: river.id, to: userClub().id, fim: { s: S.season + 1, r: 0 } });
+    const outro = todosEstrangeiros().find(c => c !== river);
+    const jovem = outro.players.find(p => p.pos === 'M');
+    Object.assign(jovem, { age: 17, ovr: 55, pot: 85 });
+    const europeu = clubesEuropa().flatMap(c => c.players).find(p => !p.id.startsWith('s'));
+    movePlayer(europeu, userClub());
+    europeu.age = 36;
+    europeu.contrato = 4;
+    const veterano = outro.players.find(p => p !== jovem);
+    veterano.age = 36;
+    outro.players = [jovem, veterano];
+    reindex();
+    S.versao = 19;
+    delete S.aposentados;
+    return { river: river.id, outro: outro.id, emprestado: emprestado.id,
+      idadeEmprestado: emprestado.age, jovem: jovem.id, aposentados: [comprado.id, veterano.id, europeu.id] };
+  })()`);
+  const clubes = j.run('todosEstrangeiros().map(c => c.id).sort()');
+  const temporada = j.run('S.season');
+  for (let ano = 1; ano <= 3; ano++) {
+    const virada = j.run(`
+      S.round = S.fixtures.length - 1;
+      const { virada } = jogarRodadaLiga(JSON.parse(JSON.stringify(S)), {});
+      migrarSave(JSON.parse(JSON.stringify(S)));
+      virada;
+    `);
+    assert.equal(virada.temporada, temporada + ano - 1);
+    assert.equal(j.run('S.versao'), j.run('VERSAO_SAVE'));
+    assert.deepEqual(j.run('todosEstrangeiros().map(c => c.id).sort()'), clubes);
+    assert.equal(j.run(`P['${caso.jovem}']?.age`), 17 + ano, 'idade do jovem da copa');
+    assert.ok(j.run(`P['${caso.jovem}']?.ovr`) >= 55 + ano, 'evolução do jovem da copa');
+    assert.equal(j.run(`P['${caso.emprestado}']?.age`), caso.idadeEmprestado + ano, 'idade do emprestado');
+    assert.equal(j.run(`P['${caso.emprestado}']?.clubId`), caso.river, 'retorno ao River');
+    for (const pid of caso.aposentados) assert.equal(j.run(`P['${pid}']`), undefined, pid);
+    assert.ok(j.run(`todosEstrangeiros().every(c => c.strength === forcaDoElenco(c))`));
+    assert.ok(j.run(`todosEstrangeiros().every(c => Object.entries(MINIMO_POSICAO)
+      .every(([pos, min]) => c.players.filter(p => p.pos === pos).length >= min))`));
+    assert.ok(j.run(`clubeDe('${caso.outro}').players.filter(p => p.id !== '${caso.jovem}')
+      .every(p => p.age >= 17 && p.age <= 19 + ${ano} - 1)`), 'reposição por jovens');
+  }
+});

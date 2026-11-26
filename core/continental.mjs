@@ -55,14 +55,15 @@ function grupoJogos(grupos) {
 /** Monta as duas copas da temporada (jogo novo e começo de cada temporada) com as vagas de vagasBrasileiras(). */
 export function criarContinentais(vagas) {
   const R = S.fixtures.length;
-  if (!CONTINENTAIS.ligados || !vagas || R < DATAS + 1) { S.continentais = null; return }
-  const estrangeiros = {}, torneios = [];
-  // quem já joga no Brasil (comprado ou emprestado) não volta ao elenco estrangeiro; cada jogador existe uma vez só
-  const vistos = new Set(S.clubs.flatMap(c => [...c.players, ...(c.base || [])].map(p => p.id)));
-  // clube estrangeiro com jogador emprestado fora fica no jogo (mesmo sem a edição nova) para o jogador voltar a ele
-  const antigos = S.continentais ? S.continentais.estrangeiros : {};
-  for (const id of Object.keys(antigos)) if ((S.loans || []).some(l => l.from === id)) estrangeiros[id] = antigos[id];
-  for (const cfg of TORNEIOS) {
+  // O elenco segue no save mesmo quando o clube fica fora das copas, inclusive para receber o jogador emprestado.
+  const estrangeiros = S.continentais?.estrangeiros ?? {}, torneios = [];
+  const habilitados = CONTINENTAIS.ligados && vagas && R >= DATAS + 1;
+  const vistos = new Set(S.aposentados);
+  for (const c of [...S.clubs, ...Object.values(estrangeiros)]) {
+    for (const p of [...c.players, ...(c.base || [])]) vistos.add(p.id);
+  }
+  for (const lista of Object.values(S.europa?.chegadas ?? {})) for (const p of lista) vistos.add(p.id);
+  for (const cfg of habilitados ? TORNEIOS : []) {
     const br = vagas[cfg.id].filter(id => clubById(id)), fora = DADOS_CONTINENTAIS.clubs.filter(c => c.torneio === cfg.id)
       .sort((a, b) => b.strength - a.strength || (a.id < b.id ? -1 : 1)).slice(0, VAGAS - br.length);
     if (br.length + fora.length < VAGAS) continue;
@@ -72,7 +73,6 @@ export function criarContinentais(vagas) {
         novo.players = novo.players.filter(p => !vistos.has(p.id) && vistos.add(p.id));
         estrangeiros[c.id] = novo;
       }
-      for (const p of estrangeiros[c.id].players) vistos.add(p.id);
     }
     // um brasileiro por grupo (enquanto der), o resto sorteado
     const grupos = Array.from({ length: GRUPOS }, () => []), resto = shuffle(fora.map(c => c.id));
@@ -80,7 +80,8 @@ export function criarContinentais(vagas) {
     for (const g of grupos) while (g.length < 4) g.push(resto.pop());
     torneios.push({ id: cfg.id, nome: cfg.nome, grupos, rodadas: grupoJogos(grupos), fases: [], final: null, campeao: null, gols: {} });
   }
-  S.continentais = torneios.length ? { temporada: S.season, datas: Array.from({ length: DATAS }, (_, k) => Math.floor((k + 1) * R / (DATAS + 1))), estrangeiros, torneios } : null;
+  const datas = torneios.length ? Array.from({ length: DATAS }, (_, k) => Math.floor((k + 1) * R / (DATAS + 1))) : [];
+  S.continentais = torneios.length || Object.keys(estrangeiros).length ? { temporada: S.season, datas, estrangeiros, torneios } : null;
   if (S.continentais) { for (const c of Object.values(S.continentais.estrangeiros)) prepararEstrangeiro(c); reindex() }
 }
 
