@@ -11,7 +11,7 @@ test('só jogador da lista de empréstimo da IA pode ser pedido; o resto é recu
   const j = novo();
   const fora = j.run('Object.values(P).find(p=>!ehHumano(p.clubId)&&!p.emprestar).id');
   assert.match(j.run(`proporEmprestimo({pid:'${fora}'}).erro`), /não pôs .+ na lista de empréstimo/);
-  const meu = j.run('userClub().players[0].id');
+  const meu = j.run('userClub().players.find(p=>userClub().players.filter(x=>x.pos===p.pos).length>MINIMO_POSICAO[p.pos]).id');
   assert.match(j.run(`proporEmprestimo({pid:'${meu}'}).erro`), /lista de empréstimo no Elenco/);
   const pid = daLista(j), clube = j.run(`P['${pid}'].clubId`);
   j.run(`ui.mf.club='${clube}';go('mercado')`);
@@ -86,7 +86,7 @@ test('empréstimo novo: 1 ano, salário 50/50 nas duas folhas, sem opção de co
 
 test('lista de empréstimo do técnico: pôr e tirar no Elenco; a IA manda propostas e, aceita, o jogador vai por 1 ano', () => {
   const j = novo();
-  const pid = j.run('userClub().players.find(p=>!userClub().lineup.includes(p.id)).id');
+  const pid = j.run('userClub().players.find(p=>!userClub().lineup.includes(p.id)&&userClub().players.filter(x=>x.pos===p.pos).length>MINIMO_POSICAO[p.pos]).id');
   j.run(`go('elenco')`);
   j.acao(`toggleEmprestimo|${pid}`);
   assert.equal(j.run(`P['${pid}'].emprestar`), true);
@@ -104,7 +104,7 @@ test('lista de empréstimo do técnico: pôr e tirar no Elenco; a IA manda propo
   assert.ok(l.fim);
   assert.equal(j.run(`P['${pid}'].emprestar`), undefined, 'emprestado, sai da lista');
   // tirar da lista
-  const outro = j.run('userClub().players.find(p=>!userClub().lineup.includes(p.id)).id');
+  const outro = j.run('userClub().players.find(p=>!userClub().lineup.includes(p.id)&&userClub().players.filter(x=>x.pos===p.pos).length>MINIMO_POSICAO[p.pos]).id');
   j.acao(`toggleEmprestimo|${outro}`); j.acao(`toggleEmprestimo|${outro}`);
   assert.equal(j.run(`P['${outro}'].emprestar`), undefined);
   assert.match(j.run(`alternarEmprestimo(Object.values(P).find(p=>p.clubId!==userClub().id).id).erro`), /inválido/);

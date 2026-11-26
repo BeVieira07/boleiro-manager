@@ -7,7 +7,7 @@ import { MOVE_N, P, S, addFin, addNews, clubById, divOf, divisions, ehHumano, ta
 import { FORMA_LIM } from './forma.mjs';
 import { ehJanela, sobrasDoElenco } from './mercadoIA.mjs';
 import { autoXI } from './motor.mjs';
-import { ensureSquad } from './partida.mjs';
+import { ensureSquad, saidaAbaixoDoMinimo } from './partida.mjs';
 import { clamp, money, pick, rnd } from './utils.mjs';
 
 /* ================= transferências ================= */
@@ -18,7 +18,8 @@ export function movePlayer(p,to,emprestimo=false){
   if(from.lineup)from.lineup=from.lineup.filter(id=>id!==p.id);
   to.players.push(p);p.clubId=to.id;p.listed=false;delete p.emprestar;if(!emprestimo)novoContrato(p);
   for(const t of tecnicos())t.offers=t.offers.filter(o=>o.pid!==p.id);
-  if(!ehEuropeu(from))ensureSquad(from); // #355: o clube europeu é refeito dos dados a cada jogo aberto; os gerados sumiriam
+  // #410: o clube do técnico não ganha jogador de graça ao vender; #355: o europeu é refeito dos dados a cada jogo aberto, os gerados sumiriam
+  if(!ehHumano(from)&&!ehEuropeu(from))ensureSquad(from);
 }
 // regra: pode fazer proposta por este jogador agora? (texto do erro ou null)
 const rodadaDaProposta=()=>S.round+'_'+S.season;
@@ -137,6 +138,7 @@ const emprestado=pid=>loanOf(pid)?{erro:`${P[pid].name} está emprestado: só o 
 export function aceitarOferta(oid){
   const o=tec().offers.find(x=>x.id===oid);if(!o)return {erro:'Proposta não encontrada.'};const p=P[o.pid],b=clubeDe(o.from); // #355: a proposta pode ser de um clube europeu
   const e=emprestado(o.pid);if(e)return e;
+  const m=saidaAbaixoDoMinimo(userClub(),p);if(m)return {erro:m}; // #410: vale para venda e empréstimo; antes dos 16, que esconderia a posição
   if(userClub().players.length<=16)return {erro:'Seu elenco ficaria pequeno demais (mínimo 16).'};
   // #376: a vaga vale para venda e empréstimo (a oferta dura 3 rodadas, e o clube pode ter enchido o elenco)
   if(b.players.length>=32){recusarOferta(oid);return {erro:`${b.name} ficou sem vaga no elenco e desistiu ${o.emprestimo?'do empréstimo':'da proposta'}.`}}
@@ -152,6 +154,7 @@ export const valorVendaRapida=pid=>Math.round(P[pid].value*0.7*10)/10;
 export function venderJa(pid){
   const e=emprestado(pid);if(e)return e;
   const p=P[pid],uc=userClub();
+  const m=saidaAbaixoDoMinimo(uc,p);if(m)return {erro:m}; // #410
   if(uc.players.length<=16)return {erro:'Seu elenco ficaria pequeno demais (mínimo 16).'};
   const amt=valorVendaRapida(pid),vagas=S.clubs.filter(c=>!ehHumano(c)&&c.players.length<32),comCaixa=vagas.filter(c=>c.balance>=amt);
   const b=pick(comCaixa.length?comCaixa:vagas); // venda rápida sempre sai; quem tem caixa paga (#103)

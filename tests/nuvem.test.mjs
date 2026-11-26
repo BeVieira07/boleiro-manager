@@ -242,3 +242,23 @@ test('#372: com outra conta no mesmo navegador, os saves da primeira não sobem,
   assert.equal(nuvem.liberarEspaco(), false);
   assert.ok(pc.ls['brasfoot_save_v2_' + id], 'o save da Ana continua no navegador');
 });
+
+test('#412: aba desatualizada que dispara o envio sobe o save gravado pela outra aba, não o S velho dela', async () => {
+  const srv = servidorFalso();
+  const j = carregarJogo({ boot: true });
+  await logar(srv);
+  j.run(`newGame('${clubeDaSerie(j)}')`);
+  await nuvem.enviarPendentes();
+  const id = j.run('S.saveId');
+  // outra aba (B) joga 3 rodadas e grava no armazenamento compartilhado; a aba A segue com o S de antes
+  const saves = await import(new URL('../ui/inicio/saves.mjs', import.meta.url));
+  const estadoB = { ...JSON.parse(j.ls[saves.SAVE_PREFIX + id]), round: 3 };
+  j.ls[saves.SAVE_PREFIX + id] = JSON.stringify(estadoB);
+  const idx = JSON.parse(j.ls[saves.SAVES_KEY]);
+  idx.list[0].data = new Date(Date.now() + 5000).toISOString(); idx.list[0].jogadas = 3;
+  j.ls[saves.SAVES_KEY] = JSON.stringify(idx);
+  assert.equal(j.run('S.round'), 0, 'a aba A está atrasada');
+  await nuvem.enviarPendentes(); // timer de 2 s, evento online ou sincronizar na aba A
+  assert.equal(srv.linhas['u1/' + id].estado.round, 3, 'o que sobe é o estado da aba B');
+  assert.equal(JSON.parse(j.ls[saves.SAVES_KEY]).list[0].nuvem, idx.list[0].data, 'marcado como enviado');
+});
