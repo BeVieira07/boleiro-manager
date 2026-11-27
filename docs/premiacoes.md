@@ -42,6 +42,8 @@ Os prêmios por fase crescem dentro de cada divisão. Para as copas, os valores-
 
 ## Ligas europeias (#449)
 
+> Desde a #456, TV, bilheteria e premiação seguem a seção **Receita pela folha** abaixo. Os valores fixos de TV, bilheteria e cotas desta seção e o teste de −10% a +60% são o histórico da #449; continuam valendo as referências reais, as metas e o caixa inicial.
+
 As receitas reais orientam a escala de cada país e a diferença entre divisões. Os relatórios têm recortes diferentes. Alguns incluem receitas da UEFA ou compensações por rebaixamento, enquanto outros medem os contratos de TV domésticos.
 
 - **Inglaterra.** Em 2024/25, a Premier League registrou £3,4 bilhões de transmissão e pouco mais de £1 bilhão em dias de jogo, ante £461 milhões e £208 milhões na Championship. Por clube, a Premier ficou aproximadamente 8,9 vezes acima em TV e 6 vezes em dias de jogo. [Deloitte, Premier League](https://www.deloitte.com/uk/en/services/consulting/research/annual-review-of-football-finance-premier-league-clubs.html) · [Deloitte, Football League](https://www.deloitte.com/uk/en/services/consulting/research/annual-review-of-football-finance-football-league-clubs.html)
@@ -89,3 +91,16 @@ O teste de temporada usa a semente 449 e um clube próximo do meio da lista por 
 | PO2 | Farense | 7,600 | 9,070 | 7,600 | 10,021 | 3º, meta de 12º |
 
 Saves europeus anteriores à #449 usam a nova economia nos próximos lançamentos e recalculam as metas dos técnicos ativos na temporada em curso. O caixa, os lançamentos e as temporadas já registradas conservam os valores gravados.
+
+## Receita pela folha (#456)
+
+**Problema.** A folha cresce ~3,4 vezes a cada 10 pontos de força (folha/rodada ≈ e^(−9,11 + 0,122·força), R² 0,95 nas 14 ligas), mas a TV era fixa por liga e a bilheteria linear. Cada liga tinha uma força de equilíbrio: abaixo dela o clube enriquecia, acima quebrava. Numa simulação com três clubes por liga (forte, médio e fraco) e duas temporadas, a variação do caixa por temporada tinha mediana +33%, de −378% (Real Madrid) a +434% (Sampaio Corrêa); só 25 de 84 casos entre −25% e +35%.
+
+**Regra.** `receitaPorRodada` (`core/estado.mjs`) = folha do clube no começo da temporada (`folhaRef`, fixada no jogo novo e na virada), limitada entre 0,8× e 1,25× da folha que a força justifica na liga (a curva acima vezes `economia.fator`, ou o fator da série no Brasil), dividida pela margem: 1,10 no Brasil (copas e estaduais dão bilheteria e prêmios a mais) e 1,05 na Europa. Metade é cota de TV por rodada regular, metade bilheteria por mando (com o bônus pela posição). Contratar caro no meio da temporada sai do caixa; na seguinte, a receita acompanha só até o teto.
+
+Os fatores são a mediana, por liga, da folha inicial de todos os clubes contra a curva: Série A 1,09, B 1,15, C 1,11, D 1,08; Premier League 1,28, Championship 1,41, LaLiga 1,31, LaLiga 2 1,43, Serie A 1,32, Serie B 1,41, Ligue 1 1,23, Ligue 2 1,32, Liga Portugal 1,35, Liga Portugal 2 1,48.
+
+**Premiação.** Em rodadas de receita média da liga: o campeão leva 8 rodadas, o último 1, e as posições do meio em linha reta. No jogo novo isso dá ao campeão cerca de 8,0 milhões na Série A (antes 4,16), 2,8 na B, 1,7 na C e 0,9 na D.
+
+**Resultado** (mesma simulação, semente 7): mediana +4% por temporada, metade dos casos entre −2% e +12%, de −19% a +40% (Flamengo campeão); 83 de 84 casos entre −25% e +35%. O caixa cresce com campanha boa, copas e vendas, e cai com folha acima do que a força vale. A folha só passa do limite da diretoria (`FOLHA_LIMITE`, 1,6 vez a receita esperada) se crescer uns 45% acima da do começo da temporada.
+

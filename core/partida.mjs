@@ -8,7 +8,7 @@ import { criarEstaduais } from './estadual.mjs';
 import { todosEstrangeiros } from './estrangeiros.mjs';
 import { fakePlayer, forcaDoElenco, refreshEconomics } from './dados.mjs';
 import { confiancaFimTemporada, confiancaNovaTemporada } from './diretoria.mjs';
-import { DIVS, MOVE_N, P, S, addFin, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, hasTwoDivs, jogaNoBrasil, makeAllFixtures, reindex, seasonPrize, table, tecnicos, topScorers, zonasDaDivisao } from './estado.mjs';
+import { DIVS, MOVE_N, P, S, fixarFolhas, addFin, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, hasTwoDivs, jogaNoBrasil, makeAllFixtures, reindex, seasonPrize, table, tecnicos, topScorers, zonasDaDivisao } from './estado.mjs';
 import { autoXI, concluirRodadaCopa, getXI } from './motor.mjs';
 import { POSD } from './posicoes.mjs';
 import { clamp, ri, rnd } from './utils.mjs';
@@ -86,6 +86,7 @@ export function iniciarTemporada(){
   S.season++;S.round=0;S.fixtures=makeAllFixtures(S.clubs,S.pais);
   reindex();if(brasil){criarCopa();criarEstaduais();criarContinentais(vagas)}
   processLoans(); // #142: empréstimo de 1 ano feito na rodada 0 volta agora
+  fixarFolhas(); // #456: receita da temporada pela folha de agora
   for(const c of [...S.clubs,...todosEstrangeiros()])for(const p of [...c.players,...(c.base||[])])p.amar=0;
   for(const t of tecnicos().filter(t=>!t.demitido)){t.offers=[];confiancaNovaTemporada(t);const uc=clubDo(t);uc.lineup=getXI(uc);if(uc.lineup.length<11)uc.lineup=autoXI(uc)}
   addNewsTodos(`📅 Começa a temporada ${S.season}!`);

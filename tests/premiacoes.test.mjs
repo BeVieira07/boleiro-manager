@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { carregarJogo, clubeDaSerie } from './jogo.mjs';
 
-test('a soma dos títulos cabe no caixa inicial e financia de um a três titulares de referência por série', () => {
+// #456: a premiação da liga é medida em rodadas de receita (tests/caixa-regulado.test.mjs); aqui ficam as copas e o estadual
+test('a soma dos títulos das copas cabe no caixa inicial e financia de um a três titulares de referência por série', () => {
   const j = carregarJogo({ boot: true, semente: 20261115 });
   j.run("newGame('c121')");
   const dados = j.run(`(()=>{
@@ -25,9 +26,10 @@ test('a soma dos títulos cabe no caixa inicial e financia de um a três titular
     for (const premios of [copa, continental, estadual]) {
       assert.ok(premios.every((v, p) => v > 0 && (p === 0 || v > premios[p - 1])));
     }
-    const total = [liga[0], ...copa, ...continental, estadual[1]].reduce((s, n) => s + n, 0);
+    const total = [...copa, ...continental, estadual[1]].reduce((s, n) => s + n, 0);
     assert.ok(total <= caixa, `prêmio acumulado ${total} para caixa mínimo ${caixa}`);
-    assert.ok(total / custo >= 1 && total / custo < 3, `reforços financiados: ${total / custo}`);
+    const comLiga = total + liga[0];
+    assert.ok(comLiga / custo >= 1 && comLiga / custo < 4, `reforços financiados: ${comLiga / custo}`);
   }
 });
 

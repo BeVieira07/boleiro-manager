@@ -1,4 +1,5 @@
 import { criarBases, darPotencial } from './base.mjs';
+import { wageBill } from './emprestimos.mjs';
 import { BRASIL, CAMPEONATOS, datasPlayoff, playoffAte, regraLiga, repescagemDe } from './campeonatos.mjs';
 import { abrirPassagem } from './carreira.mjs';
 import { contratoInicial } from './contratos.mjs';
@@ -53,21 +54,33 @@ export const divsOf=clubs=>[...new Set(clubs.map(divOf))].sort();
 export const divisions=()=>divsOf(S.clubs);
 export const hasTwoDivs=()=>divisions().length>1;
 export const jogaNoBrasil=()=>!S.pais||S.pais===BRASIL;
-export const tvQuota=div=>regraLiga(div)?.economia.tv??({A:1.2,B:0.5,C:0.2,D:0.1})[div];
-const valorPorForca=(forca,referencia,{base,porPonto,piso})=>Math.max(piso,base+(forca-referencia)*porPonto);
-// bilheteria de um jogo em casa, antes do bônus pela posição na tabela
-export function bilheteriaBase(c){
-  const economia=regraLiga(divOf(c))?.economia;
-  return economia?valorPorForca(c.strength,economia.forcaReferencia,economia.bilheteria):0.5+(c.strength-60)*0.06;
+/* Receita (#456): a folha cresce ~3,4x a cada 10 pontos de força (folha/rodada ≈ e^(-9,11 + 0,122·força), R² 0,95 nas 14 ligas),
+   então a receita segue a folha do próprio clube no começo da temporada (folhaRef), limitada a FOLHA_FAIXA da folha que a força
+   justifica na liga, e divide pela margemDe (folha ÷ receita base). Contratar caro no meio da temporada sai do caixa; o lucro vem da
+   campanha (bônus de bilheteria pela posição, premiação, copas) e das vendas. Simulação em docs/premiacoes.md. */
+const FATOR_SERIE={A:1.09,B:1.15,C:1.11,D:1.08};
+// folha ÷ receita base; no Brasil as copas e os estaduais dão bilheteria e prêmios a mais
+export const MARGEM={brasil:1.1,europa:1.05}, FOLHA_FAIXA=[0.8,1.25];
+export const margemDe=c=>c.pais?MARGEM.europa:MARGEM.brasil;
+const folhaPelaForca=c=>(regraLiga(divOf(c))?.economia.fator??FATOR_SERIE[divOf(c)]??0.85)*Math.exp(-9.11+0.122*c.strength);
+/** Fixa a folha de referência da temporada (começo do jogo e de cada temporada). */
+export function fixarFolhas(clubes=S.clubs){for(const c of clubes)c.folhaRef={s:S.season,v:Math.round(wageBill(c)*1000)/1000}}
+/** Receita esperada por rodada: metade cota de TV, metade bilheteria (um jogo em casa a cada duas rodadas). */
+export function receitaPorRodada(c){
+  if(S&&c.folhaRef?.s!==S.season)fixarFolhas([c]); // saves de antes da #456
+  const f=folhaPelaForca(c), folha=S?c.folhaRef.v:c.players.reduce((t,p)=>t+p.wage,0); // sem jogo: prévia da escolha de clube
+  return Math.min(FOLHA_FAIXA[1]*f,Math.max(FOLHA_FAIXA[0]*f,folha))/margemDe(c);
 }
-// premiação de fim de temporada e caixa inicial, por série
-// Prêmios em milhões de reais. Referências de mercado em docs/premiacoes.md.
-const PREMIO_LIGA = { A: [0.55, 0.19], B: [0.23, 0.10], C: [0.12, 0.055], D: [0.06, 0.03] };
+export const tvQuota=c=>Math.round(receitaPorRodada(c)/2*1000)/1000;
+// bilheteria de um jogo em casa, antes do bônus pela posição na tabela
+export const bilheteriaBase=c=>Math.round(receitaPorRodada(c)*1000)/1000;
+// Premiação de fim de temporada, em rodadas da receita média da liga: o campeão leva PREMIO_RODADAS[0], o último PREMIO_RODADAS[1].
+export const PREMIO_RODADAS=[8,1];
+const valorPorForca=(forca,referencia,{base,porPonto,piso})=>Math.max(piso,base+(forca-referencia)*porPonto);
 export function seasonPrize(div, pos) {
-  const liga = regraLiga(div);
-  if (liga) return Math.round((liga.clubes + 1 - pos) * liga.economia.premioPorCota * 100) / 100;
-  const [piso, porPosicao] = PREMIO_LIGA[div];
-  return Math.round((piso + (20 - pos) * porPosicao) * 100) / 100;
+  const cs=S.clubs.filter(c=>divOf(c)===div), n=cs.length, media=cs.reduce((t,c)=>t+receitaPorRodada(c),0)/n;
+  const [topo,piso]=PREMIO_RODADAS;
+  return Math.round(media*(piso+(topo-piso)*(n-pos)/(n-1))*100)/100;
 }
 export function startBalance(div,s){
   const economia=regraLiga(div)?.economia;
@@ -134,6 +147,7 @@ export function criarJogo(quem,data,{pais=BRASIL}={}){
   reindex();criarBases();
   if(!europeu){criarCopa();criarEstaduais();criarContinentais(vagasBrasileiras())} // #133: na 1ª temporada, os mais fortes da Série A
   for(const t of tecnicos()){const uc=clubDo(t);abrirPassagem(t);uc.lineup=autoXI(uc);addNews(`${lista.length>1?t.nome+', você':'Você'} assumiu o comando do ${uc.name}! Caixa inicial: ${money(uc.balance)}.`,uc.id)}
+  fixarFolhas();
   migrarDiretoria(S);
   return S;
 }

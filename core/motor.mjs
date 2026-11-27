@@ -124,7 +124,7 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
   for(const t of ativos){
     const uc=clubDo(t),mine=jogoDe(uc),div=divOf(uc);
     const regular=brasil||S.round<rodadasDaDivisao(div);
-    if(regular)addFin(`Cota de TV — rodada ${S.round+1}`,tvQuota(div),uc);
+    if(regular)addFin(`Cota de TV — rodada ${S.round+1}`,tvQuota(uc),uc);
     if(mine&&mine.h===uc.id&&!mine.neutro){
       const pos=table(div).findIndex(x=>x.id===uc.id);
       const bonus=S.round===0?1:pos<4?1.3:pos<10?1.1:1; // #381: sem tabela ainda, a ordem seria a alfabética

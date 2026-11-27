@@ -17,7 +17,7 @@ export const faixaConf=c=>FAIXAS.find(f=>c>=f[0])[1];
    Caixa em queda: QUEDA_RODADAS rodadas seguidas no vermelho e, no ritmo delas (a mediana, para uma compra isolada não pesar),
    nem a premiação da meta cobre o buraco até o fim da temporada. O elenco padrão perde dinheiro por rodada e fecha a conta na premiação. */
 export const FOLHA_LIMITE=1.6,QUEDA_RODADAS=4;
-export const receitaEsperada=c=>tvQuota(divOf(c))+Math.max(0,bilheteriaBase(c))/2;
+export const receitaEsperada=c=>tvQuota(c)+bilheteriaBase(c)/2;
 export const folhaSobreReceita=c=>wageBill(c)/receitaEsperada(c);
 export function fatoresFinanceiros(uc,meta){
   const fat=[],q=folhaSobreReceita(uc);

@@ -10,7 +10,7 @@ const folhaEm = (j, q) => j.run(`(()=>{const uc=userClub(),k=${q}/folhaSobreRece
 
 test('receita esperada: cota de TV mais meia bilheteria, e nenhum clube padrão passa do limite da folha', () => {
   const j = novo();
-  assert.equal(j.run('receitaEsperada(userClub())'), j.run('tvQuota(divOf(userClub()))+bilheteriaBase(userClub())/2'));
+  assert.equal(j.run('receitaEsperada(userClub())'), j.run('tvQuota(userClub())+bilheteriaBase(userClub())/2'));
   assert.equal(j.run('S.clubs.every(c=>receitaEsperada(c)>0)'), true);
   assert.deepEqual(j.run('S.clubs.filter(c=>folhaSobreReceita(c)>FOLHA_LIMITE).map(c=>c.name)'), [], 'o elenco padrão não é cobrado');
 });
