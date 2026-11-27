@@ -148,6 +148,7 @@ html:has(.nav-abas){scroll-padding-block-start:121px}
 .nav{display:flex;gap:4px;margin-right:auto}
 .nav-item{appearance:none;background:transparent;border:0;display:flex;align-items:center;gap:9px;min-height:43px;padding:5px 15px;border-radius:var(--r-sm);color:var(--texto2);font:italic 800 17px/1 var(--f-titulo);letter-spacing:.045em;text-transform:uppercase;cursor:pointer}
 .nav-item:hover{background:var(--painel);color:var(--texto)}
+.nav-contagem{background:var(--painel2);color:var(--texto);border-radius:var(--r-pill);padding:2px 5px;font:700 11px/1.2 var(--f-texto);letter-spacing:0}
 .nav .nav-item[aria-current]{color:var(--tinta-verde);background:linear-gradient(180deg,#49db89,var(--verde))}
 .nav-resto{position:absolute;z-index:1;right:24px;top:calc(100% + 6px);padding:6px;border:1px solid var(--linha);border-radius:var(--r);background:var(--painel);box-shadow:var(--sombra);max-height:calc(100dvh - 85px);overflow:auto;overscroll-behavior:contain}
 .nav-resto .nav-item{width:100%;font:600 14px/1.35 var(--f-texto);letter-spacing:0;text-transform:none}
@@ -1021,6 +1022,12 @@ body.em-jogo .avisos{bottom:24px}
 .mer-aba.on,.mer-aba[aria-pressed="true"]{background:var(--verde-esc);color:var(--verde-claro)}
 .mer-aba .n{background:var(--painel2);border-radius:var(--r-pill);padding:1px 8px;font-size:12px}
 .mer-aba.on .n{background:var(--verde);color:#08150d}
+@media(pointer:coarse){.mer-aba{min-height:44px}}
+.mer-propostas{display:grid;gap:var(--e3);grid-template-columns:repeat(auto-fill,minmax(min(100%,270px),1fr));list-style:none;margin:0;padding:0}
+.mer-proposta{display:flex;flex-direction:column;gap:var(--e3);margin:0;overflow-wrap:anywhere}
+.mer-proposta h2,.mer-proposta p{margin:0}
+.mer-proposta-clube{display:flex;align-items:center;gap:var(--e2)}
+.mer-proposta .acoes{margin-top:auto;flex-wrap:wrap}
 .mer-filtros{display:flex;flex-direction:column;gap:var(--e4)}
 .mer-linha{display:flex;flex-wrap:wrap;gap:var(--e4);align-items:flex-end}
 .mer-linha .art-campo{min-width:150px}

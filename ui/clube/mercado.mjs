@@ -15,6 +15,7 @@ import { campoBusca, chipsGrupo, filtrar, mudarFiltro, th } from './jogadores.mj
 import { icone } from '../icones.mjs';
 import { closeModal, crest } from '../partida/partida.mjs';
 import { posTag } from './posicoes.mjs';
+import { propostasAbertas } from './propostas-recebidas.mjs';
 import { render } from '../telas.mjs';
 import { botaoProposta, mercadoLiga } from '../liga/ligajogo.mjs';
 import { avisar, confirmar, pedirValor } from '../avisos.mjs';
@@ -23,7 +24,8 @@ import { avisar, confirmar, pedirValor } from '../avisos.mjs';
    Maquete em docs/maquetes/mercado.png. Os indicadores, as abas e as contagens dos chips olham só para País, Liga, Clube e Valor
    máximo (listaMercado); busca e posição só mexem na tabela, então digitar não redesenha a tela (filtrarMercado). */
 const LIMITE = 120, VAGAS = 32;
-const ABAS = [['todos', 'Todos os jogadores', 'pessoas'], ['venda', 'À venda', 'etiqueta'], ['emprestimo', 'Para empréstimo', 'trocar'], ['clube', 'Por clube', 'escudo']];
+const ABAS = [['todos', 'Todos os jogadores', 'pessoas'], ['venda', 'À venda', 'etiqueta'], ['emprestimo', 'Para empréstimo', 'trocar'],
+  ['clube', 'Por clube', 'escudo'], ['propostas', 'Propostas', 'financas']];
 const ORDEM = { pos: 'posição', nome: 'nome', idade: 'idade', ovr: 'força', pot: 'potencial', valor: 'valor', salario: 'salário' };
 const todosOsClubes = () => [...S.clubs, ...todosEstrangeiros(), ...clubesEuropa()]; // #172: clubes estrangeiros das copas; #355: e os europeus
 const clubesPor = () => Object.fromEntries(todosOsClubes().map(c => [c.id, c]));
@@ -117,8 +119,8 @@ function indicadores(uc) {
     ${stat({ rotulo: 'Elenco', valor: `${n} / ${VAGAS}`, cor: cheio ? 'var(--ouro)' : '', classe: cheio ? 'stat-alerta' : '', sub: n > VAGAS ? `${n - VAGAS} acima do limite: venda ou empreste antes de contratar` : n === VAGAS ? 'No limite: venda ou empreste antes de contratar' : `${VAGAS - n} vaga${VAGAS - n === 1 ? '' : 's'} livre${VAGAS - n === 1 ? '' : 's'}` })}
     ${stat({ rotulo: 'Suas propostas', valor: minhas, unid: 'aguardando resposta' })}</div>`;
 }
-function abas(L, clubes) {
-  const n = { todos: L.length, venda: contaAba(L, 'venda'), emprestimo: contaAba(L, 'emprestimo'), clube: clubes };
+function abas(L, clubes, recebidas) {
+  const n = { todos: L.length, venda: contaAba(L, 'venda'), emprestimo: contaAba(L, 'emprestimo'), clube: clubes, propostas: recebidas };
   return `<div class="mer-abas" role="group" aria-label="Lista do mercado">${ABAS.map(([k, rot, ic]) => `<button type="button" class="mer-aba${ui.mf.aba === k ? ' on' : ''}" aria-pressed="${ui.mf.aba === k}" data-acao="filtrarMercado|aba|${k}">${icone(ic, { tam: 16 })}${rot}<span class="n">${n[k]}</span></button>`).join('')}</div>`;
 }
 function porClube(jogadores, f) {
@@ -129,18 +131,36 @@ function porClube(jogadores, f) {
     <span><b>${esc(c.name)}</b><span class="muted">${esc(ligaTxt(c))} · ${contagem(contagens.get(c.id))}</span></span></button>`).join('')}</div>`
     : '<p class="card muted" role="status">Nenhum clube com jogadores que correspondam aos filtros.</p>';
 }
+function listarPropostas(recebidas) {
+  if (!recebidas.length) return '<p class="card muted" role="status">Você ainda não tem propostas em aberto. Quando um clube fizer uma oferta por um jogador seu, ela aparece aqui.</p>';
+  return `<ul class="mer-propostas" role="list" aria-label="Propostas recebidas">${recebidas.map(o => {
+    const p = P[o.pid], clube = clubeDe(o.from), nome = esc(clube?.name || 'Clube indisponível');
+    const valor = o.emprestimo ? 'Empréstimo 1 ano (salário 50/50)' : money(o.amount);
+    const rotulo = `proposta de ${nome} por ${esc(p.name)}`;
+    return `<li class="card mer-proposta">
+      <h2 class="t3">${esc(p.name)}</h2>
+      <div class="mer-proposta-clube">${clube ? crest(clube) : ''}<span>${nome}</span></div>
+      <div><p><strong>${valor}</strong></p><p class="muted">Valor de mercado: ${money(p.value)}</p><p class="muted">Válida até a rodada ${o.until + 1}</p></div>
+      <div class="acoes">
+        <button type="button" class="btn sm" data-acao="acceptOffer|${esc(o.id)}" aria-label="Aceitar ${rotulo}">Aceitar</button>
+        <button type="button" class="btn sec sm" data-acao="rejectOffer|${esc(o.id)}" aria-label="Recusar ${rotulo}">Recusar</button>
+      </div></li>`;
+  }).join('')}</ul>`;
+}
 export function vMercado() {
   const uc = userClub(), f = ui.mf, a = 'filtrarMercado', porClubeAberta = f.aba === 'clube';
   const base = listaMercado({ ignorarClube: porClubeAberta });
+  const jogadoresDosClubes = f.club && !porClubeAberta ? listaMercado({ ignorarClube: true }) : base;
+  const totalClubes = new Set(jogadoresDosClubes.map(p => p.clubId)).size, recebidas = propostasAbertas();
+  const topo = `<div class="figma-mercado">${indicadores(uc)}${abas(base, totalClubes, recebidas.length)}`;
+  if (f.aba === 'propostas') return `${topo}${listarPropostas(recebidas)}</div>`;
   const r = porClubeAberta ? null : corpoMercado();
   const C = clubesPor(), teste = daAba[f.aba];
   const lista = teste ? base.filter(p => teste(p, C)) : base;
-  const jogadoresDosClubes = f.club && !porClubeAberta ? listaMercado({ ignorarClube: true }) : base;
-  const totalClubes = new Set(jogadoresDosClubes.map(p => p.clubId)).size;
   const ligas = ligasDoPais(f.pais), paises = PAISES(), exterior = paises.length > 2; // #172, #355: com clubes estrangeiros, o país vira filtro
   const pais = paises.find(([id]) => id === (f.pais || ''))?.[1] || 'Todos os países';
   const paisLocal = S.pais || 'Brasil';
-  return `<div class="figma-mercado">${indicadores(uc)}${abas(base, totalClubes)}
+  return `${topo}
   <section class="card mer-filtros" aria-label="Filtros do mercado">
     <div class="art-campo mer-pos"><span class="art-rotulo">Posição</span>${chipsGrupo(lista, f, a)}</div>
     <div class="mer-linha"><div class="art-campo mer-busca">${campoBusca(f, a, 'Nome do jogador')}</div>
@@ -184,10 +204,17 @@ export function comprarJa(pid){
     const r=comprarJaCore(pid);if(r.ok)closeModal();feito(r,r.msg);
   });
 }
-export function acceptOffer(oid){
-  const o=tec().offers.find(x=>x.id===oid),txt=!o||!P[o.pid]?'':o.emprestimo?`${P[o.pid].name} foi emprestado ao ${clubeDe(o.from).name} por 1 ano.`:`Negócio fechado: ${P[o.pid].name} vendido ao ${clubeDe(o.from).name} por ${money(o.amount)}.`;
-  if(ui.liga)return mercadoLiga({tipo:'aceitar',oid},txt);
-  feito(aceitarOferta(oid),txt);
+export function acceptOffer(oid) {
+  const o = propostasAbertas().find(x => x.id === oid);
+  if (!o) { avisar('Proposta não encontrada.', 'erro'); return }
+  const p = P[o.pid], clube = clubeDe(o.from), nome = clube?.name || 'clube que fez a proposta';
+  const txt = o.emprestimo ? `${p.name} foi emprestado ao ${nome} por 1 ano.` : `Negócio fechado: ${p.name} vendido ao ${nome} por ${money(o.amount)}.`;
+  if (ui.liga) return mercadoLiga({ tipo: 'aceitar', oid }, txt);
+  if (!clube) { avisar('Não foi possível localizar o clube da proposta.', 'erro'); return }
+  const r = aceitarOferta(oid);
+  // A desistência do comprador retira a oferta mesmo quando a venda falha.
+  if (r.erro && !tec().offers.includes(o)) { save(); render() }
+  feito(r, txt);
 }
 export function rejectOffer(oid){if(ui.liga)return mercadoLiga({tipo:'recusar',oid},'Proposta recusada.');feito(recusarOferta(oid),'Proposta recusada.','info')}
 export function quickSell(pid){

@@ -93,6 +93,7 @@ export function render(){
     const n=document.querySelector(`[${chave[0]}="${(globalThis.CSS&&CSS.escape?CSS.escape(chave[1]):chave[1])}"]`);
     if(n?.focus){n.focus({preventScroll:true});if(selecao&&typeof n.selectionStart==='number')n.setSelectionRange(...selecao)}
     else if(mesma&&ui.view==='base'&&at.closest?.('.base-lista'))document.getElementById('titulo-base').focus();
+    else if(mesma&&ui.view==='mercado'&&at.closest?.('.mer-proposta'))document.querySelector('[data-acao="filtrarMercado|aba|propostas"]')?.focus({preventScroll:true});
   }
 }
 export function autoLineup(){escalarMelhores();save();render()}

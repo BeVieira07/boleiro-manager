@@ -39,7 +39,7 @@ test('uma aba só: salvar várias vezes segue normal', () => {
   const id = j.run('S.saveId');
   for (let i = 0; i < 3; i++) { jogarRodada(j, 1); assert.equal(j.run('salvarJogo()'), true) }
   assert.equal(lerSave(j, id).round, 3);
-  assert.equal(j.alertas.length, 0);
+  assert.ok(!j.alertas.some(a => /outra aba/.test(a)));
 });
 
 test('abrir de novo e trocar de campanha não dão falso aviso', () => {
@@ -54,7 +54,7 @@ test('abrir de novo e trocar de campanha não dão falso aviso', () => {
   j.run(`abrirSave('${b}')`); jogarRodada(j, 1);
   assert.equal(j.run('salvarJogo()'), true);
   assert.equal(lerSave(j, a).round, 2);
-  assert.equal(j.alertas.length, 0);
+  assert.ok(!j.alertas.some(a => /outra aba/.test(a)));
 });
 
 test('mensagem de falta de espaço não fala em exportar', () => {

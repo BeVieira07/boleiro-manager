@@ -2,6 +2,7 @@ import { BRASIL } from '../core/campeonatos.mjs';
 import { DIVS, S, divOf, rodadasRegulares, table, tec, tecnicos, userClub } from '../core/estado.mjs';
 import { fasePlayoff } from '../core/playoffs.mjs';
 import { esc, money } from '../core/utils.mjs';
+import { propostasAbertas } from './clube/propostas-recebidas.mjs';
 import { ui } from './estado.mjs';
 import { icone } from './icones.mjs';
 import { rotuloRodada } from './temporada/estadual.mjs';
@@ -40,18 +41,20 @@ export function lateral() {
   const uc = userClub();
   const liga = DIVS[divOf(uc)], pais = S.pais || BRASIL;
   const tela = ABA_POR_TELA[ui.view] || ui.view;
+  const n = propostasAbertas().length;
+  const contagem = n ? `<span class="nav-contagem" aria-hidden="true">${n}</span><span class="sr"> ${n === 1 ? '1 proposta em aberto' : `${n} propostas em aberto`}</span>` : '';
   const secao = SECOES.find(s => s.tela === tela || s.abas?.some(([id]) => id === tela));
   const secoes = SECOES.map(s => {
     const destino = s.tela || s.abas[0][0];
     const atual = s === secao ? ` aria-current="${s.tela ? 'page' : 'true'}"` : '';
-    return `<button type="button" class="nav-item" data-acao="go|${destino}"${atual}>${icone(s.icone)}<span>${s.rotulo}</span></button>`;
+    return `<button type="button" class="nav-item" data-acao="go|${destino}"${atual}>${icone(s.icone)}<span>${s.rotulo}</span>${destino === 'mercado' ? contagem : ''}</button>`;
   }).join('');
   const abas = secao?.abas ? `<nav class="nav-abas" aria-label="${secao.rotulo}">
     <span class="nav-secao">${secao.rotulo}</span>
     ${secao.abas.map(([id, rotulo]) => `<button type="button" data-acao="go|${id}"${tela === id ? ' aria-current="page"' : ''}>${rotulo}</button>`).join('')}
   </nav>` : '';
   const lista = TELAS_LATERAL.map(([id, rotulo, ic]) =>
-    `<button type="button" class="nav-item" data-acao="go|${id}"${tela === id ? ' aria-current="page"' : ''}>${icone(ic)}<span>${rotulo}</span></button>`).join('');
+    `<button type="button" class="nav-item" data-acao="go|${id}"${tela === id ? ' aria-current="page"' : ''}>${icone(ic)}<span>${rotulo}</span>${id === 'mercado' ? contagem : ''}</button>`).join('');
   return `<div class="hud">
     ${marca()}
     <nav class="nav" aria-label="Seções do jogo">${secoes}</nav>
