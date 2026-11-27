@@ -16,6 +16,10 @@ export const loans=()=>S.loans||(S.loans=[]);
 export const loanOf=pid=>loans().find(l=>l.pid===pid);
 export const loansOut=c=>loans().filter(l=>l.from===c.id);
 export const loansIn=c=>loans().filter(l=>l.to===c.id);
+// #465: no máximo MAX_RECEBIDOS jogadores emprestados a um clube ao mesmo tempo
+export const MAX_RECEBIDOS=3;
+export const lotadoDeEmprestimos=c=>loansIn(c).length>=MAX_RECEBIDOS;
+export const avisoLotado=c=>`${c.name} já tem ${MAX_RECEBIDOS} jogadores emprestados, o máximo por clube.`;
 export const UM_ANO=()=>({s:S.season+1,r:S.round});
 /** O empréstimo terminou (o jogador volta agora)? */
 export const acabou=l=>l.fim?S.season>l.fim.s||(S.season===l.fim.s&&S.round>=l.fim.r):S.round>=l.until;
@@ -60,6 +64,7 @@ export const emprestimoJa=pid=>proporEmprestimo({pid},true);
 export function loanCheck(p,lender,borrower){
   if(loanOf(p.id))return `${p.name} já está emprestado.`;
   if(borrower.players.length>=32)return `${borrower.name} já tem 32 jogadores.`;
+  if(lotadoDeEmprestimos(borrower))return avisoLotado(borrower);
   if(ehHumano(lender)){const m=saidaAbaixoDoMinimo(lender,p);if(m)return m} // #410
   if(ehHumano(lender)&&lender.players.length<=16)return 'Seu elenco ficaria pequeno demais (mínimo 16).';
   if(!ehHumano(lender)){
