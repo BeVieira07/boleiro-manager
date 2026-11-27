@@ -34,7 +34,7 @@ test('save antigo: 80+ sai da lista de empréstimo e, nos clubes da IA, vai à v
   j.run(`newGame('${clubeDaSerie(j, 'A', 10)}')`);
   const ia = j.run('S.clubs.find(c => !ehHumano(c)).players[0].id'), meu = j.run('userClub().players[0].id');
   j.run(`Object.assign(P['${ia}'], { ovr: 81, emprestar: true, listed: false }); Object.assign(P['${meu}'], { ovr: 81, emprestar: true, listed: false })`);
-  j.run('(() => { const s = JSON.parse(JSON.stringify(S)); s.versao = VERSAO_SAVE - 1; migrarSave(s) })()');
+  j.run('(() => { const s = JSON.parse(JSON.stringify(S)); s.versao = 22; migrarSave(s) })()');
   assert.deepEqual(j.run(`[P['${ia}'].emprestar, P['${ia}'].listed]`), [undefined, true]);
   assert.deepEqual(j.run(`[P['${meu}'].emprestar, P['${meu}'].listed]`), [undefined, false], 'o do técnico só sai da lista');
 });

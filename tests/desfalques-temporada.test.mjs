@@ -9,7 +9,7 @@ function novo() {
   return j;
 }
 
-test('a virada de temporada zera a lesão de todos e mantém a suspensão pendente', () => {
+test('a virada de temporada zera a lesão e a suspensão de todos (#467)', () => {
   const j = novo();
   jogarTemporada(j); // a pena e a lesão são postas no fim da temporada, antes das férias
   j.run(`(() => {
@@ -24,7 +24,7 @@ test('a virada de temporada zera a lesão de todos e mantém a suspensão penden
   const r = j.run('ids.map(id => [P[id].inj || 0, P[id].susp || 0])');
   assert.equal(r[0][0], 0, 'lesão do elenco zerada');
   assert.equal(r[2][0], 0, 'lesão do estrangeiro zerada');
-  assert.equal(r[1][1], 2, 'suspensão pendente continua na temporada nova');
+  assert.equal(r[1][1], 0, 'suspensão não passa para a temporada nova (#467)');
   assert.equal(j.run('Object.values(P).every(p => !p.inj)'), true);
 });
 
