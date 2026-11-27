@@ -190,7 +190,7 @@ for (const [pais, div, clubeId, nome, jogosRegulares, alvoMediano] of [
       assert.deepEqual(valores('Cota de TV'), regular ? [j.run('tvQuota(userClub())')] : []);
       assert.equal(valores('Bilheteria').length, r.meu?.h === clube.id && !r.meu.neutro ? 1 : 0);
       const ganhou = r.meu && (r.meu.h === clube.id ? r.meu.hg > r.meu.ag : r.meu.ag > r.meu.hg);
-      assert.deepEqual(valores('Bicho por vitória'), ganhou ? [-Math.round(folha * 0.15 * 1000) / 1000] : []);
+      assert.deepEqual(valores('Bicho por vitória'), ganhou ? [-Math.round(folha * j.run('BICHO') * 1000) / 1000] : []);
       folhaPaga -= valores('Salários do elenco')[0] ?? 0;
       assert.ok(clube.balance >= 0, `caixa negativo na rodada ${rodada + 1}`);
       menorCaixa = Math.min(menorCaixa, clube.balance);

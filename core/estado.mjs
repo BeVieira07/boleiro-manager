@@ -60,7 +60,7 @@ export const jogaNoBrasil=()=>!S.pais||S.pais===BRASIL;
    campanha (bônus de bilheteria pela posição, premiação, copas) e das vendas. Simulação em docs/premiacoes.md. */
 const FATOR_SERIE={A:1.09,B:1.15,C:1.11,D:1.08};
 // folha ÷ receita base; no Brasil as copas e os estaduais dão bilheteria e prêmios a mais
-export const MARGEM={brasil:1.1,europa:1.05}, FOLHA_FAIXA=[0.8,1.25];
+export const MARGEM={brasil:1.13,europa:1.08}, FOLHA_FAIXA=[0.8,1.25];
 export const margemDe=c=>c.pais?MARGEM.europa:MARGEM.brasil;
 const folhaPelaForca=c=>(regraLiga(divOf(c))?.economia.fator??FATOR_SERIE[divOf(c)]??0.85)*Math.exp(-9.11+0.122*c.strength);
 /** Fixa a folha de referência da temporada (começo do jogo e de cada temporada). */
