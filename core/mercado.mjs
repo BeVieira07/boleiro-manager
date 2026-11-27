@@ -1,6 +1,6 @@
 import { estrelasPot } from './base.mjs';
 import { novoContrato } from './contratos.mjs';
-import { UM_ANO, emprestavel, loanOf, naoEmpresta, startLoan, wageBill } from './emprestimos.mjs';
+import { UM_ANO, avisoLotado, emprestavel, loanOf, lotadoDeEmprestimos, naoEmpresta, startLoan, wageBill } from './emprestimos.mjs';
 import { clubeDe, ehEstrangeiro } from './estrangeiros.mjs';
 import { ehEuropaDoMercado, registrarMudanca } from './europa.mjs';
 import { P, S, addFin, addNews, clubById, divOf, ehHumano, table, tec, tecnicos, userClub, zonasDaDivisao } from './estado.mjs';
@@ -143,6 +143,7 @@ export function aceitarOferta(oid){
   // #376: a vaga vale para venda e empréstimo (a oferta dura 3 rodadas, e o clube pode ter enchido o elenco)
   if(b.players.length>=32){recusarOferta(oid);return {erro:`${b.name} ficou sem vaga no elenco e desistiu ${o.emprestimo?'do empréstimo':'da proposta'}.`}}
   if(o.emprestimo){ // #142: proposta de empréstimo da IA por um jogador da lista do técnico
+    if(lotadoDeEmprestimos(b)){recusarOferta(oid);return {erro:`${avisoLotado(b)} A proposta caiu.`}} // #465
     recusarOferta(oid);startLoan({pid:p.id,from:userClub().id,to:b.id,fim:UM_ANO()});return {ok:true};
   }
   if(!ehHumano(b)&&b.balance<o.amount){recusarOferta(oid);return {erro:`${b.name} gastou o caixa em outros negócios e desistiu da proposta.`}}

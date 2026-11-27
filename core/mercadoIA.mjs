@@ -6,7 +6,7 @@
    3. Jovens marcados vão emprestados a clubes mais fracos, onde viram titulares.
    4. Propostas espontâneas: um clube da IA oferece por um destaque do técnico, mesmo sem ele estar à venda.
    Busca curta (poucos candidatos por clube) e no máximo MAX_NEGOCIOS por janela: o tempo fica previsível. */
-import { emprestavel, loanOf, loans } from './emprestimos.mjs';
+import { emprestavel, loanOf, loans, lotadoDeEmprestimos } from './emprestimos.mjs';
 import { S, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, ehHumano, rodadasRegulares, tecnicos } from './estado.mjs';
 import { clubesEuropa, nomeLigaEuropa } from './europa.mjs';
 import { movePlayer } from './mercado.mjs';
@@ -59,7 +59,7 @@ export function janelaIA() {
   for (const p of shuffle(ia.flatMap(c => c.players.filter(x => x.emprestar)))) { // sem preferência pela ordem dos clubes
     if (emprestimos.length >= MAX_EMPRESTIMOS || compras.length + emprestimos.length >= MAX_NEGOCIOS) break;
     const de = clubById(p.clubId); if (de.players.length <= ELENCO_MIN) continue;
-    const para = shuffle(ia.filter(c => c !== de && c.strength < de.strength)).slice(0, BUSCA).find(c => c.players.length < ELENCO_MAX && p.ovr >= pior(c, p.pos));
+    const para = shuffle(ia.filter(c => c !== de && c.strength < de.strength)).slice(0, BUSCA).find(c => c.players.length < ELENCO_MAX && !lotadoDeEmprestimos(c) && p.ovr >= pior(c, p.pos)); // #465
     if (!para) continue;
     // sem startLoan: a notícia de cada empréstimo iria para o técnico da vez
     movePlayer(p, para, true); loans().push({ pid: p.id, from: de.id, to: para.id, until: ate, payer: 'to', buy: null });
