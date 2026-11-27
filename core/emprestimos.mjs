@@ -39,6 +39,10 @@ export function wageBill(c){
 /* #142: só jogador da lista de empréstimo (p.emprestar). A IA põe na lista as sobras jovens (#103); o técnico põe os
    dele no Elenco, e os clubes da IA mandam propostas por eles (motor.mjs). Como o jogador já está na lista, a IA aceita quase sempre. */
 export const CHANCE_LISTA=0.95;
+// #463: jogador de overall 80 ou mais não vai para empréstimo, só à venda
+export const OVR_MAX_EMPRESTIMO=79;
+export const emprestavel=p=>p.ovr<=OVR_MAX_EMPRESTIMO;
+export const naoEmpresta=p=>`${p.name} tem overall ${p.ovr}: jogador desse nível só sai vendido, não emprestado.`;
 // regra: pedir emprestado um jogador de um clube da IA. Devolve {erro} ou {ok, msg} (ok=false: recusou).
 export function proporEmprestimo({pid},imediato=false){
   const p=P[pid],lender=p&&clubeDe(p.clubId),uc=userClub();
@@ -46,6 +50,7 @@ export function proporEmprestimo({pid},imediato=false){
   if(lender.id===uc.id)return {erro:'Para emprestar um jogador seu, ponha-o na lista de empréstimo no Elenco.'};
   if(ehHumano(lender))return {erro:'O clube é de outro técnico: faça uma proposta a ele.'};
   if(!p.emprestar)return {erro:`${lender.name} não pôs ${p.name} na lista de empréstimo.`};
+  if(!emprestavel(p))return {erro:naoEmpresta(p)};
   const err=loanCheck(p,lender,uc);if(err)return {erro:err};
   if(!imediato&&rnd()>=CHANCE_LISTA){addNews(`❌ ${lender.name} recusou o empréstimo de ${p.name}.`);return {ok:false,msg:`${lender.name} recusou a proposta de empréstimo.`}}
   const l={pid,from:lender.id,to:uc.id,fim:UM_ANO()};

@@ -1,6 +1,7 @@
 import { potInicial } from './base.mjs';
 import { contratoInicial } from './contratos.mjs';
 import { refreshEconomics } from './dados.mjs';
+import { emprestavel } from './emprestimos.mjs';
 import { S, clubById } from './estado.mjs';
 import { clubeEuropeu, ehEuropaDoMercado, nomeLigaEuropa } from './europa.mjs';
 import { atribuirPosicoes } from './posicoes.mjs';
@@ -33,6 +34,6 @@ export function prepararEstrangeiro(c) {
     if (p.contrato == null) p.contrato = contratoInicial(p);
     if (p.pot == null) p.pot = potInicial(p);
     if (p.value == null || p.wage == null) refreshEconomics(p);
-    if (!melhores.has(p.id) && hashStr(p.id + '|oferta') % 100 < 60) { if (p.age <= 23) p.emprestar = true; else p.listed = true }
+    if (!melhores.has(p.id) && hashStr(p.id + '|oferta') % 100 < 60) { if (p.age <= 23 && emprestavel(p)) p.emprestar = true; else p.listed = true } // #463: 80+ só à venda
   }
 }

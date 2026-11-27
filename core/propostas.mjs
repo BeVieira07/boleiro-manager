@@ -5,7 +5,7 @@
    e vender ou emprestar o seu. valor: quem recebe o jogador paga ao clube dono (no empréstimo é uma taxa, pode ser 0).
    As propostas ficam no estado da liga, então passam pelo mesmo caminho do mercado: o servidor confere e grava com
    controle de versão. Ao aceitar, tudo é conferido de novo, porque o estado pode ter mudado desde a proposta. */
-import { UM_ANO, loanOf, startLoan } from './emprestimos.mjs';
+import { UM_ANO, emprestavel, loanOf, naoEmpresta, startLoan } from './emprestimos.mjs';
 import { P, S, addFin, addNews, clubDo, tec, tecDoClube } from './estado.mjs';
 import { movePlayer } from './mercado.mjs';
 import { saidaAbaixoDoMinimo } from './partida.mjs';
@@ -35,6 +35,7 @@ function conferir(pr) {
   const { jog, ced, rec } = l;
   if (loanOf(jog.id)) return { erro: `${jog.name} está emprestado.` };
   if (pr.negocio === 'emprestimo' && !jog.emprestar) return { erro: `${jog.name} não está na lista de empréstimo do ${ced.name}.` };
+  if (pr.negocio === 'emprestimo' && !emprestavel(jog)) return { erro: naoEmpresta(jog) };
   { const m = saidaAbaixoDoMinimo(ced, jog); if (m) return { erro: m }; } // #410
   if (ced.players.length <= 16) return { erro: `${ced.name} ficaria com menos de 16 jogadores.` };
   if (rec.players.length >= 32) return { erro: `${rec.name} já tem 32 jogadores.` };

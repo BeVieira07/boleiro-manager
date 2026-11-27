@@ -1,6 +1,6 @@
 import { estrelasPot } from './base.mjs';
 import { novoContrato } from './contratos.mjs';
-import { UM_ANO, loanOf, startLoan, wageBill } from './emprestimos.mjs';
+import { UM_ANO, emprestavel, loanOf, naoEmpresta, startLoan, wageBill } from './emprestimos.mjs';
 import { clubeDe, ehEstrangeiro } from './estrangeiros.mjs';
 import { ehEuropaDoMercado, registrarMudanca } from './europa.mjs';
 import { P, S, addFin, addNews, clubById, divOf, ehHumano, table, tec, tecnicos, userClub, zonasDaDivisao } from './estado.mjs';
@@ -164,6 +164,6 @@ export function venderJa(pid){
 export function alternarEmprestimo(pid){
   const p=P[pid];if(!p||p.clubId!==userClub().id)return {erro:'Jogador inválido para esta ação.'};
   const e=emprestado(pid);if(e)return e;
-  if(p.emprestar)delete p.emprestar;else p.emprestar=true;return {ok:true};
+  if(p.emprestar)delete p.emprestar;else if(!emprestavel(p))return {erro:naoEmpresta(p)};else p.emprestar=true;return {ok:true};
 }
 export function alternarVenda(pid){const e=emprestado(pid);if(e)return e;P[pid].listed=!P[pid].listed;return {ok:true}}

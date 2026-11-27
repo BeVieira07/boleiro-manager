@@ -6,7 +6,7 @@
    3. Jovens marcados vão emprestados a clubes mais fracos, onde viram titulares.
    4. Propostas espontâneas: um clube da IA oferece por um destaque do técnico, mesmo sem ele estar à venda.
    Busca curta (poucos candidatos por clube) e no máximo MAX_NEGOCIOS por janela: o tempo fica previsível. */
-import { loanOf, loans } from './emprestimos.mjs';
+import { emprestavel, loanOf, loans } from './emprestimos.mjs';
 import { S, addNews, addNewsTodos, clubById, clubDo, divOf, divisions, ehHumano, rodadasRegulares, tecnicos } from './estado.mjs';
 import { clubesEuropa, nomeLigaEuropa } from './europa.mjs';
 import { movePlayer } from './mercado.mjs';
@@ -29,7 +29,8 @@ function marcarSobras(ia) {
   for (const c of ia) {
     for (const p of c.players) { p.listed = false; delete p.emprestar }
     const sobras = sobrasDoElenco(c);
-    const jovens = sobras.filter(p => p.age <= 21), outros = sobras.filter(p => p.age > 21).sort((a, b) => b.age - a.age); // veteranos primeiro
+    // #463: jovem de overall 80+ vai à venda, não para empréstimo
+    const jovens = sobras.filter(p => p.age <= 21 && emprestavel(p)), outros = sobras.filter(p => !jovens.includes(p)).sort((a, b) => b.age - a.age); // veteranos primeiro
     for (const p of shuffle(jovens).slice(0, POR_CLUBE)) if (rnd() < 0.6) p.emprestar = true;
     for (const p of outros.slice(0, POR_CLUBE + 1)) if (rnd() < 0.6) p.listed = true;
   }
