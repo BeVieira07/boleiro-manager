@@ -14,6 +14,7 @@ import { taticaUser } from '../../core/taticas.mjs';
 import { esc, money } from '../../core/utils.mjs';
 import { migrarCarreira, migrarValoresDeMercado } from '../../core/versao.mjs';
 import { avisar, confirmar, pedirValor } from '../avisos.mjs';
+import { avisarPropostasNovas, idsDasPropostas } from '../clube/propostas-recebidas.mjs';
 import { clienteLogado, sessaoEncerrada, usuarioAtual } from '../inicio/conta.mjs';
 import { ui } from '../estado.mjs';
 import { icone } from '../icones.mjs';
@@ -74,8 +75,13 @@ async function carregar(id) {
     return false;
   }
   if (l.error || e.error || !e.data) { avisar('Não foi possível abrir a liga.', 'erro'); return false }
+  if (ui.liga?.id === id && l.data.versao < ui.liga.versao) return false;
+  const anterior = ui.liga?.id === id && S?.managers[eu];
+  // A recarga do mercado também pode baixar a rodada nova antes da atualização pelo tempo real.
+  const avancou = anterior && (e.data.season > S.season || (e.data.season === S.season && e.data.round > S.round));
+  const ofertasAntes = avancou ? idsDasPropostas(anterior) : null;
   // a escalação, a tática e os ajustes de pênalti ainda não confirmados só existem aqui
-  const uc0 = ui.liga && ui.liga.id === id && S && S.managers[eu] && !S.managers[eu].demitido && clubDo(S.managers[eu]);
+  const uc0 = anterior && !anterior.demitido && clubDo(anterior);
   const meu = uc0 && { clube: uc0.id, lineup: uc0.lineup || [], formation: uc0.formation, tatica: uc0.tatica,
     cobradores: uc0.cobradores, cantos: uc0.cantos };
   const paraMim = () => (S.propostas || []).filter(x => x.para === eu).length, antes = uc0 ? paraMim() : null;
@@ -99,6 +105,7 @@ async function carregar(id) {
   if (antes != null && paraMim() > antes) avisar('Você recebeu uma proposta de outro técnico. Veja na tela Liga.', 'info'); // #36
   ui.liga = { ...(ui.liga && ui.liga.id === id ? ui.liga : {}), id, nome: l.data.nome, dono: l.data.dono_id === eu, rodada: l.data.rodada, versao: l.data.versao,
     prontos: (en.data || []).filter(x => x.pronto_rodada === l.data.rodada).map(x => x.user_id) };
+  if (ofertasAntes) avisarPropostasNovas(ofertasAntes);
   return true;
 }
 

@@ -335,6 +335,44 @@ test('mercado da liga: a venda é feita no servidor, todos recebem o estado novo
   j.run('sairDaLiga()');
 });
 
+test('propostas por jogadores na liga: avisa na rodada nova uma vez e responde pelo servidor', async () => {
+  const j = carregarJogo({ boot: true });
+  const srv = servidorFalso([clubeDaSerie(j, 'A', 0), clubeDaSerie(j, 'A', 1)]);
+  await como(srv, 'a');
+  await j.acao('comecarLiga|L1'); await esperar();
+  try {
+    j.run("mudarPref('aoVivo', 'nunca')");
+    const [ana, bia] = srv.membros.map(m => m.club_id), uc = srv.estado.clubs.find(c => c.id === ana);
+    const comprador = srv.estado.clubs.find(c => c.id !== ana && c.id !== bia && c.players.length < 31 && c.balance >= 2);
+    const [venda, recusa] = uc.players.filter(p => p.pos === 'D');
+    srv.estado.managers.a.offers.push(
+      { id: 'venda-ia', pid: venda.id, from: comprador.id, amount: 1, until: 3 },
+      { id: 'recusa-ia', pid: recusa.id, from: comprador.id, amount: 1, until: 3 });
+    srv.entradas.push({ user_id: 'b', rodada: 0, pronto: true });
+    await j.acao('confirmarLiga'); await esperar();
+    assert.equal(j.run('S.round'), 1);
+    const avisos = () => j.alertas.filter(a => a.includes('Veja em Mercado > Propostas.'));
+    const total = srv.estado.managers.a.offers.length;
+    assert.deepEqual(avisos(), [`${total} propostas novas. Veja em Mercado > Propostas.`]);
+    await j.run('atualizarAposRodada()');
+    assert.equal(avisos().length, 1);
+
+    j.acao('go|mercado');
+    j.acao('filtrarMercado|aba|propostas');
+    assert.match(j.html(), /acceptOffer\|venda-ia/);
+    assert.match(j.html(), /rejectOffer\|recusa-ia/);
+    await j.acao('acceptOffer|venda-ia');
+    assert.ok(srv.estado.clubs.find(c => c.id === comprador.id).players.some(p => p.id === venda.id));
+    await j.acao('rejectOffer|recusa-ia');
+    assert.ok(srv.estado.clubs.find(c => c.id === ana).players.some(p => p.id === recusa.id));
+    assert.deepEqual(srv.chamadas.filter(c => c.body.acao === 'mercado').map(c => c.body.mercado), [
+      { tipo: 'aceitar', oid: 'venda-ia' }, { tipo: 'recusar', oid: 'recusa-ia' }
+    ]);
+    assert.doesNotMatch(j.html(), /venda-ia|recusa-ia/);
+    assert.equal(avisos().length, 1);
+  } finally { j.run('sairDaLiga()') }
+});
+
 test('aba Base da liga: promoção e venda atualizam o servidor e mantêm a tela aberta', async () => {
   const j = carregarJogo({ boot: true });
   const srv = servidorFalso([clubeDaSerie(j, 'A', 0), clubeDaSerie(j, 'A', 1)]);

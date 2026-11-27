@@ -18,6 +18,7 @@ import { crest } from '../partida/partida.mjs';
 import { zonas } from '../telas.mjs';
 import { noticiaVisivel } from '../inicio/configuracoes.mjs';
 import { renderNoticia } from './noticias.mjs';
+import { propostasAbertas } from './propostas-recebidas.mjs';
 
 const ord = n => n + 'º';
 const meuJogo = (r, me) => S.fixtures[r] && S.fixtures[r].find(g => g.h === me || g.a === me);
@@ -35,7 +36,7 @@ export function formaRecente(me, n = 5) {
 
 /** O que pede atenção agora, cada item com a ação ou a tela certa. */
 export function alertas() {
-  const uc = userClub(), me = uc.id, out = [];
+  const uc = userClub(), out = [];
   const lay = slotLayout(uc), xi = lay.map(s => s.id).filter(Boolean);
   const fora = xi.map(id => P[id]).filter(p => unavailable(p));
   if (xi.length < 11) out.push({ tipo: 'erro', titulo: 'Escalação incompleta', texto: `Só ${xi.length} titulares. Escale 11 antes de jogar.`, acao: 'go|escalacao', rotulo: 'Escalar' });
@@ -44,9 +45,9 @@ export function alertas() {
   if (foraPos.length) out.push({ tipo: 'aviso', titulo: `${foraPos.length} jogador${foraPos.length > 1 ? 'es' : ''} fora de posição`, texto: foraPos.map(s => `${P[s.id].name} na vaga de ${s.d}`).join(', ') + '.', acao: 'go|escalacao', rotulo: 'Ajustar' });
   const cans = cansados(xi, P);
   if (cans.length) out.push({ tipo: 'aviso', titulo: `${cans.length} titular${cans.length > 1 ? 'es' : ''} cansado${cans.length > 1 ? 's' : ''}`, texto: cans.map(p => `${p.name} (${Math.round(energiaDe(p))})`).join(', ') + '. Com pouca energia rendem menos e se lesionam mais.', acao: 'go|escalacao', rotulo: 'Poupar' });
-  for (const o of tec().offers.filter(o => P[o.pid] && P[o.pid].clubId === me)) {
-    const p = P[o.pid];
-    out.push({ tipo: 'aviso', titulo: `Proposta ${o.emprestimo ? 'de empréstimo ' : ''}por ${p.name}`, texto: o.emprestimo ? `${clubeDe(o.from).name} quer ele emprestado por 1 ano, com o salário dividido 50/50. Vale até a rodada ${o.until + 1}.` : `${clubeDe(o.from).name} oferece ${money(o.amount)} (valor de mercado ${money(p.value)}). Vale até a rodada ${o.until + 1}.`,
+  for (const o of propostasAbertas()) {
+    const p = P[o.pid], clube = clubeDe(o.from)?.name || 'Um clube';
+    out.push({ tipo: 'aviso', titulo: `Proposta ${o.emprestimo ? 'de empréstimo ' : ''}por ${p.name}`, texto: o.emprestimo ? `${clube} quer ele emprestado por 1 ano, com o salário dividido 50/50. Vale até a rodada ${o.until + 1}.` : `${clube} oferece ${money(o.amount)} (valor de mercado ${money(p.value)}). Vale até a rodada ${o.until + 1}.`,
       botoes: `<button class="btn sm" data-acao="acceptOffer|${o.id}">Aceitar</button><button class="btn sec sm" data-acao="rejectOffer|${o.id}">Recusar</button>` });
   }
   const fim = uc.players.filter(p => p.contrato === 1 && !loanOf(p.id));

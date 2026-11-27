@@ -1,6 +1,7 @@
 import { P, S, addFin, addNews, addNewsTodos, clubById, ehHumano, tec, userClub } from './estado.mjs';
 import { novoContrato } from './contratos.mjs';
 import { clubeDe } from './estrangeiros.mjs';
+import { ehEuropaDoMercado } from './europa.mjs';
 import { movePlayer } from './mercado.mjs';
 import { ensureSquad, saidaAbaixoDoMinimo } from './partida.mjs';
 import { money, rnd } from './utils.mjs';
@@ -61,16 +62,16 @@ export function loanCheck(p,lender,borrower){
   return null;
 }
 export function startLoan(l){
-  const p=P[l.pid];movePlayer(p,clubById(l.to),true); // movePlayer só completa o elenco de quem cedeu se for clube da IA; o do técnico já foi barrado por saidaAbaixoDoMinimo
+  const p=P[l.pid],to=clubeDe(l.to);movePlayer(p,to,true); // movePlayer só completa o elenco de quem cedeu se for clube da IA; o do técnico já foi barrado por saidaAbaixoDoMinimo
   loans().push(l);
-  const msg=`🤝 ${p.name} emprestado do ${clubeDe(l.from).name} ao ${clubById(l.to).name} ${fimTxt(l)}.`;
+  const msg=`🤝 ${p.name} emprestado do ${clubeDe(l.from).name} ao ${to.name} ${fimTxt(l)}.`;
   addNews(msg,l.from);addNews(msg,l.to); // para os técnicos dos dois clubes (clube da IA: descarta)
 }
 export function endLoan(l,back){ // back: devolve ao clube de origem
   S.loans=loans().filter(x=>x!==l);
   const p=P[l.pid];if(!p||!back)return;
-  const from=clubeDe(l.from),to=clubById(l.to);
-  movePlayer(p,from,true);ensureSquad(to);
+  const from=clubeDe(l.from),to=clubeDe(l.to);
+  movePlayer(p,from,true);if(!ehEuropaDoMercado(to))ensureSquad(to);
   const msg=`🔙 ${p.name} voltou ao ${from.name} (fim do empréstimo).`;addNews(msg,from.id);if(to.id!==from.id)addNews(msg,to.id);
 }
 // chamada a cada rodada, depois de S.round++, e no começo da temporada (empréstimo de 1 ano feito na rodada 0)

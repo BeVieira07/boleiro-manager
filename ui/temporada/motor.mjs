@@ -3,6 +3,7 @@ import { esc } from '../../core/utils.mjs';
 import { S, tec, tecnicos, usarTecnico, userClub } from '../../core/estado.mjs';
 import { autoXI, concluirRodadaCopa, confirmarRodada, jogarRodada, validateLineup } from '../../core/motor.mjs';
 import { demissao } from '../clube/diretoria.mjs';
+import { avisarPropostasNovas, idsDasPropostas } from '../clube/propostas-recebidas.mjs';
 import { save, ui } from '../estado.mjs';
 import { conflito } from '../inicio/saves.mjs';
 import { seasonEnd } from '../partida/partida.mjs';
@@ -17,7 +18,8 @@ import { rotuloRodada } from './estadual.mjs';
 export function playRound(aoVivo=true){
   if(bloqueadoNaLiga())return; // na liga, quem joga a rodada é o servidor (#34)
   encerrarVivo(); // a rodada anterior ao vivo, se ficou aberta, termina aqui
-  const solo=tecnicos().length===1;
+  const tecnicosLocais=tecnicos(), solo=tecnicosLocais.length===1;
+  const ofertasAntes=idsDasPropostas(tecnicosLocais[0]); // ao fim da rodada, a vez volta ao primeiro técnico
   const r=jogarRodada({adiarCopa:aoVivo&&prefs().aoVivo!=='nunca', assistir:aoVivo?g=>verAoVivo(g,S.round+(g.uf?0:1)):null});
   if(r.demitido){if(r.tecnico)usarTecnico(r.tecnico);demissao();return} // #37: escolher o novo clube antes da rodada
   if(r.fim){seasonEnd();return}
@@ -26,6 +28,7 @@ export function playRound(aoVivo=true){
   ui.lastRound=r.estadual?{pre:r.estadual.dia,games}:{round:S.round,games}; // #132: data do estadual
   const c0=conflito.n;save();
   if(conflito.n!==c0)return; // #412: aba desatualizada: o aviso de recarregar vem primeiro; não abre o ao vivo nem os resultados da campanha velha
+  avisarPropostasNovas(ofertasAntes);
   if(!aoVivo)return;
   const temCopa=!!S.copa?.pendente, seguir=temCopa?retomarCopa:mostrarResultados;
   if(mine&&(solo?mine.expulsaoAoVivo===userClub().id:verAoVivo(mine)))iniciarVivo(games,mine,seguir,{
