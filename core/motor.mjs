@@ -85,6 +85,32 @@ export function validateLineup(uc=userClub()){
   if(ind.length)return `Jogador(es) indisponível(is) na escalação: ${ind.map(p=>p.name+' ('+unavailable(p)+')').join(', ')}.`;
   return null;
 }
+// Propostas da IA pelos jogadores do técnico: compra pelos que estão à venda e empréstimo pelos da lista (#142).
+// #470: também em cada data do estadual (marca = data, para os ids não repetirem na rodada 0).
+export function sortearPropostas(t,uc,marca=''){
+  // ofertas por jogadores à venda
+  t.offers=t.offers.filter(o=>o.until>S.round);
+  for(const p of uc.players.filter(p=>p.listed)){
+    if(rnd()<0.35){
+      const amt=Math.round(p.value*(0.75+rnd()*0.5)*10)/10;
+      // #413: só quem pode pagar, tem vaga, é da mesma série ou vizinha e não tem oferta aberta por ele
+      const buyers=vizinhos(S.clubs.filter(c=>!ehHumano(c)),uc).filter(c=>c.players.length<32&&c.balance>=amt&&!temOferta(t,p.id,c.id));
+      if(buyers.length){const b=pick(buyers);
+        t.offers.push({id:'o'+S.season+'_'+S.round+'_'+marca+p.id,pid:p.id,from:b.id,amount:amt,until:S.round+3});
+        addNews(`💼 ${b.name} ofereceu ${money(amt)} por ${p.name}.`,uc.id);}
+    }
+  }
+  // #142: propostas de empréstimo (1 ano, salário dividido) pelos jogadores da lista de empréstimo
+  for(const p of uc.players.filter(p=>p.emprestar&&!t.offers.some(o=>o.pid===p.id))){
+    if(rnd()<0.4){
+      const quem=S.clubs.filter(c=>!ehHumano(c)&&c.players.length<32&&!lotadoDeEmprestimos(c)); // #465
+      if(quem.length){const b=pick(quem);
+        t.offers.push({id:'oe'+S.season+'_'+S.round+'_'+marca+p.id,pid:p.id,from:b.id,amount:0,until:S.round+3,emprestimo:true});
+        addNews(`🤝 ${b.name} quer ${p.name} emprestado por 1 ano, com o salário dividido. Responda no painel do clube.`,uc.id);}
+    }
+  }
+}
+
 // regra: joga a rodada atual. Devolve {erro, tecnico}, {demitido}, {fim} ou {jogos, meu, copa} (meu = jogo do técnico da vez;
 // copa = confrontos da Copa do Brasil jogados nesta rodada, #51). Na pré-temporada, joga uma data dos estaduais (#132) e
 // devolve {jogos, meu, estadual} (jogos = os do estadual; estadual = a data), sem a rodada avançar.
@@ -106,6 +132,7 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
     for(const t of tecnicos())t.pronto=false;
     S.atual=tecnicos()[0].id;
     const uc=userClub();
+    for(const t of tecnicos().filter(t=>!t.demitido))sortearPropostas(t,clubDo(t),'e'+pre.dia+'_'); // #470
     renovarPropostasDeClubes();
     return {jogos:pre.jogos,meu:tec().demitido?null:pre.jogos.find(g=>g.h===uc.id||g.a===uc.id)||null,estadual:{dia:pre.dia}};
   }
@@ -135,27 +162,7 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
     if(mine){const gf=mine.h===uc.id?mine.hg:mine.ag,ga=mine.h===uc.id?mine.ag:mine.hg,bicho=bichoDe(uc);
       (mine.bicho||(mine.bicho={}))[uc.id]=bicho; // o ajuste ao vivo (ressimularDepois) usa o mesmo valor (#43)
       if(gf>ga)addFin('Bicho por vitória',-bicho,uc)}
-    // ofertas por jogadores à venda
-    t.offers=t.offers.filter(o=>o.until>S.round);
-    for(const p of uc.players.filter(p=>p.listed)){
-      if(rnd()<0.35){
-        const amt=Math.round(p.value*(0.75+rnd()*0.5)*10)/10;
-        // #413: só quem pode pagar, tem vaga, é da mesma série ou vizinha e não tem oferta aberta por ele
-        const buyers=vizinhos(S.clubs.filter(c=>!ehHumano(c)),uc).filter(c=>c.players.length<32&&c.balance>=amt&&!temOferta(t,p.id,c.id));
-        if(buyers.length){const b=pick(buyers);
-          t.offers.push({id:'o'+S.season+'_'+S.round+'_'+p.id,pid:p.id,from:b.id,amount:amt,until:S.round+3});
-          addNews(`💼 ${b.name} ofereceu ${money(amt)} por ${p.name}.`,uc.id);}
-      }
-    }
-    // #142: propostas de empréstimo (1 ano, salário dividido) pelos jogadores da lista de empréstimo
-    for(const p of uc.players.filter(p=>p.emprestar&&!t.offers.some(o=>o.pid===p.id))){
-      if(rnd()<0.4){
-        const quem=S.clubs.filter(c=>!ehHumano(c)&&c.players.length<32&&!lotadoDeEmprestimos(c)); // #465
-        if(quem.length){const b=pick(quem);
-          t.offers.push({id:'oe'+S.season+'_'+S.round+'_'+p.id,pid:p.id,from:b.id,amount:0,until:S.round+3,emprestimo:true});
-          addNews(`🤝 ${b.name} quer ${p.name} emprestado por 1 ano, com o salário dividido. Responda no painel do clube.`,uc.id);}
-      }
-    }
+    sortearPropostas(t,uc);
   }
   const {copa,pendente}=brasil?semSuspensoesPorAmarelos(()=>{
     const copa=jogarCopa(S.round,true,cansacoNoJogo);
