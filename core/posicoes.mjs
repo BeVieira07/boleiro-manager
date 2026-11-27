@@ -24,7 +24,25 @@ export const GRUPO_DETALHES={G:['GOL'],D:['ZAG','LD','LE'],M:['MEI'],A:['ATA']};
 // proporção aproximada de cada posição dentro do grupo, no elenco
 export const POSD_PESO={GOL:1,ZAG:.5,LD:.25,LE:.25,MEI:1,ATA:1};
 // dica pelo número da camisa (quando a API não traz a posição detalhada)
-export const POSD_CAMISA={2:'LD',13:'LD',23:'LD',6:'LE',16:'LE',26:'LE',3:'ZAG',4:'ZAG',14:'ZAG',15:'ZAG',5:'MEI',8:'MEI',10:'MEI',7:'ATA',11:'ATA',9:'ATA',19:'ATA'};
+export const POSD_CAMISA={1:'GOL',12:'GOL',2:'LD',13:'LD',23:'LD',6:'LE',16:'LE',26:'LE',3:'ZAG',4:'ZAG',14:'ZAG',15:'ZAG',5:'MEI',8:'MEI',10:'MEI',7:'ATA',11:'ATA',9:'ATA',19:'ATA'};
+
+/** Menor camisa livre que combina com a posição, ou a menor livre de 1 a 99. */
+export function numeroLivre(c, p) {
+  const usados = new Set(c.players.map(jogador => Number(jogador.number)));
+  const posicao = p.pd || inferirPosicao(p);
+  let livre = null;
+  for (let numero = 1; numero <= 99; numero++) {
+    if (usados.has(numero)) continue;
+    livre ??= numero;
+    if (POSD_CAMISA[numero] === posicao) return numero;
+  }
+  return livre;
+}
+
+/** Completa as camisas ausentes, reservando cada número antes de atribuir o próximo. */
+export function numerarElenco(c) {
+  for (const p of c.players) p.number ??= numeroLivre(c, p);
+}
 
 // Atributos que importam em cada posição (peso 0-1). O jogo mostra os mais relevantes.
 export const ATRIBUTOS={vel:'Velocidade',cruz:'Cruzamento',marc:'Marcação',aereo:'Jogo aéreo',passe:'Passe',drible:'Drible',fin:'Finalização',visao:'Visão de jogo',fisico:'Físico',refl:'Reflexo',jogoPes:'Jogo com os pés'};

@@ -40,6 +40,8 @@ test('base: só os clubes com técnico têm, com jovens fracos hoje e potencial 
   assert.equal(b.length, 4);
   assert.equal(j.run('S.clubs.filter(c=>c.base).length'), 1);
   assert.ok(b.every(p => p.age >= 16 && p.age <= 18 && p.pot >= p.ovr && p.pot <= 95 && p.contrato === 3 && p.pd));
+  assert.ok(b.every(p => Number.isInteger(p.number) && p.number >= 1 && p.number <= 99));
+  assert.equal(new Set(b.map(p => p.number)).size, b.length);
   assert.equal(j.run('userClub().base.some(p=>P[p.id])'), false, 'fora do índice de jogadores (mercado, escalação)');
   const folha = j.run('wageBill(userClub())');
   assert.equal(j.run('wageBill(userClub())'), folha, 'fora da folha');
@@ -61,10 +63,54 @@ test('promover leva o jovem ao elenco; vender dá dinheiro e manda para um clube
   assert.equal(j.run(`venderDaBase('${b}').ok`), true);
   assert.ok(Math.abs(j.run('userClub().balance') - caixa - v) < 1e-9);
   assert.equal(j.run(`P['${b}'].clubId!==userClub().id&&clubById(P['${b}'].clubId).players.includes(P['${b}'])&&!ehHumano(P['${b}'].clubId)`), true);
+  const vendido = j.run(`P['${b}']`);
+  assert.ok(vendido.number >= 1 && vendido.number <= 99);
+  assert.equal(j.run(`clubById('${vendido.clubId}').players.filter(p=>p.number===${vendido.number}).length`), 1);
   // elenco cheio não promove
   const c = j.run('userClub().base[0].id');
   j.run(`while(userClub().players.length<32)userClub().players.push({...userClub().players[0],id:'x'+userClub().players.length})`);
   assert.match(j.run(`promoverDaBase('${c}').erro`), /já tem 32 jogadores/);
+});
+
+test('promoções usam a menor camisa livre da posição e, sem ela, a menor livre do elenco', () => {
+  const j = novo();
+  const base = j.run(`(() => {
+    const c = userClub();
+    c.players.splice(2);
+    c.players[0].number = '1';
+    c.players[1].number = 2;
+    ['GOL', 'GOL', 'LD', 'MEI'].forEach((pd, i) => {
+      Object.assign(c.base[i], { pd, pos: POSD[pd].grupo });
+    });
+    return c.base.map(p => p.id);
+  })()`);
+  for (const id of base) assert.equal(j.run(`promoverDaBase('${id}').ok`), true);
+  const numeros = j.run('userClub().players.map(p => Number(p.number))');
+  assert.deepEqual(numeros, [1, 2, 12, 3, 13, 5]);
+  assert.equal(new Set(numeros).size, numeros.length);
+});
+
+test('save da versão 24 recupera camisas de promovidos e de jogadores de outros clubes', () => {
+  const j = novo();
+  const base = j.run(`(() => {
+    const c = userClub();
+    c.players.splice(1);
+    c.players[0].number = 1;
+    for (const p of c.base.slice(0, 2)) Object.assign(p, { pd: 'GOL', pos: 'G' });
+    return c.base.slice(0, 2).map(p => p.id);
+  })()`);
+  for (const id of base) assert.equal(j.run(`promoverDaBase('${id}').ok`), true);
+  const s = JSON.parse(j.run('JSON.stringify(S)'));
+  s.versao = 24;
+  const meu = s.clubs.find(c => c.id === s.managers.local.clubId);
+  meu.players[1].number = null;
+  delete meu.players[2].number;
+  const estrangeiro = { id: 'fora', players: [{ id: 'a', pd: 'ATA', number: 7 }, { id: 'b', pd: 'ATA' }] };
+  s.continentais = { estrangeiros: { fora: estrangeiro } };
+  assert.equal(j.run(`migrarSave(${JSON.stringify(s)}).ok`), true);
+  assert.deepEqual(j.run('userClub().players.map(p => p.number)'), [1, 12, 2]);
+  assert.deepEqual(j.run('S.continentais.estrangeiros.fora.players.map(p => p.number)'), [7, 9]);
+  assert.equal(j.run('S.versao'), j.run('VERSAO_SAVE'));
 });
 
 test('virada: a base envelhece e evolui até o potencial, dispensa quem passou da idade e recebe jovens novos', () => {

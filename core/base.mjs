@@ -6,7 +6,7 @@
 import { CONTRATO_NOVO } from './contratos.mjs';
 import { fakePlayer, refreshEconomics, valueOf } from './dados.mjs';
 import { P, S, addFin, addNews, clubById, ehHumano, tecnicos, userClub } from './estado.mjs';
-import { POSD } from './posicoes.mjs';
+import { numeroLivre, POSD } from './posicoes.mjs';
 import { clamp, hashStr, money, mulberry32, pick, ri, rnd } from './utils.mjs';
 
 export const BASE_IDADE_MAX = 20, BASE_NOVOS = 4, BASE_MAX = 12, CRAQUE_RARO = 0.06, ELENCO_MAX = 32;
@@ -26,7 +26,7 @@ export const estrelasPot = p => clamp(Math.ceil(((p.pot ?? p.ovr) - 55) / 8), 1,
 const POS_BASE = ['G', 'D', 'D', 'M', 'M', 'A'];
 /** Um jovem novo da base: fraco hoje, com potencial ligado à força do clube e, raramente, de craque. */
 export function novoJovem(c, k, r = rnd) {
-  const p = fakePlayer(c.id, k, c.strength, pick(POS_BASE, r), r, [16, 18]);
+  const p = fakePlayer({ id: c.id, players: c.base || [] }, k, pick(POS_BASE, r), r, [16, 18]);
   p.id = 'b' + p.id; // não se confunde com os gerados por ensureSquad
   p.ovr = clamp(c.strength - 16 + ri(-4, 6, r), 40, 80);
   p.pot = r() < CRAQUE_RARO ? clamp(c.strength + ri(8, 14, r), p.ovr + 8, 95) : clamp(p.ovr + ri(5, 14, r), p.ovr, Math.min(95, c.strength + 6));
@@ -78,7 +78,7 @@ const NAO = { erro: 'Jogador da base não encontrado.' };
 export function promoverDaBase(id) {
   const uc = userClub(), p = daBase(id); if (!p) return NAO;
   if (uc.players.length >= ELENCO_MAX) return { erro: `Seu elenco já tem ${ELENCO_MAX} jogadores. Venda alguém antes.` };
-  uc.base = uc.base.filter(x => x !== p); p.number = null; uc.players.push(p); P[p.id] = p;
+  uc.base = uc.base.filter(x => x !== p); p.number = numeroLivre(uc, p); uc.players.push(p); P[p.id] = p;
   addNews(`⬆️ ${p.name} (${POSD[p.pd].nome}, ${p.age} anos) foi promovido da base.`);
   return { ok: true, msg: `${p.name} agora faz parte do elenco principal.` };
 }
@@ -88,7 +88,7 @@ export function venderDaBase(id) {
   const uc = userClub(), p = daBase(id); if (!p) return NAO;
   const vagas = S.clubs.filter(c => !ehHumano(c) && c.players.length < ELENCO_MAX); if (!vagas.length) return { erro: 'Nenhum clube tem vaga para ele agora.' };
   const b = pick(vagas), v = valorVendaBase(p);
-  uc.base = uc.base.filter(x => x !== p); b.players.push(p); p.clubId = b.id; P[p.id] = p;
+  uc.base = uc.base.filter(x => x !== p); p.number = numeroLivre(b, p); b.players.push(p); p.clubId = b.id; P[p.id] = p;
   addFin(`Venda de ${p.name} (base, ${b.name})`, v);
   addNews(`💰 ${p.name}, da base, vendido ao ${b.name} por ${money(v)}.`);
   return { ok: true, msg: `${p.name} vendido ao ${b.name} por ${money(v)}.` };

@@ -10,7 +10,7 @@ import { SQUAD_MIN, SQUAD_SHAPE, fakePlayer, forcaDoElenco, rate, refStrength, r
 import { migrarDiretoria } from './diretoria.mjs';
 import { clubesEuropa, dadosParaCarreira, definirBaseEuropa, montarEuropa, nomeLigaEuropa } from './europa.mjs';
 import { autoXI } from './motor.mjs';
-import { atribuirPosicoes, converterPosicoesAntigas, simplificarPosicoes } from './posicoes.mjs';
+import { atribuirPosicoes, converterPosicoesAntigas, numerarElenco, simplificarPosicoes } from './posicoes.mjs';
 import { hashStr, money, mulberry32, novaSemente, shuffle } from './utils.mjs';
 import { VERSAO_SAVE } from './versao.mjs';
 
@@ -112,9 +112,10 @@ export function prepararElencos(clubs,{posv,europeu}){
     const r=mulberry32(hashStr(c.id));let k=0;
     for(const [pos,n] of Object.entries(minimo)){
       const tem=c.players.filter(p=>p.pos===pos).length;
-      for(let i=tem;i<n;i++)c.players.push(fakePlayer(c.id,k++,c.strength,pos,r));
+      for(let i=tem;i<n;i++)c.players.push(fakePlayer(c,k++,pos,r));
     }
     atribuirPosicoes(c.players);
+    numerarElenco(c);
     const ref=europeu?c.strength:refStrength(c,clubs);
     c.players.forEach(p=>{
       if(!europeu||!Number.isFinite(p.ovr))p.ovr=rate(p,ref,divOf(c));

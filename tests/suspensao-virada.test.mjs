@@ -25,7 +25,7 @@ test('save na rodada 0 com suspensão da temporada passada é corrigido ao abrir
   const j = jogo();
   const id = j.run('getXI(userClub())[0]');
   j.run(`P['${id}'].susp = 1`);
-  j.run('(() => { const s = JSON.parse(JSON.stringify(S)); s.versao = VERSAO_SAVE - 1; migrarSave(s) })()');
+  j.run('(() => { const s = JSON.parse(JSON.stringify(S)); s.versao = 23; migrarSave(s) })()');
   assert.ok(!j.run(`unavailable(P['${id}'])`));
 });
 
@@ -34,6 +34,6 @@ test('no meio da temporada a suspensão continua valendo', () => {
   j.run('S.round = 5');
   const id = j.run('getXI(userClub())[0]');
   j.run(`P['${id}'].susp = 1`);
-  j.run('(() => { const s = JSON.parse(JSON.stringify(S)); s.versao = VERSAO_SAVE - 1; migrarSave(s) })()');
+  j.run('(() => { const s = JSON.parse(JSON.stringify(S)); s.versao = 23; migrarSave(s) })()');
   assert.match(j.run(`unavailable(P['${id}'])`), /suspenso/);
 });
