@@ -1,6 +1,6 @@
 import { P, S, addFin, clubById, ehHumano, tec, userClub } from './estado.mjs';
 import { creditarGolCopa } from './gols-copa.mjs';
-import { wageBill } from './emprestimos.mjs';
+import { bichoDe, wageBill } from './emprestimos.mjs';
 import { acertarEnergiaDaPartida, energiaDaSaidaForcada, energiaDaTroca, energiaDoElenco, MINUTOS_JOGO, minutosDaPartida, perdaPorEnergia, TRECHO_CANSACO } from './energia.mjs';
 import { cancelarDesfalque, conciliarAmarelos } from './escalacao.mjs';
 import { aplicarLanceAoElenco, escalacaoInicial, escalacaoNoMinuto, melhorReserva, saidaForcada } from './lances.mjs';
@@ -205,7 +205,7 @@ const saldoDe=g=>{const uid=tec().clubId;return g.h===uid?g.hg-g.ag:g.ag-g.hg};
 function acertarDepois(g,antes){
   if(g.uf||g.copa)return; // as copas não pagam bicho por vitória
   if(S.fixtures[S.round-1]?.includes(g))noticiarPenaltisDaLiga(g,S.round-1);
-  const bicho=g.bicho?.[tec().clubId]??Math.round(wageBill(userClub())*0.15*1000)/1000,depois=saldoDe(g); // o valor cobrado em jogarRodada (#43)
+  const bicho=g.bicho?.[tec().clubId]??bichoDe(userClub()),depois=saldoDe(g); // o valor cobrado em jogarRodada (#43)
   if(antes>0&&depois<=0)addFin('Bicho por vitória (ajuste)',bicho);
   if(antes<=0&&depois>0)addFin('Bicho por vitória (ajuste)',-bicho);
 }

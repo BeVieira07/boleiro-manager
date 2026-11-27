@@ -26,6 +26,9 @@ export const fimTxt=l=>l.fim?(l.fim.r?`até a rodada ${l.fim.r} da temporada ${l
 export const salarioTxt=l=>l.fim?'dividido 50/50':l.payer==='from'?'pago por quem cede':'pago por quem recebe';
 // folha salarial real do clube: o salário do emprestado é dividido 50/50 (#142); no formato antigo, quem paga arca com ele
 const parte=(l,dono)=>l.fim?0.5:(l.payer==='from')===dono?1:0;
+// bicho por vitória (#459): fração da folha da rodada; era 15% e pesava demais em quem vence muito
+export const BICHO=0.05;
+export const bichoDe=c=>Math.round(wageBill(c)*BICHO*1000)/1000;
 export function wageBill(c){
   let w=0;
   for(const p of c.players){const l=loanOf(p.id);w+=l&&l.to===c.id?p.wage*parte(l,false):p.wage}

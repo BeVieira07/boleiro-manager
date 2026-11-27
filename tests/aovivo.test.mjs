@@ -51,5 +51,5 @@ test('bicho por vitória: o ajuste ao vivo usa o mesmo valor cobrado, mesmo com 
     return {soma:Math.round(soma*1000)/1000,esperado:venceu()?-g.bicho[uc.id]:0,bicho:g.bicho[uc.id]}})()`);
   assert.ok(r, 'o time venceu alguma rodada');
   assert.equal(r.soma, r.esperado);
-  assert.equal(r.bicho, Math.round(j.run('wageBill(userClub())') * 0.15 * 1000) / 1000);
+  assert.equal(r.bicho, j.run('bichoDe(userClub())'));
 });

@@ -5,7 +5,7 @@ import { limparEventosAntigos } from './aovivo.mjs';
 import { anotarTitulares, atualizarEnergia, energiaDaSaidaForcada, fatorEnergia } from './energia.mjs';
 import { atualizarConfianca } from './diretoria.mjs';
 import { jogarPreTemporada } from './estadual.mjs';
-import { processLoans, wageBill } from './emprestimos.mjs';
+import { bichoDe, processLoans, wageBill } from './emprestimos.mjs';
 import { aplicarDisponibilidade, autoSlotXI, semSuspensoesPorAmarelos, slotsDe, unavailable } from './escalacao.mjs';
 import { P, S, addFin, addNews, bilheteriaBase, clubById, clubDo, divOf, ehHumano, jogaNoBrasil, rodadasDaDivisao, table, tec, tecnicos, tvQuota, userClub } from './estado.mjs';
 import { adiarForma, aplicarFormaPendente } from './forma.mjs';
@@ -132,7 +132,7 @@ export function jogarRodada({ adiarCopa = false, assistir = null, cansacoNoJogo 
     }
     const wages=wageBill(uc);
     if(regular||mine)addFin('Salários do elenco',-Math.round(wages*1000)/1000,uc);
-    if(mine){const gf=mine.h===uc.id?mine.hg:mine.ag,ga=mine.h===uc.id?mine.ag:mine.hg,bicho=Math.round(wages*0.15*1000)/1000;
+    if(mine){const gf=mine.h===uc.id?mine.hg:mine.ag,ga=mine.h===uc.id?mine.ag:mine.hg,bicho=bichoDe(uc);
       (mine.bicho||(mine.bicho={}))[uc.id]=bicho; // o ajuste ao vivo (ressimularDepois) usa o mesmo valor (#43)
       if(gf>ga)addFin('Bicho por vitória',-bicho,uc)}
     // ofertas por jogadores à venda
