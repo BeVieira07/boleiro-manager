@@ -42,3 +42,18 @@ test('os dados padrão têm elencos menores e a campanha cobre os grupos em todo
   const abaixoDoPiso = j.run('S.clubs.filter(c => Object.entries(SQUAD_MIN).some(([pos, n]) => c.players.filter(p => p.pos === pos).length < n)).map(c => c.name)');
   assert.deepEqual(abaixoDoPiso, []);
 });
+
+test('a preparação do elenco dá camisa a quem veio sem número e aos jogadores gerados', () => {
+  const j = carregarJogo();
+  const numeros = j.run(`(() => {
+    const c = { id: 'teste', strength: 60, players: [
+      { id: 'a', pos: 'A', number: 1 },
+      { id: 'd', pos: 'D', number: null },
+    ] };
+    prepararElencos([c], { posv: 2 });
+    return c.players.map(p => p.number);
+  })()`);
+  assert.equal(numeros[0], 1);
+  assert.ok(numeros.every(n => Number.isInteger(n) && n >= 1 && n <= 99));
+  assert.equal(new Set(numeros).size, numeros.length);
+});

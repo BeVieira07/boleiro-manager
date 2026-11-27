@@ -1,5 +1,5 @@
 import { S, divOf } from './estado.mjs';
-import { sorteiaPosD } from './posicoes.mjs';
+import { numeroLivre, sorteiaPosD } from './posicoes.mjs';
 import { clamp, hashStr, mulberry32, pick, ri } from './utils.mjs';
 
 /* ================= dados base (Série A 2026) ================= */
@@ -31,15 +31,17 @@ export const LN=['Silva','Santos','Oliveira','Souza','Lima','Pereira','Costa','R
 export const SQUAD_SHAPE={G:3,D:8,M:9,A:6};
 export const SQUAD_MIN={G:2,D:6,M:5,A:4};
 
-export function fakePlayer(clubId,i,strength,pos,r,ageRange){
-  return {id:'s'+clubId+'_'+i+'_'+Math.floor(r()*1e6),name:pick(FN,r)+' '+pick(LN,r),age:ageRange?ri(ageRange[0],ageRange[1],r):ri(18,34,r),pos,pd:sorteiaPosD(pos,r),number:i+1,photo:null,amar:0};
+export function fakePlayer(c,i,pos,r,ageRange){
+  const p={id:'s'+c.id+'_'+i+'_'+Math.floor(r()*1e6),name:pick(FN,r)+' '+pick(LN,r),age:ageRange?ri(ageRange[0],ageRange[1],r):ri(18,34,r),pos,pd:sorteiaPosD(pos,r),photo:null,amar:0};
+  p.number=numeroLivre(c,p);
+  return p;
 }
 export function sampleData(){
   const r=mulberry32(2026);
   const clubs=BASE_CLUBS.map((b,ci)=>{
-    const id='c'+ci; const players=[]; let i=0;
-    for(const [pos,n] of Object.entries(SQUAD_SHAPE)) for(let k=0;k<n;k++) players.push(fakePlayer(id,i++,b[2],pos,r));
-    return {id,name:b[0],short:b[1],color:b[3],logo:null,strength:b[2],players};
+    const c={id:'c'+ci,name:b[0],short:b[1],color:b[3],logo:null,strength:b[2],players:[]}; let i=0;
+    for(const [pos,n] of Object.entries(SQUAD_SHAPE)) for(let k=0;k<n;k++) c.players.push(fakePlayer(c,i++,pos,r));
+    return c;
   });
   return {source:'sample',season:2026,createdAt:new Date().toISOString(),clubs};
 }

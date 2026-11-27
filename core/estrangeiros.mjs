@@ -4,7 +4,7 @@ import { refreshEconomics } from './dados.mjs';
 import { emprestavel } from './emprestimos.mjs';
 import { S, clubById } from './estado.mjs';
 import { clubeEuropeu, ehEuropaDoMercado, nomeLigaEuropa } from './europa.mjs';
-import { atribuirPosicoes } from './posicoes.mjs';
+import { atribuirPosicoes, numerarElenco } from './posicoes.mjs';
 import { hashStr } from './utils.mjs';
 
 /* ================= jogadores dos clubes estrangeiros no mercado (#172) =================
@@ -27,6 +27,7 @@ export function prepararEstrangeiro(c) {
   if (c.mercado) return; // já preparado (a marca fica no clube para não pôr campos à toa em cada jogador: o save é grande)
   c.mercado = true;
   atribuirPosicoes(c.players);
+  numerarElenco(c);
   const melhores = new Set([...c.players].sort((a, b) => b.ovr - a.ovr).slice(0, BANCO).map(p => p.id));
   for (const p of c.players) {
     p.clubId = c.id;

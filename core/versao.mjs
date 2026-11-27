@@ -18,7 +18,7 @@ import { DIVS, S, clubDo, divOf, ehHumano, jogaNoBrasil, migrarTecnicos, reindex
 import { limparEventosAntigos } from './aovivo.mjs';
 import { prepararEstrangeiro } from './estrangeiros.mjs';
 import { migrarPenaltis } from './penaltis.mjs';
-import { migrarPosicoes, simplificarPosicoes } from './posicoes.mjs';
+import { migrarPosicoes, numerarElenco, simplificarPosicoes } from './posicoes.mjs';
 import { novaSemente } from './utils.mjs';
 
 export function migrarCarreira(t) {
@@ -96,6 +96,10 @@ const MIGRACOES = [
   s => { // 24: suspensão que passou para a temporada nova, em saves ainda antes do 1º jogo dela (#467)
     const comecando = s.round === 0 && !(s.estaduais?.temporada === s.season && s.estaduais.dia > 0);
     if (comecando) for (const c of [...s.clubs, ...Object.values(s.continentais?.estrangeiros || {})]) for (const p of [...c.players, ...(c.base || [])]) limparSuspensao(p);
+  },
+  s => { // 25: camisas de quem ficou sem número no elenco (#472)
+    const clubes = [...s.clubs, ...Object.values(s.continentais?.estrangeiros ?? {})];
+    clubes.forEach(numerarElenco);
   },
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
