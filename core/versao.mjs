@@ -10,6 +10,7 @@ import { adicionarTitulo, abrirPassagem, fecharPassagem, garantirCarreira, gerar
 import { migrarContratos } from './contratos.mjs';
 import { COPA } from './copa.mjs';
 import { emprestavel } from './emprestimos.mjs';
+import { limparSuspensao } from './escalacao.mjs';
 import { valueOf } from './dados.mjs';
 import { DADOS_PADRAO } from './dados-padrao.mjs';
 import { definirMeta, migrarDiretoria } from './diretoria.mjs';
@@ -91,6 +92,10 @@ const MIGRACOES = [
   s => { // 23: overall 80+ sai da lista de empréstimo; nos clubes da IA vai à venda (#463)
     const clubes = [...s.clubs, ...Object.values(s.continentais?.estrangeiros || {})];
     for (const c of clubes) for (const p of c.players) if (p.emprestar && !emprestavel(p)) { delete p.emprestar; if (!ehHumano(c)) p.listed = true }
+  },
+  s => { // 24: suspensão que passou para a temporada nova, em saves ainda antes do 1º jogo dela (#467)
+    const comecando = s.round === 0 && !(s.estaduais?.temporada === s.season && s.estaduais.dia > 0);
+    if (comecando) for (const c of [...s.clubs, ...Object.values(s.continentais?.estrangeiros || {})]) for (const p of [...c.players, ...(c.base || [])]) limparSuspensao(p);
   },
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
