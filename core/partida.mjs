@@ -17,6 +17,7 @@ import { aplicarFormaPendente } from './forma.mjs';
 import { processLoans } from './emprestimos.mjs';
 import { concluirDataPlayoff, resultadoPlayoff } from './playoffs.mjs';
 import { regraLiga } from './campeonatos.mjs';
+import { limparSuspensao } from './escalacao.mjs';
 
 /* ================= fim de temporada ================= */
 // regra: fecha a temporada (premiação, histórico, diretoria). Devolve o resumo, ou null se já foi fechada.
@@ -87,7 +88,7 @@ export function iniciarTemporada(){
   reindex();if(brasil){criarCopa();criarEstaduais();criarContinentais(vagas)}
   processLoans(); // #142: empréstimo de 1 ano feito na rodada 0 volta agora
   fixarFolhas(); // #456: receita da temporada pela folha de agora
-  for(const c of [...S.clubs,...todosEstrangeiros()])for(const p of [...c.players,...(c.base||[])])p.amar=0;
+  for(const c of [...S.clubs,...todosEstrangeiros()])for(const p of [...c.players,...(c.base||[])]){p.amar=0;limparSuspensao(p)} // #467: suspensão não passa de uma temporada para outra
   for(const t of tecnicos().filter(t=>!t.demitido)){t.offers=[];confiancaNovaTemporada(t);const uc=clubDo(t);uc.lineup=getXI(uc);if(uc.lineup.length<11)uc.lineup=autoXI(uc)}
   addNewsTodos(`📅 Começa a temporada ${S.season}!`);
 }

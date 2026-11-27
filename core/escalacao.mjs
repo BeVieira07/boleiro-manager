@@ -13,6 +13,8 @@ function indisponibilidade(p,susp){
 }
 let considerarAmarelos = true;
 const suspensaoSemAmarelos = p => p.suspSemAmarelos ?? p.susp;
+/** #467: na virada da temporada, a suspensão (cartão vermelho ou amarelos) é zerada. */
+export function limparSuspensao(p) { delete p.susp; delete p.suspSemAmarelos }
 export const indisponivelNaCopa = p => indisponibilidade(p, suspensaoSemAmarelos(p));
 export const unavailable = p => considerarAmarelos ? indisponibilidade(p, p.susp) : indisponivelNaCopa(p);
 
