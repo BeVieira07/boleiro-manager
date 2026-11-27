@@ -11,6 +11,7 @@ import { P, S, addFin, addNews, bilheteriaBase, clubById, clubDo, divOf, ehHuman
 import { adiarForma, aplicarFormaPendente } from './forma.mjs';
 import { noticiaPenaltis } from './gols-copa.mjs';
 import { elencoDoJogo, saidaForcada, sortearLances } from './lances.mjs';
+import { avisarAposentadorias } from './aposentadoria.mjs';
 import { ehJanela, janelaIA, temOferta, vizinhos } from './mercadoIA.mjs';
 import { ovrNaPosicao } from './posicoes.mjs';
 import { concluirDataPlayoff, jogosDaRodada } from './playoffs.mjs';
@@ -201,6 +202,7 @@ function concluirRodada(games){
     if(uc.balance<0)addNews('⚠️ Caixa negativo! Venda jogadores para equilibrar as contas.',uc.id);
   }
   renovarPropostasDeClubes();
+  avisarAposentadorias(); // #418: por último, para a notícia não sumir atrás das ofertas da rodada
 }
 
 export function concluirRodadaCopa(){

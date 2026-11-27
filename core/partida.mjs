@@ -13,6 +13,7 @@ import { autoXI, concluirRodadaCopa, getXI } from './motor.mjs';
 import { POSD } from './posicoes.mjs';
 import { clamp, ri, rnd } from './utils.mjs';
 import { limparEventosAntigos } from './aovivo.mjs';
+import { seAposenta } from './aposentadoria.mjs';
 import { aplicarFormaPendente } from './forma.mjs';
 import { processLoans } from './emprestimos.mjs';
 import { concluirDataPlayoff, resultadoPlayoff } from './playoffs.mjs';
@@ -72,10 +73,11 @@ export function iniciarTemporada(){
     const keep=[];
     for(const p of c.players){
       p.o0=p.ovr;p.forma=0;
+      const aposenta=seAposenta(p); // #418: a mesma regra do aviso
       p.age++;
       const d=p.age<=21?ri(1,4):p.age<=24?ri(0,3):p.age<=29?ri(-1,1):p.age<=32?ri(-2,0):ri(-4,-1);
       p.ovr=clamp(d>0?Math.max(p.ovr,Math.min(p.ovr+d,tetoOvr(p))):p.ovr+d,40,95);p.oT=p.ovr;p.goals=0; // sobe só até o potencial (#50); oT: o teto da forma conta depois da idade (#44)
-      if(p.age>=37){addNews(`👋 ${p.name} se aposentou.`,c.id);S.loans=(S.loans||[]).filter(l=>l.pid!==p.id);continue} // #367: sem empréstimo pendurado
+      if(aposenta){addNews(`👋 ${p.name} se aposentou.`,c.id);S.loans=(S.loans||[]).filter(l=>l.pid!==p.id);continue} // #367: sem empréstimo pendurado
       refreshEconomics(p);keep.push(p);
     }
     c.players=keep;ensureSquad(c);
