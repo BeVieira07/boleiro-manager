@@ -1,7 +1,7 @@
 import { COPA } from '../../core/copa.mjs';
 import { esc } from '../../core/utils.mjs';
 import { S, tec, tecnicos, usarTecnico, userClub } from '../../core/estado.mjs';
-import { autoXI, concluirRodadaCopa, confirmarRodada, jogarRodada, validateLineup } from '../../core/motor.mjs';
+import { concluirRodadaCopa, confirmarRodada, jogarRodada } from '../../core/motor.mjs';
 import { demissao } from '../clube/diretoria.mjs';
 import { avisarPropostasNovas, idsDasPropostas } from '../clube/propostas-recebidas.mjs';
 import { save, ui } from '../estado.mjs';
@@ -10,7 +10,7 @@ import { seasonEnd } from '../partida/partida.mjs';
 import { encerrarVivo, iniciarVivo, penaltisDoJogo, vivoAtivo } from '../partida/aovivo.mjs';
 import { icone } from '../icones.mjs';
 import { render } from '../telas.mjs';
-import { avisar, confirmar } from '../avisos.mjs';
+import { avisar } from '../avisos.mjs';
 import { bloqueadoNaLiga, botaoLiga } from '../liga/ligajogo.mjs';
 import { prefs, verAoVivo } from '../inicio/configuracoes.mjs';
 import { rotuloRodada } from './estadual.mjs';
@@ -60,19 +60,6 @@ export function retomarCopa(){
     else save();
   }});
 }
-export function simToEnd(){
-  if(bloqueadoNaLiga())return;
-  confirmar({dispensavel:true,titulo:'Simular até o fim?',texto:`As ${S.fixtures.length-S.round} rodadas restantes serão jogadas sem você assistir. Lesionados e suspensos são trocados pela escalação automática.`,ok:'Simular'},()=>{
-    const c0=conflito.n;
-    while(S.round<S.fixtures.length&&!tec().demitido&&conflito.n===c0){
-      const err=validateLineup();if(err){userClub().lineup=autoXI(userClub())}
-      playRound(false);
-    }
-    if(conflito.n!==c0)return; // #412: aba desatualizada: para de simular em memória
-    ui.view='tabela';render();if(S.round>=S.fixtures.length)seasonEnd();if(tec().demitido)demissao(); // #366: demitido no meio, a temporada continua
-  });
-}
-
 // revezamento: confirma a vez do técnico atual; quando todos confirmaram, joga a rodada
 export function confirmarVez(){
   if(bloqueadoNaLiga())return;

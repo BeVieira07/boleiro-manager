@@ -3,14 +3,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { carregarJogo, clubeDaSerie, TELAS, problemasNasTelas } from './jogo.mjs';
 
-test('barra de ações com "Jogar rodada" e "Simular até o fim" em todas as telas do jogo', () => {
+test('barra de ações com "Jogar rodada" em todas as telas do jogo, sem "Simular até o fim" (#474)', () => {
   const j = carregarJogo({ boot: true });
   j.run(`newGame('${clubeDaSerie(j)}')`);
   for (const t of TELAS) {
     j.run(`go('${t}')`);
     assert.match(j.html(), /class="barra-acoes"/, t);
     assert.match(j.html(), /Jogar rodada 1/, t);
-    assert.match(j.html(), /Simular até o fim/, t);
+    assert.doesNotMatch(j.html(), /Simular até o fim|simToEnd/, t);
   }
   assert.deepEqual(problemasNasTelas(j), []);
 });

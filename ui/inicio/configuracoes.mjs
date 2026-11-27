@@ -66,7 +66,7 @@ export function vConfig() {
    <p class="muted">Ao soltar o controle toca um apito de amostra. No jogo ao vivo, o botão de som liga e desliga na hora.</p>
   </section>
   <section class="card"><h2 class="t3">Confirmações</h2>
-   ${marca('confirmar', 'Pedir confirmação na venda rápida, na venda de jovens da base e ao simular até o fim', p.confirmar)}
+   ${marca('confirmar', 'Pedir confirmação na venda rápida, e na venda de jovens da base', p.confirmar)}
    <p class="muted">Excluir um jogo salvo sempre pede confirmação.</p>
   </section>
   <section class="card"><h2 class="t3">Notícias no Painel do clube</h2>
