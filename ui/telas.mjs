@@ -215,7 +215,7 @@ export function vFin() {
    ${stat({ rotulo: 'Caixa', valor: money(uc.balance), cor: uc.balance < 0 ? 'var(--perigo)' : 'var(--verde)' })}
    ${stat({ rotulo: 'Folha salarial', valor: money(w), unid: 'por rodada', cor: alta ? 'var(--perigo)' : '', sub: `${Math.round(q * 100)}% da receita esperada (${money(receitaEsperada(uc))} por rodada)${alta ? ` · acima do que a diretoria aceita (${Math.round(FOLHA_LIMITE * 100)}%)` : ''}` })}
    ${stat({ rotulo: 'Valor do elenco', valor: money(val), unid: `${uc.players.length} jogadores` })}
-   ${stat({ rotulo: 'Receitas', valor: money(ent, 3), unid: 'registradas', sub: `${money(tvQuota(divOf(uc)))} de TV por rodada` })}
+   ${stat({ rotulo: 'Receitas', valor: money(ent, 3), unid: 'registradas', sub: `${money(tvQuota(uc))} de TV por rodada` })}
   </div>
   <div class="figma-financas-corpo"><section class="card figma-lancamentos"><h2 class="t3">Lançamentos recentes</h2>
     ${fin.length ? `<ul class="lancamentos">${fin.map(f => {

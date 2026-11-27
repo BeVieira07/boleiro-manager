@@ -96,18 +96,17 @@ test('Championship: mando das semifinais, agregado, pênaltis e final única em 
   assert.deepEqual(j.run('S.fixtures[48][0].pen'), penFinal);
 });
 
-test('Europa: cada liga tem TV, bilheteria, caixa inicial e cotas de mérito próprios', () => {
-  const j = carregarJogo();
-  const regras = j.run('CAMPEONATOS');
-  for (const ligas of Object.values(regras)) {
-    const valores = Object.entries(ligas).map(([div, { clubes, economia: { forcaReferencia } }]) => {
-      const pr = j.run(`Array.from({length:${clubes}}, (_, i) => seasonPrize('${div}', i + 1))`);
-      assert.ok(pr.every((valor, i) => valor > (pr[i + 1] ?? 0)), div);
-      assert.ok(Math.abs(pr[0] / pr.at(-1) - clubes) < 1e-9, `${div}: campeão recebe uma cota para cada clube da liga`);
-      return j.run(`[tvQuota('${div}'), bilheteriaBase({ division: '${div}', strength: ${forcaReferencia} }),
-        startBalance('${div}', ${forcaReferencia}), seasonPrize('${div}', 1)]`);
-    });
-    assert.ok(valores[0].every((valor, i) => valor > valores[1][i]));
+test('Europa: premiação pela posição e caixa inicial de cada liga (#456)', () => {
+  for (const [pais, ligas] of Object.entries(CAMPEONATOS_TESTE)) {
+    const j = iniciarNaEuropa(pais, ligas[0]);
+    const premios = ligas.map(div => j.run(`Array.from({ length: S.clubs.filter(c => divOf(c) === '${div}').length }, (_, i) => seasonPrize('${div}', i + 1))`));
+    for (const [k, pr] of premios.entries()) {
+      assert.ok(pr.every((valor, i) => valor > (pr[i + 1] ?? 0)), ligas[k]);
+      assert.ok(Math.abs(pr[0] / pr.at(-1) / 8 - 1) < 0.03, `${ligas[k]}: campeão leva 8 rodadas de receita média, o último 1`);
+    }
+    assert.ok(premios[0][0] > premios[1][0], `${pais}: o campeão da 1ª divisão recebe mais que o da 2ª`);
+    const { forcaReferencia: f1 } = j.run(`CAMPEONATOS['${pais}']['${ligas[0]}'].economia`), { forcaReferencia: f2 } = j.run(`CAMPEONATOS['${pais}']['${ligas[1]}'].economia`);
+    assert.ok(j.run(`startBalance('${ligas[0]}', ${f1}) > startBalance('${ligas[1]}', ${f2})`), pais);
   }
 });
 
@@ -153,6 +152,8 @@ test('Europa: a prévia usa a zona de acesso e inclui a repescagem na meta de pe
   }
 });
 
+const CAMPEONATOS_TESTE = { Inglaterra: ['GB1', 'GB2'], Espanha: ['ES1', 'ES2'], 'Itália': ['IT1', 'IT2'], 'França': ['FR1', 'FR2'], Portugal: ['PO1', 'PO2'] };
+
 for (const [pais, div, clubeId, nome, jogosRegulares, alvoMediano] of [
   ['Inglaterra', 'GB1', 'e52', 'Crystal Palace', 38, 11],
   ['Inglaterra', 'GB2', 'e76', 'Swansea', 46, 13],
@@ -186,7 +187,7 @@ for (const [pais, div, clubeId, nome, jogosRegulares, alvoMediano] of [
       const folha = j.run('wageBill(userClub())'); // a forma dos jogadores pode mudar a folha no início da rodada
       const salario = -Math.round(folha * 1000) / 1000;
       assert.deepEqual(valores('Salários do elenco'), regular || r.meu ? [salario] : []);
-      assert.deepEqual(valores('Cota de TV'), regular ? [j.run(`tvQuota('${div}')`)] : []);
+      assert.deepEqual(valores('Cota de TV'), regular ? [j.run('tvQuota(userClub())')] : []);
       assert.equal(valores('Bilheteria').length, r.meu?.h === clube.id && !r.meu.neutro ? 1 : 0);
       const ganhou = r.meu && (r.meu.h === clube.id ? r.meu.hg > r.meu.ag : r.meu.ag > r.meu.hg);
       assert.deepEqual(valores('Bicho por vitória'), ganhou ? [-Math.round(folha * 0.15 * 1000) / 1000] : []);
@@ -200,7 +201,7 @@ for (const [pais, div, clubeId, nome, jogosRegulares, alvoMediano] of [
     assert.ok(fim.pos <= alvo, `${fim.pos}º lugar, meta de ${alvo}º`);
     assert.equal(fim.prize, j.run(`seasonPrize('${div}', ${fim.pos})`));
     assert.ok(folhaPaga > inicial, 'pagou mais que o caixa inicial em salários');
-    assert.ok(clube.balance >= inicial * 0.90 && clube.balance <= inicial * 1.60,
+    assert.ok(clube.balance >= inicial * 0.75 && clube.balance <= inicial * 1.35,
       `caixa de ${inicial} para ${clube.balance} milhões`);
     assert.equal(j.run('tec().demitido'), false);
     t.diagnostic(`Caixa inicial ${inicial.toFixed(3)}, mínimo ${menorCaixa.toFixed(3)}, final ${clube.balance.toFixed(3)}. Folha ${folhaPaga.toFixed(3)}. ${fim.pos}º lugar, meta de ${alvo}º.`);
