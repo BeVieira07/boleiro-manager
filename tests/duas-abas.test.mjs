@@ -65,7 +65,7 @@ test('mensagem de falta de espaço não fala em exportar', () => {
   assert.doesNotMatch(msg, /export/i);
 });
 
-// ---- #412 (revisão): jogo ao vivo, simular até o fim e "Agora não" numa aba desatualizada ----
+// ---- #412 (revisão): jogo ao vivo e "Agora não" numa aba desatualizada ----
 const { avisosTeste } = await import(new URL('../ui/avisos.mjs', import.meta.url));
 // com a confirmação "de verdade": o modal fica esperando e o teste responde com responderDialogo
 function semAutoConfirmar(fn) {
@@ -105,18 +105,6 @@ test('Carregar durante um ao vivo já aberto encerra o jogo antigo (sem tempo co
   assert.equal(j.run('__v.timer._destroyed'), true, 'o temporizador foi parado');
   assert.equal(j.run('S.round'), lerSave(j, id).round, 'a aba ficou com a versão da outra aba');
   assert.equal(j.run('ui.view'), 'clube');
-}));
-
-test('simular até o fim na aba desatualizada para na primeira rodada e não abre o fim de temporada', () => semAutoConfirmar(() => {
-  const { j, id } = abaAntiga();
-  abaDoisAvanca(j, id, 3);
-  j.run('simToEnd()');
-  if (j.run('S.round') === 0) j.run("responderDialogo('sim')"); // confirmação da simulação, se a preferência pedir
-  assert.ok(j.run('S.round') <= 1, 'só a primeira rodada rodou em memória');
-  assert.equal(lerSave(j, id).round, 3);
-  assert.equal(j.run('ui.view') === 'tabela', false);
-  j.run("responderDialogo('sim')");
-  assert.equal(j.run('S.round'), 3);
 }));
 
 test('Agora não: não grava, o aviso volta no próximo save e a aba segue utilizável', () => semAutoConfirmar(() => {

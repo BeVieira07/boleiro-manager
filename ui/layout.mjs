@@ -103,7 +103,7 @@ export function barraAcoes(titulo) {
   if (ui.view !== 'aovivo') {
     botoes = fim && !vivoAtivo() // #368: com o jogo da última rodada aberto, a barra leva de volta a ele antes de encerrar
       ?`<button type="button" class="btn" data-acao="proximaTemporada">${icone('trofeu')}${S.seasonClosed === S.season ? 'Iniciar temporada ' + (S.season + 1) : 'Encerrar a temporada ' + S.season}</button>`
-      : `${varios || ui.liga || fim ? '' : '<button type="button" class="btn sec" data-acao="simToEnd">Simular até o fim</button>'}${botaoRodada('btn botao-jogar', `${icone('play', { tam: 16 })}Jogar ${rotuloRodada()}`)}`;
+      : `${botaoRodada('btn botao-jogar', `${icone('play', { tam: 16 })}Jogar ${rotuloRodada()}`)}`;
   }
   return `<div class="barra-acoes"><div class="barra-titulo"><h1>${esc(titulo)}</h1><dl class="placar-temporada">${placar}</dl>${vez}</div>
     ${botoes ? `<div class="barra-botoes">${botoes}</div>` : ''}</div>`;
