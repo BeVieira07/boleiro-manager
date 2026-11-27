@@ -9,10 +9,11 @@ import { BRASIL } from './campeonatos.mjs';
 import { adicionarTitulo, abrirPassagem, fecharPassagem, garantirCarreira, gerarPropostas } from './carreira.mjs';
 import { migrarContratos } from './contratos.mjs';
 import { COPA } from './copa.mjs';
+import { emprestavel } from './emprestimos.mjs';
 import { valueOf } from './dados.mjs';
 import { DADOS_PADRAO } from './dados-padrao.mjs';
 import { definirMeta, migrarDiretoria } from './diretoria.mjs';
-import { DIVS, S, clubDo, divOf, jogaNoBrasil, migrarTecnicos, reindex, startBalance, tecnicos, usarEstado } from './estado.mjs';
+import { DIVS, S, clubDo, divOf, ehHumano, jogaNoBrasil, migrarTecnicos, reindex, startBalance, tecnicos, usarEstado } from './estado.mjs';
 import { limparEventosAntigos } from './aovivo.mjs';
 import { prepararEstrangeiro } from './estrangeiros.mjs';
 import { migrarPenaltis } from './penaltis.mjs';
@@ -86,6 +87,10 @@ const MIGRACOES = [
     if (!jogaNoBrasil() && s.seasonClosed !== s.season) {
       for (const t of tecnicos()) if (!t.demitido) definirMeta(t);
     }
+  },
+  s => { // 23: overall 80+ sai da lista de empréstimo; nos clubes da IA vai à venda (#463)
+    const clubes = [...s.clubs, ...Object.values(s.continentais?.estrangeiros || {})];
+    for (const c of clubes) for (const p of c.players) if (p.emprestar && !emprestavel(p)) { delete p.emprestar; if (!ehHumano(c)) p.listed = true }
   },
 ];
 export const VERSAO_SAVE = MIGRACOES.length;
